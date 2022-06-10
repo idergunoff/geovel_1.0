@@ -15,7 +15,7 @@ class GeoradarObject(Base):
     __tablename__ = 'georadar_object'
 
     id = Column(Integer, primary_key=True)
-    title = Column(String, unique=True)
+    title = Column(String)
     date_exam = Column(Date, default=datetime.date.today())
 
     profiles = relationship('Profile', back_populates='georadar_object')
@@ -37,7 +37,7 @@ class Measure(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
-    title = Column(String)
+    number = Column(Integer)
 
     x_wgs = Column(Float)
     y_wgs = Column(Float)
