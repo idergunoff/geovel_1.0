@@ -136,6 +136,9 @@ class Ui_MainWindow(object):
         self.gridLayout_5.addLayout(self.verticalLayout_3, 1, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.gridLayout_5.addItem(spacerItem, 3, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(self.tab_3)
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout_5.addWidget(self.pushButton, 2, 0, 1, 1)
         self.tabWidget_2.addTab(self.tab_3, "")
         self.tab_4 = QtWidgets.QWidget()
         self.tab_4.setObjectName("tab_4")
@@ -182,6 +185,7 @@ class Ui_MainWindow(object):
         self.label_6.setText(_translate("MainWindow", "Парам. пласта:"))
         self.toolButton_load_plast.setText(_translate("MainWindow", "load"))
         self.toolButton_del_plast.setText(_translate("MainWindow", "del"))
+        self.pushButton.setText(_translate("MainWindow", "PushButton"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_3), _translate("MainWindow", "Tab 1"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_4), _translate("MainWindow", "Tab 2"))
 from pyqtgraph import ImageView, PlotWidget

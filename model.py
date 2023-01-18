@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
