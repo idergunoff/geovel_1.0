@@ -4,6 +4,8 @@ from wgs_to_pulc import wgs84_to_pulc42
 from qt.add_obj_dialog import *
 
 
+
+
 def add_object():
     """Добавить ноывый объект в БД"""
     Add_Object = QtWidgets.QDialog()
@@ -49,49 +51,70 @@ def load_profile():
     except FileNotFoundError:
         return
     try:
-        pd_radar = pd_radar.rename(columns={'X': 'measure_id', 'T': 'time_ns', 'ALn': 'A'})
-        pd_radar = pd_radar.drop(columns=['Unnamed: 3'])
+        new_profile = Profile(object_id=get_object_id(), title=file_name.split('/')[-1].split('.')[0])
+        session.add(new_profile)
+        session.commit()
+        ui.progressBar.setMaximum(int(len(pd_radar.index)/512))
+        for i in range(int(len(pd_radar.index)/512)):
+            list_signal = list(pd_radar['ALn'].loc[i * 512:(i + 1) * 512])
+            ui.progressBar.setValue(i+1)
+            if len(set(list_signal)) > 1:
+                # analytic_signal = hilbert(list_signal)
+                # Vt = list(map(lambda x: round(x, 2), np.imag(analytic_signal)))
+                # At = list(map(lambda x: round(x, 2), np.hypot(list_signal, np.imag(analytic_signal))))
+                # Pht = list(map(lambda x: round(x, 2), np.angle(analytic_signal)))
+                # Wt = list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal))))
+                new_measure = Measure(
+                    profile_id=new_profile.id,
+                    signal = json.dumps(list_signal),
+                    # diff = json.dumps(np.diff(list_signal).tolist()),
+                    # Vt = json.dumps(Vt),
+                    # At = json.dumps(At),
+                    # Pht = json.dumps(Pht),
+                    # Wt = json.dumps(Wt)
+                )
+                session.add(new_measure)
+        session.commit()
     except KeyError:
         set_info('Не правильный формат файла', 'red')
         return
-    new_profile = Profile(object_id=get_object_id(), title=file_name.split('/')[-1].split('.')[0])
-    session.add(new_profile)
-    session.commit()
-    for i in range(pd_radar['measure_id'].max() + 1):
-        new_measure = Measure(profile_id=new_profile.id, number=i)
-        session.add(new_measure)
-    session.commit()
-    l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
-    m = [i for i in l for _ in range(512)]
-    print(m)
-    pd_radar['measure_id'] = m
-    print(pd_radar)
-    pd_radar.to_sql('signal', con=engine, if_exists='append', index=False)
-
-    list_zero = list(set(query_to_list(session.query(Measure.id).join(Signal).filter(Signal.A == 0).all())))
-    for i in list_zero:
-        session.query(Measure).filter(Measure.id == i).delete()
-    session.query(Signal).filter(Signal.A == 0).delete()
-    session.commit()
-
-    l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
-    ui.progressBar.setMaximum(len(l))
-    ui.progressBar.setValue(0)
-    for n, i in enumerate(l):
-
-        pd_signal = pd.read_sql(f'SELECT * FROM signal WHERE measure_id={i};', engine, index_col='id')
-        session.query(Signal).filter(Signal.measure_id == i).delete()
-        session.commit()
-        pd_signal['diff'] = pd_signal['A'].diff()
-        analytic_signal = hilbert(pd_signal['A'])
-        pd_signal['Vt'] = np.imag(analytic_signal)
-        pd_signal['At'] = np.hypot(pd_signal['A'], np.imag(analytic_signal))
-        pd_signal['Pht'] = np.angle(analytic_signal)
-        pd_signal['Wt'] = pd_signal['Pht'].diff()
-        print(pd_signal)
-        pd_signal.to_sql('signal', con=engine, if_exists='append', index=True)
-        ui.progressBar.setValue(n + 1)
-    session.commit()
+    #
+    # session.commit()
+    # for i in range(pd_radar['measure_id'].max() + 1):
+    #     new_measure = Measure(profile_id=new_profile.id, number=i)
+    #     session.add(new_measure)
+    # session.commit()
+    # l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
+    # m = [i for i in l for _ in range(512)]
+    # # print(m)
+    # pd_radar['measure_id'] = m
+    # # print(pd_radar)
+    # pd_radar.to_sql('signal', con=engine, if_exists='append', index=False)
+    #
+    # list_zero = list(set(query_to_list(session.query(Measure.id).join(Signal).filter(Signal.A == 0).all())))
+    # for i in list_zero:
+    #     session.query(Measure).filter(Measure.id == i).delete()
+    # session.query(Signal).filter(Signal.A == 0).delete()
+    # session.commit()
+    #
+    # l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
+    # ui.progressBar.setMaximum(len(l))
+    # ui.progressBar.setValue(0)
+    # for n, i in enumerate(l):
+    #
+    #     pd_signal = pd.read_sql(f'SELECT * FROM signal WHERE measure_id={i};', engine, index_col='id')
+    #     session.query(Signal).filter(Signal.measure_id == i).delete()
+    #     session.commit()
+    #     pd_signal['diff'] = pd_signal['A'].diff()
+    #     analytic_signal = hilbert(pd_signal['A'])
+    #     pd_signal['Vt'] = np.imag(analytic_signal)
+    #     pd_signal['At'] = np.hypot(pd_signal['A'], np.imag(analytic_signal))
+    #     pd_signal['Pht'] = np.angle(analytic_signal)
+    #     pd_signal['Wt'] = pd_signal['Pht'].diff()
+    #     # print(pd_signal)
+    #     pd_signal.to_sql('signal', con=engine, if_exists='append', index=True)
+    #     ui.progressBar.setValue(n + 1)
+    # session.commit()
     update_profile_combobox()
 
 
@@ -102,7 +125,7 @@ def update_profile_combobox():
         for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
             count_measure = session.query(Measure).filter(Measure.profile_id == i.id).count()
             ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
-        update_param_combobox()
+        # update_param_combobox()
     except ValueError:
         pass
 
@@ -188,12 +211,10 @@ def load_param():
 
 def delete_profile():
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
-    l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == get_profile_id()).all())
-    for id_measure in l:
-        session.query(Signal).filter(Signal.measure_id == id_measure).delete()
     session.query(Measure).filter(Measure.profile_id == get_profile_id()).delete()
     session.query(Profile).filter(Profile.id == get_profile_id()).delete()
     session.commit()
+    vacuum()
     set_info(f'Профиль {title_prof} удалён', 'green')
     update_profile_combobox()
 
@@ -206,51 +227,81 @@ def update_param_combobox():
         if session.query(Measure).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
             ui.comboBox_param_plast.addItem(i)
 
-    # with open(file_name) as f:
-    #     count_line = sum(1 for _ in f)
-    #
-    # with open(file_name, 'rb') as f:
-    #     ui.progressBar.setMaximum(count_line)
-    #     ui.progressBar.setValue(0)
-    #     n = 0
-    #     n_izm = 1
-    #     list_sig = []
-    #     while True:
-    #         try:
-    #             line = f.readline()
-    #             if not line:
-    #                 break
-    #             line_signal = line.strip().decode('utf-8').split(';')
-    #             if not session.query(Measure).filter(Measure.profile_id == new_profile.id, Measure.number == int(line_signal[0])).first():
-    #                 n_izm = int(line_signal[0])
-    #                 new_measure = Measure(profile_id=new_profile.id, number=int(line_signal[0]))
-    #                 session.add(new_measure)
-    #
-    #             new_signal_point = Signal(measure_id=n_izm, time_ns=int(line_signal[1]), A=int(line_signal[2]))
-    #             list_sig.append(new_signal_point)
-    #             # session.add(new_signal_point)
-    #         except ValueError:
-    #             pass
-    #         n += 1
-    #         ui.progressBar.setValue(n)
-    #     session.add_all(list_sig)
-    #     session.commit()
-
 
 def draw_radarogram():
-    rad = session.query(Signal.A).join(Measure).filter(Measure.profile_id == get_profile_id()).all()
-    ui.progressBar.setMaximum(len(rad)/512)
+    clear_current_profile()
+    # if ui.comboBox_atrib.currentText() == 'A':
+    #     atr = Measure.signal
+    # elif ui.comboBox_atrib.currentText() == 'diff':
+    #     atr = Measure.diff
+    # elif ui.comboBox_atrib.currentText() == 'At':
+    #     atr = Measure.At
+    # elif ui.comboBox_atrib.currentText() == 'Vt':
+    #     atr = Measure.Vt
+    # elif ui.comboBox_atrib.currentText() == 'Pht':
+    #     atr = Measure.Pht
+    # elif ui.comboBox_atrib.currentText() == 'Wt':
+    #     atr = Measure.Wt
+    # else:
+    #     atr = Measure.signal
+    rad = session.query(Measure.signal).filter(Measure.profile_id == get_profile_id()).all()
+    ui.progressBar.setMaximum(len(rad))
     radar = []
-    for i in range(int(len(rad)/512)):
-        ui.progressBar.setValue(i+1)
-        if i != len(rad)/512:
-            radar.append(rad[i*512: (i+1)*512])
-    ui.radarogram.setImage(np.array(radar))
+    for n, i in enumerate(rad):
+        ui.progressBar.setValue(n + 1)
+        if ui.comboBox_atrib.currentText() == 'A':
+            radar.append(json.loads(i[0]))
+        elif ui.comboBox_atrib.currentText() == 'diff':
+            radar.append(np.diff(json.loads(i[0])).tolist())
+        elif ui.comboBox_atrib.currentText() == 'At':
+            analytic_signal = hilbert(json.loads(i[0]))
+            radar.append(list(map(lambda x: round(x, 2), np.hypot(json.loads(i[0]), np.imag(analytic_signal)))))
+        elif ui.comboBox_atrib.currentText() == 'Vt':
+            analytic_signal = hilbert(json.loads(i[0]))
+            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
+        elif ui.comboBox_atrib.currentText() == 'Pht':
+            analytic_signal = hilbert(json.loads(i[0]))
+            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
+        elif ui.comboBox_atrib.currentText() == 'Wt':
+            analytic_signal = hilbert(json.loads(i[0]))
+            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
+        else:
+            radar.append(json.loads(i[0]))
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
+    session.add(new_current)
+    session.commit()
 
+    hist.setImageItem(img)
+    hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
         (255, 0, 0),
         (0, 0, 0),
         (0, 0, 255)
     ]
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
-    ui.radarogram.setColorMap(cmap)
+    img.setColorMap(cmap)
+    hist.gradient.setColorMap(cmap)
+    img.setImage(np.array(radar))
+
+    updatePlot()
+
+
+def updatePlot():
+    rad = session.query(CurrentProfile.signal).first()
+    radar = json.loads(rad[0])
+    selected = roi.getArrayRegion(np.array(radar), img)
+    # n = form.spinBox.value()//2
+    ui.signal.plot(y=range(512, 0, -1), x=selected.mean(axis=0), clear=True, pen='r')
+    ui.signal.plot(y=range(512, 0, -1), x=selected[10])
+    ui.signal.showGrid(x=True, y=True)
+
+
+def clear_current_profile():
+    session.query(CurrentProfile).delete()
+    session.commit()
+
+
+def vacuum():
+    conn = connect(DATABASE_NAME)
+    conn.execute("VACUUM")
+    conn.close()

@@ -1,11 +1,12 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
 
 engine = create_engine(f'sqlite:///{DATABASE_NAME}', echo=False)
+
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
@@ -30,6 +31,7 @@ class Profile(Base):
 
     georadar_object = relationship('GeoradarObject', back_populates='profiles')
     measures = relationship('Measure', back_populates='profile')
+    current = relationship('CurrentProfile', back_populates='profile')
 
 
 class Measure(Base):
@@ -37,7 +39,14 @@ class Measure(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
-    number = Column(Integer)
+
+    signal = Column(Text)
+    # diff = Column(Text)
+    # max_min = Column(Float)
+    # At = Column(Text)
+    # Vt = Column(Text)
+    # Pht = Column(Text)
+    # Wt = Column(Text)
 
     x_wgs = Column(Float)
     y_wgs = Column(Float)
@@ -81,25 +90,33 @@ class Measure(Base):
     k_var = Column(Float)
 
     profile = relationship('Profile', back_populates='measures')
-    signals = relationship('Signal', back_populates='measure')
+    # signals = relationship('Signal', back_populates='measure')
 
 
-class Signal(Base):
-    __tablename__ = 'signal'
-
+class CurrentProfile(Base):
+    __tablename__ = 'current_profile'
     id = Column(Integer, primary_key=True)
-    measure_id = Column(Integer, ForeignKey('measure.id'))
-    time_ns = Column(Integer)
-    A = Column(Float)
-    diff = Column(Float)
-    diff2 = Column(Float)
-    max_min = Column(Float)
-    At = Column(Float)
-    Vt = Column(Float)
-    Pht = Column(Float)
-    Wt = Column(Float)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    signal = Column(Text)
 
-    measure = relationship('Measure', back_populates='signals')
+    profile = relationship('Profile', back_populates='current')
+
+# class Signal(Base):
+#     __tablename__ = 'signal'
+#
+#     id = Column(Integer, primary_key=True)
+#     measure_id = Column(Integer, ForeignKey('measure.id'))
+#     time_ns = Column(Integer)
+#     A = Column(Float)
+#     diff = Column(Float)
+#     diff2 = Column(Float)
+#     max_min = Column(Float)
+#     At = Column(Float)
+#     Vt = Column(Float)
+#     Pht = Column(Float)
+#     Wt = Column(Float)
+#
+#     measure = relationship('Measure', back_populates='signals')
 
 
 Base.metadata.create_all(engine)

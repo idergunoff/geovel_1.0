@@ -1,7 +1,3 @@
-from PyQt5.QtWidgets import QFileDialog, QCheckBox
-import pandas as pd
-import numpy as np
-from scipy.signal import savgol_filter, hilbert, wiener
 from object import *
 
 
