@@ -6,7 +6,14 @@ def set_info(text, color):
 
 
 def get_object_id():
-    return int(ui.comboBox_object.currentText().split('id')[-1])
+    try:
+        return int(ui.comboBox_object.currentText().split('id')[-1])
+    except ValueError:
+        pass
+
+
+def get_object_name():
+    return ui.comboBox_object.currentText().split(' id')[0]
 
 
 def get_profile_id():

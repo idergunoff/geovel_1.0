@@ -67,6 +67,7 @@ def load_profile():
                 new_measure = Measure(
                     profile_id=new_profile.id,
                     signal = json.dumps(list_signal),
+                    number = i
                     # diff = json.dumps(np.diff(list_signal).tolist()),
                     # Vt = json.dumps(Vt),
                     # At = json.dumps(At),
@@ -125,9 +126,17 @@ def update_profile_combobox():
         for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
             count_measure = session.query(Measure).filter(Measure.profile_id == i.id).count()
             ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
-        # update_param_combobox()
+        update_param_combobox()
     except ValueError:
         pass
+    if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+        ui.pushButton_uf.setStyleSheet('background: rgb(191, 255, 191)')
+        ui.pushButton_m.setStyleSheet('background: rgb(191, 255, 191)')
+        ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)')
+    else:
+        ui.pushButton_uf.setStyleSheet('background: rgb(255, 185, 185)')
+        ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
+        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
 
 
 def load_param():
@@ -136,6 +145,7 @@ def load_param():
         file_name = QFileDialog.getOpenFileName(caption='Выберите файл выделенного интервала пласта', filter='*.txt')[0]
         set_info(file_name, 'blue')
         tab_int = pd.read_table(file_name, delimiter=';', header=0)
+        tab_int = tab_int.applymap(lambda x: float(str(x).replace(',', '.')))
     except FileNotFoundError:
         return
 
@@ -144,34 +154,22 @@ def load_param():
         set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах', 'red')
     else:
         ui.progressBar.setMaximum(len(tab_int.index))
+        grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+        if grid_db:
+            pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
+            pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
+            pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
         for i in tab_int.index:
-            list_A = query_to_list(session.query(Signal.A).filter(
-                Signal.measure_id == measures[i].id,
-                Signal.time_ns >= tab_int['T01'][i] / 5,
-                Signal.time_ns <= tab_int['D02'][i] / 5
-            ).order_by(Signal.time_ns).all())
-            list_At = query_to_list(session.query(Signal.At).filter(
-                Signal.measure_id == measures[i].id,
-                Signal.time_ns >= tab_int['T01'][i] / 5,
-                Signal.time_ns <= tab_int['D02'][i] / 5
-            ).order_by(Signal.time_ns).all())
-            list_Vt = query_to_list(session.query(Signal.Vt).filter(
-                Signal.measure_id == measures[i].id,
-                Signal.time_ns >= tab_int['T01'][i] / 5,
-                Signal.time_ns <= tab_int['D02'][i] / 5
-            ).order_by(Signal.time_ns).all())
-            list_Pht = query_to_list(session.query(Signal.Pht).filter(
-                Signal.measure_id == measures[i].id,
-                Signal.time_ns >= tab_int['T01'][i] / 5,
-                Signal.time_ns <= tab_int['D02'][i] / 5
-            ).order_by(Signal.time_ns).all())
-            list_Wt = query_to_list(session.query(Signal.Wt).filter(
-                Signal.measure_id == measures[i].id,
-                Signal.time_ns >= tab_int['T01'][i] / 5,
-                Signal.time_ns <= tab_int['D02'][i] / 5
-            ).order_by(Signal.time_ns).all())
+            signal = json.loads(measures[i].signal)
+            analytic_signal = hilbert(signal)
+            At = np.hypot(signal, np.imag(analytic_signal)).tolist()
+            Vt = np.imag(analytic_signal).tolist()
+            Pht = np.angle(analytic_signal).tolist()
+            Wt = np.diff(Pht).tolist()
+            nt = int(tab_int['T01'][i] / 40)
+            nb = int(tab_int['D02'][i] / 40)
             y, x = wgs84_to_pulc42(tab_int['Latd'][i], tab_int['Long'][i])
-            session.query(Measure).filter(Measure.id == measures[i].id).update({
+            dict_measure = {
                 'x_wgs': tab_int['Long'][i],
                 'y_wgs': tab_int['Latd'][i],
                 'x_pulc': x,
@@ -179,34 +177,49 @@ def load_param():
                 'T_top': tab_int['T01'][i] / 5,
                 'T_bottom': tab_int['D02'][i] / 5,
                 'dT': tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5,
-                'A_top': list_A[0],
-                'A_bottom': list_A[-1],
-                'dA': list_A[-1] - list_A[0],
-                'A_sum': np.sum(list_A),
-                'A_mean': np.mean(list_A),
-                'dVt': list_Vt[-1] - list_Vt[0],
-                'Vt_top': list_Vt[0],
-                'Vt_sum': np.sum(list_Vt),
-                'Vt_mean': np.mean(list_Vt),
-                'dAt': list_At[-1] - list_At[0],
-                'At_top': list_At[0],
-                'At_sum': np.sum(list_At),
-                'At_mean': np.mean(list_At),
-                'dPht': list_Pht[-1] - list_Pht[0],
-                'Pht_top' : list_Pht[0],
-                'Pht_sum': np.sum(list_Pht),
-                'Pht_mean': np.mean(list_Pht),
-                'Wt_top': list_Wt[0],
-                'Wt_mean': np.mean(list_Wt),
-                'Wt_sum': np.sum(list_Wt),
-                'std': np.std(list_A),
-                'k_var': np.var(list_A),
-                'skew': skew(list_A),
-                'kurt': kurtosis(list_A)},
-            synchronize_session="fetch")
+                'A_top': signal[nt],
+                'A_bottom': signal[nb],
+                'dA': signal[nb] - signal[nt],
+                'A_sum': np.sum(signal[nt:nb]),
+                'A_mean': np.mean(signal[nt:nb]),
+                'dVt': Vt[nb] - Vt[nt],
+                'Vt_top': Vt[nt],
+                'Vt_sum': np.sum(Vt[nt:nb]),
+                'Vt_mean': np.mean(Vt[nt:nb]),
+                'dAt': At[nb] - At[nt],
+                'At_top': At[nt],
+                'At_sum': np.sum(At[nt:nb]),
+                'At_mean': np.mean(At[nt:nb]),
+                'dPht': Pht[nb] - Pht[nt],
+                'Pht_top' : Pht[nt],
+                'Pht_sum': np.sum(Pht[nt:nb]),
+                'Pht_mean': np.mean(Pht[nt:nb]),
+                'Wt_top': Wt[nt],
+                'Wt_mean': np.mean(Wt[nt:nb]),
+                'Wt_sum': np.sum(Wt[nt:nb]),
+                'std': np.std(signal),
+                'k_var': np.var(signal),
+                'skew': skew(signal),
+                'kurt': kurtosis(signal)}
+            if grid_db:
+                pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y)
+                pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x)
+                pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y)
+                pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x)
+                pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y)
+                pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x)
+                i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
+                i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
+                i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+                dict_measure['width'] = i_m if i_m > 0 else 0
+                dict_measure['top'] = i_uf
+                dict_measure['land'] = i_r
+                dict_measure['speed'] = dict_measure['width'] * 100 / (tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5)
+                dict_measure['speed_cover'] = (i_r - i_uf) * 100 / (tab_int['T01'][i] / 5)
+            session.query(Measure).filter(Measure.id == measures[i].id).update(dict_measure, synchronize_session="fetch")
             ui.progressBar.setValue(i+1)
         session.commit()
-        update_profile_combobox()
+        update_param_combobox()
 
 
 def delete_profile():
@@ -222,7 +235,7 @@ def delete_profile():
 def update_param_combobox():
     ui.comboBox_param_plast.clear()
     list_columns = Measure.__table__.columns.keys()  # список параметров таблицы
-    [list_columns.remove(i) for i in ['id', 'profile_id', 'number', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc']]  # удаляем не нужные колонки
+    [list_columns.remove(i) for i in ['id', 'profile_id', 'number', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]  # удаляем не нужные колонки
     for i in list_columns:
         if session.query(Measure).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
             ui.comboBox_param_plast.addItem(i)
@@ -230,20 +243,6 @@ def update_param_combobox():
 
 def draw_radarogram():
     clear_current_profile()
-    # if ui.comboBox_atrib.currentText() == 'A':
-    #     atr = Measure.signal
-    # elif ui.comboBox_atrib.currentText() == 'diff':
-    #     atr = Measure.diff
-    # elif ui.comboBox_atrib.currentText() == 'At':
-    #     atr = Measure.At
-    # elif ui.comboBox_atrib.currentText() == 'Vt':
-    #     atr = Measure.Vt
-    # elif ui.comboBox_atrib.currentText() == 'Pht':
-    #     atr = Measure.Pht
-    # elif ui.comboBox_atrib.currentText() == 'Wt':
-    #     atr = Measure.Wt
-    # else:
-    #     atr = Measure.signal
     rad = session.query(Measure.signal).filter(Measure.profile_id == get_profile_id()).all()
     ui.progressBar.setMaximum(len(rad))
     radar = []
@@ -282,8 +281,19 @@ def draw_radarogram():
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
     img.setImage(np.array(radar))
-
     updatePlot()
+
+
+def draw_param():
+    param = ui.comboBox_param_plast.currentText()
+    graph = query_to_list(session.query(literal_column(f'Measure.{param}')).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all())
+    number = query_to_list(session.query(Measure.number).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all())
+    ui.graph.clear()
+    curve = pg.PlotCurveItem(x=number, y=graph)
+    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+    ui.graph.addItem(curve)
+    ui.graph.addItem(curve_filter)
+    ui.graph.showGrid(x=True, y=True)
 
 
 def updatePlot():
@@ -305,3 +315,60 @@ def vacuum():
     conn = connect(DATABASE_NAME)
     conn.execute("VACUUM")
     conn.close()
+
+
+def load_uf_grid():
+    try:
+        file_name = QFileDialog.getOpenFileName(
+            caption=f'Выберите grid-файл структурной карты по кровле продуктивного пласта по объекту {get_object_name()}',
+            filter='*.dat')[0]
+        set_info(file_name, 'blue')
+        tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+                {'grid_table_uf': json.dumps(tab_grid)}, synchronize_session="fetch"
+            )
+        else:
+            new_grid = Grid(object_id=get_object_id(), grid_table_uf=json.dumps(tab_grid))
+            session.add(new_grid)
+        session.commit()
+    except FileNotFoundError:
+        return
+
+
+def load_m_grid():
+    try:
+        file_name = QFileDialog.getOpenFileName(
+            caption=f'Выберите grid-файл карты мощности продуктивного пласта по объекту {get_object_name()}',
+            filter='*.dat')[0]
+        set_info(file_name, 'blue')
+        tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+                {'grid_table_m': json.dumps(tab_grid)}, synchronize_session="fetch"
+            )
+        else:
+            new_grid = Grid(object_id=get_object_id(), grid_table_m=json.dumps(tab_grid))
+            session.add(new_grid)
+        session.commit()
+    except FileNotFoundError:
+        return
+
+
+def load_r_grid():
+    try:
+        file_name = QFileDialog.getOpenFileName(
+            caption=f'Выберите grid-файл карты рельефа по объекту {get_object_name()}',
+            filter='*.dat')[0]
+        set_info(file_name, 'blue')
+        tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+                {'grid_table_r': json.dumps(tab_grid)}, synchronize_session="fetch"
+            )
+        else:
+            new_grid = Grid(object_id=get_object_id(), grid_table_r=json.dumps(tab_grid))
+            session.add(new_grid)
+        session.commit()
+    except FileNotFoundError:
+        return

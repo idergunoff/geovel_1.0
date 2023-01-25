@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text, literal_column
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -20,6 +20,7 @@ class GeoradarObject(Base):
     date_exam = Column(Date, default=datetime.date.today())
 
     profiles = relationship('Profile', back_populates='georadar_object')
+    grid = relationship('Grid', back_populates='object')
 
 
 class Profile(Base):
@@ -39,6 +40,7 @@ class Measure(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
+    number = Column(Integer)
 
     signal = Column(Text)
     # diff = Column(Text)
@@ -95,11 +97,26 @@ class Measure(Base):
 
 class CurrentProfile(Base):
     __tablename__ = 'current_profile'
+
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
     signal = Column(Text)
 
     profile = relationship('Profile', back_populates='current')
+
+
+class Grid(Base):
+    __tablename__ = 'grid'
+
+    id = Column(Integer, primary_key=True)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    grid_table_uf = Column(Text)
+    grid_table_m = Column(Text)
+    grid_table_r = Column(Text)
+
+    object = relationship('GeoradarObject', back_populates='grid')
+
+
 
 # class Signal(Base):
 #     __tablename__ = 'signal'
