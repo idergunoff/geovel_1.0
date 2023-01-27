@@ -117,6 +117,11 @@ class Grid(Base):
     object = relationship('GeoradarObject', back_populates='grid')
 
 
+class FFTSpectr(Base):
+    __tablename__ = 'fft_spectr'
+
+    id = Column(Integer, primary_key=True)
+    spectr = Column(Text)
 
 # class Signal(Base):
 #     __tablename__ = 'signal'

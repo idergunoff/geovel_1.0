@@ -24,3 +24,16 @@ def query_to_list(query):
     """ результаты запроса в список """
     return sum(list(map(list, query)), [])
 
+
+def draw_image(radar):
+    hist.setImageItem(img)
+    hist.setLevels(np.array(radar).min(), np.array(radar).max())
+    colors = [
+        (255, 0, 0),
+        (0, 0, 0),
+        (0, 0, 255)
+    ]
+    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
+    img.setColorMap(cmap)
+    hist.gradient.setColorMap(cmap)
+    img.setImage(np.array(radar))

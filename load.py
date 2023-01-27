@@ -269,18 +269,7 @@ def draw_radarogram():
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
     session.add(new_current)
     session.commit()
-
-    hist.setImageItem(img)
-    hist.setLevels(np.array(radar).min(), np.array(radar).max())
-    colors = [
-        (255, 0, 0),
-        (0, 0, 0),
-        (0, 0, 255)
-    ]
-    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
-    img.setColorMap(cmap)
-    hist.gradient.setColorMap(cmap)
-    img.setImage(np.array(radar))
+    draw_image(radar)
     updatePlot()
 
 
@@ -372,3 +361,10 @@ def load_r_grid():
         session.commit()
     except FileNotFoundError:
         return
+
+
+def save_signal():
+    radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+    pd_radar = pd.DataFrame(radar).transpose()
+    fn = QFileDialog.getSaveFileName(caption="Сохранить сигнал", filter="TXT (*.txt)")
+    pd_radar.to_csv(fn[0], sep=';')
