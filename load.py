@@ -273,6 +273,67 @@ def draw_radarogram():
     updatePlot()
 
 
+
+def draw_current_radarogram():
+    rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+    ui.progressBar.setMaximum(len(rad))
+    radar = []
+    for n, i in enumerate(rad):
+        ui.progressBar.setValue(n + 1)
+        if ui.comboBox_atrib.currentText() == 'A':
+            radar.append(i)
+        elif ui.comboBox_atrib.currentText() == 'diff':
+            radar.append(np.diff(i).tolist())
+        elif ui.comboBox_atrib.currentText() == 'At':
+            analytic_signal = hilbert(i)
+            radar.append(list(map(lambda x: round(x, 2), np.hypot(i, np.imag(analytic_signal)))))
+        elif ui.comboBox_atrib.currentText() == 'Vt':
+            analytic_signal = hilbert(i)
+            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
+        elif ui.comboBox_atrib.currentText() == 'Pht':
+            analytic_signal = hilbert(i)
+            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
+        elif ui.comboBox_atrib.currentText() == 'Wt':
+            analytic_signal = hilbert(i)
+            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
+        else:
+            radar.append(i)
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
+    session.add(new_current)
+    session.commit()
+    draw_image(radar)
+    updatePlot()
+
+
+
+
+
+def draw_max_min():
+    rad = session.query(CurrentProfile.signal).first()
+    radar = json.loads(rad[0])
+    radar_max_min = []
+    print(len(radar))
+    ui.progressBar.setMaximum(len(radar))
+    for n, sig in enumerate(radar):
+        diff_signal = np.diff(sig)
+
+        max_points = argrelmax(diff_signal)
+        min_points = argrelmin(diff_signal)
+        signal_max_min = []
+        for j in range(512):
+            if j in max_points[0]:
+                signal_max_min.append(1)
+            elif j in min_points[0]:
+                signal_max_min.append(-1)
+            else:
+                signal_max_min.append(0)
+        radar_max_min.append(signal_max_min)
+        ui.progressBar.setValue(n + 1)
+    print(len(radar_max_min))
+    draw_image(radar_max_min)
+    updatePlot()
+
+
 def draw_param():
     param = ui.comboBox_param_plast.currentText()
     graph = query_to_list(session.query(literal_column(f'Measure.{param}')).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all())
@@ -289,10 +350,26 @@ def updatePlot():
     rad = session.query(CurrentProfile.signal).first()
     radar = json.loads(rad[0])
     selected = roi.getArrayRegion(np.array(radar), img)
-    # n = form.spinBox.value()//2
+    n = ui.spinBox_roi.value()//2
     ui.signal.plot(y=range(512, 0, -1), x=selected.mean(axis=0), clear=True, pen='r')
-    ui.signal.plot(y=range(512, 0, -1), x=selected[10])
+    ui.signal.plot(y=range(512, 0, -1), x=selected[n])
     ui.signal.showGrid(x=True, y=True)
+
+
+def draw_rad_line():
+    radarogramma.clear()
+    radarogramma.addItem(img)
+    radarogramma.addItem(roi)
+    rad = session.query(CurrentProfile.signal).first()
+    radar = json.loads(rad[0])
+    draw_image(radar)
+    updatePlot()
+    line_up = ui.spinBox_rad_up.value()
+    line_down = ui.spinBox_rad_down.value()
+    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
+    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
+    radarogramma.addItem(l_up)
+    radarogramma.addItem(l_down)
 
 
 def clear_current_profile():
@@ -368,3 +445,7 @@ def save_signal():
     pd_radar = pd.DataFrame(radar).transpose()
     fn = QFileDialog.getSaveFileName(caption="Сохранить сигнал", filter="TXT (*.txt)")
     pd_radar.to_csv(fn[0], sep=';')
+
+
+def changeSpinBox():
+    roi.setSize([ui.spinBox_roi.value(), 512])

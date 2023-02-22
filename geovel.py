@@ -19,6 +19,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
 
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
+ui.pushButton_draw_cur.clicked.connect(draw_current_radarogram)
 ui.pushButton_vacuum.clicked.connect(vacuum)
 ui.pushButton_uf.clicked.connect(load_uf_grid)
 ui.pushButton_m.clicked.connect(load_m_grid)
@@ -31,6 +32,7 @@ ui.pushButton_wiener.clicked.connect(calc_wiener)
 ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
 ui.pushButton_reset.clicked.connect(reset_spinbox_fft)
+ui.pushButton_maxmin.clicked.connect(draw_max_min)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -45,6 +47,9 @@ ui.comboBox_param_plast.activated.connect(draw_param)
 
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)
+ui.spinBox_roi.valueChanged.connect(changeSpinBox)
+ui.spinBox_rad_up.valueChanged.connect(draw_rad_line)
+ui.spinBox_rad_down.valueChanged.connect(draw_rad_line)
 
 roi.sigRegionChanged.connect(updatePlot)
 

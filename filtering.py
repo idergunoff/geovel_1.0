@@ -10,18 +10,32 @@ def clear_spectr():
 
 def calc_add_fft():
     radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+
     axes_fft = (0, 1) if ui.checkBox_fft_2axes.isChecked() else 1
-    radar_fft = rfft2(radar, axes=axes_fft)
+    if ui.checkBox_fft_int.isChecked():
+        line_up = ui.spinBox_rad_up.value()
+        line_down = ui.spinBox_rad_down.value()
+        radar_fft = rfft2(radar[line_up:line_down], axes=axes_fft)
+    else:
+        radar_fft = rfft2(radar, axes=axes_fft)
+
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     ui.spinBox_fft_down.setMaximum(len(radar_fft[0]))
     ui.spinBox_ftt_up.setMaximum(len(radar_fft[0]))
     up = ui.spinBox_ftt_up.value()
     down = ui.spinBox_fft_down.value()
+
+    window = cosine(down - up + 1)
+    for i in range(len(window)):
+        window[i] = 1 - window[i]
     for i in range(len(radar_fft)):
-        radar_fft[i][up:down] = 0
+        radar_fft[i][up:down+1] = radar_fft[i][up:down+1] * window
+
     radar_filter = irfft2(radar_fft, axes=axes_fft)
+
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar_filter.tolist()))
     session.add(new_current)
@@ -31,6 +45,7 @@ def calc_add_fft():
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     clear_spectr()
     new_spectr = FFTSpectr(spectr=json.dumps(np.abs(sum_radar_fft[1:]).tolist()))
     session.add(new_spectr)
@@ -40,19 +55,36 @@ def calc_add_fft():
 
 def calc_fft():
     draw_radarogram()
+
     radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+
     axes_fft = (0, 1) if ui.checkBox_fft_2axes.isChecked() else 1
-    radar_fft = rfft2(radar, axes=axes_fft)
+    if ui.checkBox_fft_int.isChecked():
+        line_up = ui.spinBox_rad_up.value()
+        line_down = ui.spinBox_rad_down.value()
+        radar_fft = rfft2(radar[line_up:line_down], axes=axes_fft)
+    else:
+        radar_fft = rfft2(radar, axes=axes_fft)
+
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     ui.spinBox_fft_down.setMaximum(len(radar_fft[0]))
     ui.spinBox_ftt_up.setMaximum(len(radar_fft[0]))
     up = ui.spinBox_ftt_up.value()
     down = ui.spinBox_fft_down.value()
+
+    window = cosine(down - up + 1)
+    for i in range(len(window)):
+        window[i] = 1 - window[i]
     for i in range(len(radar_fft)):
-        radar_fft[i][up:down] = 0
+        radar_fft[i][up:down+1] = radar_fft[i][up:down+1] * window
+
+
     radar_filter = irfft2(radar_fft, axes=axes_fft)
+
+
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar_filter.tolist()))
     session.add(new_current)
@@ -62,6 +94,7 @@ def calc_fft():
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     clear_spectr()
     new_spectr = FFTSpectr(spectr=json.dumps(np.abs(sum_radar_fft[1:]).tolist()))
     session.add(new_spectr)
@@ -71,18 +104,32 @@ def calc_fft():
 
 def calc_ifft():
     radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+
     axes_fft = (0, 1) if ui.checkBox_fft_2axes.isChecked() else 1
-    radar_fft = rfft2(radar, axes=axes_fft)
+    if ui.checkBox_fft_int.isChecked():
+        line_up = ui.spinBox_rad_up.value()
+        line_down = ui.spinBox_rad_down.value()
+        radar_fft = rfft2(radar[line_up:line_down], axes=axes_fft)
+    else:
+        radar_fft = rfft2(radar, axes=axes_fft)
+
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     ui.spinBox_fft_down.setMaximum(len(radar_fft[0]))
     ui.spinBox_ftt_up.setMaximum(len(radar_fft[0]))
     up = ui.spinBox_ftt_up.value()
     down = ui.spinBox_fft_down.value()
+
+    window = cosine(down - up + 1)
+    for i in range(len(window)):
+        window[i] = 1 - window[i]
     for i in range(len(radar_fft)):
-        radar_fft[i][up:down] = 0
+        radar_fft[i][up:down+1] = radar_fft[i][up:down+1] * window
+
     radar_filter = irfft2(radar_fft, axes=axes_fft)
+
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar_filter.tolist()))
     session.add(new_current)
@@ -94,6 +141,7 @@ def calc_ifft():
     sum_radar_fft = [0]*len(radar_fft[0])
     for i in range(len(radar_fft)):
         sum_radar_fft += radar_fft[i]
+
     clear_spectr()
     new_spectr = FFTSpectr(spectr=json.dumps(np.abs(sum_radar_fft[1:]).tolist()))
     session.add(new_spectr)

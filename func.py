@@ -37,3 +37,7 @@ def draw_image(radar):
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
     img.setImage(np.array(radar))
+
+
+
+

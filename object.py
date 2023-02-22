@@ -11,8 +11,9 @@ import pandas as pd
 import json
 from scipy.stats import skew, kurtosis
 from PyQt5.QtWidgets import QFileDialog, QCheckBox
-from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter
+from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax
 from scipy.fft import rfft2, irfft2
+from scipy.signal.windows import cosine
 
 
 
@@ -31,7 +32,7 @@ hist = pg.HistogramLUTItem(gradientPosition='left')
 ui.radarogram.addItem(hist)
 
 
-roi = pg.ROI(pos=[0, 0], size=[20, 512], maxBounds=QRect(0, 0, 100000000, 512))
+roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), 512], maxBounds=QRect(0, 0, 100000000, 512))
 radarogramma.addItem(roi)
 
 
