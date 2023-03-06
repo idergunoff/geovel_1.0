@@ -413,7 +413,7 @@ def add_window():
     ui_nw.info.setText(ui.info.toHtml())
 
     def updatePlot_nw():
-        rad = session.query(CurrentProfile.signal).first()
+        rad = session.query(WindowProfile.signal).filter(WindowProfile.id == ui_nw.label_id_nw_rad.text()).first()
         radar = json.loads(rad[0])
         selected = roi.getArrayRegion(np.array(radar), img)
         n = ui.spinBox_roi.value() // 2
