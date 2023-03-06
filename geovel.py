@@ -3,9 +3,19 @@ import traceback
 from object import *
 from load import *
 from filtering import *
+from draw import *
 
 
 MainWindow.show()
+
+
+# def mouseMoved(evt):
+#     """ Отслеживаем координаты курсора и прокрутка таблицы до выбранного курсором значения """
+#     pos = evt[0]
+#     vb = radarogramma.vb
+#     if radarogramma.sceneBoundingRect().contains(pos):
+#         mousePoint = vb.mapSceneToView(pos)
+#         print(mousePoint.x(), mousePoint.y())
 
 
 def log_uncaught_exceptions(ex_cls, ex, tb):
@@ -16,6 +26,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
     QtWidgets.QMessageBox.critical(None, 'Error', text)
     sys.exit()
 
+# proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
 
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
@@ -33,6 +44,13 @@ ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
 ui.pushButton_reset.clicked.connect(reset_spinbox_fft)
 ui.pushButton_maxmin.clicked.connect(draw_max_min)
+ui.pushButton_rfft2.clicked.connect(calc_rfft2)
+ui.pushButton_irfft2.clicked.connect(calc_irfft2)
+ui.pushButton_dct.clicked.connect(calc_dctn)
+ui.pushButton_idct.clicked.connect(calc_idctn)
+ui.pushButton_log.clicked.connect(calc_log)
+ui.pushButton_rang.clicked.connect(calc_rang)
+ui.pushButton_add_window.clicked.connect(add_window)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -45,6 +63,8 @@ ui.comboBox_object.activated.connect(update_profile_combobox)
 ui.comboBox_profile.activated.connect(update_param_combobox)
 ui.comboBox_param_plast.activated.connect(draw_param)
 
+ui.checkBox_minmax.stateChanged.connect(choose_minmax)
+
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_roi.valueChanged.connect(changeSpinBox)
@@ -56,7 +76,10 @@ roi.sigRegionChanged.connect(updatePlot)
 
 update_object()
 clear_current_profile()
+clear_current_profile_min_max()
 clear_spectr()
+clear_window_profile()
+set_info('Старт...', 'green')
 
 
 

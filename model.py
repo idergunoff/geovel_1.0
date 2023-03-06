@@ -33,6 +33,8 @@ class Profile(Base):
     georadar_object = relationship('GeoradarObject', back_populates='profiles')
     measures = relationship('Measure', back_populates='profile')
     current = relationship('CurrentProfile', back_populates='profile')
+    window = relationship('WindowProfile', back_populates='profile')
+    min_max = relationship('CurrentProfileMinMax', back_populates='profile')
 
 
 class Measure(Base):
@@ -105,6 +107,16 @@ class CurrentProfile(Base):
     profile = relationship('Profile', back_populates='current')
 
 
+class CurrentProfileMinMax(Base):
+    __tablename__ = 'current_profile_min_max'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    signal = Column(Text)
+
+    profile = relationship('Profile', back_populates='min_max')
+
+
 class Grid(Base):
     __tablename__ = 'grid'
 
@@ -122,6 +134,16 @@ class FFTSpectr(Base):
 
     id = Column(Integer, primary_key=True)
     spectr = Column(Text)
+
+
+class WindowProfile(Base):
+    __tablename__ = 'window_profile'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    signal = Column(Text)
+
+    profile = relationship('Profile', back_populates='window')
 
 # class Signal(Base):
 #     __tablename__ = 'signal'

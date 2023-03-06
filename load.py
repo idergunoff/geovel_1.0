@@ -59,63 +59,17 @@ def load_profile():
             list_signal = list(pd_radar['ALn'].loc[i * 512:(i + 1) * 512])
             ui.progressBar.setValue(i+1)
             if len(set(list_signal)) > 1:
-                # analytic_signal = hilbert(list_signal)
-                # Vt = list(map(lambda x: round(x, 2), np.imag(analytic_signal)))
-                # At = list(map(lambda x: round(x, 2), np.hypot(list_signal, np.imag(analytic_signal))))
-                # Pht = list(map(lambda x: round(x, 2), np.angle(analytic_signal)))
-                # Wt = list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal))))
                 new_measure = Measure(
                     profile_id=new_profile.id,
                     signal = json.dumps(list_signal),
                     number = i
-                    # diff = json.dumps(np.diff(list_signal).tolist()),
-                    # Vt = json.dumps(Vt),
-                    # At = json.dumps(At),
-                    # Pht = json.dumps(Pht),
-                    # Wt = json.dumps(Wt)
                 )
                 session.add(new_measure)
         session.commit()
+        set_info(f'Профиль загружен ({get_object_name()})', 'green')
     except KeyError:
         set_info('Не правильный формат файла', 'red')
         return
-    #
-    # session.commit()
-    # for i in range(pd_radar['measure_id'].max() + 1):
-    #     new_measure = Measure(profile_id=new_profile.id, number=i)
-    #     session.add(new_measure)
-    # session.commit()
-    # l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
-    # m = [i for i in l for _ in range(512)]
-    # # print(m)
-    # pd_radar['measure_id'] = m
-    # # print(pd_radar)
-    # pd_radar.to_sql('signal', con=engine, if_exists='append', index=False)
-    #
-    # list_zero = list(set(query_to_list(session.query(Measure.id).join(Signal).filter(Signal.A == 0).all())))
-    # for i in list_zero:
-    #     session.query(Measure).filter(Measure.id == i).delete()
-    # session.query(Signal).filter(Signal.A == 0).delete()
-    # session.commit()
-    #
-    # l = query_to_list(session.query(Measure.id).filter(Measure.profile_id == new_profile.id).all())
-    # ui.progressBar.setMaximum(len(l))
-    # ui.progressBar.setValue(0)
-    # for n, i in enumerate(l):
-    #
-    #     pd_signal = pd.read_sql(f'SELECT * FROM signal WHERE measure_id={i};', engine, index_col='id')
-    #     session.query(Signal).filter(Signal.measure_id == i).delete()
-    #     session.commit()
-    #     pd_signal['diff'] = pd_signal['A'].diff()
-    #     analytic_signal = hilbert(pd_signal['A'])
-    #     pd_signal['Vt'] = np.imag(analytic_signal)
-    #     pd_signal['At'] = np.hypot(pd_signal['A'], np.imag(analytic_signal))
-    #     pd_signal['Pht'] = np.angle(analytic_signal)
-    #     pd_signal['Wt'] = pd_signal['Pht'].diff()
-    #     # print(pd_signal)
-    #     pd_signal.to_sql('signal', con=engine, if_exists='append', index=True)
-    #     ui.progressBar.setValue(n + 1)
-    # session.commit()
     update_profile_combobox()
 
 
@@ -219,6 +173,7 @@ def load_param():
             session.query(Measure).filter(Measure.id == measures[i].id).update(dict_measure, synchronize_session="fetch")
             ui.progressBar.setValue(i+1)
         session.commit()
+        set_info(f'Параметры загружены ({get_object_name()}, {get_profile_name()})', 'green')
         update_param_combobox()
 
 
@@ -242,6 +197,8 @@ def update_param_combobox():
 
 
 def draw_radarogram():
+    global l_up, l_down
+    ui.info.clear()
     clear_current_profile()
     rad = session.query(Measure.signal).filter(Measure.profile_id == get_profile_id()).all()
     ui.progressBar.setMaximum(len(rad))
@@ -266,15 +223,27 @@ def draw_radarogram():
             radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
         else:
             radar.append(json.loads(i[0]))
+    clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
     session.add(new_current)
     session.commit()
+    save_max_min(radar)
+    ui.checkBox_minmax.setCheckState(0)
     draw_image(radar)
+    set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
     updatePlot()
+    line_up = ui.spinBox_rad_up.value()
+    line_down = ui.spinBox_rad_down.value()
+    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
+    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
+    radarogramma.addItem(l_up)
+    radarogramma.addItem(l_down)
+
 
 
 
 def draw_current_radarogram():
+    global l_up, l_down
     rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     ui.progressBar.setMaximum(len(rad))
     radar = []
@@ -298,13 +267,22 @@ def draw_current_radarogram():
             radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
         else:
             radar.append(i)
+    clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
     session.add(new_current)
     session.commit()
+    save_max_min(radar)
+    if ui.checkBox_minmax.isChecked():
+        radar = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
     draw_image(radar)
+    set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" для текущего профиля', 'blue')
     updatePlot()
-
-
+    line_up = ui.spinBox_rad_up.value()
+    line_down = ui.spinBox_rad_down.value()
+    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
+    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
+    radarogramma.addItem(l_up)
+    radarogramma.addItem(l_down)
 
 
 
@@ -312,26 +290,25 @@ def draw_max_min():
     rad = session.query(CurrentProfile.signal).first()
     radar = json.loads(rad[0])
     radar_max_min = []
-    print(len(radar))
     ui.progressBar.setMaximum(len(radar))
     for n, sig in enumerate(radar):
-        diff_signal = np.diff(sig)
+        max_points, _ = find_peaks(np.array(sig))
+        min_points, _ = find_peaks(-np.array(sig))
+        # diff_signal = np.diff(sig) возможно 2min/max
+        # max_points = argrelmax(diff_signal)
+        # min_points = argrelmin(diff_signal)
+        signal_max_min = build_list(max_points, min_points)
 
-        max_points = argrelmax(diff_signal)
-        min_points = argrelmin(diff_signal)
-        signal_max_min = []
-        for j in range(512):
-            if j in max_points[0]:
-                signal_max_min.append(1)
-            elif j in min_points[0]:
-                signal_max_min.append(-1)
-            else:
-                signal_max_min.append(0)
         radar_max_min.append(signal_max_min)
         ui.progressBar.setValue(n + 1)
-    print(len(radar_max_min))
+    clear_current_profile()
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar_max_min))
+    session.add(new_current)
+    session.commit()
+
     draw_image(radar_max_min)
     updatePlot()
+    set_info(f'Отрисовка "max/min" для текущего профиля', 'blue')
 
 
 def draw_param():
@@ -344,43 +321,22 @@ def draw_param():
     ui.graph.addItem(curve)
     ui.graph.addItem(curve_filter)
     ui.graph.showGrid(x=True, y=True)
+    set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')
 
 
-def updatePlot():
-    rad = session.query(CurrentProfile.signal).first()
-    radar = json.loads(rad[0])
-    selected = roi.getArrayRegion(np.array(radar), img)
-    n = ui.spinBox_roi.value()//2
-    ui.signal.plot(y=range(512, 0, -1), x=selected.mean(axis=0), clear=True, pen='r')
-    ui.signal.plot(y=range(512, 0, -1), x=selected[n])
-    ui.signal.showGrid(x=True, y=True)
+
 
 
 def draw_rad_line():
-    radarogramma.clear()
-    radarogramma.addItem(img)
-    radarogramma.addItem(roi)
-    rad = session.query(CurrentProfile.signal).first()
-    radar = json.loads(rad[0])
-    draw_image(radar)
-    updatePlot()
+    global l_up, l_down
+    radarogramma.removeItem(l_up)
+    radarogramma.removeItem(l_down)
     line_up = ui.spinBox_rad_up.value()
     line_down = ui.spinBox_rad_down.value()
     l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
     l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
     radarogramma.addItem(l_up)
     radarogramma.addItem(l_down)
-
-
-def clear_current_profile():
-    session.query(CurrentProfile).delete()
-    session.commit()
-
-
-def vacuum():
-    conn = connect(DATABASE_NAME)
-    conn.execute("VACUUM")
-    conn.close()
 
 
 def load_uf_grid():
@@ -398,6 +354,7 @@ def load_uf_grid():
             new_grid = Grid(object_id=get_object_id(), grid_table_uf=json.dumps(tab_grid))
             session.add(new_grid)
         session.commit()
+        set_info(f'Загружен grid-файл структурной карты по кровле продуктивного пласта по объекту {get_object_name()}', 'green')
     except FileNotFoundError:
         return
 
@@ -417,6 +374,7 @@ def load_m_grid():
             new_grid = Grid(object_id=get_object_id(), grid_table_m=json.dumps(tab_grid))
             session.add(new_grid)
         session.commit()
+        set_info(f'Загружен grid-файл карты мощности продуктивного пласта по объекту {get_object_name()}', 'green')
     except FileNotFoundError:
         return
 
@@ -436,6 +394,7 @@ def load_r_grid():
             new_grid = Grid(object_id=get_object_id(), grid_table_r=json.dumps(tab_grid))
             session.add(new_grid)
         session.commit()
+        set_info(f'Загружен grid-файл карты рельефа по объекту {get_object_name()}', 'green')
     except FileNotFoundError:
         return
 
@@ -446,6 +405,3 @@ def save_signal():
     fn = QFileDialog.getSaveFileName(caption="Сохранить сигнал", filter="TXT (*.txt)")
     pd_radar.to_csv(fn[0], sep=';')
 
-
-def changeSpinBox():
-    roi.setSize([ui.spinBox_roi.value(), 512])

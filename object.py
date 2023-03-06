@@ -9,9 +9,9 @@ import numpy as np
 import pyqtgraph as pg
 import pandas as pd
 import json
-from scipy.stats import skew, kurtosis
+from scipy.stats import skew, kurtosis, rankdata
 from PyQt5.QtWidgets import QFileDialog, QCheckBox
-from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax
+from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
 from scipy.fft import rfft2, irfft2
 from scipy.signal.windows import cosine
 
