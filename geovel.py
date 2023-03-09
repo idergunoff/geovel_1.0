@@ -4,18 +4,15 @@ from object import *
 from load import *
 from filtering import *
 from draw import *
+from layer import *
 
 
 MainWindow.show()
 
 
-# def mouseMoved(evt):
-#     """ Отслеживаем координаты курсора и прокрутка таблицы до выбранного курсором значения """
-#     pos = evt[0]
-#     vb = radarogramma.vb
-#     if radarogramma.sceneBoundingRect().contains(pos):
-#         mousePoint = vb.mapSceneToView(pos)
-#         print(mousePoint.x(), mousePoint.y())
+def show_globals():
+    print(globals().keys())
+
 
 
 def log_uncaught_exceptions(ex_cls, ex, tb):
@@ -26,7 +23,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
     QtWidgets.QMessageBox.critical(None, 'Error', text)
     sys.exit()
 
-# proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
+img.scene().sigMouseClicked.connect(mouseClicked)
 
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
@@ -51,6 +48,10 @@ ui.pushButton_idct.clicked.connect(calc_idctn)
 ui.pushButton_log.clicked.connect(calc_log)
 ui.pushButton_rang.clicked.connect(calc_rang)
 ui.pushButton_add_window.clicked.connect(add_window)
+ui.pushButton_add_layer.clicked.connect(add_layer)
+ui.pushButton_remove_layer.clicked.connect(remove_layer)
+ui.pushButton_edges_layer.clicked.connect(add_edges)
+ui.pushButton_find_oil.clicked.connect(show_globals)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -74,12 +75,15 @@ ui.spinBox_rad_down.valueChanged.connect(draw_rad_line)
 roi.sigRegionChanged.connect(updatePlot)
 
 
+
 update_object()
 clear_current_profile()
 clear_current_profile_min_max()
 clear_spectr()
 clear_window_profile()
+update_layers()
 set_info('Старт...', 'green')
+
 
 
 

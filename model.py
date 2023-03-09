@@ -35,6 +35,7 @@ class Profile(Base):
     current = relationship('CurrentProfile', back_populates='profile')
     window = relationship('WindowProfile', back_populates='profile')
     min_max = relationship('CurrentProfileMinMax', back_populates='profile')
+    layers = relationship('Layers', back_populates='profile')
 
 
 class Measure(Base):
@@ -45,12 +46,6 @@ class Measure(Base):
     number = Column(Integer)
 
     signal = Column(Text)
-    # diff = Column(Text)
-    # max_min = Column(Float)
-    # At = Column(Text)
-    # Vt = Column(Text)
-    # Pht = Column(Text)
-    # Wt = Column(Text)
 
     x_wgs = Column(Float)
     y_wgs = Column(Float)
@@ -145,22 +140,23 @@ class WindowProfile(Base):
 
     profile = relationship('Profile', back_populates='window')
 
-# class Signal(Base):
-#     __tablename__ = 'signal'
-#
-#     id = Column(Integer, primary_key=True)
-#     measure_id = Column(Integer, ForeignKey('measure.id'))
-#     time_ns = Column(Integer)
-#     A = Column(Float)
-#     diff = Column(Float)
-#     diff2 = Column(Float)
-#     max_min = Column(Float)
-#     At = Column(Float)
-#     Vt = Column(Float)
-#     Pht = Column(Float)
-#     Wt = Column(Float)
-#
-#     measure = relationship('Measure', back_populates='signals')
 
+class Layers(Base):
+    __tablename__ = 'layers'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    layer_title = Column(Text)
+
+    profile = relationship('Profile', back_populates='layers')
+
+
+class PointsOfLayer(Base):
+    __tablename__ = 'points_of_layer'
+
+    id = Column(Integer, primary_key=True)
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+    point_x = Column(Float)
+    point_y = Column(Float)
 
 Base.metadata.create_all(engine)

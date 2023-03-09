@@ -194,6 +194,7 @@ def update_param_combobox():
     for i in list_columns:
         if session.query(Measure).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
             ui.comboBox_param_plast.addItem(i)
+    update_layers()
 
 
 def draw_radarogram():
@@ -238,6 +239,8 @@ def draw_radarogram():
     l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
     radarogramma.addItem(l_up)
     radarogramma.addItem(l_down)
+    update_layers()
+    draw_layers()
 
 
 
