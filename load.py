@@ -327,9 +327,6 @@ def draw_param():
     set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')
 
 
-
-
-
 def draw_rad_line():
     global l_up, l_down
     radarogramma.removeItem(l_up)

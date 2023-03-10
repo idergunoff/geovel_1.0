@@ -95,9 +95,10 @@ def updatePlot():
     radar = json.loads(rad[0])
     selected = roi.getArrayRegion(np.array(radar), img)
     n = ui.spinBox_roi.value()//2
-    ui.signal.plot(y=range(512, 0, -1), x=selected.mean(axis=0), clear=True, pen='r')
-    ui.signal.plot(y=range(512, 0, -1), x=selected[n])
+    ui.signal.plot(y=range(0, 512), x=selected.mean(axis=0), clear=True, pen='r')
+    ui.signal.plot(y=range(0, 512), x=selected[n])
     ui.signal.showGrid(x=True, y=True)
+    ui.signal.invertY(True)
 
 
 def save_max_min(radar):

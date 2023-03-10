@@ -15,6 +15,32 @@ def show_globals():
 
 
 
+def mouse_moved_to_signal(evt):
+    """ Отслеживаем координаты курсора и отображение на графике сигнала """
+    global hor_line_sig, hor_line_rad, vert_line_rad, vert_line_graph
+    if 'hor_line_sig' in globals():
+        ui.signal.removeItem(hor_line_sig)
+        radarogramma.removeItem(hor_line_rad)
+        radarogramma.removeItem(vert_line_rad)
+        ui.graph.removeItem(vert_line_graph)
+    pos = evt[0]
+    vb = radarogramma.vb
+    if radarogramma.sceneBoundingRect().contains(pos):
+        mousePoint = vb.mapSceneToView(pos)
+        hor_line_sig = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w',width=0.5, dash=[4, 7]))
+        hor_line_rad = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+        vert_line_rad = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+        vert_line_graph = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+        ui.signal.addItem(hor_line_sig)
+        radarogramma.addItem(hor_line_rad)
+        radarogramma.addItem(vert_line_rad)
+        ui.graph.addItem(vert_line_graph)
+
+
+
+proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mouse_moved_to_signal)
+
+
 def log_uncaught_exceptions(ex_cls, ex, tb):
     """ Вывод ошибок программы """
     text = '{}: {}:\n'.format(ex_cls.__name__, ex)
