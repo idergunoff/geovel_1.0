@@ -51,20 +51,15 @@ def load_profile():
     except FileNotFoundError:
         return
     try:
-        new_profile = Profile(object_id=get_object_id(), title=file_name.split('/')[-1].split('.')[0])
-        session.add(new_profile)
-        session.commit()
         ui.progressBar.setMaximum(int(len(pd_radar.index)/512))
+        signal = []
         for i in range(int(len(pd_radar.index)/512)):
             list_signal = list(pd_radar['ALn'].loc[i * 512:(i + 1) * 512])
             ui.progressBar.setValue(i+1)
             if len(set(list_signal)) > 1:
-                new_measure = Measure(
-                    profile_id=new_profile.id,
-                    signal = json.dumps(list_signal),
-                    number = i
-                )
-                session.add(new_measure)
+                signal.append(list_signal)
+        new_profile = Profile(object_id=get_object_id(), title=file_name.split('/')[-1].split('.')[0], signal=json.dumps(signal))
+        session.add(new_profile)
         session.commit()
         set_info(f'Профиль загружен ({get_object_name()})', 'green')
     except KeyError:
@@ -78,7 +73,7 @@ def update_profile_combobox():
     ui.comboBox_profile.clear()
     try:
         for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
-            count_measure = session.query(Measure).filter(Measure.profile_id == i.id).count()
+            count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
             ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
         update_param_combobox()
     except ValueError:
@@ -102,9 +97,8 @@ def load_param():
         tab_int = tab_int.applymap(lambda x: float(str(x).replace(',', '.')))
     except FileNotFoundError:
         return
-
-    measures = session.query(Measure).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all()
-    if len(measures) != len(tab_int.index):
+    signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
+    if len(signals) != len(tab_int.index):
         set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах', 'red')
     else:
         ui.progressBar.setMaximum(len(tab_int.index))
@@ -113,8 +107,11 @@ def load_param():
             pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
             pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
             pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+        x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l, T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, Vt_mean_l, dAt_l, At_top_l, \
+        At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l = \
+            [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
         for i in tab_int.index:
-            signal = json.loads(measures[i].signal)
+            signal = signals[i]
             analytic_signal = hilbert(signal)
             At = np.hypot(signal, np.imag(analytic_signal)).tolist()
             Vt = np.imag(analytic_signal).tolist()
@@ -123,38 +120,37 @@ def load_param():
             nt = int(tab_int['T01'][i] / 40)
             nb = int(tab_int['D02'][i] / 40)
             y, x = wgs84_to_pulc42(tab_int['Latd'][i], tab_int['Long'][i])
-            dict_measure = {
-                'x_wgs': tab_int['Long'][i],
-                'y_wgs': tab_int['Latd'][i],
-                'x_pulc': x,
-                'y_pulc': y,
-                'T_top': tab_int['T01'][i] / 5,
-                'T_bottom': tab_int['D02'][i] / 5,
-                'dT': tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5,
-                'A_top': signal[nt],
-                'A_bottom': signal[nb],
-                'dA': signal[nb] - signal[nt],
-                'A_sum': np.sum(signal[nt:nb]),
-                'A_mean': np.mean(signal[nt:nb]),
-                'dVt': Vt[nb] - Vt[nt],
-                'Vt_top': Vt[nt],
-                'Vt_sum': np.sum(Vt[nt:nb]),
-                'Vt_mean': np.mean(Vt[nt:nb]),
-                'dAt': At[nb] - At[nt],
-                'At_top': At[nt],
-                'At_sum': np.sum(At[nt:nb]),
-                'At_mean': np.mean(At[nt:nb]),
-                'dPht': Pht[nb] - Pht[nt],
-                'Pht_top' : Pht[nt],
-                'Pht_sum': np.sum(Pht[nt:nb]),
-                'Pht_mean': np.mean(Pht[nt:nb]),
-                'Wt_top': Wt[nt],
-                'Wt_mean': np.mean(Wt[nt:nb]),
-                'Wt_sum': np.sum(Wt[nt:nb]),
-                'std': np.std(signal),
-                'k_var': np.var(signal),
-                'skew': skew(signal),
-                'kurt': kurtosis(signal)}
+            x_wgs_l.append(tab_int['Long'][i])
+            y_wgs_l.append(tab_int['Latd'][i])
+            x_pulc_l.append(x)
+            y_pulc_l.append(y)
+            T_top_l.append(tab_int['T01'][i] / 5)
+            T_bottom_l.append(tab_int['D02'][i] / 5)
+            dT_l.append(tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5)
+            A_top_l.append(signal[nt])
+            A_bottom_l.append(signal[nb])
+            dA_l.append(signal[nb] - signal[nt])
+            A_sum_l.append(float(np.sum(signal[nt:nb])))
+            A_mean_l.append(float(np.mean(signal[nt:nb])))
+            dVt_l.append(Vt[nb] - Vt[nt])
+            Vt_top_l.append(Vt[nt])
+            Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
+            Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
+            dAt_l.append(At[nb] - At[nt])
+            At_top_l.append(At[nt])
+            At_sum_l.append(float(np.sum(At[nt:nb])))
+            At_mean_l.append(float(np.mean(At[nt:nb])))
+            dPht_l.append(Pht[nb] - Pht[nt])
+            Pht_top_l.append(Pht[nt])
+            Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
+            Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
+            Wt_top_l.append(Wt[nt])
+            Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
+            Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
+            std_l.append(float(np.std(signal[nt:nb])))
+            k_var_l.append(float(np.var(signal[nt:nb])))
+            skew_l.append(skew(signal[nt:nb]))
+            kurt_l.append(kurtosis(signal[nt:nb]))
             if grid_db:
                 pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y)
                 pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x)
@@ -165,13 +161,51 @@ def load_param():
                 i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
                 i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
                 i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
-                dict_measure['width'] = i_m if i_m > 0 else 0
-                dict_measure['top'] = i_uf
-                dict_measure['land'] = i_r
-                dict_measure['speed'] = dict_measure['width'] * 100 / (tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5)
-                dict_measure['speed_cover'] = (i_r - i_uf) * 100 / (tab_int['T01'][i] / 5)
-            session.query(Measure).filter(Measure.id == measures[i].id).update(dict_measure, synchronize_session="fetch")
+                im = i_m if i_m > 0 else 0
+                width_l.append(im)
+                top_l.append(i_uf)
+                land_l.append(i_r)
+                speed_l.append(im * 100 / (tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5))
+                speed_cover_l.append((i_r - i_uf) * 100 / (tab_int['T01'][i] / 5))
             ui.progressBar.setValue(i+1)
+        dict_signal = {'x_wgs': json.dumps(x_wgs_l),
+                       'y_wgs': json.dumps(y_wgs_l),
+                        'x_pulc': json.dumps(x_pulc_l),
+                        'y_pulc': json.dumps(y_pulc_l),
+                        'T_top': json.dumps(T_top_l),
+                        'T_bottom': json.dumps(T_bottom_l),
+                        'dT': json.dumps(dT_l),
+                        'A_top': json.dumps(A_top_l),
+                        'A_bottom': json.dumps(A_bottom_l),
+                        'dA': json.dumps(dA_l),
+                        'A_sum': json.dumps(A_sum_l),
+                        'A_mean': json.dumps(A_mean_l),
+                        'dVt': json.dumps(dVt_l),
+                        'Vt_top': json.dumps(Vt_top_l),
+                        'Vt_sum': json.dumps(Vt_sum_l),
+                        'Vt_mean': json.dumps(Vt_mean_l),
+                        'dAt': json.dumps(dAt_l),
+                        'At_top': json.dumps(At_top_l),
+                        'At_sum': json.dumps(At_sum_l),
+                        'At_mean': json.dumps(At_mean_l),
+                        'dPht': json.dumps(dPht_l),
+                        'Pht_top': json.dumps(Pht_top_l),
+                        'Pht_sum': json.dumps(Pht_sum_l),
+                        'Pht_mean': json.dumps(Pht_mean_l),
+                        'Wt_top': json.dumps(Wt_top_l),
+                        'Wt_mean': json.dumps(Wt_mean_l),
+                        'Wt_sum': json.dumps(Wt_sum_l),
+                        'std': json.dumps(std_l),
+                        'k_var': json.dumps(k_var_l),
+                        'skew': json.dumps(skew_l),
+                        'kurt': json.dumps(kurt_l)}
+        if grid_db:
+            dict_signal['width'] = json.dumps(width_l)
+            dict_signal['top'] = json.dumps(top_l)
+            dict_signal['land'] = json.dumps(land_l)
+            dict_signal['speed'] = json.dumps(speed_l)
+            dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+        session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
         session.commit()
         set_info(f'Параметры загружены ({get_object_name()}, {get_profile_name()})', 'green')
         update_param_combobox()
@@ -179,7 +213,6 @@ def load_param():
 
 def delete_profile():
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
-    session.query(Measure).filter(Measure.profile_id == get_profile_id()).delete()
     session.query(Profile).filter(Profile.id == get_profile_id()).delete()
     session.commit()
     vacuum()
@@ -189,154 +222,12 @@ def delete_profile():
 
 def update_param_combobox():
     ui.comboBox_param_plast.clear()
-    list_columns = Measure.__table__.columns.keys()  # список параметров таблицы
-    [list_columns.remove(i) for i in ['id', 'profile_id', 'number', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]  # удаляем не нужные колонки
+    list_columns = Profile.__table__.columns.keys()  # список параметров таблицы
+    [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]  # удаляем не нужные колонки
     for i in list_columns:
-        if session.query(Measure).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
+        if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
             ui.comboBox_param_plast.addItem(i)
     update_layers()
-
-
-def draw_radarogram():
-    global l_up, l_down
-    ui.info.clear()
-    clear_current_profile()
-    rad = session.query(Measure.signal).filter(Measure.profile_id == get_profile_id()).all()
-    ui.progressBar.setMaximum(len(rad))
-    radar = []
-    for n, i in enumerate(rad):
-        ui.progressBar.setValue(n + 1)
-        if ui.comboBox_atrib.currentText() == 'A':
-            radar.append(json.loads(i[0]))
-        elif ui.comboBox_atrib.currentText() == 'diff':
-            radar.append(np.diff(json.loads(i[0])).tolist())
-        elif ui.comboBox_atrib.currentText() == 'At':
-            analytic_signal = hilbert(json.loads(i[0]))
-            radar.append(list(map(lambda x: round(x, 2), np.hypot(json.loads(i[0]), np.imag(analytic_signal)))))
-        elif ui.comboBox_atrib.currentText() == 'Vt':
-            analytic_signal = hilbert(json.loads(i[0]))
-            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Pht':
-            analytic_signal = hilbert(json.loads(i[0]))
-            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Wt':
-            analytic_signal = hilbert(json.loads(i[0]))
-            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
-        else:
-            radar.append(json.loads(i[0]))
-    clear_current_profile()
-    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
-    session.add(new_current)
-    session.commit()
-    save_max_min(radar)
-    ui.checkBox_minmax.setCheckState(0)
-    draw_image(radar)
-    set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
-    updatePlot()
-    line_up = ui.spinBox_rad_up.value()
-    line_down = ui.spinBox_rad_down.value()
-    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
-    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
-    radarogramma.addItem(l_up)
-    radarogramma.addItem(l_down)
-    update_layers()
-    draw_layers()
-
-
-
-
-def draw_current_radarogram():
-    global l_up, l_down
-    rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
-    ui.progressBar.setMaximum(len(rad))
-    radar = []
-    for n, i in enumerate(rad):
-        ui.progressBar.setValue(n + 1)
-        if ui.comboBox_atrib.currentText() == 'A':
-            radar.append(i)
-        elif ui.comboBox_atrib.currentText() == 'diff':
-            radar.append(np.diff(i).tolist())
-        elif ui.comboBox_atrib.currentText() == 'At':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.hypot(i, np.imag(analytic_signal)))))
-        elif ui.comboBox_atrib.currentText() == 'Vt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Pht':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Wt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
-        else:
-            radar.append(i)
-    clear_current_profile()
-    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
-    session.add(new_current)
-    session.commit()
-    save_max_min(radar)
-    if ui.checkBox_minmax.isChecked():
-        radar = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
-    draw_image(radar)
-    set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" для текущего профиля', 'blue')
-    updatePlot()
-    line_up = ui.spinBox_rad_up.value()
-    line_down = ui.spinBox_rad_down.value()
-    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
-    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
-    radarogramma.addItem(l_up)
-    radarogramma.addItem(l_down)
-
-
-
-def draw_max_min():
-    rad = session.query(CurrentProfile.signal).first()
-    radar = json.loads(rad[0])
-    radar_max_min = []
-    ui.progressBar.setMaximum(len(radar))
-    for n, sig in enumerate(radar):
-        max_points, _ = find_peaks(np.array(sig))
-        min_points, _ = find_peaks(-np.array(sig))
-        # diff_signal = np.diff(sig) возможно 2min/max
-        # max_points = argrelmax(diff_signal)
-        # min_points = argrelmin(diff_signal)
-        signal_max_min = build_list(max_points, min_points)
-
-        radar_max_min.append(signal_max_min)
-        ui.progressBar.setValue(n + 1)
-    clear_current_profile()
-    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar_max_min))
-    session.add(new_current)
-    session.commit()
-
-    draw_image(radar_max_min)
-    updatePlot()
-    set_info(f'Отрисовка "max/min" для текущего профиля', 'blue')
-
-
-def draw_param():
-    param = ui.comboBox_param_plast.currentText()
-    graph = query_to_list(session.query(literal_column(f'Measure.{param}')).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all())
-    number = query_to_list(session.query(Measure.number).filter(Measure.profile_id == get_profile_id()).order_by(Measure.number).all())
-    ui.graph.clear()
-    curve = pg.PlotCurveItem(x=number, y=graph)
-    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
-    ui.graph.addItem(curve)
-    ui.graph.addItem(curve_filter)
-    ui.graph.showGrid(x=True, y=True)
-    set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')
-
-
-def draw_rad_line():
-    global l_up, l_down
-    radarogramma.removeItem(l_up)
-    radarogramma.removeItem(l_down)
-    line_up = ui.spinBox_rad_up.value()
-    line_down = ui.spinBox_rad_down.value()
-    l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
-    l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
-    radarogramma.addItem(l_up)
-    radarogramma.addItem(l_down)
 
 
 def load_uf_grid():

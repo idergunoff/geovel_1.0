@@ -76,7 +76,7 @@ ui.pushButton_rang.clicked.connect(calc_rang)
 ui.pushButton_add_window.clicked.connect(add_window)
 ui.pushButton_add_layer.clicked.connect(add_layer)
 ui.pushButton_remove_layer.clicked.connect(remove_layer)
-ui.pushButton_edges_layer.clicked.connect(add_edges)
+ui.pushButton_edges_layer.clicked.connect(save_layer)
 ui.pushButton_find_oil.clicked.connect(show_globals)
 
 
@@ -84,6 +84,8 @@ ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
 ui.toolButton_del_prof.clicked.connect(delete_profile)
 ui.toolButton_load_plast.clicked.connect(load_param)
+ui.toolButton_crop_up.clicked.connect(crop_up)
+ui.toolButton_crop_down.clicked.connect(crop_down)
 
 
 ui.comboBox_object.activated.connect(update_profile_combobox)
@@ -91,6 +93,7 @@ ui.comboBox_profile.activated.connect(update_param_combobox)
 ui.comboBox_param_plast.activated.connect(draw_param)
 
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
+ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
 
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)

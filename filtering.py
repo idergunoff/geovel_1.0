@@ -3,7 +3,8 @@ from scipy.fftpack import fft2, ifft2, dctn, idctn
 from model import *
 from func import *
 from qt.new_window_dialog import *
-from load import updatePlot, clear_current_profile, draw_radarogram
+from load import clear_current_profile
+from draw import draw_radarogram
 
 
 

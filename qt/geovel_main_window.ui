@@ -386,13 +386,16 @@
                  </layout>
                 </item>
                 <item row="4" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,9,1,1">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,1,1">
                   <item>
                    <widget class="QLabel" name="label_6">
                     <property name="text">
-                     <string>Парам. пласта:</string>
+                     <string>Пласт:</string>
                     </property>
                    </widget>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_plast"/>
                   </item>
                   <item>
                    <widget class="QComboBox" name="comboBox_param_plast">
@@ -719,6 +722,16 @@
                       </property>
                      </widget>
                     </item>
+                    <item row="0" column="2">
+                     <widget class="QCheckBox" name="checkBox_draw_layer">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>draw</string>
+                      </property>
+                     </widget>
+                    </item>
                     <item row="0" column="1">
                      <spacer name="horizontalSpacer_2">
                       <property name="orientation">
@@ -732,20 +745,10 @@
                       </property>
                      </spacer>
                     </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_draw_layer">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw</string>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </item>
                   <item>
-                   <layout class="QGridLayout" name="gridLayout_17" columnstretch="4,1">
+                   <layout class="QGridLayout" name="gridLayout_17" columnstretch="3,1">
                     <item row="0" column="0">
                      <widget class="QScrollArea" name="scrollArea_2">
                       <property name="widgetResizable">
@@ -756,8 +759,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>214</width>
-                         <height>94</height>
+                         <width>211</width>
+                         <height>111</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4,1">
@@ -812,7 +815,7 @@
                      </widget>
                     </item>
                     <item row="0" column="1">
-                     <layout class="QGridLayout" name="gridLayout_layer_5" columnstretch="3">
+                     <layout class="QGridLayout" name="gridLayout_layer_5" columnstretch="0">
                       <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_remove_layer">
                         <property name="styleSheet">
@@ -839,9 +842,33 @@
                          <string notr="true">background-color: rgb(255, 204, 121);</string>
                         </property>
                         <property name="text">
-                         <string>edges</string>
+                         <string>save</string>
                         </property>
                        </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <layout class="QGridLayout" name="gridLayout_19">
+                        <item row="0" column="0">
+                         <widget class="QToolButton" name="toolButton_crop_up">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(175, 255, 243);</string>
+                          </property>
+                          <property name="text">
+                           <string>up</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QToolButton" name="toolButton_crop_down">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(175, 255, 243);</string>
+                          </property>
+                          <property name="text">
+                           <string>down</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
                     </item>

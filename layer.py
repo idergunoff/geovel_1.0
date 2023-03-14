@@ -48,7 +48,7 @@ def mouseClicked(evt):
     scene_pos = vb.mapToScene(pos)
     if radarogramma.sceneBoundingRect().contains(scene_pos):
         mousePoint = vb.mapSceneToView(scene_pos)
-        count_sig = session.query(Measure).filter(Measure.profile_id == get_profile_id()).count()
+        count_sig = len(json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
         if 0 <= mousePoint.x() <= count_sig and 0 <= mousePoint.y() <= 513:
             new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=int(mousePoint.x()), point_y=int(mousePoint.y()))
             session.add(new_point)
@@ -56,20 +56,38 @@ def mouseClicked(evt):
             draw_layer(new_point.layer_id)
 
 
-def add_edges():
+def save_layer():
     l_id = get_layer_id()
     layer_x = query_to_list(session.query(PointsOfLayer.point_x).filter(PointsOfLayer.layer_id == l_id).order_by(PointsOfLayer.point_x).all())
     layer_y = query_to_list(session.query(PointsOfLayer.point_y).filter(PointsOfLayer.layer_id == l_id).order_by(PointsOfLayer.point_x).all())
-    count_sig = session.query(Measure).filter(Measure.profile_id == get_profile_id()).count()
-    new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=0, point_y=int(layer_y[layer_x.index(min(layer_x))]))
-    session.add(new_point)
-    new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=count_sig, point_y=int(layer_y[layer_x.index(max(layer_x))]))
-    session.add(new_point)
+    count_sig = len(json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
+    if session.query(PointsOfLayer).filter(PointsOfLayer.layer_id == get_layer_id(), PointsOfLayer.point_x == 0).count() == 0:
+        new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=0, point_y=int(layer_y[layer_x.index(min(layer_x))]))
+        session.add(new_point)
+    if session.query(PointsOfLayer).filter(PointsOfLayer.layer_id == get_layer_id(), PointsOfLayer.point_x == count_sig).count() == 0:
+        new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=count_sig, point_y=int(layer_y[layer_x.index(max(layer_x))]))
+        session.add(new_point)
     session.commit()
-    draw_layer(new_point.layer_id)
+    draw_layer(l_id, True)
 
 
+def crop_up():
+    l_id, crop_line, y_new = crop()
+    for i in range(len(y_new)):
+        if y_new[i] < crop_line[i]:
+            y_new[i] = crop_line[i]
+    session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(y_new)}, synchronize_session="fetch")
+    session.commit()
+    draw_layers()
 
 
+def crop_down():
+    l_id, crop_line, y_new = crop()
+    for i in range(len(y_new)):
+        if y_new[i] > crop_line[i]:
+            y_new[i] = crop_line[i]
+    session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(y_new)}, synchronize_session="fetch")
+    session.commit()
+    draw_layers()
 
 
