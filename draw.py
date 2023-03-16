@@ -3,6 +3,12 @@ from func import *
 
 def draw_radarogram():
     global l_up, l_down
+    if 'curve_up' in globals():
+        radarogramma.removeItem(globals()['curve_up'])
+    if 'curve_down' in globals():
+        radarogramma.removeItem(globals()['curve_down'])
+    if 'text_item' in globals():
+        radarogramma.removeItem(globals()['text_item'])
     ui.info.clear()
     clear_current_profile()
     rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
@@ -45,10 +51,17 @@ def draw_radarogram():
     radarogramma.addItem(l_down)
     update_layers()
     draw_layers()
+    update_formation_combobox()
 
 
 def draw_current_radarogram():
     global l_up, l_down
+    if 'curve_up' in globals():
+        radarogramma.removeItem(globals()['curve_up'])
+    if 'curve_down' in globals():
+        radarogramma.removeItem(globals()['curve_down'])
+    if 'text_item' in globals():
+        radarogramma.removeItem(globals()['text_item'])
     rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     ui.progressBar.setMaximum(len(rad))
     radar = []
@@ -88,6 +101,7 @@ def draw_current_radarogram():
     l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
     radarogramma.addItem(l_up)
     radarogramma.addItem(l_down)
+    update_formation_combobox()
 
 
 def draw_max_min():
@@ -115,19 +129,6 @@ def draw_max_min():
     set_info(f'Отрисовка "max/min" для текущего профиля', 'blue')
 
 
-def draw_param():
-    param = ui.comboBox_param_plast.currentText()
-    graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(Profile.id == get_profile_id()).first()[0])
-    number = list(range(1, len(graph) + 1))
-    ui.graph.clear()
-    curve = pg.PlotCurveItem(x=number, y=graph)
-    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
-    ui.graph.addItem(curve)
-    ui.graph.addItem(curve_filter)
-    ui.graph.showGrid(x=True, y=True)
-    set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')
-
-
 def draw_rad_line():
     global l_up, l_down
     radarogramma.removeItem(l_up)
@@ -147,3 +148,39 @@ def choose_minmax():
         radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     draw_image(radar)
     updatePlot()
+
+
+def draw_formation():
+    if 'curve_up' in globals():
+        radarogramma.removeItem(globals()['curve_up'])
+    if 'curve_down' in globals():
+        radarogramma.removeItem(globals()['curve_down'])
+    if 'text_item' in globals():
+        radarogramma.removeItem(globals()['text_item'])
+    if ui.comboBox_plast.currentText() == '-----':
+        return
+    elif ui.comboBox_plast.currentText() == 'KROT':
+        t_top = json.loads(session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0])
+        t_bot = json.loads(session.query(Profile.T_bottom).filter(Profile.id == get_profile_id()).first()[0])
+        layer_up = [x / 8 for x in t_top]
+        layer_down = [x / 8 for x in t_bot]
+        title_text = 'KROT'
+    else:
+        formation = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+        layer_up = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.up).first()[0])
+        layer_down = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.down).first()[0])
+        title_text = formation.title
+    x = list(range(len(layer_up)))
+    # Создаем объект линии и добавляем его на радарограмму
+    curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(color='white', width=2))
+    curve_down = pg.PlotCurveItem(x=x, y=layer_down, pen=pg.mkPen(color='white', width=2))
+    radarogramma.addItem(curve_up)
+    radarogramma.addItem(curve_down)
+    # Создаем объект текста для отображения id слоя и добавляем его на радарограмму
+    text_item = pg.TextItem(text=f'{title_text}', color='white')
+    text_item.setPos(min(x) - int(max(x) - min(x)) / 50, int(layer_down[x.index(min(x))]))
+    radarogramma.addItem(text_item)
+    # Добавляем созданные объекты в глобальные переменные для возможности последующего удаления
+    globals()['curve_up'] = curve_up
+    globals()['curve_down'] = curve_down
+    globals()['text_item'] = text_item

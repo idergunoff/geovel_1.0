@@ -1,6 +1,5 @@
 from scipy.fftpack import fft2, ifft2, dctn, idctn
 
-from model import *
 from func import *
 from qt.new_window_dialog import *
 from load import clear_current_profile

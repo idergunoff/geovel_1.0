@@ -14,28 +14,31 @@ def show_globals():
     print(globals().keys())
 
 
-
 def mouse_moved_to_signal(evt):
     """ Отслеживаем координаты курсора и отображение на графике сигнала """
     global hor_line_sig, hor_line_rad, vert_line_rad, vert_line_graph
+    # Удаление предыдущих линий при движении мыши
     if 'hor_line_sig' in globals():
         ui.signal.removeItem(hor_line_sig)
         radarogramma.removeItem(hor_line_rad)
         radarogramma.removeItem(vert_line_rad)
         ui.graph.removeItem(vert_line_graph)
+    # Получение координат курсора
     pos = evt[0]
     vb = radarogramma.vb
+    # Проверка, находится ли курсор в пределах области графика
     if radarogramma.sceneBoundingRect().contains(pos):
         mousePoint = vb.mapSceneToView(pos)
-        hor_line_sig = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w',width=0.5, dash=[4, 7]))
+        # Создание бесконечных линий
+        hor_line_sig = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
         hor_line_rad = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
         vert_line_rad = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
         vert_line_graph = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+        # Добавление линий на соответствующие графики
         ui.signal.addItem(hor_line_sig)
         radarogramma.addItem(hor_line_rad)
         radarogramma.addItem(vert_line_rad)
         ui.graph.addItem(vert_line_graph)
-
 
 
 proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mouse_moved_to_signal)
@@ -48,6 +51,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
     print(text)
     QtWidgets.QMessageBox.critical(None, 'Error', text)
     sys.exit()
+
 
 img.scene().sigMouseClicked.connect(mouseClicked)
 
@@ -75,6 +79,7 @@ ui.pushButton_log.clicked.connect(calc_log)
 ui.pushButton_rang.clicked.connect(calc_rang)
 ui.pushButton_add_window.clicked.connect(add_window)
 ui.pushButton_add_layer.clicked.connect(add_layer)
+ui.pushButton_add_formation.clicked.connect(add_formation)
 ui.pushButton_remove_layer.clicked.connect(remove_layer)
 ui.pushButton_edges_layer.clicked.connect(save_layer)
 ui.pushButton_find_oil.clicked.connect(show_globals)
@@ -84,16 +89,20 @@ ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
 ui.toolButton_del_prof.clicked.connect(delete_profile)
 ui.toolButton_load_plast.clicked.connect(load_param)
+ui.toolButton_del_plast.clicked.connect(remove_formation)
 ui.toolButton_crop_up.clicked.connect(crop_up)
 ui.toolButton_crop_down.clicked.connect(crop_down)
 
 
 ui.comboBox_object.activated.connect(update_profile_combobox)
-ui.comboBox_profile.activated.connect(update_param_combobox)
+ui.comboBox_profile.activated.connect(update_formation_combobox)
+ui.comboBox_plast.activated.connect(update_param_combobox)
+ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
 
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
+ui.checkBox_all_formation.stateChanged.connect(draw_param)
 
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)

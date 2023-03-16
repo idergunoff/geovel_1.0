@@ -1,9 +1,6 @@
-from model import *
 from func import *
 from wgs_to_pulc import wgs84_to_pulc42
 from qt.add_obj_dialog import *
-
-
 
 
 def add_object():
@@ -34,14 +31,6 @@ def add_object():
     Add_Object.exec_()
 
 
-def update_object():
-    """ Обновление списка объектов в выпадающем списке """
-    ui.comboBox_object.clear()
-    for i in session.query(GeoradarObject).order_by(GeoradarObject.date_exam).all():
-        ui.comboBox_object.addItem(f'{i.title} {i.date_exam.strftime("%m.%Y")} id{i.id}')
-    update_profile_combobox()
-
-
 def load_profile():
     """ загрузка профилей """
     try:
@@ -68,49 +57,42 @@ def load_profile():
     update_profile_combobox()
 
 
-def update_profile_combobox():
-    """ Обновление списка профилей в выпадающем списке """
-    ui.comboBox_profile.clear()
-    try:
-        for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
-            count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
-            ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
-        update_param_combobox()
-    except ValueError:
-        pass
-    if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-        ui.pushButton_uf.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_m.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)')
-    else:
-        ui.pushButton_uf.setStyleSheet('background: rgb(255, 185, 185)')
-        ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
-        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
-
-
 def load_param():
     """ Загрузка параметров """
     try:
+        # открываем диалоговое окно для выбора файла и получаем имя файла
         file_name = QFileDialog.getOpenFileName(caption='Выберите файл выделенного интервала пласта', filter='*.txt')[0]
-        set_info(file_name, 'blue')
+        set_info(file_name, 'blue')  # выводим имя файла в информационное окно приложения
+        # считываем данные из файла в pandas DataFrame и заменяем запятые на точки
         tab_int = pd.read_table(file_name, delimiter=';', header=0)
         tab_int = tab_int.applymap(lambda x: float(str(x).replace(',', '.')))
     except FileNotFoundError:
         return
     signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
+    # проверяем соответствие количества измерений в загруженном файле и в БД
     if len(signals) != len(tab_int.index):
         set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах', 'red')
     else:
+        # задаем максимальное значение для прогресс-бара
         ui.progressBar.setMaximum(len(tab_int.index))
         grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
         if grid_db:
+            # считываем сетку грида из БД
             pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
             pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
             pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+        # задаем списки для хранения данных о скважинах
         x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l, T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, Vt_mean_l, dAt_l, At_top_l, \
         At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l = \
             [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
         for i in tab_int.index:
+            y, x = wgs84_to_pulc42(tab_int['Latd'][i], tab_int['Long'][i])
+            x_wgs_l.append(tab_int['Long'][i])
+            y_wgs_l.append(tab_int['Latd'][i])
+            x_pulc_l.append(x)
+            y_pulc_l.append(y)
+            if all(x == 0 for x in tab_int['D02']):
+                continue
             signal = signals[i]
             analytic_signal = hilbert(signal)
             At = np.hypot(signal, np.imag(analytic_signal)).tolist()
@@ -119,11 +101,6 @@ def load_param():
             Wt = np.diff(Pht).tolist()
             nt = int(tab_int['T01'][i] / 40)
             nb = int(tab_int['D02'][i] / 40)
-            y, x = wgs84_to_pulc42(tab_int['Latd'][i], tab_int['Long'][i])
-            x_wgs_l.append(tab_int['Long'][i])
-            y_wgs_l.append(tab_int['Latd'][i])
-            x_pulc_l.append(x)
-            y_pulc_l.append(y)
             T_top_l.append(tab_int['T01'][i] / 5)
             T_bottom_l.append(tab_int['D02'][i] / 5)
             dT_l.append(tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5)
@@ -168,7 +145,13 @@ def load_param():
                 speed_l.append(im * 100 / (tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5))
                 speed_cover_l.append((i_r - i_uf) * 100 / (tab_int['T01'][i] / 5))
             ui.progressBar.setValue(i+1)
-        dict_signal = {'x_wgs': json.dumps(x_wgs_l),
+        if all(x == 0 for x in tab_int['D02']):
+            dict_signal = {'x_wgs': json.dumps(x_wgs_l),
+                           'y_wgs': json.dumps(y_wgs_l),
+                           'x_pulc': json.dumps(x_pulc_l),
+                           'y_pulc': json.dumps(y_pulc_l)}
+        else:
+            dict_signal = {'x_wgs': json.dumps(x_wgs_l),
                        'y_wgs': json.dumps(y_wgs_l),
                         'x_pulc': json.dumps(x_pulc_l),
                         'y_pulc': json.dumps(y_pulc_l),
@@ -199,12 +182,12 @@ def load_param():
                         'k_var': json.dumps(k_var_l),
                         'skew': json.dumps(skew_l),
                         'kurt': json.dumps(kurt_l)}
-        if grid_db:
-            dict_signal['width'] = json.dumps(width_l)
-            dict_signal['top'] = json.dumps(top_l)
-            dict_signal['land'] = json.dumps(land_l)
-            dict_signal['speed'] = json.dumps(speed_l)
-            dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+            if grid_db:
+                dict_signal['width'] = json.dumps(width_l)
+                dict_signal['top'] = json.dumps(top_l)
+                dict_signal['land'] = json.dumps(land_l)
+                dict_signal['speed'] = json.dumps(speed_l)
+                dict_signal['speed_cover'] = json.dumps(speed_cover_l)
         session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
         session.commit()
         set_info(f'Параметры загружены ({get_object_name()}, {get_profile_name()})', 'green')
@@ -218,16 +201,6 @@ def delete_profile():
     vacuum()
     set_info(f'Профиль {title_prof} удалён', 'green')
     update_profile_combobox()
-
-
-def update_param_combobox():
-    ui.comboBox_param_plast.clear()
-    list_columns = Profile.__table__.columns.keys()  # список параметров таблицы
-    [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]  # удаляем не нужные колонки
-    for i in list_columns:
-        if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
-            ui.comboBox_param_plast.addItem(i)
-    update_layers()
 
 
 def load_uf_grid():

@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text, literal_column
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text, literal_column, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -78,60 +78,7 @@ class Profile(Base):
     window = relationship('WindowProfile', back_populates='profile')
     min_max = relationship('CurrentProfileMinMax', back_populates='profile')
     layers = relationship('Layers', back_populates='profile')
-
-
-# class Measure(Base):
-#     __tablename__ = 'measure'
-#
-#     id = Column(Integer, primary_key=True)
-#     profile_id = Column(Integer, ForeignKey('profile.id'))
-#     number = Column(Integer)
-#
-#     signal = Column(Text)
-#
-#     x_wgs = Column(Float)
-#     y_wgs = Column(Float)
-#     x_pulc = Column(Float)
-#     y_pulc = Column(Float)
-#
-#     T_top = Column(Float)
-#     T_bottom = Column(Float)
-#     dT = Column(Float)
-#
-#     A_top = Column(Float)
-#     A_bottom = Column(Float)
-#     dA = Column(Float)
-#     A_sum = Column(Float)
-#     A_mean = Column(Float)
-#     dVt = Column(Float)
-#     Vt_top = Column(Float)
-#     Vt_sum = Column(Float)
-#     Vt_mean = Column(Float)
-#     dAt = Column(Float)
-#     At_top = Column(Float)
-#     At_sum = Column(Float)
-#     At_mean = Column(Float)
-#     dPht = Column(Float)
-#     Pht_top = Column(Float)
-#     Pht_sum = Column(Float)
-#     Pht_mean = Column(Float)
-#     Wt_top = Column(Float)
-#     Wt_mean = Column(Float)
-#     Wt_sum = Column(Float)
-#
-#     width = Column(Float)
-#     top = Column(Float)
-#     land = Column(Float)
-#     speed = Column(Float)
-#     speed_cover = Column(Float)
-#
-#     skew = Column(Float)
-#     kurt = Column(Float)
-#     std = Column(Float)
-#     k_var = Column(Float)
-#
-#     profile = relationship('Profile', back_populates='measures')
-#     # signals = relationship('Signal', back_populates='measure')
+    formations = relationship('Formation', back_populates='profile')
 
 
 class CurrentProfile(Base):
@@ -212,6 +159,7 @@ class Formation(Base):
     __tablename__ = 'formation'
 
     id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
     title = Column(String)
     up = Column(Integer, ForeignKey('layers.id'))
     down = Column(Integer, ForeignKey('layers.id'))
@@ -241,9 +189,6 @@ class Formation(Base):
     Wt_mean = Column(Text)
     Wt_sum = Column(Text)
 
-    width = Column(Text)
-    top = Column(Text)
-    land = Column(Text)
     speed = Column(Text)
     speed_cover = Column(Text)
 
@@ -252,6 +197,7 @@ class Formation(Base):
     std = Column(Text)
     k_var = Column(Text)
 
+    profile = relationship('Profile', back_populates='formations')
     layer_up = relationship('Layers', back_populates='formation_up', foreign_keys=[up])
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
 

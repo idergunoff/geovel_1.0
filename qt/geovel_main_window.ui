@@ -386,7 +386,7 @@
                  </layout>
                 </item>
                 <item row="4" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,1,1">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,0,1,1">
                   <item>
                    <widget class="QLabel" name="label_6">
                     <property name="text">
@@ -404,6 +404,13 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_all_formation">
+                    <property name="text">
+                     <string/>
                     </property>
                    </widget>
                   </item>
@@ -708,6 +715,26 @@
                  <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,4">
                   <item>
                    <layout class="QGridLayout" name="gridLayout_14">
+                    <item row="0" column="3">
+                     <widget class="QPushButton" name="pushButton_add_formation">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>+ formation</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="4">
+                     <widget class="QCheckBox" name="checkBox_draw_layer">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>draw</string>
+                      </property>
+                     </widget>
+                    </item>
                     <item row="0" column="0">
                      <widget class="QLabel" name="label_10">
                       <property name="font">
@@ -719,16 +746,6 @@
                       </property>
                       <property name="text">
                        <string>Слои:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_draw_layer">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw</string>
                       </property>
                      </widget>
                     </item>
@@ -744,6 +761,19 @@
                        </size>
                       </property>
                      </spacer>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QCheckBox" name="checkBox_uf_formation">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>uf</string>
+                      </property>
+                      <property name="checked">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
                     </item>
                    </layout>
                   </item>
