@@ -142,6 +142,7 @@ class Layers(Base):
     points = relationship('PointsOfLayer', back_populates='layer')
     formation_up = relationship('Formation', back_populates='layer_up', foreign_keys='Formation.up')
     formation_down = relationship('Formation', back_populates='layer_down', foreign_keys='Formation.down')
+    boundary_to_layers = relationship('BoundaryToLayer', back_populates='layer')
 
 
 class PointsOfLayer(Base):
@@ -202,6 +203,53 @@ class Formation(Base):
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
 
 
+class Well(Base):
+    __tablename__ = 'well'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    alt = Column(Float)
+
+    boundaries = relationship("Boundary", back_populates="well")
+    well_logs = relationship("WellLog", back_populates="well")
+
+
+class Boundary(Base):
+    __tablename__ = 'boundary'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well.id'))
+    depth = Column(Float)
+    title = Column(String)
+
+    well = relationship("Well", back_populates="boundaries")
+    boundary_to_layers = relationship('BoundaryToLayer', back_populates='boundary')
+
+
+class BoundaryToLayer(Base):
+    __tablename__ = 'boundary_to_layer'
+
+    id = Column(Integer, primary_key=True)
+    boundary_id = Column(Integer, ForeignKey('boundary.id'))
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+    index = Column(Float)
+
+    boundary = relationship("Boundary", back_populates="boundary_to_layers")
+    layer = relationship('Layers', back_populates="boundary_to_layers")
+
+
+class WellLog(Base):
+    __tablename__ = 'well_log'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well.id'))
+    curve_name = Column(String)
+    depth_data = Column(Text)
+    curve_data = Column(Text)
+
+    well = relationship("Well", back_populates="well_logs")
 
 
 Base.metadata.create_all(engine)

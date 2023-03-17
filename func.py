@@ -123,6 +123,139 @@ def updatePlot():
     ui.signal.invertY(True)
 
 
+def update_profile_combobox():
+    """ Обновление списка профилей в выпадающем списке """
+    # Очистка выпадающего списка
+    ui.comboBox_profile.clear()
+    try:
+        # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
+        for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
+            count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
+            ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
+        # Обновление списка формирований
+        update_formation_combobox()
+    except ValueError:
+        # Если возникла ошибка при обновлении списка профилей, просто проигнорировать ее
+        pass
+    # Если в объекте есть график, изменить цвет кнопок на зеленый
+    if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+        ui.pushButton_uf.setStyleSheet('background: rgb(191, 255, 191)')
+        ui.pushButton_m.setStyleSheet('background: rgb(191, 255, 191)')
+        ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)')
+    else:
+        # Если в объекте нет графика, изменить цвет кнопок на красный
+        ui.pushButton_uf.setStyleSheet('background: rgb(255, 185, 185)')
+        ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
+        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
+
+
+def update_object():
+    """ Функция для обновления списка объектов в выпадающем списке """
+    # Очистка выпадающего списка объектов
+    ui.comboBox_object.clear()
+    # Получение всех объектов из базы данных, отсортированных по дате исследования
+    for i in session.query(GeoradarObject).order_by(GeoradarObject.date_exam).all():
+        # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
+        ui.comboBox_object.addItem(f'{i.title} {i.date_exam.strftime("%m.%Y")} id{i.id}')
+    # Обновление выпадающего списка профилей
+    update_profile_combobox()
+
+
+def update_param_combobox():
+    """Обновление выпадающего списка параметров формаций/пластов"""
+    current_text = ui.comboBox_param_plast.currentText()  # сохраняем текущий текст в комбобоксе
+    ui.comboBox_param_plast.clear()  # очищаем комбобокс
+    if ui.comboBox_plast.currentText() == '-----':  # если выбрана пустая строка, то ничего не делаем
+        pass
+    elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
+        list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
+        # удаляем не нужные колонки
+        [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]
+        for i in list_columns:
+            # если в таблице профиля есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
+            if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
+                ui.comboBox_param_plast.addItem(i)
+    else:  # если выбрана какая-то формация, то добавляем в комбобокс параметры формации
+        list_columns = Formation.__table__.columns.keys()  # список параметров таблицы формаций
+        [list_columns.remove(i) for i in  ['id', 'profile_id', 'title', 'up', 'down']]  # удаляем не нужные колонки
+        for i in list_columns:
+            # если в таблице формаций есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
+            if session.query(Formation).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
+                ui.comboBox_param_plast.addItem(i)
+    index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
+    if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
+        ui.comboBox_param_plast.setCurrentIndex(index)
+    draw_param()  # отрисовываем параметр
+    update_layers()  # обновляем список слоев в соответствии с выбранным параметром
+
+
+def draw_param():
+    # Очищаем график
+    ui.graph.clear()
+    # Получаем параметр из выпадающего списка
+    param = ui.comboBox_param_plast.currentText()
+    # Если выбрана опция "все пласты"
+    if ui.checkBox_all_formation.isChecked():
+        # Если не выбран конкретный пласт
+        if ui.comboBox_plast.currentText() == '-----':
+            return
+        # Получаем данные для текущего пласта
+        graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(Profile.id == get_profile_id()).first()[0])
+        # Создаем список значений по порядку
+        number = list(range(1, len(graph) + 1))
+        # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
+        curve = pg.PlotCurveItem(x=number, y=graph)
+        wl = 2.4 if ui.comboBox_plast.currentText() == 'KROT' else 1
+        cl = 'red' if ui.comboBox_plast.currentText() == 'KROT' else 'green'
+        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
+                                        pen=pg.mkPen(color=cl, width=wl))
+        # Если выбран пласт КРОТ, то добавляем только кривую на график
+        if ui.comboBox_plast.currentText() == 'KROT':
+            ui.graph.addItem(curve)
+        # Добавляем кривую и отфильтрованную кривую на график для всех пластов
+        ui.graph.addItem(curve_filter)
+        # Для каждого пласта
+        for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
+            # Если выбран параметр ширина, верхняя или нижняя граница пласта, то не рисуем кривые
+            if param in ['width', 'top', 'land']:
+                return
+            # Получаем данные для текущего пласта
+            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
+            # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
+            curve = pg.PlotCurveItem(x=number, y=graph)
+            wl = 2.4 if f.id == get_formation_id() else 1
+            cl = 'red' if f.id == get_formation_id() else 'green'
+            curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
+                                            pen=pg.mkPen(color=cl, width=wl))
+            # Если выбран текущий пласт, то добавляем только кривую на график
+            if f.id == get_formation_id():
+                ui.graph.addItem(curve)
+            # Добавляем кривую и отфильтрованную кривую на график для всех пластов
+            ui.graph.addItem(curve_filter)
+    # Если выбран конкретный пласт
+    else:
+        # если текущий выбранный элемент равен '-----', то ничего не делаем и выходим из функции
+        if ui.comboBox_plast.currentText() == '-----':
+            return
+        # если текущий выбранный элемент равен 'KROT', то получаем данные для профиля
+        elif ui.comboBox_plast.currentText() == 'KROT':
+            # получаем данные для выбранного параметра из таблицы Profile и преобразуем их из строки в список с помощью json.loads()
+            graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(
+                Profile.id == get_profile_id()).first()[0])
+        else:  # в остальных случаях получаем данные для формации
+            # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
+            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
+                Formation.id == get_formation_id()).first()[0])
+        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+        curve = pg.PlotCurveItem(x=number, y=graph)  # создаем объект класса PlotCurveItem для отображения графика данных
+        # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
+        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+        ui.graph.addItem(curve)  # добавляем график данных на график
+        ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+        ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+        set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
+
+
 def save_max_min(radar):
     radar_max_min = []
     ui.progressBar.setMaximum(len(radar))
@@ -354,137 +487,46 @@ def update_formation_combobox():
         ui.comboBox_plast.addItem(f'{form.title} id{form.id}')
     # Обновляем список выбора параметров для выбранного пласта
     update_param_combobox()
+    update_list_well()
 
 
-def update_profile_combobox():
-    """ Обновление списка профилей в выпадающем списке """
-    # Очистка выпадающего списка
-    ui.comboBox_profile.clear()
-    try:
-        # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
-        for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
-            count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
-            ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
-        # Обновление списка формирований
-        update_formation_combobox()
-    except ValueError:
-        # Если возникла ошибка при обновлении списка профилей, просто проигнорировать ее
-        pass
-    # Если в объекте есть график, изменить цвет кнопок на зеленый
-    if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-        ui.pushButton_uf.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_m.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)')
+###################################################################
+############################   Well   #############################
+###################################################################
+
+def distance(x1, y1, x2, y2):
+    return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+
+
+def closest_point(well_x, well_y, profile_x, profile_y):
+    closest_idx = 0
+    closest_distance = distance(well_x, well_y, profile_x[0], profile_y[0])
+    for i in range(1, len(profile_x)):
+        dist = distance(well_x, well_y, profile_x[i], profile_y[i])
+        if dist < closest_distance:
+            closest_distance = dist
+            closest_idx = i
+    return (profile_x[closest_idx], profile_y[closest_idx], closest_distance)
+
+
+def update_list_well():
+    ui.listWidget_well.clear()
+    wells = session.query(Well).order_by(Well.name).all()
+    if ui.checkBox_profile_well.isChecked():
+        if session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+            for w in wells:
+                if ui.checkBox_profile_well.isChecked() and session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
+                    _, _, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                    if dist <= ui.spinBox_well_distance.value():
+                        ui.listWidget_well.addItem(f'{w.name} id{w.id} - {round(dist, 2)} м.')
+        else:
+            ui.listWidget_well.addItem('Координаты профиля не загружены')
     else:
-        # Если в объекте нет графика, изменить цвет кнопок на красный
-        ui.pushButton_uf.setStyleSheet('background: rgb(255, 185, 185)')
-        ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
-        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
+        for w in wells:
+            ui.listWidget_well.addItem(f'{w.name} id{w.id}')
 
 
-def update_object():
-    """ Функция для обновления списка объектов в выпадающем списке """
-    # Очистка выпадающего списка объектов
-    ui.comboBox_object.clear()
-    # Получение всех объектов из базы данных, отсортированных по дате исследования
-    for i in session.query(GeoradarObject).order_by(GeoradarObject.date_exam).all():
-        # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
-        ui.comboBox_object.addItem(f'{i.title} {i.date_exam.strftime("%m.%Y")} id{i.id}')
-    # Обновление выпадающего списка профилей
-    update_profile_combobox()
-
-
-def update_param_combobox():
-    """Обновление выпадающего списка параметров формаций/пластов"""
-    current_text = ui.comboBox_param_plast.currentText()  # сохраняем текущий текст в комбобоксе
-    ui.comboBox_param_plast.clear()  # очищаем комбобокс
-    if ui.comboBox_plast.currentText() == '-----':  # если выбрана пустая строка, то ничего не делаем
-        pass
-    elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
-        list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
-        # удаляем не нужные колонки
-        [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]
-        for i in list_columns:
-            # если в таблице профиля есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
-            if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
-                ui.comboBox_param_plast.addItem(i)
-    else:  # если выбрана какая-то формация, то добавляем в комбобокс параметры формации
-        list_columns = Formation.__table__.columns.keys()  # список параметров таблицы формаций
-        [list_columns.remove(i) for i in  ['id', 'profile_id', 'title', 'up', 'down']]  # удаляем не нужные колонки
-        for i in list_columns:
-            # если в таблице формаций есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
-            if session.query(Formation).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
-                ui.comboBox_param_plast.addItem(i)
-    index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
-    if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
-        ui.comboBox_param_plast.setCurrentIndex(index)
-    draw_param()  # отрисовываем параметр
-    update_layers()  # обновляем список слоев в соответствии с выбранным параметром
-
-
-def draw_param():
-    # Очищаем график
-    ui.graph.clear()
-    # Получаем параметр из выпадающего списка
-    param = ui.comboBox_param_plast.currentText()
-    # Если выбрана опция "все пласты"
-    if ui.checkBox_all_formation.isChecked():
-        # Если не выбран конкретный пласт
-        if ui.comboBox_plast.currentText() == '-----':
-            return
-        # Получаем данные для текущего пласта
-        graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(Profile.id == get_profile_id()).first()[0])
-        # Создаем список значений по порядку
-        number = list(range(1, len(graph) + 1))
-        # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-        curve = pg.PlotCurveItem(x=number, y=graph)
-        wl = 2.4 if ui.comboBox_plast.currentText() == 'KROT' else 1
-        cl = 'red' if ui.comboBox_plast.currentText() == 'KROT' else 'green'
-        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
-                                        pen=pg.mkPen(color=cl, width=wl))
-        # Если выбран пласт КРОТ, то добавляем только кривую на график
-        if ui.comboBox_plast.currentText() == 'KROT':
-            ui.graph.addItem(curve)
-        # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-        ui.graph.addItem(curve_filter)
-        # Для каждого пласта
-        for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
-            # Если выбран параметр ширина, верхняя или нижняя граница пласта, то не рисуем кривые
-            if param in ['width', 'top', 'land']:
-                return
-            # Получаем данные для текущего пласта
-            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
-            # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-            curve = pg.PlotCurveItem(x=number, y=graph)
-            wl = 2.4 if f.id == get_formation_id() else 1
-            cl = 'red' if f.id == get_formation_id() else 'green'
-            curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
-                                            pen=pg.mkPen(color=cl, width=wl))
-            # Если выбран текущий пласт, то добавляем только кривую на график
-            if f.id == get_formation_id():
-                ui.graph.addItem(curve)
-            # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-            ui.graph.addItem(curve_filter)
-    # Если выбран конкретный пласт
-    else:
-        # если текущий выбранный элемент равен '-----', то ничего не делаем и выходим из функции
-        if ui.comboBox_plast.currentText() == '-----':
-            return
-        # если текущий выбранный элемент равен 'KROT', то получаем данные для профиля
-        elif ui.comboBox_plast.currentText() == 'KROT':
-            # получаем данные для выбранного параметра из таблицы Profile и преобразуем их из строки в список с помощью json.loads()
-            graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(
-                Profile.id == get_profile_id()).first()[0])
-        else:  # в остальных случаях получаем данные для формации
-            # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
-            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
-                Formation.id == get_formation_id()).first()[0])
-        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
-        curve = pg.PlotCurveItem(x=number, y=graph)  # создаем объект класса PlotCurveItem для отображения графика данных
-        # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
-        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
-        ui.graph.addItem(curve)  # добавляем график данных на график
-        ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
-        ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
-        set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
-
+def get_well_id():
+    return ui.listWidget_well.currentItem().text().split(' id')[-1]

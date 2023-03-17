@@ -443,8 +443,14 @@ def add_window():
     New_Window.exec_()
 
 
-
-
+def filter19():
+    ui.spinBox_a_medfilt.setValue(19)
+    ui.spinBox_b_medfilt.setValue(1)
+    ui.pushButton_medfilt.click()
+    ui.spinBox_b_medfilt.setValue(19)
+    ui.pushButton_medfilt.click()
+    ui.spinBox_a_medfilt.setValue(1)
+    ui.pushButton_medfilt.click()
 
 
 
