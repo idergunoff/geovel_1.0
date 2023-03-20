@@ -3,7 +3,7 @@ from object import *
 
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
-    ui.info.append(f'{datetime.datetime.now().strftime("%H:%M:%S")}:\t<span style =\"color:{color};\" >{text}</span>')
+    ui.info.append(f'{datetime.datetime.now().strftime("%H:%M:%S")}:\t<span style ="color:{color};" >{text}</span>')
 
 
 # Функция получения id выбранного объекта
@@ -338,13 +338,13 @@ def draw_layers():
     for i in ui.widget_layer.findChildren(QtWidgets.QCheckBox):
         # Если объект уже отображен на радарограмме, удаляем его
         if f'scatter_id{i.text().split(" id")[-1]}' in globals():
-            globals()[f'scatter_id{i.text().split(" id")[-1]}'] = globals()[f'scatter_id{i.text().split(" id")[-1]}']
+            # globals()[f'scatter_id{i.text().split(" id")[-1]}'] = globals()[f'scatter_id{i.text().split(" id")[-1]}']
             radarogramma.removeItem(globals()[f'scatter_id{i.text().split(" id")[-1]}'])
         if f'curve_id{i.text().split(" id")[-1]}' in globals():
-            globals()[f'curve_id{i.text().split(" id")[-1]}'] = globals()[f'curve_id{i.text().split(" id")[-1]}']
+            # globals()[f'curve_id{i.text().split(" id")[-1]}'] = globals()[f'curve_id{i.text().split(" id")[-1]}']
             radarogramma.removeItem(globals()[f'curve_id{i.text().split(" id")[-1]}'])
         if f'text_id{i.text().split(" id")[-1]}' in globals():
-            globals()[f'text_id{i.text().split(" id")[-1]}'] = globals()[f'text_id{i.text().split(" id")[-1]}']
+            # globals()[f'text_id{i.text().split(" id")[-1]}'] = globals()[f'text_id{i.text().split(" id")[-1]}']
             radarogramma.removeItem(globals()[f'text_id{i.text().split(" id")[-1]}'])
         # Если CheckBox отмечен, отображаем соответствующий слой на радарограмме
         if i.isChecked():
@@ -506,27 +506,102 @@ def closest_point(well_x, well_y, profile_x, profile_y):
         if dist < closest_distance:
             closest_distance = dist
             closest_idx = i
-    return (profile_x[closest_idx], profile_y[closest_idx], closest_distance)
+    return (closest_idx, closest_distance)
 
 
 def update_list_well():
+    for key, value in globals().items():
+        if key.startswith('bound_') or key.startswith('well_'):
+            radarogramma.removeItem(globals()[key])
     ui.listWidget_well.clear()
     wells = session.query(Well).order_by(Well.name).all()
     if ui.checkBox_profile_well.isChecked():
         if session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
             x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
             y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+            profile_plus_dist = distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
             for w in wells:
-                if ui.checkBox_profile_well.isChecked() and session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
-                    _, _, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                start_profile_dist = distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
+                end_profile_dist = distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
+                if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
+                    index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
                     if dist <= ui.spinBox_well_distance.value():
-                        ui.listWidget_well.addItem(f'{w.name} id{w.id} - {round(dist, 2)} м.')
+                        ui.listWidget_well.addItem(f'скв.№ {w.name} - ({index}) {round(dist, 2)} м. id{w.id}')
+            draw_wells()
         else:
             ui.listWidget_well.addItem('Координаты профиля не загружены')
     else:
         for w in wells:
-            ui.listWidget_well.addItem(f'{w.name} id{w.id}')
+            ui.listWidget_well.addItem(f'скв.№ {w.name} id{w.id}')
 
 
 def get_well_id():
     return ui.listWidget_well.currentItem().text().split(' id')[-1]
+
+
+def update_boundaries():
+    ui.listWidget_bound.clear()
+    boundaries = session.query(Boundary).filter(Boundary.well_id == get_well_id()).order_by(Boundary.depth).all()
+    for b in boundaries:
+        ui.listWidget_bound.addItem(f'{b.title} - {b.depth}m. id{b.id}')
+
+
+def get_boundary_id():
+    return ui.listWidget_bound.currentItem().text().split(' id')[-1]
+
+
+def draw_wells():
+    # for key, value in globals().items():
+    #     if key.startswith('well_'):
+    #         radarogramma.removeItem(globals()[key])
+    for i in range(ui.listWidget_well.count()):
+        well_id = ui.listWidget_well.item(i).text().split(' id')[-1]
+        draw_well(well_id)
+
+
+def draw_well(well_id):
+    # если существуют глобальные объекты линий и точек, удаляем их с радарограммы
+    if f'well_curve_id{well_id}' in globals():
+        radarogramma.removeItem(globals()[f'well_curve_id{well_id}'])
+    if f'well_text_id{well_id}' in globals():
+        radarogramma.removeItem(globals()[f'well_text_id{well_id}'])
+
+    well = session.query(Well).filter(Well.id == well_id).first()
+    x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+    y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+    index, dist = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+    curve = pg.PlotCurveItem(x=[index, index], y=[0, 512], pen=pg.mkPen(color='white', width=2))
+    radarogramma.addItem(curve)
+    globals()[f'well_curve_id{well_id}'] = curve
+
+    text_item = pg.TextItem(text=f'{well.name} ({round(dist, 2)})', color='white')
+    text_item.setPos(index, -30)
+    radarogramma.addItem(text_item)
+    globals()[f'well_text_id{well_id}'] = text_item
+
+    boundaries = session.query(Boundary).filter(Boundary.well_id == well_id).all()
+    # for key, value in globals().items():
+    #     if key.startswith('bound_'):
+    #         radarogramma.removeItem(globals()[key])
+    for b in boundaries:
+        draw_boundary(b.id, index)
+
+
+def draw_boundary(bound_id, index):
+    if f'bound_scatter_id{bound_id}' in globals():
+        radarogramma.removeItem(globals()[f'bound_scatter_id{bound_id}'])
+    if f'bound_text_id{bound_id}' in globals():
+        radarogramma.removeItem(globals()[f'bound_text_id{bound_id}'])
+    bound = session.query(Boundary).filter(Boundary.id == bound_id).first()
+    d = ((bound.depth * 100) / 5) / 8
+    scatter = pg.ScatterPlotItem(x=[index], y=[d], symbol='o', pen=pg.mkPen(None),
+                                 brush=pg.mkBrush(255, 255, 255, 120), size=10)
+    radarogramma.addItem(scatter)
+    globals()[f'bound_scatter_id{bound_id}'] = scatter
+
+    text_item = pg.TextItem(text=f'{bound.title} ({bound.depth})', color='white')
+    text_item.setPos(index + 10, d)
+    radarogramma.addItem(text_item)
+    globals()[f'bound_text_id{bound_id}'] = text_item
+
+

@@ -84,7 +84,11 @@ ui.pushButton_remove_layer.clicked.connect(remove_layer)
 ui.pushButton_edges_layer.clicked.connect(save_layer)
 ui.pushButton_find_oil.clicked.connect(show_globals)
 ui.pushButton_add_well.clicked.connect(add_well)
-ui.pushButton_rem_well.clicked.connect(remove_well)
+ui.pushButton_edit_well.clicked.connect(edit_well)
+ui.pushButton_add_wells.clicked.connect(add_wells)
+ui.pushButton_add_bound.clicked.connect(add_boundary)
+ui.pushButton_rem_bound.clicked.connect(remove_boundary)
+
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
@@ -113,6 +117,9 @@ ui.spinBox_roi.valueChanged.connect(changeSpinBox)
 ui.spinBox_rad_up.valueChanged.connect(draw_rad_line)
 ui.spinBox_rad_down.valueChanged.connect(draw_rad_line)
 ui.spinBox_well_distance.valueChanged.connect(update_list_well)
+
+ui.listWidget_well.clicked.connect(show_data_well)
+ui.listWidget_well.clicked.connect(update_boundaries)
 
 roi.sigRegionChanged.connect(updatePlot)
 
