@@ -114,7 +114,7 @@ def add_formation():
             layer_0 = session.query(Layers.layer_line).filter(Layers.id == list_id[0]).first()[0]
             layer_1 = session.query(Layers.layer_line).filter(Layers.id == list_id[1]).first()[0]
             if not layer_0 or not layer_1:
-                set_info('Один из пластов не сохранён', 'red')
+                set_info('Одна из границ не сохранена', 'red')
                 return
             if sum(json.loads(layer_0)) > sum(json.loads(layer_1)):
                 up, down = list_id[1], list_id[0]
@@ -130,9 +130,9 @@ def add_formation():
                 set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в радарпограмме и в границах кровли/подошвы', 'red')
             else:
                 ui.progressBar.setMaximum(len(layer_up))
-                width_json = session.query(Profile.width).filter(Profile.id == get_profile_id()).first()[0]
-                top_json = session.query(Profile.top).filter(Profile.id == get_profile_id()).first()[0]
-                land_json = session.query(Profile.land).filter(Profile.id == get_profile_id()).first()[0]
+                width_json = session.query(Formation.width).filter(Formation.profile_id == get_profile_id()).first()[0]
+                top_json = session.query(Formation.top).filter(Formation.profile_id == get_profile_id()).first()[0]
+                land_json = session.query(Formation.land).filter(Formation.profile_id == get_profile_id()).first()[0]
                 if width_json and top_json and land_json:
                     width, top, land = json.loads(width_json), json.loads(top_json), json.loads(land_json)
                 T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, Vt_mean_l, dAt_l, At_top_l, \

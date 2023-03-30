@@ -17,17 +17,27 @@ class GeoradarObject(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String)
-    date_exam = Column(Date, default=datetime.date.today())
 
-    profiles = relationship('Profile', back_populates='georadar_object')
+    researches = relationship('Research', back_populates='object')
     grid = relationship('Grid', back_populates='object')
+
+
+class Research(Base):
+    __tablename__ = 'research'
+
+    id = Column(Integer, primary_key=True)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    date_research = Column(Date)
+
+    object = relationship('GeoradarObject', back_populates='researches')
+    profiles = relationship('Profile', back_populates='research')
 
 
 class Profile(Base):
     __tablename__ = 'profile'
 
     id = Column(Integer, primary_key=True)
-    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    research_id = Column(Integer, ForeignKey('research.id'))
     title = Column(String)
 
     signal = Column(Text)
@@ -37,48 +47,50 @@ class Profile(Base):
     x_pulc = Column(Text)
     y_pulc = Column(Text)
 
-    T_top = Column(Text)
-    T_bottom = Column(Text)
-    dT = Column(Text)
-
-    A_top = Column(Text)
-    A_bottom = Column(Text)
-    dA = Column(Text)
-    A_sum = Column(Text)
-    A_mean = Column(Text)
-    dVt = Column(Text)
-    Vt_top = Column(Text)
-    Vt_sum = Column(Text)
-    Vt_mean = Column(Text)
-    dAt = Column(Text)
-    At_top = Column(Text)
-    At_sum = Column(Text)
-    At_mean = Column(Text)
-    dPht = Column(Text)
-    Pht_top = Column(Text)
-    Pht_sum = Column(Text)
-    Pht_mean = Column(Text)
-    Wt_top = Column(Text)
-    Wt_mean = Column(Text)
-    Wt_sum = Column(Text)
-
-    width = Column(Text)
-    top = Column(Text)
-    land = Column(Text)
-    speed = Column(Text)
-    speed_cover = Column(Text)
-
-    skew = Column(Text)
-    kurt = Column(Text)
-    std = Column(Text)
-    k_var = Column(Text)
-
-    georadar_object = relationship('GeoradarObject', back_populates='profiles')
+    research = relationship('Research', back_populates='profiles')
     current = relationship('CurrentProfile', back_populates='profile')
     window = relationship('WindowProfile', back_populates='profile')
     min_max = relationship('CurrentProfileMinMax', back_populates='profile')
     layers = relationship('Layers', back_populates='profile')
     formations = relationship('Formation', back_populates='profile')
+    markups = relationship('MarkupLDA', back_populates='profile')
+    # дальше всё убираем
+
+    # T_top = Column(Text)
+    # T_bottom = Column(Text)
+    # dT = Column(Text)
+    #
+    # A_top = Column(Text)
+    # A_bottom = Column(Text)
+    # dA = Column(Text)
+    # A_sum = Column(Text)
+    # A_mean = Column(Text)
+    # dVt = Column(Text)
+    # Vt_top = Column(Text)
+    # Vt_sum = Column(Text)
+    # Vt_mean = Column(Text)
+    # dAt = Column(Text)
+    # At_top = Column(Text)
+    # At_sum = Column(Text)
+    # At_mean = Column(Text)
+    # dPht = Column(Text)
+    # Pht_top = Column(Text)
+    # Pht_sum = Column(Text)
+    # Pht_mean = Column(Text)
+    # Wt_top = Column(Text)
+    # Wt_mean = Column(Text)
+    # Wt_sum = Column(Text)
+    #
+    # width = Column(Text)
+    # top = Column(Text)
+    # land = Column(Text)
+    # speed = Column(Text)
+    # speed_cover = Column(Text)
+    #
+    # skew = Column(Text)
+    # kurt = Column(Text)
+    # std = Column(Text)
+    # k_var = Column(Text)
 
 
 class CurrentProfile(Base):
@@ -135,7 +147,7 @@ class Layers(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
-    layer_title = Column(Text)
+    layer_title = Column(String)
     layer_line = Column(Text)
 
     profile = relationship('Profile', back_populates='layers')
@@ -190,6 +202,9 @@ class Formation(Base):
     Wt_mean = Column(Text)
     Wt_sum = Column(Text)
 
+    width = Column(Text)
+    top = Column(Text)
+    land = Column(Text)
     speed = Column(Text)
     speed_cover = Column(Text)
 
@@ -201,6 +216,7 @@ class Formation(Base):
     profile = relationship('Profile', back_populates='formations')
     layer_up = relationship('Layers', back_populates='formation_up', foreign_keys=[up])
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
+    markups = relationship('MarkupLDA', back_populates='formation')
 
 
 class Well(Base):
@@ -214,6 +230,7 @@ class Well(Base):
 
     boundaries = relationship("Boundary", back_populates="well")
     well_logs = relationship("WellLog", back_populates="well")
+    markups = relationship("MarkupLDA", back_populates="well")
 
 
 class Boundary(Base):
@@ -250,6 +267,62 @@ class WellLog(Base):
     curve_data = Column(Text)
 
     well = relationship("Well", back_populates="well_logs")
+
+
+#####################################################
+######################  LDA  ########################
+#####################################################
+
+
+class AnalysisLDA(Base):
+    __tablename__ = 'analysis_lda'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    parameters = relationship('ParameterLDA', back_populates='analysis')
+    markers = relationship('MarkerLDA', back_populates='analysis')
+    markups = relationship('MarkupLDA', back_populates='analysis')
+
+
+class ParameterLDA(Base):
+    __tablename__ = 'parameter_lda'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
+    parameter = Column(String)
+
+    analysis = relationship('AnalysisLDA', back_populates='parameters')
+
+
+class MarkerLDA(Base):
+    __tablename__ = 'marker_lda'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
+    title = Column(String)
+    color = Column(String)
+
+    analysis = relationship('AnalysisLDA', back_populates='markers')
+    markups = relationship('MarkupLDA', back_populates='marker')
+
+
+class MarkupLDA(Base):
+    __tablename__ = 'markup_lda'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
+    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    marker_id = Column(Integer, ForeignKey('marker_lda.id'))
+    list_measure = Column(Text)
+
+    analysis = relationship('AnalysisLDA', back_populates='markups')
+    well = relationship("Well", back_populates="markups")
+    profile = relationship("Profile", back_populates="markups")
+    formation = relationship("Formation", back_populates="markups")
+    marker = relationship("MarkerLDA", back_populates="markups")
 
 
 Base.metadata.create_all(engine)

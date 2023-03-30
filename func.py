@@ -14,6 +14,10 @@ def get_object_id():
         pass
 
 
+def get_research_id():
+    return int(ui.comboBox_research.currentText().split(' id')[-1])
+
+
 # Функция получения имени выбранного объекта
 def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
@@ -21,7 +25,7 @@ def get_object_name():
 
 # Функция получения id выбранного профиля
 def get_profile_id():
-    return int(ui.comboBox_profile.currentText().split('id')[-1])
+    return int(ui.comboBox_profile.currentText().split(' id')[-1])
 
 
 # Функция получения имени выбранного профиля
@@ -73,6 +77,15 @@ def vacuum():
     conn = connect(DATABASE_NAME)
     conn.execute("VACUUM")
     conn.close()
+
+
+def set_random_color():
+    red = random.randint(0, 255)
+    green = random.randint(0, 255)
+    blue = random.randint(0, 255)
+    color = f'#{red:02x}{green:02x}{blue:02x}'
+    ui.pushButton_color.setStyleSheet(f"background-color: {color};")
+    ui.pushButton_color.setText(color)
 
 
 def changeSpinBox():
@@ -129,11 +142,12 @@ def update_profile_combobox():
     ui.comboBox_profile.clear()
     try:
         # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
-        for i in session.query(Profile).filter(Profile.object_id == get_object_id()).all():
+        for i in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
             count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
             ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
         # Обновление списка формирований
         update_formation_combobox()
+        update_layers()
     except ValueError:
         # Если возникла ошибка при обновлении списка профилей, просто проигнорировать ее
         pass
@@ -154,10 +168,17 @@ def update_object():
     # Очистка выпадающего списка объектов
     ui.comboBox_object.clear()
     # Получение всех объектов из базы данных, отсортированных по дате исследования
-    for i in session.query(GeoradarObject).order_by(GeoradarObject.date_exam).all():
+    for i in session.query(GeoradarObject).order_by(GeoradarObject.title).all():
         # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
-        ui.comboBox_object.addItem(f'{i.title} {i.date_exam.strftime("%m.%Y")} id{i.id}')
+        ui.comboBox_object.addItem(f'{i.title} id{i.id}')
     # Обновление выпадающего списка профилей
+    update_research_combobox()
+
+
+def update_research_combobox():
+    ui.comboBox_research.clear()
+    for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
+        ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
     update_profile_combobox()
 
 
@@ -167,14 +188,14 @@ def update_param_combobox():
     ui.comboBox_param_plast.clear()  # очищаем комбобокс
     if ui.comboBox_plast.currentText() == '-----':  # если выбрана пустая строка, то ничего не делаем
         pass
-    elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
-        list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
-        # удаляем не нужные колонки
-        [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]
-        for i in list_columns:
-            # если в таблице профиля есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
-            if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
-                ui.comboBox_param_plast.addItem(i)
+    # elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
+    #     list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
+    #     # удаляем не нужные колонки
+    #     [list_columns.remove(i) for i in ['id', 'object_id', 'title', 'x_wgs', 'y_wgs', 'x_pulc', 'y_pulc', 'signal']]
+    #     for i in list_columns:
+    #         # если в таблице профиля есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
+    #         if session.query(Profile).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
+    #             ui.comboBox_param_plast.addItem(i)
     else:  # если выбрана какая-то формация, то добавляем в комбобокс параметры формации
         list_columns = Formation.__table__.columns.keys()  # список параметров таблицы формаций
         [list_columns.remove(i) for i in  ['id', 'profile_id', 'title', 'up', 'down']]  # удаляем не нужные колонки
@@ -199,28 +220,28 @@ def draw_param():
         # Если не выбран конкретный пласт
         if ui.comboBox_plast.currentText() == '-----':
             return
-        # Получаем данные для текущего пласта
-        graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(Profile.id == get_profile_id()).first()[0])
-        # Создаем список значений по порядку
-        number = list(range(1, len(graph) + 1))
-        # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-        curve = pg.PlotCurveItem(x=number, y=graph)
-        wl = 2.4 if ui.comboBox_plast.currentText() == 'KROT' else 1
-        cl = 'red' if ui.comboBox_plast.currentText() == 'KROT' else 'green'
-        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
-                                        pen=pg.mkPen(color=cl, width=wl))
-        # Если выбран пласт КРОТ, то добавляем только кривую на график
-        if ui.comboBox_plast.currentText() == 'KROT':
-            ui.graph.addItem(curve)
-        # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-        ui.graph.addItem(curve_filter)
+        # # Получаем данные для текущего пласта
+        # graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
+        #     Formation.profile_id == get_profile_id()).first()[0])
+        # # Создаем список значений по порядку
+        # number = list(range(1, len(graph) + 1))
+        # # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
+        # curve = pg.PlotCurveItem(x=number, y=graph)
+        # wl = 2.4 if ui.comboBox_plast.currentText() == 'KROT' else 1
+        # cl = 'red' if ui.comboBox_plast.currentText() == 'KROT' else 'green'
+        # curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
+        #                                 pen=pg.mkPen(color=cl, width=wl))
+        # # Если выбран пласт КРОТ, то добавляем только кривую на график
+        # if ui.comboBox_plast.currentText() == 'KROT':
+        #     ui.graph.addItem(curve)
+        # # Добавляем кривую и отфильтрованную кривую на график для всех пластов
+        # ui.graph.addItem(curve_filter)
         # Для каждого пласта
         for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
-            # Если выбран параметр ширина, верхняя или нижняя граница пласта, то не рисуем кривые
-            if param in ['width', 'top', 'land']:
-                return
             # Получаем данные для текущего пласта
             graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
+            # Создаем список значений по порядку
+            number = list(range(1, len(graph) + 1))
             # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
             curve = pg.PlotCurveItem(x=number, y=graph)
             wl = 2.4 if f.id == get_formation_id() else 1
@@ -237,11 +258,6 @@ def draw_param():
         # если текущий выбранный элемент равен '-----', то ничего не делаем и выходим из функции
         if ui.comboBox_plast.currentText() == '-----':
             return
-        # если текущий выбранный элемент равен 'KROT', то получаем данные для профиля
-        elif ui.comboBox_plast.currentText() == 'KROT':
-            # получаем данные для выбранного параметра из таблицы Profile и преобразуем их из строки в список с помощью json.loads()
-            graph = json.loads(session.query(literal_column(f'Profile.{param}')).filter(
-                Profile.id == get_profile_id()).first()[0])
         else:  # в остальных случаях получаем данные для формации
             # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
             graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
@@ -296,13 +312,13 @@ def clear_layers():
             radarogramma.removeItem(globals()[f'text_id{i.text().split(" id")[-1]}'])
             del globals()[f'text_id{i.text().split(" id")[-1]}']
     # удаляем все RadioButton виджеты, находящиеся в виджете ui.widget_layer_radio
-    for i in ui.widget_layer_radio.findChildren(QtWidgets.QRadioButton):
+    for i in ui.widget_layer.findChildren(QtWidgets.QRadioButton):
         i.deleteLater()
 
 
 def get_layer_id():
     # Найти id выбранного слоя в списке радиокнопок
-    for i in ui.widget_layer_radio.findChildren(QtWidgets.QRadioButton):
+    for i in ui.widget_layer.findChildren(QtWidgets.QRadioButton):
         if i.isChecked():
             return int(i.text())
 
@@ -415,14 +431,17 @@ def update_layers():
     layers = session.query(Layers).filter(Layers.profile_id == get_profile_id()).all()
     # Для каждого слоя создать элементы управления
     for n, lay in enumerate(layers):
+        ui.new_horizontalLayout = QtWidgets.QHBoxLayout()
+        ui.verticalLayout_layer.addLayout(ui.new_horizontalLayout)
         ui.checkBox_new = QtWidgets.QCheckBox()
-        ui.radio_new = QtWidgets.QRadioButton()
         # Задать текст для флажка и радиокнопки
         ui.checkBox_new.setText(f'{lay.layer_title} id{lay.id}')
-        ui.radio_new.setText(f'{lay.id}')
         # Добавить флажок и радиокнопку на соответствующие макеты
-        ui.verticalLayout_layer.addWidget(ui.checkBox_new)
-        ui.verticalLayout_layer_radio.addWidget(ui.radio_new)
+        ui.new_horizontalLayout.addWidget(ui.checkBox_new)
+        if not lay.layer_title.startswith('krot_'):
+            ui.radio_new = QtWidgets.QRadioButton()
+            ui.radio_new.setText(f'{lay.id}')
+            ui.new_horizontalLayout.addWidget(ui.radio_new)
         # Связать событие нажатия на флажок с функцией draw_layers()
         ui.checkBox_new.clicked.connect(draw_layers)
 
@@ -480,8 +499,8 @@ def update_formation_combobox():
     formations = session.query(Formation).filter(Formation.profile_id == get_profile_id()).all()
     # Добавляем первые два пункта в список
     ui.comboBox_plast.addItem('-----')
-    if session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0]:
-        ui.comboBox_plast.addItem('KROT')
+    # if session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0]:
+    #     ui.comboBox_plast.addItem('KROT')
     # Добавляем все формации в список выбора пластов
     for form in formations:
         ui.comboBox_plast.addItem(f'{form.title} id{form.id}')
@@ -498,15 +517,12 @@ def distance(x1, y1, x2, y2):
     return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
 
 
+# Функция для нахождения ближайшей точки на профиле к заданной скважине
 def closest_point(well_x, well_y, profile_x, profile_y):
-    closest_idx = 0
-    closest_distance = distance(well_x, well_y, profile_x[0], profile_y[0])
-    for i in range(1, len(profile_x)):
-        dist = distance(well_x, well_y, profile_x[i], profile_y[i])
-        if dist < closest_distance:
-            closest_distance = dist
-            closest_idx = i
-    return (closest_idx, closest_distance)
+    # используем lambda-функцию для нахождения расстояния между скважиной и каждой точкой на профиле
+    closest = min(range(len(profile_x)), key=lambda i: distance(well_x, well_y, profile_x[i], profile_y[i]))
+    # возвращает индекс ближайшей точки и расстояние до нее
+    return (closest, distance(well_x, well_y, profile_x[closest], profile_y[closest]))
 
 
 def update_list_well():
@@ -536,7 +552,8 @@ def update_list_well():
 
 
 def get_well_id():
-    return ui.listWidget_well.currentItem().text().split(' id')[-1]
+    if ui.listWidget_well.currentItem():
+        return ui.listWidget_well.currentItem().text().split(' id')[-1]
 
 
 def update_boundaries():
@@ -588,20 +605,46 @@ def draw_well(well_id):
 
 
 def draw_boundary(bound_id, index):
+    # Проверка наличия ранее добавленных графических элементов (точки) с данным bound_id
     if f'bound_scatter_id{bound_id}' in globals():
+        # Удаление точки с графика, если она есть в globals()
         radarogramma.removeItem(globals()[f'bound_scatter_id{bound_id}'])
+    # Проверка наличия ранее добавленных графических элементов (текста) с данным bound_id
     if f'bound_text_id{bound_id}' in globals():
+        # Удаление текста с графика, если он есть в globals()
         radarogramma.removeItem(globals()[f'bound_text_id{bound_id}'])
+    # Запрос на получение объекта границы из базы данных
     bound = session.query(Boundary).filter(Boundary.id == bound_id).first()
-    d = ((bound.depth * 100) / 5) / 8
+    # Получение значения средней скорости в среде
+    Vmean = ui.doubleSpinBox_vsr.value()
+    # Расчёт значения глубины, которое будет использоваться для отображения точки и текста на графике
+    d = ((bound.depth * 100) / Vmean) / 8
+    # Создание графического объекта точки с переданными параметрами
     scatter = pg.ScatterPlotItem(x=[index], y=[d], symbol='o', pen=pg.mkPen(None),
                                  brush=pg.mkBrush(255, 255, 255, 120), size=10)
-    radarogramma.addItem(scatter)
-    globals()[f'bound_scatter_id{bound_id}'] = scatter
+    radarogramma.addItem(scatter)  # Добавление графического объекта точки на график
+    globals()[f'bound_scatter_id{bound_id}'] = scatter  # Сохранение ссылки на графический объект точки в globals()
 
+    # Создание графического объекта текста с переданными параметрами
     text_item = pg.TextItem(text=f'{bound.title} ({bound.depth})', color='white')
-    text_item.setPos(index + 10, d)
-    radarogramma.addItem(text_item)
-    globals()[f'bound_text_id{bound_id}'] = text_item
+    text_item.setPos(index + 10, d)  # Установка позиции текста на графике
+    radarogramma.addItem(text_item)  # Добавление графического объекта текста на график
+    globals()[f'bound_text_id{bound_id}'] = text_item  # Сохранение ссылки на графический объект текста в globals()
 
 
+################################################################
+############################# LDA ##############################
+################################################################
+
+
+def get_LDA_id():
+    return ui.comboBox_lda_analysis.currentText().split(' id')[-1]
+
+
+def get_marker_id():
+    return ui.comboBox_mark_lda.currentText().split(' id')[-1]
+
+
+def get_markup_id():
+    if ui.listWidget_well_lda.currentItem():
+        return ui.listWidget_well_lda.currentItem().text().split(' id')[-1]

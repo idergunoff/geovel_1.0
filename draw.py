@@ -9,6 +9,8 @@ def draw_radarogram():
         radarogramma.removeItem(globals()['curve_down'])
     if 'text_item' in globals():
         radarogramma.removeItem(globals()['text_item'])
+    if 'poly_item' in globals():
+        radarogramma.removeItem(globals()['poly_item'])
     ui.info.clear()
     clear_current_profile()
     rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
@@ -62,6 +64,8 @@ def draw_current_radarogram():
         radarogramma.removeItem(globals()['curve_down'])
     if 'text_item' in globals():
         radarogramma.removeItem(globals()['text_item'])
+    if 'poly_item' in globals():
+        radarogramma.removeItem(globals()['poly_item'])
     rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     ui.progressBar.setMaximum(len(rad))
     radar = []
@@ -159,12 +163,12 @@ def draw_formation():
         radarogramma.removeItem(globals()['text_item'])
     if ui.comboBox_plast.currentText() == '-----':
         return
-    elif ui.comboBox_plast.currentText() == 'KROT':
-        t_top = json.loads(session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0])
-        t_bot = json.loads(session.query(Profile.T_bottom).filter(Profile.id == get_profile_id()).first()[0])
-        layer_up = [x / 8 for x in t_top]
-        layer_down = [x / 8 for x in t_bot]
-        title_text = 'KROT'
+    # elif ui.comboBox_plast.currentText() == 'KROT':
+    #     t_top = json.loads(session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0])
+    #     t_bot = json.loads(session.query(Profile.T_bottom).filter(Profile.id == get_profile_id()).first()[0])
+    #     layer_up = [x / 8 for x in t_top]
+    #     layer_down = [x / 8 for x in t_bot]
+    #     title_text = 'KROT'
     else:
         formation = session.query(Formation).filter(Formation.id == get_formation_id()).first()
         layer_up = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.up).first()[0])
@@ -184,3 +188,15 @@ def draw_formation():
     globals()['curve_up'] = curve_up
     globals()['curve_down'] = curve_down
     globals()['text_item'] = text_item
+
+
+def draw_fill(x, y1, y2, color):
+    if 'poly_item' in globals():
+        radarogramma.removeItem(globals()['poly_item'])
+    curve_up = pg.PlotCurveItem(x=x, y=y1)
+    curve_down = pg.PlotCurveItem(x=x, y=y2)
+    poly_item = pg.FillBetweenItem(curve1=curve_down, curve2=curve_up, brush=color)
+    radarogramma.addItem(poly_item)
+    poly_item.setOpacity(0.5)
+    poly_item.setZValue(1)
+    globals()['poly_item'] = poly_item

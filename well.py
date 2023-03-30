@@ -102,7 +102,8 @@ def add_wells():
 def show_data_well():
     ui.textEdit_datawell.clear()
     well = session.query(Well).filter_by(id=get_well_id()).first()
-    ui.textEdit_datawell.append(f'<p><b>Скважина №</b> {well.name}</p>'
+    if well:
+        ui.textEdit_datawell.append(f'<p><b>Скважина №</b> {well.name}</p>'
                                 f'<p><b>X:</b> {well.x_coord}</p>'
                                 f'<p><b>Y:</b> {well.y_coord}</p>'
                                 f'<p><b>Альтитуда:</b> {well.alt} м.</p>')
@@ -141,3 +142,29 @@ def remove_boundary():
     session.commit()
     update_boundaries()
     update_list_well()
+
+
+def draw_bound_int():
+    for key, value in globals().items():
+        if key.startswith('int_bound_'):
+            radarogramma.removeItem(globals()[key])
+    if ui.listWidget_bound.currentItem():
+        bound = session.query(Boundary).filter(Boundary.id == get_boundary_id()).first()
+        dmin = ((bound.depth * 100) / ui.doubleSpinBox_vmin.value()) / 8
+        dmax = ((bound.depth * 100) / ui.doubleSpinBox_vmax.value()) / 8
+        lmin = pg.InfiniteLine(pos=dmin, angle=0, pen=pg.mkPen(color='white', width=1, dash=[2, 2]))
+        lmax = pg.InfiniteLine(pos=dmax, angle=0, pen=pg.mkPen(color='white', width=1, dash=[2, 2]))
+        radarogramma.addItem(lmin)
+        radarogramma.addItem(lmax)
+        globals()[f'int_bound_min'] = lmin
+        globals()[f'int_bound_max'] = lmax
+
+        text_min = pg.TextItem(text=f'{bound.title} Vmin', color='white')
+        text_min.setPos(0, dmin - 30)
+        radarogramma.addItem(text_min)
+        globals()[f'int_bound_text_min'] = text_min
+        text_max = pg.TextItem(text=f'{bound.title} Vmax', color='white')
+        text_max.setPos(0, dmax - 30)
+        radarogramma.addItem(text_max)
+        globals()[f'int_bound_text_max'] = text_max
+

@@ -1,17 +1,21 @@
 import traceback
 
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QColorDialog
+
 from load import *
 from filtering import *
 from draw import *
 from layer import *
 from well import *
+from lda import *
 
 
 MainWindow.show()
 
 
-def show_globals():
-    print(globals().keys())
+# def show_globals():
+#     print(globals().keys())
 
 
 def mouse_moved_to_signal(evt):
@@ -53,6 +57,23 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
     sys.exit()
 
 
+def change_color():
+    button_color = ui.pushButton_color.palette().color(ui.pushButton_color.backgroundRole())
+    color = QColorDialog.getColor(button_color)
+    ui.pushButton_color.setStyleSheet(f"background-color: {color.name()};")
+    ui.pushButton_color.setText(color.name())
+
+
+    # result = QtWidgets.QMessageBox.question(None, 'Вопрос', 'Вы уверены, что хотите выйти?',
+    #                                         QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel)
+    #
+    # if result == QtWidgets.QMessageBox.Yes:
+    #     print('Да')
+    #
+    # elif result == QtWidgets.QMessageBox.Cancel:
+    #     print('Отмена')
+
+
 img.scene().sigMouseClicked.connect(mouseClicked)
 
 ui.pushButton_save_signal.clicked.connect(save_signal)
@@ -82,12 +103,16 @@ ui.pushButton_add_layer.clicked.connect(add_layer)
 ui.pushButton_add_formation.clicked.connect(add_formation)
 ui.pushButton_remove_layer.clicked.connect(remove_layer)
 ui.pushButton_edges_layer.clicked.connect(save_layer)
-ui.pushButton_find_oil.clicked.connect(show_globals)
+# ui.pushButton_find_oil.clicked.connect(show_globals)
 ui.pushButton_add_well.clicked.connect(add_well)
 ui.pushButton_edit_well.clicked.connect(edit_well)
 ui.pushButton_add_wells.clicked.connect(add_wells)
 ui.pushButton_add_bound.clicked.connect(add_boundary)
 ui.pushButton_rem_bound.clicked.connect(remove_boundary)
+ui.pushButton_color.clicked.connect(change_color)
+ui.pushButton_add_lda.clicked.connect(add_lda)
+ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
+ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -99,11 +124,13 @@ ui.toolButton_crop_up.clicked.connect(crop_up)
 ui.toolButton_crop_down.clicked.connect(crop_down)
 
 
-ui.comboBox_object.activated.connect(update_profile_combobox)
+ui.comboBox_object.activated.connect(update_research_combobox)
+ui.comboBox_research.activated.connect(update_profile_combobox)
 ui.comboBox_profile.activated.connect(update_formation_combobox)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
+ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda)
 
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
@@ -117,9 +144,15 @@ ui.spinBox_roi.valueChanged.connect(changeSpinBox)
 ui.spinBox_rad_up.valueChanged.connect(draw_rad_line)
 ui.spinBox_rad_down.valueChanged.connect(draw_rad_line)
 ui.spinBox_well_distance.valueChanged.connect(update_list_well)
+ui.doubleSpinBox_vmin.valueChanged.connect(draw_bound_int)
+ui.doubleSpinBox_vmax.valueChanged.connect(draw_bound_int)
+ui.doubleSpinBox_vsr.valueChanged.connect(draw_wells)
 
-ui.listWidget_well.clicked.connect(show_data_well)
-ui.listWidget_well.clicked.connect(update_boundaries)
+
+ui.listWidget_well.currentItemChanged.connect(show_data_well)
+ui.listWidget_well.currentItemChanged.connect(update_boundaries)
+ui.listWidget_bound.currentItemChanged.connect(draw_bound_int)
+ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
 
 roi.sigRegionChanged.connect(updatePlot)
 
@@ -130,9 +163,11 @@ clear_current_profile()
 clear_current_profile_min_max()
 clear_spectr()
 clear_window_profile()
-update_layers()
+# update_layers()
 update_list_well()
 set_info('Старт...', 'green')
+set_random_color()
+update_list_lda()
 
 
 
