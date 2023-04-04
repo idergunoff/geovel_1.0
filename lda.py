@@ -24,8 +24,20 @@ def add_lda():
 
 def remove_lda():
     """Удалить анализ LDA"""
-    # todo: подтверждение удаления, потом удаление всех составляющих анализа
-    pass
+    lda_title = get_lda_title()
+    result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove markup LDA',
+                                            f'Вы уверены, что хотите удалить модель LDA "{lda_title}"?',
+                                            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).delete()
+        session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).delete()
+        session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).delete()
+        session.query(AnalysisLDA).filter_by(id=get_LDA_id()).delete()
+        session.commit()
+        set_info(f'Удалена модель LDA - "{lda_title}"', 'green')
+        update_list_lda()
+    elif result == QtWidgets.QMessageBox.No:
+        pass
 
 
 def update_list_lda():

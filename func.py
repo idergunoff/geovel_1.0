@@ -565,6 +565,13 @@ def get_well_id():
         return ui.listWidget_well.currentItem().text().split(' id')[-1]
 
 
+def process_string(s):
+    """Удалить пробелы из строки и заменить запятую на точку"""
+    s = s.replace(" ", "") # удалить пробелы
+    s = s.replace(",", ".") # заменить запятые на точки
+    return s
+
+
 def update_boundaries():
     ui.listWidget_bound.clear()
     boundaries = session.query(Boundary).filter(Boundary.well_id == get_well_id()).order_by(Boundary.depth).all()

@@ -15,9 +15,9 @@ def add_well():
     ui_w.toolButton_del.hide()
     def well_to_db():
         name_well = ui_w.lineEdit_well_name.text()
-        x_well = ui_w.lineEdit_well_x.text()
-        y_well = ui_w.lineEdit_well_y.text()
-        alt_well = ui_w.lineEdit_well_alt.text()
+        x_well = process_string(ui_w.lineEdit_well_x.text())
+        y_well = process_string(ui_w.lineEdit_well_y.text())
+        alt_well = process_string(ui_w.lineEdit_well_alt.text())
         if name_well != '' and x_well != '' and y_well != '' and alt_well != '':
             new_well = Well(name=name_well, x_coord=float(x_well), y_coord=float(y_well), alt=float(alt_well))
             session.add(new_well)
