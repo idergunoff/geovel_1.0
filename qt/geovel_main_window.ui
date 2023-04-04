@@ -1322,7 +1322,7 @@
                        </widget>
                       </item>
                       <item row="1" column="1">
-                       <widget class="QPushButton" name="pushButton_save_prof_lda">
+                       <widget class="QCheckBox" name="checkBox_save_prof_lda">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(175, 255, 243);</string>
                         </property>
@@ -1491,16 +1491,6 @@
                         </property>
                         <property name="text">
                          <string>- remove parameter</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_f_test">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>F-test</string>
                         </property>
                        </widget>
                       </item>

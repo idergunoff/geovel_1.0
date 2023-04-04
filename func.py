@@ -22,6 +22,10 @@ def get_research_id():
     return int(ui.comboBox_research.currentText().split(' id')[-1])
 
 
+def get_research_name():
+    return ui.comboBox_research.currentText().split(' id')[0]
+
+
 # Функция получения имени выбранного объекта
 def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
@@ -350,6 +354,7 @@ def get_formation_id():
     # Найти id выбранного пласта
     if ui.comboBox_plast.currentText() == '-----' or ui.comboBox_plast.currentText() == 'KROT':
         return False
+
     return int(ui.comboBox_plast.currentText().split(' id')[-1])
 
 
@@ -645,6 +650,10 @@ def get_LDA_id():
     return ui.comboBox_lda_analysis.currentText().split(' id')[-1]
 
 
+def get_lda_title():
+    return ui.comboBox_lda_analysis.currentText().split(' id')[0]
+
+
 def get_marker_id():
     return ui.comboBox_mark_lda.currentText().split(' id')[-1]
 
@@ -694,6 +703,49 @@ def get_list_marker():
 def get_list_param_lda():
     parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
     return [p.parameter for p in parameters]
+
+
+def get_working_data_lda():
+    data_train, list_param = build_table_train_lda()
+    training_sample = data_train[list_param].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
+    except ValueError:
+        ui.label_info.setText(
+            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    data_trans_coef = pd.DataFrame(trans_coef)
+    data_trans_coef['mark'] = data_train[['mark']]
+    list_cat = list(clf.classes_)
+    working_data = pd.DataFrame(columns=['prof_index', 'mark'] + list_param + list_cat)
+    curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+    for param in list_param:
+        locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
+    ui.progressBar.setMaximum(len(locals()[f'list_{list_param[0]}']))
+    set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}',
+             'blue')
+    for i in range(len(locals()[f'list_{list_param[0]}'])):
+        dict_value = {}
+        for param in list_param:
+            dict_value[param] = locals()[f'list_{param}'][i]
+        dict_trans_coef = {}
+        new_trans_coef = clf.transform([list(dict_value.values())])[0]
+        for k, t in enumerate(new_trans_coef):
+            dict_trans_coef[k] = t
+        dict_trans_coef['mark'] = 'test'
+        new_mark = clf.predict([list(dict_value.values())])[0]
+        probability = clf.predict_proba([list(dict_value.values())])[0]
+        for k, _ in enumerate(list_cat):
+            dict_value[list_cat[k]] = probability[k]
+        dict_value['mark'] = new_mark
+        dict_value['prof_index'] = f'{curr_form.profile_id}_{i}'
+        working_data = pd.concat([working_data, pd.DataFrame([dict_value])], ignore_index=True)
+        data_trans_coef = pd.concat([data_trans_coef, pd.DataFrame([dict_trans_coef])], ignore_index=True)
+        ui.progressBar.setValue(i + 1)
+    return working_data, data_trans_coef, curr_form
 
 
 

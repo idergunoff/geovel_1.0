@@ -122,7 +122,7 @@ ui.pushButton_draw_lda.clicked.connect(draw_LDA)
 ui.pushButton_verify_lda.clicked.connect(calc_verify_lda)
 ui.pushButton_reset_verify_lda.clicked.connect(reset_verify_lda)
 ui.pushButton_calc_lda.clicked.connect(calc_LDA)
-ui.pushButton_f_test.clicked.connect(calc_f_test)
+ui.pushButton_calc_obj_lda.clicked.connect(calc_obj_lda)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
