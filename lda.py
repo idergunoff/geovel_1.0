@@ -1,9 +1,11 @@
 import json
 
+import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor
 
-from draw import draw_radarogram, draw_formation, draw_fill
+
+from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 
 
@@ -59,6 +61,7 @@ def update_list_marker_lda():
         ui.comboBox_mark_lda.addItem(f'{i.title} id{i.id}')
         ui.comboBox_mark_lda.setItemData(ui.comboBox_mark_lda.findText(item), QBrush(QColor(i.color)), Qt.BackgroundRole)
     update_list_well_markup_lda()
+    update_list_param_lda()
 
 
 def add_well_markup_lda():
@@ -77,7 +80,7 @@ def add_well_markup_lda():
         index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
         well_dist = ui.spinBox_well_dist.value()
         start = index - well_dist if index - well_dist > 0 else 0
-        stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof) + 1
+        stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
 
         list_measure = list(range(start, stop))
         new_markup_lda = MarkupLDA(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
@@ -90,11 +93,32 @@ def add_well_markup_lda():
         set_info('выбраны не все параметры', 'red')
 
 
+def remove_well_markup_lda():
+    markup = session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).first()
+    if not markup:
+        return
+    skv_name = session.query(Well.name).filter(Well.id == markup.well_id).first()[0]
+    prof_name = session.query(Profile.title).filter(Profile.id == markup.profile_id).first()[0]
+    lda_name = session.query(AnalysisLDA.title).filter(AnalysisLDA.id == markup.analysis_id).first()[0]
+    result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove markup LDA', f'Вы уверены, что хотите удалить скважину "{skv_name}" на '
+                                                            f'профиле "{prof_name}" из обучающей модели LDA-анализа "{lda_name}"?',
+                                            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.delete(markup)
+        session.commit()
+        set_info(f'Удалена обучающая скважина для LDA - "{ui.listWidget_well_lda.currentItem().text()}"', 'green')
+        update_list_well_markup_lda()
+    elif result == QtWidgets.QMessageBox.No:
+        pass
+
+
 def update_list_well_markup_lda():
     """Обновление списка обучающих скважин LDA"""
     ui.listWidget_well_lda.clear()
     for i in session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).all():
-        item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | id{i.id}'
+        fake = len(json.loads(i.list_fake)) if i.list_fake else 0
+        measure = len(json.loads(i.list_measure))
+        item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
         ui.listWidget_well_lda.addItem(item)
         i_item = ui.listWidget_well_lda.findItems(item, Qt.MatchContains)[0]
         i_item.setBackground(QBrush(QColor(i.marker.color)))
@@ -102,10 +126,17 @@ def update_list_well_markup_lda():
 
 
 def choose_marker_lda():
-    """Выбор маркера LDA"""
+    # Функция выбора маркера LDA
+    # Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
+    # пользовательского интерфейса
+
+    # Получение информации о маркере из БД по его ID
     markup = session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).first()
+    # Если ID маркера не найден в БД, то функция завершается
     if not markup:
         return
+
+    # Установка соответствующих значений виджетов пользовательского интерфейса
     ui.comboBox_object.setCurrentText(f'{markup.profile.research.object.title} id{markup.profile.research.object_id}')
     update_research_combobox()
     ui.comboBox_research.setCurrentText(f'{markup.profile.research.date_research.strftime("%m.%Y")} id{markup.profile.research_id}')
@@ -116,9 +147,233 @@ def choose_marker_lda():
     ui.comboBox_plast.setCurrentText(f'{markup.formation.title} id{markup.formation_id}')
     draw_formation()
     draw_well(markup.well_id)
-    list_measure = json.loads(markup.list_measure)
-    list_up = json.loads(markup.formation.layer_up.layer_line)
-    list_down = json.loads(markup.formation.layer_down.layer_line)
-    y_up = [list_up[i] for i in list_measure]
-    y_down = [list_down[i] for i in list_measure]
+    list_measure = json.loads(markup.list_measure)  # Получение списка измерений
+    list_fake = json.loads(markup.list_fake) if markup.list_fake else []    # Получение списка пропущенных измерений
+    list_up = json.loads(markup.formation.layer_up.layer_line)  # Получение списка с верхними границами формации
+    list_down = json.loads(markup.formation.layer_down.layer_line)  # Получение списка со снижными границами формации
+    y_up = [list_up[i] for i in list_measure]   # Создание списка верхних границ для отображения
+    y_down = [list_down[i] for i in list_measure]   # Создание списка нижних границ для отображения
+    # Обновление маркера с конкретными данными о верхней и нижней границах и цветом
     draw_fill(list_measure, y_up, y_down, markup.marker.color)
+    draw_fake(list_fake, list_up, list_down)
+
+
+def add_param_geovel_lda():
+    if session.query(ParameterLDA).filter_by(
+            analysis_id=get_LDA_id(),
+            parameter=ui.comboBox_geovel_param_lda.currentText()
+    ).count() == 0:
+        add_param_lda(ui.comboBox_geovel_param_lda.currentText())
+        update_list_param_lda()
+    else:
+        set_info(f'Параметр {ui.comboBox_geovel_param_lda.currentText()} уже добавлен', 'red')
+
+
+def add_all_param_geovel_lda():
+    for i in list_param_geovel:
+        if session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).filter(ParameterLDA.parameter == i).count() > 0:
+            continue
+        add_param_lda(i)
+    update_list_param_lda()
+
+
+def remove_param_geovel_lda():
+    if ui.listWidget_param_lda.currentItem():
+        session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(), parameter=ui.listWidget_param_lda.currentItem().text().split(' ')[0]).delete()
+        session.commit()
+        update_list_param_lda()
+
+
+def remove_all_param_geovel_lda():
+    session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).delete()
+    session.commit()
+    update_list_param_lda()
+
+
+def update_list_param_lda():
+    calc_f_test()
+    # ui.listWidget_param_lda.clear()
+    # for i in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+    #     ui.listWidget_param_lda.addItem(i.parameter)
+
+
+def draw_LDA():
+    """ Построить диаграмму рассеяния для модели анализа LDA """
+    data_train, list_param = build_table_train_lda()
+    colors = {}
+    for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all():
+        colors[m.title] = m.color
+    training_sample = data_train[list_param].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
+    except ValueError:
+        ui.label_info.setText(f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    data_trans_coef = pd.DataFrame(trans_coef)
+    data_trans_coef['mark'] = data_train[['mark']]
+
+    fig = plt.figure(figsize=(10, 10), dpi=80)
+    ax = plt.subplot()
+    if ui.listWidget_param_lda.count() < 3:
+        sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', palette=colors)
+    else:
+        sns.scatterplot(data=data_trans_coef, x=0, y=1, hue='mark', palette=colors)
+    ax.grid()
+    ax.xaxis.grid(True, "minor", linewidth=.25)
+    ax.yaxis.grid(True, "minor", linewidth=.25)
+    # title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+    #               f'\n{ui.comboBox_class_lda.currentText().split(". ")[1]}' \
+    #               f'\nПараметры: {" ".join(list_param)}' f'\nКоличество образцов: {str(len(data_trans_coef.index))}'
+    # plt.title(title_graph, fontsize=16)
+    fig.show()
+
+
+def calc_verify_lda():
+    data_train, list_param = build_table_train_lda()
+    # colors = [m.color for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()]
+    training_sample = data_train[list_param].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        clf.fit(training_sample, markup)
+    except ValueError:
+        ui.label_info.setText(f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    n, k = 0, 0
+    ui.progressBar.setMaximum(len(data_train.index))
+    for i in data_train.index:
+        new_mark = clf.predict([data_train.loc[i].loc[list_param].tolist()])[0]
+        if data_train['mark'][i] != new_mark:
+            prof_id = data_train['prof_well_index'][i].split('_')[0]
+            well_id = data_train['prof_well_index'][i].split('_')[1]
+            ix = int(data_train['prof_well_index'][i].split('_')[2])
+            old_list_fake = session.query(MarkupLDA.list_fake).filter(
+                MarkupLDA.analysis_id == get_LDA_id(),
+                MarkupLDA.profile_id == prof_id,
+                MarkupLDA.well_id == well_id
+            ).first()[0]
+            if old_list_fake:
+                new_list_fake = json.loads(old_list_fake)
+                new_list_fake.append(ix)
+            else:
+                new_list_fake = [ix]
+            session.query(MarkupLDA).filter(
+                MarkupLDA.analysis_id == get_LDA_id(),
+                MarkupLDA.profile_id == prof_id,
+                MarkupLDA.well_id == well_id
+            ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
+            session.commit()
+            n += 1
+        k += 1
+        ui.progressBar.setValue(k)
+    session.commit()
+    set_info(f'Из обучающей выборки удалено {n} измерений.', 'blue')
+    update_list_well_markup_lda()
+    update_list_param_lda()
+
+
+def reset_verify_lda():
+    session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).update({'list_fake': None}, synchronize_session='fetch')
+    session.commit()
+    set_info(f'Выбросы для анализа "{ui.comboBox_lda_analysis.currentText()}" очищены.', 'green')
+    update_list_well_markup_lda()
+    update_list_param_lda()
+
+
+def calc_LDA():
+    data_train, list_param = build_table_train_lda()
+    colors = {}
+    for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all():
+        colors[m.title] = m.color
+    colors['test'] = '#999999'
+    training_sample = data_train[list_param].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
+    except ValueError:
+        ui.label_info.setText(
+            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    data_trans_coef = pd.DataFrame(trans_coef)
+    data_trans_coef['mark'] = data_train[['mark']]
+    list_cat = list(clf.classes_)
+    working_data = pd.DataFrame(columns=['prof_index', 'mark'] + list_param + list_cat)
+    curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+    for param in list_param:
+        locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
+    ui.progressBar.setMaximum(len(locals()[f'list_{list_param[0]}']))
+    set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}', 'blue')
+    for i in range(len(locals()[f'list_{list_param[0]}'])):
+        dict_value = {}
+        for param in list_param:
+            dict_value[param] = locals()[f'list_{param}'][i]
+        dict_trans_coef = {}
+        new_trans_coef = clf.transform([list(dict_value.values())])[0]
+        for k, t in enumerate(new_trans_coef):
+            dict_trans_coef[k] = t
+        dict_trans_coef['mark'] = 'test'
+        new_mark = clf.predict([list(dict_value.values())])[0]
+        probability = clf.predict_proba([list(dict_value.values())])[0]
+        for k, _ in enumerate(list_cat):
+            dict_value[list_cat[k]] = probability[k]
+        dict_value['mark'] = new_mark
+        dict_value['prof_index'] = f'{curr_form.profile_id}_{i}'
+        working_data = pd.concat([working_data, pd.DataFrame([dict_value])], ignore_index=True)
+        data_trans_coef = pd.concat([data_trans_coef, pd.DataFrame([dict_trans_coef])], ignore_index=True)
+        ui.progressBar.setValue(i+1)
+    fig = plt.figure(figsize=(10, 10), dpi=80)
+    ax = plt.subplot()
+    if ui.listWidget_param_lda.count() < 3:
+        sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', palette=colors)
+    else:
+        sns.scatterplot(data=data_trans_coef, x=0, y=1, hue='mark', palette=colors)
+    ax.grid()
+    ax.xaxis.grid(True, "minor", linewidth=.25)
+    ax.yaxis.grid(True, "minor", linewidth=.25)
+    # title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+    #               f'\n{ui.comboBox_class_lda.currentText().split(". ")[1]}' \
+    #               f'\nПараметры: {" ".join(list_param)}' f'\nКоличество образцов: {str(len(data_trans_coef.index))}'
+    # plt.title(title_graph, fontsize=16)
+    fig.show()
+    remove_poly_item()
+    list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
+    list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
+
+    previous_element = None
+    list_dupl = []
+    for index, current_element in enumerate(working_data['mark']):
+        if current_element == previous_element:
+            list_dupl.append(index)
+        else:
+            if list_dupl:
+                list_dupl.append(list_dupl[-1] + 1)
+                y_up = [list_up[i] for i in list_dupl]
+                y_down = [list_down[i] for i in list_dupl]
+                draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
+            list_dupl = [index]
+        previous_element = current_element
+    if len(list_dupl) > 0:
+        y_up = [list_up[i] for i in list_dupl]
+        y_down = [list_down[i] for i in list_dupl]
+        draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
+
+
+def calc_f_test():
+    data_train, list_param = build_table_train_lda()
+    list_marker = get_list_marker()
+    ui.listWidget_param_lda.clear()
+    for param in list_param:
+        groups = []
+        for mark in list_marker:
+            groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+        F, p = f_oneway(*groups)
+        ui.listWidget_param_lda.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
+        if F < 1 or p > 0.05:
+            i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor('red')))

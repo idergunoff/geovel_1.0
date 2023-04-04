@@ -11,6 +11,7 @@ def draw_radarogram():
         radarogramma.removeItem(globals()['text_item'])
     if 'poly_item' in globals():
         radarogramma.removeItem(globals()['poly_item'])
+    remove_poly_item()
     ui.info.clear()
     clear_current_profile()
     rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
@@ -66,6 +67,7 @@ def draw_current_radarogram():
         radarogramma.removeItem(globals()['text_item'])
     if 'poly_item' in globals():
         radarogramma.removeItem(globals()['poly_item'])
+    remove_poly_item()
     rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     ui.progressBar.setMaximum(len(rad))
     radar = []
@@ -146,6 +148,7 @@ def draw_rad_line():
 
 
 def choose_minmax():
+    remove_poly_item()
     if ui.checkBox_minmax.isChecked():
         radar = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
     else:
@@ -155,6 +158,7 @@ def choose_minmax():
 
 
 def draw_formation():
+    remove_poly_item()
     if 'curve_up' in globals():
         radarogramma.removeItem(globals()['curve_up'])
     if 'curve_down' in globals():
@@ -191,8 +195,7 @@ def draw_formation():
 
 
 def draw_fill(x, y1, y2, color):
-    if 'poly_item' in globals():
-        radarogramma.removeItem(globals()['poly_item'])
+    remove_poly_item()
     curve_up = pg.PlotCurveItem(x=x, y=y1)
     curve_down = pg.PlotCurveItem(x=x, y=y2)
     poly_item = pg.FillBetweenItem(curve1=curve_down, curve2=curve_up, brush=color)
@@ -200,3 +203,30 @@ def draw_fill(x, y1, y2, color):
     poly_item.setOpacity(0.5)
     poly_item.setZValue(1)
     globals()['poly_item'] = poly_item
+
+
+def draw_fake(list_fake, list_up, list_down):
+    for key, value in globals().items():
+        if key.startswith('curve_fake_'):
+            radarogramma.removeItem(globals()[key])
+    for f in list_fake:
+        curve_fake = pg.PlotCurveItem(x=[f, f], y=[list_up[f], list_down[f]], pen=pg.mkPen(color='white', width=1))
+        radarogramma.addItem(curve_fake)
+        curve_fake.setZValue(1)
+        globals()[f'curve_fake_{f}'] = curve_fake
+
+
+def remove_poly_item():
+    for key, value in globals().items():
+        if key.startswith('poly_item'):
+            radarogramma.removeItem(globals()[key])
+
+
+def draw_fill_result(x, y1, y2, color):
+    curve_up = pg.PlotCurveItem(x=x, y=y1)
+    curve_down = pg.PlotCurveItem(x=x, y=y2)
+    poly_item = pg.FillBetweenItem(curve1=curve_down, curve2=curve_up, brush=color)
+    radarogramma.addItem(poly_item)
+    poly_item.setOpacity(0.5)
+    poly_item.setZValue(1)
+    globals()[f'poly_item{x[0]}'] = poly_item

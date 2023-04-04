@@ -1271,6 +1271,16 @@
                     </item>
                     <item row="2" column="0">
                      <layout class="QGridLayout" name="gridLayout_34">
+                      <item row="1" column="3">
+                       <widget class="QPushButton" name="pushButton_calc_obj_lda">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>calc Object LDA</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_calc_lda">
                         <property name="styleSheet">
@@ -1278,6 +1288,16 @@
                         </property>
                         <property name="text">
                          <string>calc LDA</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_draw_lda">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                        </property>
+                        <property name="text">
+                         <string>draw LDA</string>
                         </property>
                        </widget>
                       </item>
@@ -1291,8 +1311,8 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="1" column="1">
-                       <widget class="QPushButton" name="pushButton_reset_verify">
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_reset_verify_lda">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 255, 191);</string>
                         </property>
@@ -1301,13 +1321,13 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_draw_lda">
+                      <item row="1" column="1">
+                       <widget class="QPushButton" name="pushButton_save_prof_lda">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
                         </property>
                         <property name="text">
-                         <string>draw LDA</string>
+                         <string>save profile LDA</string>
                         </property>
                        </widget>
                       </item>
@@ -1454,8 +1474,18 @@
                     </item>
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_37">
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_clear_params_lda">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                        </property>
+                        <property name="text">
+                         <string>--- clear parameters</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_rem_param">
+                       <widget class="QPushButton" name="pushButton_rem_param_lda">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
@@ -1464,13 +1494,13 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_clear_params">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_f_test">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
                         </property>
                         <property name="text">
-                         <string>--- clear parameters</string>
+                         <string>F-test</string>
                         </property>
                        </widget>
                       </item>
@@ -1620,7 +1650,7 @@
     <item row="0" column="1">
      <widget class="QProgressBar" name="progressBar">
       <property name="value">
-       <number>24</number>
+       <number>100</number>
       </property>
       <property name="alignment">
        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>

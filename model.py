@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text, literal_column, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
@@ -317,6 +318,7 @@ class MarkupLDA(Base):
     formation_id = Column(Integer, ForeignKey('formation.id'))
     marker_id = Column(Integer, ForeignKey('marker_lda.id'))
     list_measure = Column(Text)
+    list_fake = Column(Text)
 
     analysis = relationship('AnalysisLDA', back_populates='markups')
     well = relationship("Well", back_populates="markups")

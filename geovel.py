@@ -113,6 +113,16 @@ ui.pushButton_color.clicked.connect(change_color)
 ui.pushButton_add_lda.clicked.connect(add_lda)
 ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
 ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
+ui.pushButton_add_geovel_lda.clicked.connect(add_param_geovel_lda)
+ui.pushButton_add_all_geovel_lda.clicked.connect(add_all_param_geovel_lda)
+ui.pushButton_rem_well_lda.clicked.connect(remove_well_markup_lda)
+ui.pushButton_rem_param_lda.clicked.connect(remove_param_geovel_lda)
+ui.pushButton_clear_params_lda.clicked.connect(remove_all_param_geovel_lda)
+ui.pushButton_draw_lda.clicked.connect(draw_LDA)
+ui.pushButton_verify_lda.clicked.connect(calc_verify_lda)
+ui.pushButton_reset_verify_lda.clicked.connect(reset_verify_lda)
+ui.pushButton_calc_lda.clicked.connect(calc_LDA)
+ui.pushButton_f_test.clicked.connect(calc_f_test)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -168,6 +178,8 @@ update_list_well()
 set_info('Старт...', 'green')
 set_random_color()
 update_list_lda()
+set_param_lda_to_combobox()
+# update_list_param_lda()
 
 
 

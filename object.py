@@ -10,14 +10,16 @@ from model import *
 import numpy as np
 import pyqtgraph as pg
 import pandas as pd
-import json
-from scipy.stats import skew, kurtosis, rankdata
+
+from scipy.stats import skew, kurtosis, rankdata, f_oneway
 
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
 from scipy.fft import rfft2, irfft2
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
-
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()

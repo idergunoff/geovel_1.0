@@ -1,5 +1,9 @@
 from object import *
 
+list_param_geovel = ['T_top', 'T_bottom', 'dT', 'A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'dVt', 'Vt_top', 'Vt_sum',
+              'Vt_mean', 'dAt', 'At_top', 'At_sum', 'At_mean', 'dPht', 'Pht_top', 'Pht_sum', 'Pht_mean', 'Wt_top',
+              'Wt_mean', 'Wt_sum', 'width', 'top', 'land', 'speed', 'speed_cover', 'skew', 'kurt', 'std', 'k_var']
+
 
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
@@ -648,3 +652,48 @@ def get_marker_id():
 def get_markup_id():
     if ui.listWidget_well_lda.currentItem():
         return ui.listWidget_well_lda.currentItem().text().split(' id')[-1]
+
+
+def set_param_lda_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_lda.addItem(param)
+
+
+def add_param_lda(param):
+    new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=param)
+    session.add(new_param_lda)
+    session.commit()
+
+
+def build_table_train_lda():
+    list_param_lda = get_list_param_lda()
+    data_train = pd.DataFrame(columns=['prof_well_index', 'mark'] + list_param_lda)
+    for markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all():
+        list_fake = json.loads(markup.list_fake) if markup.list_fake else []
+        for param in list_param_lda:
+            locals()[f'list_{param}'] = json.loads(
+                session.query(literal_column(f'Formation.{param}')).filter(Formation.id == markup.formation_id).first()[0])
+        for measure in json.loads(markup.list_measure):
+            if measure in list_fake:
+                continue
+            dict_value = {}
+            dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
+            dict_value['mark'] = markup.marker.title
+            for param in list_param_lda:
+                dict_value[param] = locals()[f'list_{param}'][measure]
+            data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
+    # print(data_train.to_string(max_rows=None))
+    return data_train, list_param_lda
+
+
+def get_list_marker():
+    markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()
+    return [m.title for m in markers]
+
+
+def get_list_param_lda():
+    parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
+    return [p.parameter for p in parameters]
+
+
+
