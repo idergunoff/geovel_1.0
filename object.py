@@ -18,6 +18,7 @@ from scipy.fft import rfft2, irfft2
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.impute import SimpleImputer
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -39,6 +40,7 @@ ui.radarogram.addItem(hist)
 roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), 512], maxBounds=QRect(0, 0, 100000000, 512))
 radarogramma.addItem(roi)
 
+imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0) # заполнение пропусков для LDA
 
 
 session = Session()

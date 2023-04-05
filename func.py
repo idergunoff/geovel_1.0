@@ -740,12 +740,22 @@ def get_working_data_lda():
         for param in list_param:
             dict_value[param] = locals()[f'list_{param}'][i]
         dict_trans_coef = {}
-        new_trans_coef = clf.transform([list(dict_value.values())])[0]
-        for k, t in enumerate(new_trans_coef):
-            dict_trans_coef[k] = t
-        dict_trans_coef['mark'] = 'test'
-        new_mark = clf.predict([list(dict_value.values())])[0]
-        probability = clf.predict_proba([list(dict_value.values())])[0]
+        try:
+            new_trans_coef = clf.transform([list(dict_value.values())])[0]
+            for k, t in enumerate(new_trans_coef):
+                dict_trans_coef[k] = t
+            dict_trans_coef['mark'] = 'test'
+            new_mark = clf.predict([list(dict_value.values())])[0]
+            probability = clf.predict_proba([list(dict_value.values())])[0]
+        except ValueError:
+            p_nan = [k for k, v in dict_value.items() if np.isnan(v)]
+            new_trans_coef = clf.transform(imputer.fit_transform([list(dict_value.values())]))[0]
+            for k, t in enumerate(new_trans_coef):
+                dict_trans_coef[k] = t
+            dict_trans_coef['mark'] = 'test'
+            new_mark = clf.predict(imputer.fit_transform([list(dict_value.values())]))[0]
+            probability = clf.predict_proba(imputer.fit_transform([list(dict_value.values())]))[0]
+            set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому категория может быть не корректна', 'red')
         for k, _ in enumerate(list_cat):
             dict_value[list_cat[k]] = probability[k]
         dict_value['mark'] = new_mark
