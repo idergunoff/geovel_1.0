@@ -87,7 +87,10 @@ def add_well_markup_lda():
     marker_id = get_marker_id()
 
     if analysis_id and well_id and profile_id and marker_id and formation_id:
-
+        for param in get_list_param_lda():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
+                set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
+                return
         well = session.query(Well).filter(Well.id == well_id).first()
         x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
         y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == profile_id).first()[0])
@@ -176,22 +179,32 @@ def choose_marker_lda():
 
 
 def add_param_geovel_lda():
+    param = ui.comboBox_geovel_param_lda.currentText()
+    for m in session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).all():
+        if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+            set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+            return
     if session.query(ParameterLDA).filter_by(
             analysis_id=get_LDA_id(),
-            parameter=ui.comboBox_geovel_param_lda.currentText()
+            parameter= param
     ).count() == 0:
-        add_param_lda(ui.comboBox_geovel_param_lda.currentText())
+        add_param_lda(param)
         update_list_param_lda()
     else:
-        set_info(f'Параметр {ui.comboBox_geovel_param_lda.currentText()} уже добавлен', 'red')
+        set_info(f'Параметр {param} уже добавлен', 'red')
 
 
 def add_all_param_geovel_lda():
-    for i in list_param_geovel:
+    for param in list_param_geovel:
+        for m in session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).all():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+                set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                return
         if session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).filter(
-                ParameterLDA.parameter == i).count() > 0:
+                ParameterLDA.parameter == param).count() > 0:
+            set_info(f'Параметр {param} уже добавлен', 'red')
             continue
-        add_param_lda(i)
+        add_param_lda(param)
     update_list_param_lda()
 
 
