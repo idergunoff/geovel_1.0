@@ -180,7 +180,7 @@ def choose_marker_lda():
 
 def add_param_geovel_lda():
     param = ui.comboBox_geovel_param_lda.currentText()
-    for m in session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).all():
+    for m in session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).all():
         if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
             set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
             return
@@ -195,11 +195,14 @@ def add_param_geovel_lda():
 
 
 def add_all_param_geovel_lda():
+    new_list_param = list_param_geovel.copy()
     for param in list_param_geovel:
-        for m in session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).all():
+        for m in session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
-                set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
-                return
+                if param in new_list_param:
+                    set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                    new_list_param.remove(param)
+    for param in new_list_param:
         if session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).filter(
                 ParameterLDA.parameter == param).count() > 0:
             set_info(f'Параметр {param} уже добавлен', 'red')

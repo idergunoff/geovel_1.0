@@ -87,12 +87,13 @@ def add_wells():
     except FileNotFoundError:
         return
     ui.progressBar.setMaximum(len(pd_wells.index))
+
     for i in pd_wells.index:
-        if session.query(Well).filter(Well.name == str(pd_wells['name'][i]), Well.x_coord == float(pd_wells['x'][i]),
-                                      Well.y_coord == float(pd_wells['y'][i])).count() > 0:
+        if session.query(Well).filter(Well.name == str(pd_wells['name'][i]), Well.x_coord == float(process_string(pd_wells['x'][i])),
+                                      Well.y_coord == float(process_string(pd_wells['y'][i]))).count() > 0:
             set_info(f'Скважина {pd_wells["name"][i]} уже есть в БД', 'red')
         else:
-            new_well = Well(name=str(pd_wells['name'][i]), x_coord=float(pd_wells['x'][i]),y_coord=float(pd_wells['y'][i]), alt=float(pd_wells['alt'][i]))
+            new_well = Well(name=str(pd_wells['name'][i]), x_coord=float(process_string(pd_wells['x'][i])), y_coord=float(process_string(pd_wells['y'][i])), alt=float(process_string(pd_wells['alt'][i])))
             session.add(new_well)
         ui.progressBar.setValue(i + 1)
     session.commit()
