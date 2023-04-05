@@ -22,6 +22,33 @@ def add_lda():
     set_info(f'Добавлен новый анализ LDA - "{ui.lineEdit_string.text()}"', 'green')
 
 
+def copy_lda():
+    """Скопировать анализ LDA"""
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название для копии анализа', 'red')
+        return
+    old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
+    new_lda = AnalysisLDA(title=ui.lineEdit_string.text())
+    session.add(new_lda)
+    session.commit()
+    for old_marker in old_lda.markers:
+        new_marker = MarkerLDA(analysis_id=new_lda.id, title=old_marker.title, color=old_marker.color)
+        session.add(new_marker)
+        for old_markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id(), marker_id=old_marker.id):
+            new_markup = MarkupLDA(
+                analysis_id=new_lda.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                marker_id=new_marker.id,
+                list_measure=old_markup.list_measure
+            )
+            session.add(new_markup)
+    session.commit()
+    update_list_lda()
+    set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
+
+
 def remove_lda():
     """Удалить анализ LDA"""
     lda_title = get_lda_title()
@@ -53,17 +80,34 @@ def add_marker_lda():
     if ui.lineEdit_string.text() == '':
         set_info('Введите название маркера', 'red')
         return
-    new_marker = MarkerLDA(title=ui.lineEdit_string.text(), analysis_id=get_LDA_id(), color=ui.pushButton_color.text())
-    session.add(new_marker)
+    if session.query(MarkerLDA).filter_by(title=ui.lineEdit_string.text(), analysis_id=get_LDA_id()).count() > 0:
+        session.query(MarkerLDA).filter_by(title=ui.lineEdit_string.text(), analysis_id=get_LDA_id()).update(
+            {'color': ui.pushButton_color.text()}, synchronize_session='fetch')
+        set_info(f'Изменен цвет маркера LDA - "{ui.lineEdit_string.text()}"', 'green')
+    else:
+        new_marker = MarkerLDA(title=ui.lineEdit_string.text(), analysis_id=get_LDA_id(), color=ui.pushButton_color.text())
+        session.add(new_marker)
+        set_info(f'Добавлен новый маркер LDA - "{ui.lineEdit_string.text()}"', 'green')
     session.commit()
     update_list_marker_lda()
-    set_info(f'Добавлен новый маркер LDA - "{ui.lineEdit_string.text()}"', 'green')
 
 
 def remove_marker_lda():
     """Удалить маркер LDA"""
-    # todo: подтверждение удаления, потом удаление всех составляющих анализа
-    pass
+    marker_title = get_marker_title()
+    result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove marker LDA',
+            f'В модели {session.query(MarkupLDA).filter_by(marker_id=get_marker_id()).count()} скважин отмеченных '
+            f'этим маркером. Вы уверены, что хотите удалить маркер LDA "{marker_title}" вместе с обучающими скважинами'
+            f' из модели "{get_lda_title()}"?',
+                                            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(MarkupLDA).filter_by(marker_id=get_marker_id()).delete()
+        session.query(MarkerLDA).filter_by(id=get_marker_id()).delete()
+        session.commit()
+        set_info(f'Удалена маркер LDA - "{marker_title}"', 'green')
+        update_list_lda()
+    elif result == QtWidgets.QMessageBox.No:
+        pass
 
 
 def update_list_marker_lda():
@@ -98,17 +142,35 @@ def add_well_markup_lda():
         well_dist = ui.spinBox_well_dist.value()
         start = index - well_dist if index - well_dist > 0 else 0
         stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
-
         list_measure = list(range(start, stop))
         new_markup_lda = MarkupLDA(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
                                    marker_id=marker_id, formation_id=formation_id,
                                    list_measure=json.dumps(list_measure))
         session.add(new_markup_lda)
         session.commit()
-        set_info(f'Добавлена новая обучающая скважина для LDA - "{ui.lineEdit_string.text()}"', 'green')
+        set_info(f'Добавлена новая обучающая скважина для LDA - "{get_well_name()} {get_marker_title()}"', 'green')
         update_list_well_markup_lda()
     else:
         set_info('выбраны не все параметры', 'red')
+
+
+def update_well_markup_lda():
+    markup = session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).first()
+    if not markup:
+        return
+    well = session.query(Well).filter(Well.id == markup.well_id).first()
+    x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
+    y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == markup.profile_id).first()[0])
+    index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+    well_dist = ui.spinBox_well_dist.value()
+    start = index - well_dist if index - well_dist > 0 else 0
+    stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+    list_measure = list(range(start, stop))
+    session.query(MarkupLDA).filter(MarkupLDA.id == get_markup_id()).update(
+        {'marker_id': get_marker_id(), 'list_measure': json.dumps(list_measure)})
+    session.commit()
+    set_info(f'Изменена обучающая скважина для LDA - "{well.name} {get_marker_title()}"', 'green')
+    update_list_well_markup_lda()
 
 
 def remove_well_markup_lda():
@@ -214,8 +276,8 @@ def add_all_param_geovel_lda():
 def remove_param_geovel_lda():
     if ui.listWidget_param_lda.currentItem():
         session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(),
-                                              parameter=ui.listWidget_param_lda.currentItem().text().split(' ')[
-                                                  0]).delete()
+                                              parameter=ui.listWidget_param_lda.currentItem().text().split(' ')[0]
+                                              ).delete()
         session.commit()
         update_list_param_lda()
 

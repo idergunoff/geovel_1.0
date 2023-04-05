@@ -1166,16 +1166,29 @@
               <item row="0" column="0" colspan="2">
                <layout class="QVBoxLayout" name="verticalLayout">
                 <item>
-                 <layout class="QGridLayout" name="gridLayout_27" columnstretch="3,1,1">
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_add_lda">
+                 <layout class="QGridLayout" name="gridLayout_27" columnstretch="3,0,0">
+                  <item row="3" column="1">
+                   <widget class="QPushButton" name="pushButton_add_mark_lda">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>add LDA</string>
+                     <string>add marker</string>
                     </property>
                    </widget>
+                  </item>
+                  <item row="3" column="2">
+                   <widget class="QPushButton" name="pushButton_rem_mark_lda">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>remove marker</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QComboBox" name="comboBox_lda_analysis"/>
                   </item>
                   <item row="0" column="2">
                    <widget class="QPushButton" name="pushButton_rem_lda">
@@ -1187,29 +1200,26 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QComboBox" name="comboBox_lda_analysis"/>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QComboBox" name="comboBox_mark_lda"/>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QPushButton" name="pushButton_add_mark_lda">
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_add_lda">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>add marker</string>
+                     <string>add LDA</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="2">
-                   <widget class="QPushButton" name="pushButton_rem_mark_lda">
+                  <item row="3" column="0">
+                   <widget class="QComboBox" name="comboBox_mark_lda"/>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_copy_lda">
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>remove marker</string>
+                     <string>copy LDA</string>
                     </property>
                    </widget>
                   </item>
@@ -1247,6 +1257,16 @@
                         </property>
                        </widget>
                       </item>
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_rem_well_lda">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                        </property>
+                        <property name="text">
+                         <string>remove well</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="1">
                        <widget class="QPushButton" name="pushButton_add_well_lda">
                         <property name="styleSheet">
@@ -1258,12 +1278,12 @@
                        </widget>
                       </item>
                       <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_rem_well_lda">
+                       <widget class="QPushButton" name="pushButton_update_well_lda">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                         <string notr="true">background-color: rgb(255, 255, 191);</string>
                         </property>
                         <property name="text">
-                         <string>remove well</string>
+                         <string>update well</string>
                         </property>
                        </widget>
                       </item>

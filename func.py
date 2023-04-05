@@ -565,6 +565,11 @@ def get_well_id():
         return ui.listWidget_well.currentItem().text().split(' id')[-1]
 
 
+def get_well_name():
+    if ui.listWidget_well.currentItem():
+        return ui.listWidget_well.currentItem().text().split(' id')[0]
+
+
 def process_string(s):
     """Удалить пробелы из строки и заменить запятую на точку"""
     if type(s) == str:
@@ -665,6 +670,10 @@ def get_lda_title():
 
 def get_marker_id():
     return ui.comboBox_mark_lda.currentText().split(' id')[-1]
+
+
+def get_marker_title():
+    return ui.comboBox_mark_lda.currentText().split(' id')[0]
 
 
 def get_markup_id():
