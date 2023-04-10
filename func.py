@@ -188,7 +188,7 @@ def update_object():
 def update_research_combobox():
     ui.comboBox_research.clear()
     for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
-        ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
+        ui.comboBox_research.addItem(f'{i.date_research.strftime("%Y")} id{i.id}')
     update_profile_combobox()
 
 
