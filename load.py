@@ -56,7 +56,7 @@ def load_profile():
         for i in range(int(len(pd_radar.index)/512)):
             list_signal = list(pd_radar['ALn'].loc[i * 512:(i + 1) * 512])
             ui.progressBar.setValue(i+1)
-            if len(set(list_signal)) > 1:
+            if np.sum(list_signal) > 0:
                 signal.append(list_signal)
         new_profile = Profile(research_id=get_research_id(), title=file_name.split('/')[-1].split('.')[0], signal=json.dumps(signal))
         session.add(new_profile)
@@ -365,11 +365,20 @@ def load_param():
 
 def delete_profile():
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
-    session.query(Profile).filter(Profile.id == get_profile_id()).delete()
-    session.commit()
-    vacuum()
-    set_info(f'Профиль {title_prof} удалён', 'green')
-    update_profile_combobox()
+    result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove profile',
+                f'Вы уверены, что хотите удалить профиль "{title_prof}" вместе со слоями, пластами и обучающими скважинами?',
+                                            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(MarkupLDA).filter(MarkupLDA.profile_id == get_profile_id()).delete()
+        session.query(Formation).filter(Formation.profile_id == get_profile_id()).delete()
+        session.query(Layers).filter(Layers.profile_id == get_profile_id()).delete()
+        session.query(Profile).filter(Profile.id == get_profile_id()).delete()
+        session.commit()
+        # vacuum()
+        set_info(f'Профиль {title_prof} удалён', 'green')
+        update_profile_combobox()
+    else:
+        pass
 
 
 def load_uf_grid():
