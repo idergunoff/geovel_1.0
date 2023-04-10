@@ -67,12 +67,12 @@ def remove_lda():
         pass
 
 
-def update_list_lda():
+def update_list_lda(db=False):
     """Обновить список анализов LDA"""
     ui.comboBox_lda_analysis.clear()
     for i in session.query(AnalysisLDA).order_by(AnalysisLDA.title).all():
         ui.comboBox_lda_analysis.addItem(f'{i.title} id{i.id}')
-    update_list_marker_lda()
+    update_list_marker_lda(db)
 
 
 def add_marker_lda():
@@ -89,7 +89,7 @@ def add_marker_lda():
         session.add(new_marker)
         set_info(f'Добавлен новый маркер LDA - "{ui.lineEdit_string.text()}"', 'green')
     session.commit()
-    update_list_marker_lda()
+    update_list_marker_lda(True)
 
 
 def remove_marker_lda():
@@ -110,7 +110,7 @@ def remove_marker_lda():
         pass
 
 
-def update_list_marker_lda():
+def update_list_marker_lda(db=False):
     """Обновить список маркеров LDA"""
     ui.comboBox_mark_lda.clear()
     for i in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).order_by(MarkerLDA.title).all():
@@ -119,7 +119,7 @@ def update_list_marker_lda():
         ui.comboBox_mark_lda.setItemData(ui.comboBox_mark_lda.findText(item), QBrush(QColor(i.color)),
                                          Qt.BackgroundRole)
     update_list_well_markup_lda()
-    update_list_param_lda()
+    update_list_param_lda(db)
 
 
 def add_well_markup_lda():
@@ -273,11 +273,66 @@ def add_all_param_geovel_lda():
     update_list_param_lda()
 
 
+def add_param_distr_lda():
+    for param in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+        if param.parameter.startswith(f'distr_{ui.comboBox_atrib_distr_lda.currentText()}'):
+            session.query(ParameterLDA).filter_by(id=param.id).update({
+                'parameter': f'distr_{ui.comboBox_atrib_distr_lda.currentText()}_{ui.spinBox_count_distr_lda.value()}'
+            }, synchronize_session='fetch')
+            session.commit()
+            update_list_param_lda()
+            set_info(f'В параметры добавлены {ui.spinBox_count_distr_lda.value()} интервалов распределения по '
+                     f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
+            return
+    add_param_lda('distr')
+    update_list_param_lda()
+    set_info(f'В параметры добавлены {ui.spinBox_count_distr_lda.value()} интервалов распределения по '
+             f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
+
+
+def add_param_sep_lda():
+    for param in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+        if param.parameter.startswith(f'sep_{ui.comboBox_atrib_distr_lda.currentText()}'):
+            session.query(ParameterLDA).filter_by(id=param.id).update({
+                'parameter': f'sep_{ui.comboBox_atrib_distr_lda.currentText()}_{ui.spinBox_count_distr_lda.value()}'
+            }, synchronize_session='fetch')
+            session.commit()
+            update_list_param_lda()
+            set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_lda.value()} интервалов по '
+                f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
+            return
+    add_param_lda('sep')
+    update_list_param_lda()
+    set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_lda.value()} интервалов по '
+             f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
+
+
+def add_all_param_distr_lda():
+    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt']
+    count = ui.spinBox_count_distr_lda.value()
+    for param in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+        if param.parameter.startswith('distr') or param.parameter.startswith('sep'):
+            session.query(ParameterLDA).filter_by(id=param.id).delete()
+            session.commit()
+    for distr_param in list_distr:
+        new_param = f'{distr_param}_{count}'
+        new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=new_param)
+        session.add(new_param_lda)
+    session.commit()
+    update_list_param_lda()
+    set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
+
+
 def remove_param_geovel_lda():
-    if ui.listWidget_param_lda.currentItem():
-        session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(),
-                                              parameter=ui.listWidget_param_lda.currentItem().text().split(' ')[0]
-                                              ).delete()
+    param = ui.listWidget_param_lda.currentItem().text().split(' ')[0]
+    if param:
+        if param.startswith('distr') or param.startswith('sep'):
+            for p in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+                if p.parameter.startswith('_'.join(param.split('_')[:-1])):
+                    session.query(ParameterLDA).filter_by(id=p.id).delete()
+                    session.commit()
+        else:
+            session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(), parameter=param ).delete()
         session.commit()
         update_list_param_lda()
 
@@ -288,31 +343,41 @@ def remove_all_param_geovel_lda():
     update_list_param_lda()
 
 
-def update_list_param_lda():
-    calc_f_test()
-    # ui.listWidget_param_lda.clear()
-    # for i in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
-    #     ui.listWidget_param_lda.addItem(i.parameter)
+def update_list_param_lda(db=False):
+    data_train, list_param = build_table_train_lda(db)
+    list_marker = get_list_marker()
+    ui.listWidget_param_lda.clear()
+    list_param_lda = data_train.columns.tolist()[2:]
+    for param in list_param_lda:
+        groups = []
+        for mark in list_marker:
+            groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+        F, p = f_oneway(*groups)
+        ui.listWidget_param_lda.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
+        if F < 1 or p > 0.05:
+            i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor('red')))
+
 
 
 def draw_LDA():
     """ Построить диаграмму рассеяния для модели анализа LDA """
-    data_train, list_param = build_table_train_lda()
+    data_train, list_param = build_table_train_lda(True)
+    list_param_lda = data_train.columns.tolist()[2:]
     colors = {}
     for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all():
         colors[m.title] = m.color
-    training_sample = data_train[list_param].values.tolist()
+    training_sample = data_train[list_param_lda].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
     clf = LinearDiscriminantAnalysis()
     try:
         trans_coef = clf.fit(training_sample, markup).transform(training_sample)
     except ValueError:
-        ui.label_info.setText(
-            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
-        ui.label_info.setStyleSheet('color: red')
+        set_info('Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 'выборки.', 'red')
         return
     data_trans_coef = pd.DataFrame(trans_coef)
-    data_trans_coef['mark'] = data_train[['mark']]
+    data_trans_coef['mark'] = data_train['mark'].values.tolist()
 
     fig = plt.figure(figsize=(10, 10), dpi=80)
     ax = plt.subplot()
@@ -323,17 +388,17 @@ def draw_LDA():
     ax.grid()
     ax.xaxis.grid(True, "minor", linewidth=.25)
     ax.yaxis.grid(True, "minor", linewidth=.25)
-    # title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
-    #               f'\n{ui.comboBox_class_lda.currentText().split(". ")[1]}' \
-    #               f'\nПараметры: {" ".join(list_param)}' f'\nКоличество образцов: {str(len(data_trans_coef.index))}'
-    # plt.title(title_graph, fontsize=16)
+    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+                  f'\n{get_lda_title().upper() }\nПараметры: {" ".join(list_param)}\nКоличество образцов: {str(len(data_trans_coef.index))}'
+    plt.title(title_graph, fontsize=16)
     fig.show()
 
 
 def calc_verify_lda():
-    data_train, list_param = build_table_train_lda()
+    data_train, list_param = build_table_train_lda(True)
+    list_param_lda = data_train.columns.tolist()[2:]
     # colors = [m.color for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()]
-    training_sample = data_train[list_param].values.tolist()
+    training_sample = data_train[list_param_lda].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
     clf = LinearDiscriminantAnalysis()
     try:
@@ -346,7 +411,7 @@ def calc_verify_lda():
     n, k = 0, 0
     ui.progressBar.setMaximum(len(data_train.index))
     for i in data_train.index:
-        new_mark = clf.predict([data_train.loc[i].loc[list_param].tolist()])[0]
+        new_mark = clf.predict([data_train.loc[i].loc[list_param_lda].tolist()])[0]
         if data_train['mark'][i] != new_mark:
             prof_id = data_train['prof_well_index'][i].split('_')[0]
             well_id = data_train['prof_well_index'][i].split('_')[1]
@@ -373,7 +438,8 @@ def calc_verify_lda():
     session.commit()
     set_info(f'Из обучающей выборки удалено {n} измерений.', 'blue')
     update_list_well_markup_lda()
-    update_list_param_lda()
+    db = True if n == 0 else False
+    update_list_param_lda(db)
 
 
 def reset_verify_lda():
@@ -400,6 +466,9 @@ def calc_LDA():
     ax.grid()
     ax.xaxis.grid(True, "minor", linewidth=.25)
     ax.yaxis.grid(True, "minor", linewidth=.25)
+    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+                  f'\n{get_lda_title().upper()}\nКоличество образцов: {str(len(data_trans_coef.index))}'
+    plt.title(title_graph, fontsize=16)
     # title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
     #               f'\n{ui.comboBox_class_lda.currentText().split(". ")[1]}' \
     #               f'\nПараметры: {" ".join(list_param)}' f'\nКоличество образцов: {str(len(data_trans_coef.index))}'
@@ -437,23 +506,11 @@ def calc_LDA():
             pass
 
 
-def calc_f_test():
-    data_train, list_param = build_table_train_lda()
-    list_marker = get_list_marker()
-    ui.listWidget_param_lda.clear()
-    for param in list_param:
-        groups = []
-        for mark in list_marker:
-            groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
-        F, p = f_oneway(*groups)
-        ui.listWidget_param_lda.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
-        if F < 1 or p > 0.05:
-            i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
-            i_item.setBackground(QBrush(QColor('red')))
+
 
 
 def calc_obj_lda():
-    working_data_result = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc', 'mark'] + get_list_param_lda() + get_list_marker())
+    working_data_result = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc', 'mark'])
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')

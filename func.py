@@ -1,3 +1,5 @@
+import json
+
 from object import *
 
 list_param_geovel = ['T_top', 'T_bottom', 'dT', 'A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'dVt', 'Vt_top', 'Vt_sum',
@@ -518,6 +520,35 @@ def update_formation_combobox():
     update_list_well()
 
 
+def calc_atrib(rad, atr):
+    radar = []
+    for n, i in enumerate(rad):
+        ui.progressBar.setValue(n + 1)
+        radar.append(calc_atrib_measure(i, atr))
+    return radar
+
+
+def calc_atrib_measure(rad, atr):
+    if atr == 'Abase':
+        return rad
+    elif atr == 'diff':
+        return np.diff(rad).tolist()
+    elif atr == 'At':
+        analytic_signal = hilbert(rad)
+        return list(map(lambda x: round(x, 2), np.hypot(rad, np.imag(analytic_signal))))
+    elif atr == 'Vt':
+        analytic_signal = hilbert(rad)
+        return list(map(lambda x: round(x, 2), np.imag(analytic_signal)))
+    elif atr == 'Pht':
+        analytic_signal = hilbert(rad)
+        return list(map(lambda x: round(x, 2), np.angle(analytic_signal)))
+    elif atr == 'Wt':
+        analytic_signal = hilbert(rad)
+        return list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal))))
+    else:
+        return rad
+
+
 ###################################################################
 ############################   Well   #############################
 ###################################################################
@@ -687,18 +718,34 @@ def set_param_lda_to_combobox():
 
 
 def add_param_lda(param):
+    if param.startswith('distr') or param.startswith('sep'):
+        atr, count = ui.comboBox_atrib_distr_lda.currentText(), ui.spinBox_count_distr_lda.value()
+        param = f'{param}_{atr}_{count}'
     new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=param)
     session.add(new_param_lda)
     session.commit()
 
 
-def build_table_train_lda():
+def build_table_train_lda(db=False):
     list_param_lda = get_list_param_lda()
-    data_train = pd.DataFrame(columns=['prof_well_index', 'mark'] + list_param_lda)
-    for markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all():
+    if db:
+        data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()[0]
+        if data:
+            data_train = pd.DataFrame(json.loads(data))
+            return data_train, list_param_lda
+    data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
+    markups = session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all()
+    ui.progressBar.setMaximum(len(markups))
+    for nm, markup in enumerate(markups):
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
+        list_up = json.loads(markup.formation.layer_up.layer_line)
+        list_down = json.loads(markup.formation.layer_down.layer_line)
         for param in list_param_lda:
-            locals()[f'list_{param}'] = json.loads(
+            if param.startswith('distr') or param.startswith('sep'):
+                if not markup.profile.title + param.split('_')[1] in locals():
+                    locals()[markup.profile.title + param.split('_')[1]] = json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+            else:
+                locals()[f'list_{param}'] = json.loads(
                 session.query(literal_column(f'Formation.{param}')).filter(Formation.id == markup.formation_id).first()[0])
         for measure in json.loads(markup.list_measure):
             if measure in list_fake:
@@ -707,8 +754,25 @@ def build_table_train_lda():
             dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
             dict_value['mark'] = markup.marker.title
             for param in list_param_lda:
-                dict_value[param] = locals()[f'list_{param}'][measure]
+                if param.startswith('distr'):
+                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
+                    for num in range(n):
+                        dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
+                elif param.startswith('sep'):
+                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
+                    for num in range(n):
+                        dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
+                else:
+                    dict_value[param] = locals()[f'list_{param}'][measure]
             data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
+        ui.progressBar.setValue(nm + 1)
+    data_train_to_db = json.dumps(data_train.to_dict())
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
+    session.commit()
     # print(data_train.to_string(max_rows=None))
     return data_train, list_param_lda
 
@@ -718,14 +782,27 @@ def get_list_marker():
     return [m.title for m in markers]
 
 
-def get_list_param_lda():
+def get_list_param_lda(all=False):
     parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
+    # if all:
+    #     list_all_param = []
+    #     for p in parameters:
+    #         if p.parameter.startswith('distr') or p.parameter.startswith('sep'):
+    #             param, atr, n = p.parameter.split('_')[0], p.parameter.split('_')[1], int(p.parameter.split('_')[2])
+    #             for num in range(n):
+    #                 list_all_param.append(f'{param}_{atr}_{num + 1}')
+    #         else:
+    #             list_all_param.append(p.parameter)
+    #     return list_all_param
+    # else:
+    #     return [p.parameter for p in parameters if not p.parameter.startswith('distr') or p.parameter.startswith('sep')]
     return [p.parameter for p in parameters]
 
 
 def get_working_data_lda():
-    data_train, list_param = build_table_train_lda()
-    training_sample = data_train[list_param].values.tolist()
+    data_train, list_param = build_table_train_lda(True)
+    list_param_lda = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_lda].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
     clf = LinearDiscriminantAnalysis()
     try:
@@ -736,19 +813,39 @@ def get_working_data_lda():
         ui.label_info.setStyleSheet('color: red')
         return
     data_trans_coef = pd.DataFrame(trans_coef)
-    data_trans_coef['mark'] = data_train[['mark']]
+    data_trans_coef['mark'] = data_train['mark'].values.tolist()
     list_cat = list(clf.classes_)
-    working_data = pd.DataFrame(columns=['prof_index', 'mark'] + list_param + list_cat)
+    working_data = pd.DataFrame(columns=['prof_index', 'mark'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+    list_up = json.loads(curr_form.layer_up.layer_line)
+    list_down = json.loads(curr_form.layer_down.layer_line)
     for param in list_param:
-        locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
-    ui.progressBar.setMaximum(len(locals()[f'list_{list_param[0]}']))
+        if param.startswith('distr') or param.startswith('sep'):
+            if not curr_form.profile.title + param.split('_')[1] in locals():
+                locals()[curr_form.profile.title + param.split('_')[1]] = json.loads(
+                    session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
+        else:
+            locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
+    ui.progressBar.setMaximum(len(list_up))
     set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}',
              'blue')
-    for i in range(len(locals()[f'list_{list_param[0]}'])):
+    for i in range(len(list_up)):
         dict_value = {}
         for param in list_param:
-            dict_value[param] = locals()[f'list_{param}'][i]
+            if param.startswith('distr'):
+                p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                distr = get_distribution(sig_measure[list_up[i]: list_down[i]], n)
+                for num in range(n):
+                    dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
+            elif param.startswith('sep'):
+                p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                sep = get_mean_values(sig_measure[list_up[i]: list_down[i]], n)
+                for num in range(n):
+                    dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
+            else:
+                dict_value[param] = locals()[f'list_{param}'][i]
         dict_trans_coef = {}
         try:
             new_trans_coef = clf.transform([list(dict_value.values())])[0]
@@ -776,4 +873,35 @@ def get_working_data_lda():
     return working_data, data_trans_coef, curr_form
 
 
+def get_distribution(values: list, n: int) -> list:
+    # Находим минимальное и максимальное значения в наборе данных
+    min_val = min(values)
+    max_val = max(values)
+    # Вычисляем размер интервала
+    interval = (max_val - min_val) / n
+    if interval == 0:
+        return [len(values)] + [0] * (n - 1)
+    # Создаем список, который будет содержать количество значений в каждом интервале
+    distribution = [0] * n
+    # Итерируем по значениям и распределяем их по соответствующему интервалу
+    for value in values:
+        index = int((value - min_val) / interval)
+        # Если значение попадает в последний интервал, то оно приравнивается к последнему интервалу
+        if index == n:
+            index -= 1
+        distribution[index] += 1
+    # Возвращаем количество значений в каждом интервале
+    return distribution
+
+
+def get_mean_values(values: list, n: int) -> list:
+    mean_values = []
+    start = 0
+    intd = int(round(len(values) / n, 0))
+    for i in range(n):
+        end = start + intd  # вычисление конца интервала
+        mean = np.mean(values[start:end]) # вычисление среднего значения в интервале
+        mean_values.append(mean)
+        start = end  # начало следующего интервала
+    return mean_values
 

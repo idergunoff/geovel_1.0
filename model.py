@@ -280,6 +280,7 @@ class AnalysisLDA(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String)
+    data = Column(Text)
 
     parameters = relationship('ParameterLDA', back_populates='analysis')
     markers = relationship('MarkerLDA', back_populates='analysis')

@@ -17,27 +17,7 @@ def draw_radarogram():
     clear_current_profile()
     rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
     ui.progressBar.setMaximum(len(rad))
-    radar = []
-    for n, i in enumerate(rad):
-        ui.progressBar.setValue(n + 1)
-        if ui.comboBox_atrib.currentText() == 'A':
-            radar.append(i)
-        elif ui.comboBox_atrib.currentText() == 'diff':
-            radar.append(np.diff(i).tolist())
-        elif ui.comboBox_atrib.currentText() == 'At':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.hypot(i, np.imag(analytic_signal)))))
-        elif ui.comboBox_atrib.currentText() == 'Vt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Pht':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Wt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
-        else:
-            radar.append(i)
+    radar = calc_atrib(rad, ui.comboBox_atrib.currentText())
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
     session.add(new_current)
@@ -72,27 +52,7 @@ def draw_current_radarogram():
     remove_curve_fake()
     rad = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
     ui.progressBar.setMaximum(len(rad))
-    radar = []
-    for n, i in enumerate(rad):
-        ui.progressBar.setValue(n + 1)
-        if ui.comboBox_atrib.currentText() == 'A':
-            radar.append(i)
-        elif ui.comboBox_atrib.currentText() == 'diff':
-            radar.append(np.diff(i).tolist())
-        elif ui.comboBox_atrib.currentText() == 'At':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.hypot(i, np.imag(analytic_signal)))))
-        elif ui.comboBox_atrib.currentText() == 'Vt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.imag(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Pht':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.angle(analytic_signal))))
-        elif ui.comboBox_atrib.currentText() == 'Wt':
-            analytic_signal = hilbert(i)
-            radar.append(list(map(lambda x: round(x, 2), np.diff(np.angle(analytic_signal)))))
-        else:
-            radar.append(i)
+    radar = calc_atrib(rad, ui.comboBox_atrib.currentText())
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
     session.add(new_current)

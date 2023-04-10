@@ -235,7 +235,7 @@
                    <widget class="QComboBox" name="comboBox_atrib">
                     <item>
                      <property name="text">
-                      <string>A</string>
+                      <string>Abase</string>
                      </property>
                     </item>
                     <item>
@@ -1429,15 +1429,39 @@
                      </layout>
                     </item>
                     <item row="4" column="0">
-                     <layout class="QGridLayout" name="gridLayout_40" columnstretch="0,0,0">
+                     <layout class="QGridLayout" name="gridLayout_40" columnstretch="1,3,2,2,1">
                       <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_distr_lda">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>add distribute</string>
-                        </property>
+                       <widget class="QComboBox" name="comboBox_atrib_distr_lda">
+                        <item>
+                         <property name="text">
+                          <string>Abase</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>diff</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>At</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Vt</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Pht</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Wt</string>
+                         </property>
+                        </item>
                        </widget>
                       </item>
                       <item row="0" column="0">
@@ -1453,13 +1477,33 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="2">
+                      <item row="0" column="3">
                        <widget class="QPushButton" name="pushButton_add_sep_lda">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(191, 255, 191);</string>
                         </property>
                         <property name="text">
-                         <string>add separate</string>
+                         <string>add sep</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_distr_lda">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add distr</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_add_all_distr">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add all</string>
                         </property>
                        </widget>
                       </item>
