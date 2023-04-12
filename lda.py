@@ -404,9 +404,7 @@ def calc_verify_lda():
     try:
         clf.fit(training_sample, markup)
     except ValueError:
-        ui.label_info.setText(
-            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
-        ui.label_info.setStyleSheet('color: red')
+        set_info(f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.', 'red')
         return
     n, k = 0, 0
     ui.progressBar.setMaximum(len(data_train.index))
