@@ -323,10 +323,43 @@ def add_all_param_distr_lda():
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
 
 
+def add_param_mfcc_lda():
+    for param in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+        if param.parameter.startswith(f'mfcc_{ui.comboBox_atrib_mfcc_lda.currentText()}'):
+            session.query(ParameterLDA).filter_by(id=param.id).update({
+                'parameter': f'mfcc_{ui.comboBox_atrib_mfcc_lda.currentText()}_{ui.spinBox_count_mfcc.value()}'
+            }, synchronize_session='fetch')
+            session.commit()
+            update_list_param_lda()
+            set_info(f'В параметры добавлены {ui.spinBox_count_mfcc.value()} кепстральных коэффициентов '
+                f'{ui.comboBox_atrib_mfcc_lda.currentText()}', 'green')
+            return
+    add_param_lda('mfcc')
+    update_list_param_lda()
+    set_info(f'В параметры добавлены {ui.spinBox_count_mfcc.value()} кепстральных коэффициентов '
+                f'{ui.comboBox_atrib_mfcc_lda.currentText()}', 'green')
+
+
+def add_all_param_mfcc_lda():
+    list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt']
+    count = ui.spinBox_count_mfcc.value()
+    for param in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
+        if param.parameter.startswith('mfcc'):
+            session.query(ParameterLDA).filter_by(id=param.id).delete()
+            session.commit()
+    for mfcc_param in list_mfcc:
+        new_param = f'{mfcc_param}_{count}'
+        new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=new_param)
+        session.add(new_param_lda)
+    session.commit()
+    update_list_param_lda()
+    set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
+
+
 def remove_param_geovel_lda():
     param = ui.listWidget_param_lda.currentItem().text().split(' ')[0]
     if param:
-        if param.startswith('distr') or param.startswith('sep'):
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             for p in session.query(ParameterLDA).filter(ParameterLDA.analysis_id == get_LDA_id()).all():
                 if p.parameter.startswith('_'.join(param.split('_')[:-1])):
                     session.query(ParameterLDA).filter_by(id=p.id).delete()
@@ -357,7 +390,6 @@ def update_list_param_lda(db=False):
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
-
 
 
 def draw_LDA():
@@ -502,9 +534,6 @@ def calc_LDA():
             set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
         except ValueError:
             pass
-
-
-
 
 
 def calc_obj_lda():

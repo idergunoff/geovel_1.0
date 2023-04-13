@@ -721,6 +721,9 @@ def add_param_lda(param):
     if param.startswith('distr') or param.startswith('sep'):
         atr, count = ui.comboBox_atrib_distr_lda.currentText(), ui.spinBox_count_distr_lda.value()
         param = f'{param}_{atr}_{count}'
+    elif param.startswith('mfcc'):
+        atr, count = ui.comboBox_atrib_mfcc_lda.currentText(), ui.spinBox_count_mfcc.value()
+        param = f'{param}_{atr}_{count}'
     new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=param)
     session.add(new_param_lda)
     session.commit()
@@ -741,7 +744,7 @@ def build_table_train_lda(db=False):
         list_up = json.loads(markup.formation.layer_up.layer_line)
         list_down = json.loads(markup.formation.layer_down.layer_line)
         for param in list_param_lda:
-            if param.startswith('distr') or param.startswith('sep'):
+            if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 if not markup.profile.title + param.split('_')[1] in locals():
                     locals()[markup.profile.title + param.split('_')[1]] = json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
             else:
@@ -766,6 +769,12 @@ def build_table_train_lda(db=False):
                     sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
+                elif param.startswith('mfcc'):
+                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
+                    for num in range(n):
+                        dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
                 else:
                     dict_value[param] = locals()[f'list_{param}'][measure]
             data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
@@ -820,7 +829,7 @@ def get_working_data_lda():
     list_up = json.loads(curr_form.layer_up.layer_line)
     list_down = json.loads(curr_form.layer_down.layer_line)
     for param in list_param:
-        if param.startswith('distr') or param.startswith('sep'):
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             if not curr_form.profile.title + param.split('_')[1] in locals():
                 locals()[curr_form.profile.title + param.split('_')[1]] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
@@ -844,6 +853,12 @@ def get_working_data_lda():
                 sep = get_mean_values(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
+            elif param.startswith('mfcc'):
+                p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                mfcc = get_mfcc(sig_measure[list_up[i]: list_down[i]], n)
+                for num in range(n):
+                    dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
             else:
                 dict_value[param] = locals()[f'list_{param}'][i]
         dict_trans_coef = {}
@@ -904,4 +919,8 @@ def get_mean_values(values: list, n: int) -> list:
         mean_values.append(mean)
         start = end  # начало следующего интервала
     return mean_values
+
+
+def get_mfcc(values: list, n: int):
+    return list(mfcc(signal=np.array(values), samplerate=125000000, winlen=0.000004104, nfilt=513, nfft=513, numcep=n)[0])
 

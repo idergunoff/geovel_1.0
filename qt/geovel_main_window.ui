@@ -70,6 +70,9 @@
                <layout class="QGridLayout" name="gridLayout_10">
                 <item row="1" column="1">
                  <widget class="QPushButton" name="pushButton_find_oil">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(148, 255, 232);</string>
+                  </property>
                   <property name="text">
                    <string>Найти нефть</string>
                   </property>
@@ -1055,7 +1058,7 @@
                     <item row="0" column="3">
                      <widget class="QPushButton" name="pushButton_add_wells">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                       <string notr="true">background-color: rgb(148, 255, 232);</string>
                       </property>
                       <property name="text">
                        <string>add wells</string>
@@ -1065,7 +1068,7 @@
                     <item row="1" column="0">
                      <widget class="QPushButton" name="pushButton_edit_well">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                       <string notr="true">background-color: rgb(255, 255, 191);</string>
                       </property>
                       <property name="text">
                        <string>edit well</string>
@@ -1417,7 +1420,7 @@
                         <item row="0" column="2">
                          <widget class="QPushButton" name="pushButton_add_all_geovel_lda">
                           <property name="styleSheet">
-                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                           <string notr="true">background-color: rgb(148, 255, 232);</string>
                           </property>
                           <property name="text">
                            <string>add all</string>
@@ -1500,7 +1503,7 @@
                       <item row="0" column="4">
                        <widget class="QPushButton" name="pushButton_add_all_distr">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
                         </property>
                         <property name="text">
                          <string>add all</string>
@@ -1510,7 +1513,51 @@
                      </layout>
                     </item>
                     <item row="6" column="0">
-                     <layout class="QGridLayout" name="gridLayout_41" columnstretch="0,0">
+                     <layout class="QGridLayout" name="gridLayout_41" columnstretch="0,0,0,0">
+                      <item row="1" column="1">
+                       <widget class="QComboBox" name="comboBox_atrib_mfcc_lda">
+                        <item>
+                         <property name="text">
+                          <string>Abase</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>diff</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>At</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Vt</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Pht</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Wt</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QPushButton" name="pushButton_add_mfcc">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add MFCC</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="1" column="0">
                        <widget class="QSpinBox" name="spinBox_count_mfcc">
                         <property name="minimum">
@@ -1524,13 +1571,13 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="1" column="1">
-                       <widget class="QPushButton" name="pushButton_add_mfcc">
+                      <item row="1" column="3">
+                       <widget class="QPushButton" name="pushButton_add_all_mfcc">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
                         </property>
                         <property name="text">
-                         <string>add MFCC</string>
+                         <string>add all MFCC</string>
                         </property>
                        </widget>
                       </item>

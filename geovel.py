@@ -18,6 +18,7 @@ MainWindow.show()
 #     print(globals().keys())
 
 
+
 def mouse_moved_to_signal(evt):
     """ Отслеживаем координаты курсора и отображение на графике сигнала """
     global hor_line_sig, hor_line_rad, vert_line_rad, vert_line_graph
@@ -131,6 +132,9 @@ ui.pushButton_verify_lda.clicked.connect(calc_verify_lda)
 ui.pushButton_reset_verify_lda.clicked.connect(reset_verify_lda)
 ui.pushButton_calc_lda.clicked.connect(calc_LDA)
 ui.pushButton_calc_obj_lda.clicked.connect(calc_obj_lda)
+ui.pushButton_add_mfcc.clicked.connect(add_param_mfcc_lda)
+ui.pushButton_add_all_mfcc.clicked.connect(add_all_param_mfcc_lda)
+# ui.pushButton_test.clicked.connect(test)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)

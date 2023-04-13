@@ -19,8 +19,10 @@ from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import normalize
 import matplotlib.pyplot as plt
 import seaborn as sns
+from python_speech_features import mfcc
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
