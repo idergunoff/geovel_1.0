@@ -1,5 +1,7 @@
 import json
 
+import pandas as pd
+
 from object import *
 
 list_param_geovel = ['T_top', 'T_bottom', 'dT', 'A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'dVt', 'Vt_top', 'Vt_sum',
@@ -786,49 +788,15 @@ def build_table_train_lda(db=False):
     return data_train, list_param_lda
 
 
-def get_list_marker():
-    markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()
-    return [m.title for m in markers]
-
-
-def get_list_param_lda(all=False):
-    parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
-    # if all:
-    #     list_all_param = []
-    #     for p in parameters:
-    #         if p.parameter.startswith('distr') or p.parameter.startswith('sep'):
-    #             param, atr, n = p.parameter.split('_')[0], p.parameter.split('_')[1], int(p.parameter.split('_')[2])
-    #             for num in range(n):
-    #                 list_all_param.append(f'{param}_{atr}_{num + 1}')
-    #         else:
-    #             list_all_param.append(p.parameter)
-    #     return list_all_param
-    # else:
-    #     return [p.parameter for p in parameters if not p.parameter.startswith('distr') or p.parameter.startswith('sep')]
-    return [p.parameter for p in parameters]
-
-
-def get_working_data_lda():
-    data_train, list_param = build_table_train_lda(True)
-    list_param_lda = data_train.columns.tolist()[2:]
-    training_sample = data_train[list_param_lda].values.tolist()
-    markup = sum(data_train[['mark']].values.tolist(), [])
-    clf = LinearDiscriminantAnalysis()
-    try:
-        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
-    except ValueError:
-        ui.label_info.setText(
-            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
-        ui.label_info.setStyleSheet('color: red')
-        return
-    data_trans_coef = pd.DataFrame(trans_coef)
-    data_trans_coef['mark'] = data_train['mark'].values.tolist()
-    list_cat = list(clf.classes_)
-    working_data = pd.DataFrame(columns=['prof_index', 'mark'])
+def build_table_test_lda():
+    list_param_lda = get_list_param_lda()
+    test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
     list_up = json.loads(curr_form.layer_up.layer_line)
     list_down = json.loads(curr_form.layer_down.layer_line)
-    for param in list_param:
+    x_pulc = json.loads(curr_form.profile.x_pulc)
+    y_pulc = json.loads(curr_form.profile.y_pulc)
+    for param in list_param_lda:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             if not curr_form.profile.title + param.split('_')[1] in locals():
                 locals()[curr_form.profile.title + param.split('_')[1]] = json.loads(
@@ -836,11 +804,11 @@ def get_working_data_lda():
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
     ui.progressBar.setMaximum(len(list_up))
-    set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}',
+    set_info(f'Процесс сбора параметров {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}',
              'blue')
     for i in range(len(list_up)):
         dict_value = {}
-        for param in list_param:
+        for param in list_param_lda:
             if param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
@@ -861,30 +829,65 @@ def get_working_data_lda():
                     dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
             else:
                 dict_value[param] = locals()[f'list_{param}'][i]
-        dict_trans_coef = {}
-        try:
-            new_trans_coef = clf.transform([list(dict_value.values())])[0]
-            for k, t in enumerate(new_trans_coef):
-                dict_trans_coef[k] = t
-            dict_trans_coef['mark'] = 'test'
-            new_mark = clf.predict([list(dict_value.values())])[0]
-            probability = clf.predict_proba([list(dict_value.values())])[0]
-        except ValueError:
-            p_nan = [k for k, v in dict_value.items() if np.isnan(v)]
-            new_trans_coef = clf.transform(imputer.fit_transform([list(dict_value.values())]))[0]
-            for k, t in enumerate(new_trans_coef):
-                dict_trans_coef[k] = t
-            dict_trans_coef['mark'] = 'test'
-            new_mark = clf.predict(imputer.fit_transform([list(dict_value.values())]))[0]
-            probability = clf.predict_proba(imputer.fit_transform([list(dict_value.values())]))[0]
-            set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому категория может быть не корректна', 'red')
-        for k, _ in enumerate(list_cat):
-            dict_value[list_cat[k]] = probability[k]
-        dict_value['mark'] = new_mark
         dict_value['prof_index'] = f'{curr_form.profile_id}_{i}'
-        working_data = pd.concat([working_data, pd.DataFrame([dict_value])], ignore_index=True)
-        data_trans_coef = pd.concat([data_trans_coef, pd.DataFrame([dict_trans_coef])], ignore_index=True)
+        test_data = pd.concat([test_data, pd.DataFrame([dict_value])], ignore_index=True)
         ui.progressBar.setValue(i + 1)
+    test_data['x_pulc'] = x_pulc
+    test_data['y_pulc'] = y_pulc
+    return test_data, curr_form
+
+
+def get_list_marker():
+    markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()
+    return [m.title for m in markers]
+
+
+def get_list_param_lda():
+    parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
+    return [p.parameter for p in parameters]
+
+
+def get_working_data_lda():
+    data_train, list_param = build_table_train_lda(True)
+    list_param_lda = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_lda].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
+    except ValueError:
+        ui.label_info.setText(
+            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    data_trans_coef = pd.DataFrame(trans_coef)
+    data_trans_coef['mark'] = data_train['mark'].values.tolist()
+    data_trans_coef['shape'] = ['train']*len(data_trans_coef)
+    list_cat = list(clf.classes_)
+    working_data, curr_form = build_table_test_lda()
+    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
+    set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
+    try:
+        new_trans_coef = clf.transform(working_data.iloc[:, 3:])
+        new_mark = clf.predict(working_data.iloc[:, 3:])
+        probability = clf.predict_proba(working_data.iloc[:, 3:])
+    except ValueError:
+        data = imputer.fit_transform(working_data.iloc[:, 3:])
+        new_trans_coef = clf.transform(data)
+        new_mark = clf.predict(data)
+        probability = clf.predict_proba(data)
+        for i in working_data.index:
+            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                         f' этого измерения может быть не корректен', 'red')
+    working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data['mark'] = new_mark
+    test_data_trans_coef = pd.DataFrame(new_trans_coef)
+    test_data_trans_coef['mark'] = new_mark
+    test_data_trans_coef['shape'] = ['test'] * len(new_trans_coef)
+    data_trans_coef = pd.concat([data_trans_coef, test_data_trans_coef], ignore_index=True)
     return working_data, data_trans_coef, curr_form
 
 

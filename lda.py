@@ -485,14 +485,14 @@ def calc_LDA():
     colors = {}
     for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all():
         colors[m.title] = m.color
-    colors['test'] = '#999999'
+    # colors['test'] = '#999999'
     working_data, data_trans_coef, curr_form = get_working_data_lda()
     fig = plt.figure(figsize=(10, 10), dpi=80)
     ax = plt.subplot()
     if ui.listWidget_param_lda.count() < 3:
-        sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', palette=colors)
+        sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', style='shape', palette=colors)
     else:
-        sns.scatterplot(data=data_trans_coef, x=0, y=1, hue='mark', palette=colors)
+        sns.scatterplot(data=data_trans_coef, x=0, y=1, hue='mark', style='shape', palette=colors)
     ax.grid()
     ax.xaxis.grid(True, "minor", linewidth=.25)
     ax.yaxis.grid(True, "minor", linewidth=.25)
@@ -537,7 +537,7 @@ def calc_LDA():
 
 
 def calc_obj_lda():
-    working_data_result = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc', 'mark'])
+    working_data_result = pd.DataFrame()
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
@@ -559,10 +559,41 @@ def calc_obj_lda():
                 Choose_Formation.close()
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_lda_ok)
             Choose_Formation.exec_()
-        working_data, data_trans_coef, curr_form = get_working_data_lda()
-        working_data['x_pulc'] = json.loads(prof.x_pulc)
-        working_data['y_pulc'] = json.loads(prof.y_pulc)
+        working_data, curr_form = build_table_test_lda()
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
+    data_train, list_param = build_table_train_lda(True)
+    list_param_lda = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_lda].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    clf = LinearDiscriminantAnalysis()
+    try:
+        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
+    except ValueError:
+        ui.label_info.setText(
+            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
+        ui.label_info.setStyleSheet('color: red')
+        return
+    data_trans_coef = pd.DataFrame(trans_coef)
+    data_trans_coef['mark'] = data_train['mark'].values.tolist()
+    data_trans_coef['shape'] = ['train'] * len(data_trans_coef)
+    list_cat = list(clf.classes_)
+
+    try:
+        new_mark = clf.predict(working_data_result.iloc[:, 3:])
+        probability = clf.predict_proba(working_data_result.iloc[:, 3:])
+    except ValueError:
+        data = imputer.fit_transform(working_data_result.iloc[:, 3:])
+        new_mark = clf.predict(data)
+        probability = clf.predict_proba(data)
+        for i in working_data_result.index:
+            p_nan = [working_data_result.columns[ic + 3] for ic, v in enumerate(working_data_result.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                profile_title = session.query(Profile.title).filter_by(id=working_data_result['prof_index'][i].split('_')[0]).first()[0][0]
+                set_info(f'Внимание для измерения "{i}" на профиле "{profile_title}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                         f' этого измерения может быть не корректен', 'red')
+    working_data_result = pd.concat([working_data_result, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data_result['mark'] = new_mark
     try:
         file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_lda_title()}.xlsx'
         fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат LDA "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
