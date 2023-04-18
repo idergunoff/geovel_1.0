@@ -1,5 +1,3 @@
-import json
-
 import pandas as pd
 
 from object import *
@@ -688,25 +686,41 @@ def draw_boundary(bound_id, index):
     globals()[f'bound_text_id{bound_id}'] = text_item  # Сохранение ссылки на графический объект текста в globals()
 
 
-################################################################
-############################# LDA ##############################
-################################################################
+#################################################################
+########################## LDA MLP ##############################
+#################################################################
 
 
 def get_LDA_id():
     return ui.comboBox_lda_analysis.currentText().split(' id')[-1]
 
 
+def get_MLP_id():
+    return ui.comboBox_mlp_analysis.currentText().split(' id')[-1]
+
+
 def get_lda_title():
     return ui.comboBox_lda_analysis.currentText().split(' id')[0]
+
+
+def get_mlp_title():
+    return ui.comboBox_mlp_analysis.currentText().split(' id')[0]
 
 
 def get_marker_id():
     return ui.comboBox_mark_lda.currentText().split(' id')[-1]
 
 
+def get_marker_mlp_id():
+    return ui.comboBox_mark_mlp.currentText().split(' id')[-1]
+
+
 def get_marker_title():
     return ui.comboBox_mark_lda.currentText().split(' id')[0]
+
+
+def get_marker_mlp_title():
+    return ui.comboBox_mark_mlp.currentText().split(' id')[0]
 
 
 def get_markup_id():
@@ -714,9 +728,19 @@ def get_markup_id():
         return ui.listWidget_well_lda.currentItem().text().split(' id')[-1]
 
 
+def get_markup_mlp_id():
+    if ui.listWidget_well_mlp.currentItem():
+        return ui.listWidget_well_mlp.currentItem().text().split(' id')[-1]
+
+
 def set_param_lda_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_lda.addItem(param)
+
+
+def set_param_mlp_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_mlp.addItem(param)
 
 
 def add_param_lda(param):
@@ -731,21 +755,39 @@ def add_param_lda(param):
     session.commit()
 
 
-def build_table_train_lda(db=False):
-    list_param_lda = get_list_param_lda()
+def add_param_mlp(param):
+    if param.startswith('distr') or param.startswith('sep'):
+        atr, count = ui.comboBox_atrib_distr_mlp.currentText(), ui.spinBox_count_distr_mlp.value()
+        param = f'{param}_{atr}_{count}'
+    elif param.startswith('mfcc'):
+        atr, count = ui.comboBox_atrib_mfcc_mlp.currentText(), ui.spinBox_count_mfcc_mlp.value()
+        param = f'{param}_{atr}_{count}'
+    new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=param)
+    session.add(new_param_mlp)
+    session.commit()
+
+
+def build_table_train(db=False, analisis='lda'):
+    list_param = get_list_param_lda() if analisis == 'lda' else get_list_param_mlp()
     if db:
-        data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()[0]
+        if analisis == 'lda':
+            data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
+        else:
+            data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
         if data:
-            data_train = pd.DataFrame(json.loads(data))
-            return data_train, list_param_lda
+            data_train = pd.DataFrame(json.loads(data[0]))
+            return data_train, list_param
     data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
-    markups = session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all()
+    if analisis == 'lda':
+        markups = session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all()
+    else:
+        markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
     ui.progressBar.setMaximum(len(markups))
     for nm, markup in enumerate(markups):
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
         list_up = json.loads(markup.formation.layer_up.layer_line)
         list_down = json.loads(markup.formation.layer_down.layer_line)
-        for param in list_param_lda:
+        for param in list_param:
             if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 if not markup.profile.title + param.split('_')[1] in locals():
                     locals()[markup.profile.title + param.split('_')[1]] = json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
@@ -758,7 +800,7 @@ def build_table_train_lda(db=False):
             dict_value = {}
             dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
             dict_value['mark'] = markup.marker.title
-            for param in list_param_lda:
+            for param in list_param:
                 if param.startswith('distr'):
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                     sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
@@ -782,21 +824,24 @@ def build_table_train_lda(db=False):
             data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
         ui.progressBar.setValue(nm + 1)
     data_train_to_db = json.dumps(data_train.to_dict())
-    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
+    if analisis == 'lda':
+        session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
+    else:
+        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
     session.commit()
     # print(data_train.to_string(max_rows=None))
-    return data_train, list_param_lda
+    return data_train, list_param
 
 
-def build_table_test_lda():
-    list_param_lda = get_list_param_lda()
+def build_table_test(analisis='lda'):
+    list_param = get_list_param_lda() if analisis == 'lda' else get_list_param_mlp()
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
     list_up = json.loads(curr_form.layer_up.layer_line)
     list_down = json.loads(curr_form.layer_down.layer_line)
     x_pulc = json.loads(curr_form.profile.x_pulc)
     y_pulc = json.loads(curr_form.profile.y_pulc)
-    for param in list_param_lda:
+    for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             if not curr_form.profile.title + param.split('_')[1] in locals():
                 locals()[curr_form.profile.title + param.split('_')[1]] = json.loads(
@@ -804,11 +849,12 @@ def build_table_test_lda():
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
     ui.progressBar.setMaximum(len(list_up))
-    set_info(f'Процесс сбора параметров {ui.comboBox_lda_analysis.currentText()} по профилю {curr_form.profile.title}',
+    analisis_title = ui.comboBox_lda_analysis.currentText() if analisis == 'lda' else ui.comboBox_mlp_analysis.currentText()
+    set_info(f'Процесс сбора параметров {analisis_title} по профилю {curr_form.profile.title}',
              'blue')
     for i in range(len(list_up)):
         dict_value = {}
-        for param in list_param_lda:
+        for param in list_param:
             if param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
@@ -842,13 +888,23 @@ def get_list_marker():
     return [m.title for m in markers]
 
 
+def get_list_marker_mlp():
+    markers = session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).all()
+    return [m.title for m in markers]
+
+
 def get_list_param_lda():
     parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
     return [p.parameter for p in parameters]
 
 
+def get_list_param_mlp():
+    parameters = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
+    return [p.parameter for p in parameters]
+
+
 def get_working_data_lda():
-    data_train, list_param = build_table_train_lda(True)
+    data_train, list_param = build_table_train(True)
     list_param_lda = data_train.columns.tolist()[2:]
     training_sample = data_train[list_param_lda].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
@@ -856,15 +912,14 @@ def get_working_data_lda():
     try:
         trans_coef = clf.fit(training_sample, markup).transform(training_sample)
     except ValueError:
-        ui.label_info.setText(
-            f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
-        ui.label_info.setStyleSheet('color: red')
+        set_info(f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
         return
     data_trans_coef = pd.DataFrame(trans_coef)
     data_trans_coef['mark'] = data_train['mark'].values.tolist()
     data_trans_coef['shape'] = ['train']*len(data_trans_coef)
     list_cat = list(clf.classes_)
-    working_data, curr_form = build_table_test_lda()
+    working_data, curr_form = build_table_test()
     profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
     set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
     try:
@@ -889,6 +944,98 @@ def get_working_data_lda():
     test_data_trans_coef['shape'] = ['test'] * len(new_trans_coef)
     data_trans_coef = pd.concat([data_trans_coef, test_data_trans_coef], ignore_index=True)
     return working_data, data_trans_coef, curr_form
+
+
+def get_working_data_mlp():
+    data_train, list_param = build_table_train(True, 'mlp')
+    list_param_mlp = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_mlp].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+    try:
+        # Нормализация данных
+        scaler = StandardScaler()
+        training_sample_norm = scaler.fit_transform(training_sample)
+        # Разделение данных на обучающую и тестовую выборки
+        # training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+        #     training_sample_norm, markup, test_size=0.20, random_state=1
+        # )
+        # Создание и тренировка MLP
+
+        layers = tuple(map(int, ui.lineEdit_layer_mlp.text().split()))
+        mlp = MLPClassifier(
+            hidden_layer_sizes=layers,
+            activation=ui.comboBox_activation_mlp.currentText(),
+            solver=ui.comboBox_solvar_mlp.currentText(),
+            alpha=ui.doubleSpinBox_alpha_mlp.value(),
+            max_iter=5000,
+            early_stopping=ui.checkBox_e_stop_mlp.isChecked(),
+            validation_fraction=ui.doubleSpinBox_valid_mlp.value(),
+            random_state=1
+        )
+        mlp.fit(training_sample_norm, markup)
+        # Оценка точности на обучающей выборке
+        train_accuracy = mlp.score(training_sample_norm, markup)
+        training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
+            training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_mlp.value(), random_state=1)
+        test_accuracy = mlp.score(training_sample_test, markup_test)
+        set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
+                 f'activation - {ui.comboBox_activation_mlp.currentText()}, '
+                 f'solver - {ui.comboBox_solvar_mlp.currentText()}, '
+                 f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, '
+                 f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}'
+                 f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}, '
+                 f'точность на всей обучающей выборке: {train_accuracy}, '
+                 f'точность на тестовой выборке: {test_accuracy}', 'blue')
+    except ValueError:
+        set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
+        return
+
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+    preds_proba_train = mlp.predict_proba(training_sample_norm)
+    preds_train = mlp.predict(training_sample_norm)
+    data_probability = pd.DataFrame(preds_proba_train)
+    data_probability['mark'] = preds_train
+    data_probability['shape'] = ['train'] * len(preds_train)
+
+    list_cat = list(mlp.classes_)
+    working_data, curr_form = build_table_test('mlp')
+    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
+    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
+    working_sample = scaler.fit_transform(working_data.iloc[:, 3:])
+    try:
+        new_mark = mlp.predict(working_sample)
+        probability = mlp.predict_proba(working_sample)
+    except ValueError:
+        data = imputer.fit_transform(working_sample)
+        new_mark = mlp.predict(data)
+        probability = mlp.predict_proba(data)
+        for i in working_data.index:
+            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                         f' этого измерения может быть не корректен', 'red')
+    working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data['mark'] = new_mark
+
+    data_work_probability = pd.DataFrame(probability)
+    data_work_probability['mark'] = new_mark
+    data_work_probability['shape'] = ['work'] * len(new_mark)
+    data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+    data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+    data_tsne['mark'] = data_probability['mark']
+    data_tsne['shape'] = data_probability['shape']
+    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+                  f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+                  f'{str(len(data_tsne.index))}\n' \
+                  f'hidden_layer_sizes - ({",".join(map(str, layers))}), ' \
+                  f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, ' \
+                  f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}' \
+                  f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}\n' \
+                  f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n' \
+                  f'точность на тестовой выборке: {round(test_accuracy, 7)}'
+    return working_data, data_tsne, curr_form, title_graph
 
 
 def get_distribution(values: list, n: int) -> list:

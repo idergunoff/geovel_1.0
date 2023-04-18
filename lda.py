@@ -1,12 +1,6 @@
-import json
-import profile
-
-import pandas as pd
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QColor
-
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
+from mlp import update_list_mlp
 from qt.choose_formation_lda import *
 
 
@@ -46,6 +40,34 @@ def copy_lda():
             session.add(new_markup)
     session.commit()
     update_list_lda()
+    set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
+
+
+def copy_lda_to_mlp():
+    """Скопировать анализ LDA в MLP"""
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название для копии анализа', 'red')
+        return
+    old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
+    new_mlp = AnalysisMLP(title=ui.lineEdit_string.text())
+    session.add(new_mlp)
+    session.commit()
+    for old_marker in old_lda.markers:
+        new_marker = MarkerMLP(analysis_id=new_mlp.id, title=old_marker.title, color=old_marker.color)
+        session.add(new_marker)
+        for old_markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id(), marker_id=old_marker.id):
+            new_markup = MarkupMLP(
+                analysis_id=new_mlp.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                marker_id=new_marker.id,
+                list_measure=old_markup.list_measure
+            )
+            session.add(new_markup)
+    session.commit()
+    update_list_lda()
+    update_list_mlp()
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
 
 
@@ -377,7 +399,7 @@ def remove_all_param_geovel_lda():
 
 
 def update_list_param_lda(db=False):
-    data_train, list_param = build_table_train_lda(db)
+    data_train, list_param = build_table_train(db)
     list_marker = get_list_marker()
     ui.listWidget_param_lda.clear()
     list_param_lda = data_train.columns.tolist()[2:]
@@ -394,7 +416,7 @@ def update_list_param_lda(db=False):
 
 def draw_LDA():
     """ Построить диаграмму рассеяния для модели анализа LDA """
-    data_train, list_param = build_table_train_lda(True)
+    data_train, list_param = build_table_train(True)
     list_param_lda = data_train.columns.tolist()[2:]
     colors = {}
     for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all():
@@ -427,7 +449,7 @@ def draw_LDA():
 
 
 def calc_verify_lda():
-    data_train, list_param = build_table_train_lda(True)
+    data_train, list_param = build_table_train(True)
     list_param_lda = data_train.columns.tolist()[2:]
     # colors = [m.color for m in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()]
     training_sample = data_train[list_param_lda].values.tolist()
@@ -559,9 +581,9 @@ def calc_obj_lda():
                 Choose_Formation.close()
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_lda_ok)
             Choose_Formation.exec_()
-        working_data, curr_form = build_table_test_lda()
+        working_data, curr_form = build_table_test()
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
-    data_train, list_param = build_table_train_lda(True)
+    data_train, list_param = build_table_train(True)
     list_param_lda = data_train.columns.tolist()[2:]
     training_sample = data_train[list_param_lda].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])

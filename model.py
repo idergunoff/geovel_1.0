@@ -54,7 +54,8 @@ class Profile(Base):
     min_max = relationship('CurrentProfileMinMax', back_populates='profile')
     layers = relationship('Layers', back_populates='profile')
     formations = relationship('Formation', back_populates='profile')
-    markups = relationship('MarkupLDA', back_populates='profile')
+    markups_lda = relationship('MarkupLDA', back_populates='profile')
+    markups_mlp = relationship('MarkupMLP', back_populates='profile')
     # дальше всё убираем
 
     # T_top = Column(Text)
@@ -217,7 +218,8 @@ class Formation(Base):
     profile = relationship('Profile', back_populates='formations')
     layer_up = relationship('Layers', back_populates='formation_up', foreign_keys=[up])
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
-    markups = relationship('MarkupLDA', back_populates='formation')
+    markups_lda = relationship('MarkupLDA', back_populates='formation')
+    markups_mlp = relationship('MarkupMLP', back_populates='formation')
 
 
 class Well(Base):
@@ -231,7 +233,8 @@ class Well(Base):
 
     boundaries = relationship("Boundary", back_populates="well")
     well_logs = relationship("WellLog", back_populates="well")
-    markups = relationship("MarkupLDA", back_populates="well")
+    markups_lda = relationship("MarkupLDA", back_populates="well")
+    markups_mlp = relationship('MarkupMLP', back_populates='well')
 
 
 class Boundary(Base):
@@ -322,10 +325,68 @@ class MarkupLDA(Base):
     list_fake = Column(Text)
 
     analysis = relationship('AnalysisLDA', back_populates='markups')
-    well = relationship("Well", back_populates="markups")
-    profile = relationship("Profile", back_populates="markups")
-    formation = relationship("Formation", back_populates="markups")
+    well = relationship("Well", back_populates="markups_lda")
+    profile = relationship("Profile", back_populates="markups_lda")
+    formation = relationship("Formation", back_populates="markups_lda")
     marker = relationship("MarkerLDA", back_populates="markups")
+
+
+#####################################################
+######################  MLP  ########################
+#####################################################
+
+
+class AnalysisMLP(Base):
+    __tablename__ = 'analysis_mlp'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    data = Column(Text)
+
+    parameters = relationship('ParameterMLP', back_populates='analysis')
+    markers = relationship('MarkerMLP', back_populates='analysis')
+    markups = relationship('MarkupMLP', back_populates='analysis')
+
+
+class ParameterMLP(Base):
+    __tablename__ = 'parameter_mlp'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    parameter = Column(String)
+
+    analysis = relationship('AnalysisMLP', back_populates='parameters')
+
+
+class MarkerMLP(Base):
+    __tablename__ = 'marker_mlp'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    title = Column(String)
+    color = Column(String)
+
+    analysis = relationship('AnalysisMLP', back_populates='markers')
+    markups = relationship('MarkupMLP', back_populates='marker')
+
+
+class MarkupMLP(Base):
+    __tablename__ = 'markup_mlp'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    marker_id = Column(Integer, ForeignKey('marker_mlp.id'))
+    list_measure = Column(Text)
+    list_fake = Column(Text)
+
+    analysis = relationship('AnalysisMLP', back_populates='markups')
+    well = relationship("Well", back_populates="markups_mlp")
+    profile = relationship("Profile", back_populates="markups_mlp")
+    formation = relationship("Formation", back_populates="markups_mlp")
+    marker = relationship("MarkerMLP", back_populates="markups")
 
 
 Base.metadata.create_all(engine)

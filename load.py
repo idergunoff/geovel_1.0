@@ -1,5 +1,3 @@
-import json
-
 from func import *
 from wgs_to_pulc import wgs84_to_pulc42
 from qt.add_obj_dialog import *

@@ -9,6 +9,7 @@ from draw import *
 from layer import *
 from well import *
 from lda import *
+from mlp import *
 
 
 MainWindow.show()
@@ -115,6 +116,7 @@ ui.pushButton_color.clicked.connect(change_color)
 ui.pushButton_add_lda.clicked.connect(add_lda)
 ui.pushButton_rem_lda.clicked.connect(remove_lda)
 ui.pushButton_copy_lda.clicked.connect(copy_lda)
+ui.pushButton_copy_lda_to_mlp.clicked.connect(copy_lda_to_mlp)
 ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
 ui.pushButton_rem_mark_lda.clicked.connect(remove_marker_lda)
 ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
@@ -136,6 +138,28 @@ ui.pushButton_add_mfcc.clicked.connect(add_param_mfcc_lda)
 ui.pushButton_add_all_mfcc.clicked.connect(add_all_param_mfcc_lda)
 # ui.pushButton_test.clicked.connect(test)
 
+#   mlp
+ui.pushButton_add_mlp.clicked.connect(add_mlp)
+ui.pushButton_rem_mlp.clicked.connect(remove_mlp)
+ui.pushButton_copy_mlp.clicked.connect(copy_mlp)
+ui.pushButton_add_mark_mlp.clicked.connect(add_marker_mlp)
+ui.pushButton_rem_mark_mlp.clicked.connect(remove_marker_mlp)
+ui.pushButton_add_well_mlp.clicked.connect(add_well_markup_mlp)
+ui.pushButton_add_geovel_mlp.clicked.connect(add_param_geovel_mlp)
+ui.pushButton_add_all_geovel_mlp.clicked.connect(add_all_param_geovel_mlp)
+ui.pushButton_add_distr_mlp.clicked.connect(add_param_distr_mlp)
+ui.pushButton_add_sep_mlp.clicked.connect(add_param_sep_mlp)
+ui.pushButton_add_all_distr_mlp.clicked.connect(add_all_param_distr_mlp)
+ui.pushButton_update_well_mlp.clicked.connect(update_well_markup_mlp)
+ui.pushButton_rem_well_mlp.clicked.connect(remove_well_markup_mlp)
+ui.pushButton_rem_param_mlp.clicked.connect(remove_param_geovel_mlp)
+ui.pushButton_clear_params_mlp.clicked.connect(remove_all_param_geovel_mlp)
+ui.pushButton_draw_mlp.clicked.connect(draw_MLP)
+ui.pushButton_calc_mlp.clicked.connect(calc_MLP)
+# ui.pushButton_calc_obj_mlp.clicked.connect(calc_obj_mlp)
+ui.pushButton_add_mfcc_mlp.clicked.connect(add_param_mfcc_mlp)
+ui.pushButton_add_all_mfcc_mlp.clicked.connect(add_all_param_mfcc_mlp)
+
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
@@ -153,6 +177,7 @@ ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
 ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda)
+ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp)
 
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
@@ -190,7 +215,9 @@ update_list_well()
 set_info('Старт...', 'green')
 set_random_color()
 update_list_lda(True)
+update_list_mlp(True)
 set_param_lda_to_combobox()
+set_param_mlp_to_combobox()
 # update_list_param_lda()
 
 

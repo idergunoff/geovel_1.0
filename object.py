@@ -2,14 +2,16 @@ import sys
 import random
 from sqlite3 import connect
 
-from PyQt5.QtCore import QRect
+from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtWidgets import QFileDialog, QCheckBox
+from PyQt5.QtGui import QBrush, QColor
 
 from qt.geovel_main_window import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
 import pandas as pd
+import json
 
 from scipy.stats import skew, kurtosis, rankdata, f_oneway
 
@@ -20,6 +22,10 @@ from scipy.signal.windows import cosine
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import normalize
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import seaborn as sns
 from python_speech_features import mfcc
