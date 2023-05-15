@@ -78,6 +78,7 @@ def change_color():
 
 img.scene().sigMouseClicked.connect(mouseClicked)
 
+
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
 ui.pushButton_draw_cur.clicked.connect(draw_current_radarogram)
@@ -218,6 +219,7 @@ update_list_lda(True)
 update_list_mlp(True)
 set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
+
 # update_list_param_lda()
 
 

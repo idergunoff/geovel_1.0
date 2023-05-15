@@ -18,9 +18,9 @@
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_3" columnstretch="5">
       <item row="0" column="0">
-       <layout class="QGridLayout" name="gridLayout_2" columnstretch="7,1">
+       <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="7,1" columnminimumwidth="7,1">
         <item row="1" column="0">
-         <layout class="QGridLayout" name="gridLayout" rowstretch="9,0" columnstretch="9,0">
+         <layout class="QGridLayout" name="gridLayout" rowstretch="7,2" columnstretch="7,2" rowminimumheight="7,2" columnminimumwidth="7,2">
           <item row="1" column="1">
            <widget class="QTextEdit" name="info">
             <property name="enabled">
