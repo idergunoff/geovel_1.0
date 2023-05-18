@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1553</width>
+    <width>1552</width>
     <height>833</height>
    </rect>
   </property>
@@ -1156,6 +1156,172 @@
                    </layout>
                   </item>
                  </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_6">
+             <attribute name="title">
+              <string>Monitoring</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_55">
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_54">
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_56">
+                  <item row="0" column="0">
+                   <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="2,9">
+                    <item>
+                     <widget class="QLabel" name="label_20">
+                      <property name="font">
+                       <font>
+                        <pointsize>12</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Object:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="comboBox_object_monitor">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QGridLayout" name="gridLayout_57">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_58">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_23">
+                        <property name="font">
+                         <font>
+                          <pointsize>12</pointsize>
+                          <underline>false</underline>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>Horizontal wells:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QListWidget" name="listWidget_h_well"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QGridLayout" name="gridLayout_59">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_24">
+                        <property name="font">
+                         <font>
+                          <pointsize>12</pointsize>
+                          <underline>false</underline>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>Parameters of h.well:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QListWidget" name="listWidget_param_h_well"/>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="2" column="0">
+                   <layout class="QGridLayout" name="gridLayout_61">
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_add_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>Add h.well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_edit_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>Edit h.well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_rem_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>Remove h.well</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="3" column="0">
+                   <layout class="QGridLayout" name="gridLayout_62">
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_therm_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(148, 255, 232);</string>
+                      </property>
+                      <property name="text">
+                       <string>Thermogram</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_inclin_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(148, 255, 232);</string>
+                      </property>
+                      <property name="text">
+                       <string>Inclinometry</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_param_h_well">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(148, 255, 232);</string>
+                      </property>
+                      <property name="text">
+                       <string>Parameters</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <spacer name="verticalSpacer_2">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>40</height>
+                   </size>
+                  </property>
+                 </spacer>
                 </item>
                </layout>
               </item>
@@ -2374,7 +2540,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1553</width>
+     <width>1552</width>
      <height>21</height>
     </rect>
    </property>
