@@ -230,6 +230,50 @@
                 </property>
                </widget>
               </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Другие</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                  <underline>true</underline>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Фильтрация</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QPushButton" name="pushButton_save_signal">
+                <property name="text">
+                 <string>Выгрузить</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_6">
                 <item row="5" column="0">
@@ -478,49 +522,36 @@
                 </item>
                </layout>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Другие</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_3">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                  <underline>true</underline>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Фильтрация</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
-               <widget class="QPushButton" name="pushButton_save_signal">
-                <property name="text">
-                 <string>Выгрузить</string>
-                </property>
-               </widget>
+              <item row="7" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QCheckBox" name="checkBox_2degree">
+                  <property name="text">
+                   <string>^2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_type_dct">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>4</number>
+                  </property>
+                  <property name="value">
+                   <number>2</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_ceps_koef">
+                  <property name="text">
+                   <string>koef</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item row="5" column="0">
                <layout class="QGridLayout" name="gridLayout_11">
@@ -652,45 +683,14 @@
                 </item>
                </layout>
               </item>
-              <item row="10" column="0">
+              <item row="11" column="0">
                <widget class="QPushButton" name="pushButton_maxmin">
                 <property name="text">
                  <string>max/min</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QCheckBox" name="checkBox_2degree">
-                  <property name="text">
-                   <string>^2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_type_dct">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>4</number>
-                  </property>
-                  <property name="value">
-                   <number>2</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_ceps_koef">
-                  <property name="text">
-                   <string>koef</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="11" column="0">
+              <item row="12" column="0">
                <spacer name="verticalSpacer">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -702,6 +702,13 @@
                  </size>
                 </property>
                </spacer>
+              </item>
+              <item row="9" column="0">
+               <widget class="QPushButton" name="pushButton_secret_filter">
+                <property name="text">
+                 <string> SFFAI</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
