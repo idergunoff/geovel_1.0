@@ -10,6 +10,7 @@ from layer import *
 from well import *
 from lda import *
 from mlp import *
+from monitoring import *
 
 
 MainWindow.show()
@@ -202,11 +203,26 @@ ui.listWidget_well.currentItemChanged.connect(update_boundaries)
 ui.listWidget_bound.currentItemChanged.connect(draw_bound_int)
 ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
 
+###################################################################
+#########################   Monitoring   ##########################
+###################################################################
+
+ui.comboBox_object_monitor.activated.connect(update_list_h_well)
+ui.listWidget_h_well.currentItemChanged.connect(update_list_param_h_well)
+ui.pushButton_add_h_well.clicked.connect(add_h_well)
+ui.pushButton_rem_h_well.clicked.connect(remove_h_well)
+ui.pushButton_edit_h_well.clicked.connect(edit_h_well)
+ui.pushButton_param_h_well.clicked.connect(load_param_h_well)
+ui.pushButton_inclin_h_well.clicked.connect(load_inclinometry_h_well)
+ui.pushButton_therm_h_well.clicked.connect(load_thermogram_h_well)
+
 roi.sigRegionChanged.connect(updatePlot)
 
 ui.pushButton_find_oil.clicked.connect(filter19)
+ui.pushButton_secret_filter.clicked.connect(secret_filter)
 
 update_object()
+update_list_object_monitor()
 clear_current_profile()
 clear_current_profile_min_max()
 clear_spectr()

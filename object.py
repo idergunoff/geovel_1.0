@@ -50,5 +50,3 @@ radarogramma.addItem(roi)
 
 imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0) # заполнение пропусков для LDA
 
-
-session = Session()

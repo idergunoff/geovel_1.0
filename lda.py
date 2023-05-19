@@ -433,7 +433,7 @@ def draw_LDA():
     data_trans_coef = pd.DataFrame(trans_coef)
     data_trans_coef['mark'] = data_train['mark'].values.tolist()
 
-    fig = plt.figure(figsize=(10, 10), dpi=80)
+    fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
     if ui.listWidget_param_lda.count() < 3:
         sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', palette=colors)
@@ -509,7 +509,7 @@ def calc_LDA():
         colors[m.title] = m.color
     # colors['test'] = '#999999'
     working_data, data_trans_coef, curr_form = get_working_data_lda()
-    fig = plt.figure(figsize=(10, 10), dpi=80)
+    fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
     if ui.listWidget_param_lda.count() < 3:
         sns.scatterplot(data=data_trans_coef, x=0, y=100, hue='mark', style='shape', palette=colors)

@@ -453,4 +453,14 @@ def filter19():
     ui.pushButton_medfilt.click()
 
 
+def secret_filter():
+    ui.pushButton_dct.click()
+    ui.pushButton_rang.click()
+    ui.pushButton_log.click()
+    ui.pushButton_idct.click()
+    ui.pushButton_rang.click()
+    ui.pushButton_filtfilt.click()
+    filter19()
+
+
 

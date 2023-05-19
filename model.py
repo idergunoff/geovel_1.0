@@ -9,6 +9,7 @@ DATABASE_NAME = 'geovel_db.sqlite'
 engine = create_engine(f'sqlite:///{DATABASE_NAME}', echo=False)
 
 Session = sessionmaker(bind=engine)
+session = Session()
 
 Base = declarative_base()
 
@@ -21,6 +22,7 @@ class GeoradarObject(Base):
 
     researches = relationship('Research', back_populates='object')
     grid = relationship('Grid', back_populates='object')
+    h_wells = relationship('HorizontalWell', back_populates='object')
 
 
 class Research(Base):
@@ -387,6 +389,29 @@ class MarkupMLP(Base):
     profile = relationship("Profile", back_populates="markups_mlp")
     formation = relationship("Formation", back_populates="markups_mlp")
     marker = relationship("MarkerMLP", back_populates="markups")
+
+
+class HorizontalWell(Base):
+    __tablename__ = 'horizontal_well'
+
+    id = Column(Integer, primary_key=True)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    title = Column(String)
+
+    object = relationship("GeoradarObject", back_populates="h_wells")
+    parameters = relationship('ParameterHWell', back_populates='h_well')
+
+
+class ParameterHWell(Base):
+    __tablename__ = 'parameter_h_well'
+
+    id = Column(Integer, primary_key=True)
+    h_well_id = Column(Integer, ForeignKey('horizontal_well.id'))
+    parameter = Column(String)
+    data = Column(Text)
+
+    h_well = relationship("HorizontalWell", back_populates="parameters")
+
 
 
 Base.metadata.create_all(engine)

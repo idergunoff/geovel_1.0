@@ -441,7 +441,7 @@ def draw_MLP():
     train_tsne = tsne.fit_transform(preds_proba_train)
     data_tsne = pd.DataFrame(train_tsne)
     data_tsne['mark'] = preds_train
-    fig = plt.figure(figsize=(10, 10), dpi=80)
+    fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
     sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', palette=colors)
     ax.grid()
@@ -522,7 +522,7 @@ def calc_MLP():
         colors[m.title] = m.color
     # colors['test'] = '#999999'
     working_data, data_tsne, curr_form, title_graph = get_working_data_mlp()
-    fig = plt.figure(figsize=(10, 10), dpi=80)
+    fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
 
     sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', style='shape', palette=colors)
