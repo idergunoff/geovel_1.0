@@ -16,7 +16,9 @@ def update_list_h_well():
     """Обновить список горизонтальных скважин"""
     ui.listWidget_h_well.clear()
     for h_well in session.query(GeoradarObject).filter_by(id=get_obj_monitor_id()).first().h_wells:
-        ui.listWidget_h_well.addItem(h_well.title)
+        item = QListWidgetItem(h_well.title)
+        item.setData(Qt.UserRole, h_well.id)
+        ui.listWidget_h_well.addItem(item)
 
 
 def check_inclinometry_h_well():
@@ -26,7 +28,12 @@ def check_inclinometry_h_well():
 
 def update_list_param_h_well():
     """Обновить список параметров горизонтальных скважин"""
-    pass
+
+    ui.listWidget_param_h_well.clear()
+    for p in session.query(ParameterHWell).filter_by(h_well_id=get_h_well_id()).all():
+        item = QListWidgetItem(p.parameter)
+        item.setData(Qt.UserRole, p.id)
+        ui.listWidget_param_h_well.addItem(item)
 
 
 def add_h_well():
@@ -139,6 +146,13 @@ def  load_param_h_well():
 def get_obj_monitor_id():
     """Получить id объекта мониторинга"""
     return ui.comboBox_object_monitor.itemData(ui.comboBox_object_monitor.currentIndex())['id']
+
+
+def get_h_well_id():
+    """Получить id горизонтальной скважины"""
+    item = ui.listWidget_h_well.currentItem()
+    if item:
+        return item.data(Qt.UserRole)
 
 
 def load_inclinometry_h_well():
