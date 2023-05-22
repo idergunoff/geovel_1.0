@@ -160,7 +160,47 @@ def get_h_well_id():
 
 def load_inclinometry_h_well():
     """Загрузить инклинометрические данные горизонтальных скважин"""
-    pass
+    if ui.lineEdit_string.text() == '':
+        well_coord = [0, 0, 0]
+    else:
+        well_coord = ui.lineEdit_string.text().split(';')
+        well_coord = [float(i) for i in well_coord]
+    if not len(well_coord) == 3:
+        set_info('Неверные координаты горизонтальной скважины, введите "x;y;z"', 'red')
+        return
+    file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл инклинометрическии', '', 'Текстовые файлы (*.txt)')[0]
+    if file_name:
+        coord_inc = calc_coord_inclinometry(file_name, well_coord)
+        print(coord_inc)
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        xs = [coord[0] for coord in coord_inc]
+        ys = [coord[1] for coord in coord_inc]
+        zs = [coord[2] for coord in coord_inc]
+
+        ax.plot(xs, ys, zs)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # задаем реальные масштабы для всех трех осей
+        # x_range = max(xs) - min(xs)
+        # y_range = max(ys) - min(ys)
+        # z_range = max(zs) - min(zs)
+        # max_range = max(x_range, y_range, z_range)
+        # x_center = (max(xs) + min(xs)) / 2
+        # y_center = (max(ys) + min(ys)) / 2
+        # z_center = (max(zs) + min(zs)) / 2
+        # ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
+        # ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
+        # ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+
+
+
+        plt.show()
+
 
 
 def load_thermogram_h_well():
@@ -199,3 +239,30 @@ def draw_param_h_well():
     # ui.graph.setAxisItems({'bottom': date_axis})
     # curve_param = pg.PlotCurveItem(x=x_num, y=y)
     # ui.graph.addItem(curve_param)
+
+
+def calc_coord_inclinometry(input_file_path, initial_coordinates):
+    output_coordinates = []
+
+    x, y, z = initial_coordinates
+    prev_length = 0
+
+    with open(input_file_path, 'r') as input_file:
+        for line in input_file:
+            length, dip_angle, azimuth = map(float, line.strip().split('\t'))
+
+            delta_length = length - prev_length  # разница между текущим и предыдущим значением length
+            delta_x = delta_length * math.sin(math.radians(180 - dip_angle)) * math.sin(math.radians(azimuth))
+            delta_y = delta_length * math.sin(math.radians(180 - dip_angle)) * math.cos(math.radians(azimuth))
+            delta_z = delta_length * math.cos(math.radians(180 - dip_angle))
+
+            x += delta_x
+            y += delta_y
+            z += delta_z
+
+            prev_length = length  # сохраняем текущее значение length для следующей итерации
+
+            output_coordinates.append((x, y, z))
+
+    return output_coordinates
+

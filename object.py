@@ -1,5 +1,5 @@
 import sys
-import random
+import random, math
 from sqlite3 import connect
 
 from PyQt5.QtCore import QRect, Qt
@@ -27,6 +27,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
 
