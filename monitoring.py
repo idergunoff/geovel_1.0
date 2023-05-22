@@ -21,6 +21,7 @@ def update_list_h_well():
         item = QListWidgetItem(h_well.title)
         item.setData(Qt.UserRole, h_well.id)
         ui.listWidget_h_well.addItem(item)
+    ui.listWidget_h_well.sortItems()
 
 
 def check_inclinometry_h_well():
@@ -174,15 +175,17 @@ def draw_param_h_well():
         return
     id_param = item.data(Qt.UserRole)
     param = session.query(ParameterHWell).filter_by(id=id_param).first()
-    param_data = json.loads(param.data)
-    x, y = [], []
-    for key, value in param_data.items():
-        x.append(datetime.datetime.strptime(key, '%Y-%m-%d'))
-        y.append(value)
 
-    fig = plt.figure(figsize=(12, 5))
+    param_data = json.loads(param.data)
+    sorted_param_data = sorted(param_data)
+    x, y = [], []
+    for key in sorted_param_data:
+        x.append(datetime.datetime.strptime(key, '%Y-%m-%d'))
+        y.append(param_data[key])
+
+    fig = plt.figure(figsize=(12, 4))
     ax = fig.add_subplot(111)
-    ax.plot(x, y, label=f'{param.parameter}', marker='.', linestyle='-', linewidth=1, color='blue')
+    ax.plot(x, y, label=f'{param.parameter} скв. {param.h_well.title}', marker='.', linestyle='-', linewidth=1, color='blue')
     ax.grid(True)
     ax.legend()
     plt.tight_layout()
