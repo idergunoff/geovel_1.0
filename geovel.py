@@ -209,6 +209,7 @@ ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
 
 ui.comboBox_object_monitor.activated.connect(update_list_h_well)
 ui.listWidget_h_well.currentItemChanged.connect(update_list_param_h_well)
+ui.listWidget_param_h_well.currentItemChanged.connect(draw_param_h_well)
 ui.pushButton_add_h_well.clicked.connect(add_h_well)
 ui.pushButton_rem_h_well.clicked.connect(remove_h_well)
 ui.pushButton_edit_h_well.clicked.connect(edit_h_well)

@@ -1,4 +1,6 @@
 import numpy as np
+from pyqtgraph import DateAxisItem
+import matplotlib.dates as mdates
 
 from func import *
 
@@ -163,3 +165,34 @@ def load_inclinometry_h_well():
 def load_thermogram_h_well():
     """Загрузить термограммы горизонтальных скважин"""
     pass
+
+
+def draw_param_h_well():
+    """Отрисовать параметр горизонтальных скважин"""
+    item = ui.listWidget_param_h_well.currentItem()
+    if not item:
+        return
+    id_param = item.data(Qt.UserRole)
+    param = session.query(ParameterHWell).filter_by(id=id_param).first()
+    param_data = json.loads(param.data)
+    x, y = [], []
+    for key, value in param_data.items():
+        x.append(datetime.datetime.strptime(key, '%Y-%m-%d'))
+        y.append(value)
+
+    fig = plt.figure(figsize=(12, 5))
+    ax = fig.add_subplot(111)
+    ax.plot(x, y, label=f'{param.parameter}', marker='.', linestyle='-', linewidth=1, color='blue')
+    ax.grid(True)
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # Вариант отображения параметров в pyqtgraph
+    # x_num = [mdates.date2num(date) for date in x]
+    # ui.graph.clear()
+    # date_axis = DateAxisItem(orientation='bottom')
+    # date_axis.setTicks([[(x_num[i], x[i].strftime('%m.%y')) for i in range(len(x_num)) if x[i].day == 1 and x[i].month % 2 == 0]])
+    # ui.graph.setAxisItems({'bottom': date_axis})
+    # curve_param = pg.PlotCurveItem(x=x_num, y=y)
+    # ui.graph.addItem(curve_param)
