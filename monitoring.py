@@ -31,8 +31,18 @@ def check_inclinometry_h_well():
 
 def update_list_param_h_well():
     """Обновить список параметров горизонтальных скважин"""
-
     ui.listWidget_param_h_well.clear()
+    h_well = session.query(HorizontalWell).filter_by(id=get_h_well_id()).first()
+    if h_well and h_well.x_coord:
+        item = QListWidgetItem(f'X: {round(h_well.x_coord, 2)}')
+        item.setData(Qt.UserRole, None)
+        ui.listWidget_param_h_well.addItem(item)
+        item = QListWidgetItem(f'Y: {round(h_well.y_coord, 2)}')
+        item.setData(Qt.UserRole, None)
+        ui.listWidget_param_h_well.addItem(item)
+        item = QListWidgetItem(f'Alt: {round(h_well.alt, 2)}')
+        item.setData(Qt.UserRole, None)
+        ui.listWidget_param_h_well.addItem(item)
     for p in session.query(ParameterHWell).filter_by(h_well_id=get_h_well_id()).all():
         item = QListWidgetItem(p.parameter)
         item.setData(Qt.UserRole, p.id)
@@ -57,6 +67,9 @@ def edit_h_well():
 def  load_param_h_well():
     """Загрузить параметры горизонтальных скважин"""
     file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл', '', 'Excel files (*.xls *.xlsx)')[0]
+    if not file_name:
+        return
+    set_info(f'Загрузка параметров скважин из файла "{file_name.split("/")[-1]}"', 'green')
     pd_param = pd.read_excel(file_name, sheet_name=None, header=None, index_col=None)
 
     ui.progressBar.setMaximum(len(pd_param))
@@ -214,6 +227,8 @@ def draw_param_h_well():
     if not item:
         return
     id_param = item.data(Qt.UserRole)
+    if not id_param:
+        return
     param = session.query(ParameterHWell).filter_by(id=id_param).first()
 
     param_data = json.loads(param.data)
@@ -249,6 +264,8 @@ def calc_coord_inclinometry(input_file_path, initial_coordinates):
 
     with open(input_file_path, 'r') as input_file:
         for line in input_file:
+            if not line.strip():
+                continue
             length, dip_angle, azimuth = map(float, line.strip().split('\t'))
 
             delta_length = length - prev_length  # разница между текущим и предыдущим значением length
@@ -265,4 +282,67 @@ def calc_coord_inclinometry(input_file_path, initial_coordinates):
             output_coordinates.append((x, y, z))
 
     return output_coordinates
+
+
+def load_wellhead():
+    """Загрузить координаты устья горизонтальной скважины"""
+    h_well_id = get_h_well_id()
+    if h_well_id:
+        try:
+            x, y = float(ui.lineEdit_string.text().split(';')[0]), float(ui.lineEdit_string.text().split(';')[1])
+            grid_db = session.query(Grid).filter(Grid.object_id == get_obj_monitor_id()).first()
+            if grid_db:
+                pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+                save_wellhead_to_db(x, y, pd_grid_r, h_well_id)
+                session.commit()
+                update_list_param_h_well()
+            else:
+                set_info(f'Не загружени grid-файл рельефа для {get_obj_monitor_name()} площади', 'red')
+        except ValueError:
+            set_info('Введите координаты устья горизонтальной скважины - "x;y"', 'red')
+    else:
+        set_info('Выберите горизонтальную скважину', 'red')
+
+
+def load_wellhead_batch():
+    """Загрузить координаты устья горизонтальной скважины"""
+    grid_db = session.query(Grid).filter(Grid.object_id == get_obj_monitor_id()).first()
+    if grid_db:
+        pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+    else:
+        set_info(f'Не загружени grid-файл рельефа для {get_obj_monitor_name()} площади', 'red')
+        return
+    file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл с координатами устья скважин', '', 'Текстовые файлы (*.txt)')[0]
+    if file_name:
+        with open(file_name, 'r') as input_file:
+            lines = input_file.readlines()
+            ui.progressBar.setMaximum(len(lines))
+            for n_line, line in enumerate(lines):
+                ui.progressBar.setValue(n_line)
+                if not line.strip():
+                    continue
+                well_name, x, y = line.strip().split('\t')
+                h_well = session.query(HorizontalWell).filter_by(title=well_name, object_id=get_obj_monitor_id()).first()
+                if not h_well:
+                    set_info(f'Не загружена скважина {well_name} для {get_obj_monitor_name()}', 'red')
+                else:
+                    save_wellhead_to_db(float(x), float(y), pd_grid_r, h_well.id)
+                    set_info(f'Загружены координаты устья скважины {well_name} для {get_obj_monitor_name()}', 'green')
+            session.commit()
+            update_list_param_h_well()
+            set_info('Готово!', 'green')
+
+
+
+def save_wellhead_to_db(x, y, land_grid, h_well_id):
+    """Сохранить координаты устья горизонтальной скважины"""
+    land_grid['dist_y'] = abs(land_grid[1] - y)
+    land_grid['dist_x'] = abs(land_grid[0] - x)
+    z = land_grid.loc[land_grid['dist_y'] == land_grid['dist_y'].min()].loc[
+        land_grid['dist_x'] == land_grid['dist_x'].min()].iat[0, 2]
+    session.query(HorizontalWell).filter(HorizontalWell.id == h_well_id).update({
+        'x_coord': x,
+        'y_coord': y,
+        'alt': z
+    }, synchronize_session='fetch')
 

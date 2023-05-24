@@ -397,6 +397,9 @@ class HorizontalWell(Base):
     id = Column(Integer, primary_key=True)
     object_id = Column(Integer, ForeignKey('georadar_object.id'))
     title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    alt = Column(Float)
 
     object = relationship("GeoradarObject", back_populates="h_wells")
     parameters = relationship('ParameterHWell', back_populates='h_well')

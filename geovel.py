@@ -216,6 +216,8 @@ ui.pushButton_edit_h_well.clicked.connect(edit_h_well)
 ui.pushButton_param_h_well.clicked.connect(load_param_h_well)
 ui.pushButton_inclin_h_well.clicked.connect(load_inclinometry_h_well)
 ui.pushButton_therm_h_well.clicked.connect(load_thermogram_h_well)
+ui.pushButton_wellhead.clicked.connect(load_wellhead)
+ui.pushButton_wellhead_batch.clicked.connect(load_wellhead_batch)
 
 roi.sigRegionChanged.connect(updatePlot)
 

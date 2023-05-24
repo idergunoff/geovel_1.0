@@ -33,6 +33,11 @@ def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
 
 
+# Функция получения имени выбранного объекта мониторинга
+def get_obj_monitor_name():
+    return ui.comboBox_object_monitor.currentText()
+
+
 # Функция получения id выбранного профиля
 def get_profile_id():
     return int(ui.comboBox_profile.currentText().split(' id')[-1])
