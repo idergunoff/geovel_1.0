@@ -1,3 +1,4 @@
+import lasio
 import numpy as np
 from pyqtgraph import DateAxisItem
 import matplotlib.dates as mdates
@@ -36,14 +37,25 @@ def update_list_param_h_well():
     if h_well and h_well.x_coord:
         item = QListWidgetItem(f'X: {round(h_well.x_coord, 2)}')
         item.setData(Qt.UserRole, None)
+        item.setBackground(QBrush(QColor('#FBD59E')))
         ui.listWidget_param_h_well.addItem(item)
         item = QListWidgetItem(f'Y: {round(h_well.y_coord, 2)}')
         item.setData(Qt.UserRole, None)
+        item.setBackground(QBrush(QColor('#FBD59E')))
         ui.listWidget_param_h_well.addItem(item)
         item = QListWidgetItem(f'Alt: {round(h_well.alt, 2)}')
         item.setData(Qt.UserRole, None)
+        item.setBackground(QBrush(QColor('#FBD59E')))
+        ui.listWidget_param_h_well.addItem(item)
+    incl = session.query(ParameterHWell).filter_by(h_well_id=get_h_well_id(), parameter='Инклинометрия').first()
+    if incl:
+        item = QListWidgetItem(incl.parameter)
+        item.setData(Qt.UserRole, incl.id)
+        item.setBackground(QBrush(QColor('#ADFCDF')))
         ui.listWidget_param_h_well.addItem(item)
     for p in session.query(ParameterHWell).filter_by(h_well_id=get_h_well_id()).all():
+        if p.parameter == 'Инклинометрия':
+            continue
         item = QListWidgetItem(p.parameter)
         item.setData(Qt.UserRole, p.id)
         ui.listWidget_param_h_well.addItem(item)
@@ -173,52 +185,34 @@ def get_h_well_id():
 
 def load_inclinometry_h_well():
     """Загрузить инклинометрические данные горизонтальных скважин"""
-    if ui.lineEdit_string.text() == '':
-        well_coord = [0, 0, 0]
-    else:
-        well_coord = ui.lineEdit_string.text().split(';')
-        well_coord = [float(i) for i in well_coord]
-    if not len(well_coord) == 3:
-        set_info('Неверные координаты горизонтальной скважины, введите "x;y;z"', 'red')
-        return
-    file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл инклинометрическии', '', 'Текстовые файлы (*.txt)')[0]
-    if file_name:
-        coord_inc = calc_coord_inclinometry(file_name, well_coord)
-        print(coord_inc)
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        xs = [coord[0] for coord in coord_inc]
-        ys = [coord[1] for coord in coord_inc]
-        zs = [coord[2] for coord in coord_inc]
-
-        ax.plot(xs, ys, zs)
-
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        # задаем реальные масштабы для всех трех осей
-        # x_range = max(xs) - min(xs)
-        # y_range = max(ys) - min(ys)
-        # z_range = max(zs) - min(zs)
-        # max_range = max(x_range, y_range, z_range)
-        # x_center = (max(xs) + min(xs)) / 2
-        # y_center = (max(ys) + min(ys)) / 2
-        # z_center = (max(zs) + min(zs)) / 2
-        # ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
-        # ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
-        # ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
-
-
-
-        plt.show()
-
+    file_dir = QFileDialog.getExistingDirectory(MainWindow, 'Выбрать папку с инклинометрическими данными')
+    for file in os.listdir(file_dir):
+        if file.endswith('.txt'):
+            h_well = session.query(HorizontalWell).filter_by(object_id=get_obj_monitor_id(), title=file.split('.')[0]).first()
+            if not h_well:
+                set_info(f'Не найдена горизонтальная скважина "{file.split(".")[0]}" для {get_obj_monitor_name()}', 'red')
+                continue
+            file_name = os.path.join(file_dir, file)
+            if not h_well.x_coord or not h_well.y_coord or not h_well.alt:
+                set_info(f'Не найдены координаты устья горизонтальной скважины "{file.split(".")[0]}" для {get_obj_monitor_name()}', 'red')
+                continue
+            inclinometry = calc_inclinometry(file_name, [h_well.x_coord, h_well.y_coord, h_well.alt])
+            new_param_h_well = ParameterHWell(
+                h_well_id=h_well.id,
+                parameter='Инклинометрия',
+                data=json.dumps(inclinometry)
+            )
+            session.add(new_param_h_well)
+    session.commit()
+    update_list_param_h_well()
 
 
 def load_thermogram_h_well():
     """Загрузить термограммы горизонтальных скважин"""
-    pass
+    file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл термограммы', '', 'Текстовые файлы (*.las)')[0]
+    las = lasio.read(file_name)
+    print(las.keys())
+    print(las.well['WELL'].value)
 
 
 def draw_param_h_well():
@@ -230,33 +224,58 @@ def draw_param_h_well():
     if not id_param:
         return
     param = session.query(ParameterHWell).filter_by(id=id_param).first()
+    if param.parameter == 'Инклинометрия':
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(111, projection='3d')
+        coord_inc = json.loads(param.data)
+        xs = [coord[0] for coord in coord_inc]
+        ys = [coord[1] for coord in coord_inc]
+        zs = [coord[2] for coord in coord_inc]
 
-    param_data = json.loads(param.data)
-    sorted_param_data = sorted(param_data)
-    x, y = [], []
-    for key in sorted_param_data:
-        x.append(datetime.datetime.strptime(key, '%Y-%m-%d'))
-        y.append(param_data[key])
+        ax.plot(xs, ys, zs)
 
-    fig = plt.figure(figsize=(12, 4))
-    ax = fig.add_subplot(111)
-    ax.plot(x, y, label=f'{param.parameter} скв. {param.h_well.title}', marker='.', linestyle='-', linewidth=1, color='blue')
-    ax.grid(True)
-    ax.legend()
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # задаем реальные масштабы для всех трех осей
+        x_range = max(xs) - min(xs)
+        y_range = max(ys) - min(ys)
+        z_range = max(zs) - min(zs)
+        max_range = max(x_range, y_range, z_range)
+        x_center = (max(xs) + min(xs)) / 2
+        y_center = (max(ys) + min(ys)) / 2
+        z_center = (max(zs) + min(zs)) / 2
+        ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
+        ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
+        ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+    else:
+        param_data = json.loads(param.data)
+        sorted_param_data = sorted(param_data)
+        x, y = [], []
+        for key in sorted_param_data:
+            x.append(datetime.datetime.strptime(key, '%Y-%m-%d'))
+            y.append(param_data[key])
+
+        fig = plt.figure(figsize=(12, 4))
+        ax = fig.add_subplot(111)
+        ax.plot(x, y, label=f'{param.parameter} скв. {param.h_well.title}', marker='.', linestyle='-', linewidth=1, color='blue')
+        ax.grid(True)
+        ax.legend()
     plt.tight_layout()
     plt.show()
 
-    # Вариант отображения параметров в pyqtgraph
-    # x_num = [mdates.date2num(date) for date in x]
-    # ui.graph.clear()
-    # date_axis = DateAxisItem(orientation='bottom')
-    # date_axis.setTicks([[(x_num[i], x[i].strftime('%m.%y')) for i in range(len(x_num)) if x[i].day == 1 and x[i].month % 2 == 0]])
-    # ui.graph.setAxisItems({'bottom': date_axis})
-    # curve_param = pg.PlotCurveItem(x=x_num, y=y)
-    # ui.graph.addItem(curve_param)
+        # Вариант отображения параметров в pyqtgraph
+        # x_num = [mdates.date2num(date) for date in x]
+        # ui.graph.clear()
+        # date_axis = DateAxisItem(orientation='bottom')
+        # date_axis.setTicks([[(x_num[i], x[i].strftime('%m.%y')) for i in range(len(x_num)) if x[i].day == 1 and x[i].month % 2 == 0]])
+        # ui.graph.setAxisItems({'bottom': date_axis})
+        # curve_param = pg.PlotCurveItem(x=x_num, y=y)
+        # ui.graph.addItem(curve_param)
 
 
-def calc_coord_inclinometry(input_file_path, initial_coordinates):
+def calc_inclinometry(input_file_path, initial_coordinates):
     output_coordinates = []
 
     x, y, z = initial_coordinates
@@ -266,7 +285,10 @@ def calc_coord_inclinometry(input_file_path, initial_coordinates):
         for line in input_file:
             if not line.strip():
                 continue
-            length, dip_angle, azimuth = map(float, line.strip().split('\t'))
+            try:
+                length, dip_angle, azimuth = map(float, line.strip().split('\t'))
+            except ValueError:
+                continue
 
             delta_length = length - prev_length  # разница между текущим и предыдущим значением length
             delta_x = delta_length * math.sin(math.radians(180 - dip_angle)) * math.sin(math.radians(azimuth))
@@ -279,7 +301,7 @@ def calc_coord_inclinometry(input_file_path, initial_coordinates):
 
             prev_length = length  # сохраняем текущее значение length для следующей итерации
 
-            output_coordinates.append((x, y, z))
+            output_coordinates.append((x, y, z, length, dip_angle, azimuth))
 
     return output_coordinates
 
@@ -333,7 +355,6 @@ def load_wellhead_batch():
             set_info('Готово!', 'green')
 
 
-
 def save_wellhead_to_db(x, y, land_grid, h_well_id):
     """Сохранить координаты устья горизонтальной скважины"""
     land_grid['dist_y'] = abs(land_grid[1] - y)
@@ -346,3 +367,42 @@ def save_wellhead_to_db(x, y, land_grid, h_well_id):
         'alt': z
     }, synchronize_session='fetch')
 
+
+def show_inclinometry():
+    """Показать инклинометрию всех скважин объекта"""
+    data_incl = session.query(ParameterHWell).join(HorizontalWell).filter(
+        HorizontalWell.object_id == get_obj_monitor_id(),
+        ParameterHWell.parameter == 'Инклинометрия').all()
+    all_x, all_y, all_z = [], [], []
+    for incl in data_incl:
+        coord_inc = json.loads(incl.data)
+        xs = [coord[0] for coord in coord_inc]
+        ys = [coord[1] for coord in coord_inc]
+        zs = [coord[2] for coord in coord_inc]
+        all_x.extend(xs)
+        all_y.extend(ys)
+        all_z.extend(zs)
+
+    fig = plt.figure(figsize=(14, 14))
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot(all_x, all_y, all_z, '.')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # задаем реальные масштабы для всех трех осей
+    x_range = max(all_x) - min(all_x)
+    y_range = max(all_y) - min(all_y)
+    z_range = max(all_z) - min(all_z)
+    max_range = max(x_range, y_range, z_range)
+    x_center = (max(all_x) + min(all_x)) / 2
+    y_center = (max(all_y) + min(all_y)) / 2
+    z_center = (max(all_z) + min(all_z)) / 2
+    ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
+    ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
+    ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+
+    plt.tight_layout()
+    plt.show()

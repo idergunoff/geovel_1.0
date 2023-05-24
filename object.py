@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import random, math
 from sqlite3 import connect
 
@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
+import lasio as las
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
