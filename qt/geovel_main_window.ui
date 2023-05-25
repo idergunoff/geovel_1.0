@@ -1388,16 +1388,6 @@
                           </property>
                          </widget>
                         </item>
-                        <item row="0" column="1">
-                         <widget class="QPushButton" name="pushButto_remove_therm">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(255, 185, 185);</string>
-                          </property>
-                          <property name="text">
-                           <string>Remove</string>
-                          </property>
-                         </widget>
-                        </item>
                         <item row="2" column="0">
                          <widget class="QPushButton" name="pushButton_set_start_therm">
                           <property name="styleSheet">
@@ -1408,16 +1398,6 @@
                           </property>
                          </widget>
                         </item>
-                        <item row="1" column="1">
-                         <widget class="QPushButton" name="pushButton_rm_all_therm">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(255, 185, 185);</string>
-                          </property>
-                          <property name="text">
-                           <string>Remove all</string>
-                          </property>
-                         </widget>
-                        </item>
                         <item row="2" column="1">
                          <widget class="QPushButton" name="pushButton_show_all_therm">
                           <property name="styleSheet">
@@ -1425,6 +1405,42 @@
                           </property>
                           <property name="text">
                            <string>Show all</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QDoubleSpinBox" name="doubleSpinBox_corr_therm">
+                          <property name="minimum">
+                           <double>-0.990000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>0.990000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.010000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>0.950000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QPushButton" name="pushButto_remove_therm">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 185, 185);</string>
+                          </property>
+                          <property name="text">
+                           <string>Remove</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_show_corr_therm">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 204, 121);</string>
+                          </property>
+                          <property name="text">
+                           <string>Show Corr</string>
                           </property>
                          </widget>
                         </item>
