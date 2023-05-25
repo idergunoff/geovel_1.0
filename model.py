@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, text, literal_column, or_
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Date, Text, text, literal_column, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -403,6 +403,7 @@ class HorizontalWell(Base):
 
     object = relationship("GeoradarObject", back_populates="h_wells")
     parameters = relationship('ParameterHWell', back_populates='h_well')
+    thermograms = relationship('Thermogram', back_populates='h_well')
 
 
 class ParameterHWell(Base):
@@ -414,6 +415,17 @@ class ParameterHWell(Base):
     data = Column(Text)
 
     h_well = relationship("HorizontalWell", back_populates="parameters")
+
+
+class Thermogram(Base):
+    __tablename__ = 'thermogram'
+
+    id = Column(Integer, primary_key=True)
+    h_well_id = Column(Integer, ForeignKey('horizontal_well.id'))
+    date_time = Column(DateTime)
+    therm_data = Column(Text)
+
+    h_well = relationship("HorizontalWell", back_populates="thermograms")
 
 
 
