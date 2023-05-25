@@ -424,6 +424,7 @@ class Thermogram(Base):
     h_well_id = Column(Integer, ForeignKey('horizontal_well.id'))
     date_time = Column(DateTime)
     therm_data = Column(Text)
+    start = Column(Float, default=0)
 
     h_well = relationship("HorizontalWell", back_populates="thermograms")
 
