@@ -13,7 +13,7 @@ import pyqtgraph as pg
 import pandas as pd
 import json
 
-from scipy.stats import skew, kurtosis, rankdata, f_oneway
+from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr
 
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
 from scipy.fft import rfft2, irfft2

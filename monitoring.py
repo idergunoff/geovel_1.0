@@ -183,6 +183,13 @@ def get_h_well_id():
         return item.data(Qt.UserRole)
 
 
+def get_therm_id():
+    """Получить id термограммы"""
+    item = ui.listWidget_thermogram.currentItem()
+    if item:
+        return item.data(Qt.UserRole)
+
+
 def load_inclinometry_h_well():
     """Загрузить инклинометрические данные горизонтальных скважин"""
     file_dir = QFileDialog.getExistingDirectory(MainWindow, 'Выбрать папку с инклинометрическими данными')
@@ -209,10 +216,99 @@ def load_inclinometry_h_well():
 
 def load_thermogram_h_well():
     """Загрузить термограммы горизонтальных скважин"""
-    file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл термограммы', '', 'Текстовые файлы (*.las)')[0]
-    las = lasio.read(file_name)
-    print(las.keys())
-    print(las.well['WELL'].value)
+    h_well_id = get_h_well_id()
+    if not h_well_id:
+        set_info('Не выбрана горизонтальная скважина', 'red')
+        return
+    file_dir = QFileDialog.getExistingDirectory(
+        MainWindow, f'Выбрать папку с термограммами скважины {ui.listWidget_h_well.currentItem().text()}')
+    ui.progressBar.setMaximum(len(os.listdir(file_dir)))
+    n_load = 0
+    for n_file, file in enumerate(os.listdir(file_dir)):
+        ui.progressBar.setValue(n_file)
+        set_info(f'Загружается термограмма {file}', 'blue')
+        if file.endswith('.las'):
+            las = lasio.read(os.path.join(file_dir, file))
+            if str(las.well['WELL'].value) != ui.listWidget_h_well.currentItem().text():
+                set_info(f'Выбраная скважина ({ui.listWidget_h_well.currentItem().text()}) не совпадает с указанной '
+                         f'в las-файле - {las.well["WELL"].value}', 'red')
+                continue
+            date_time = datetime.datetime.strptime(las.well['DATE'].value, '%d.%m.%Y %H-%M-%S')
+            therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
+            if therm:
+                session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).update(
+                    {'therm_data': json.dumps(dict(zip(las['DEPTH'], las['TEMP'])))}, synchronize_session='fetch')
+            else:
+                new_therm = Thermogram(
+                    h_well_id=h_well_id,
+                    date_time=date_time,
+                    therm_data=json.dumps(dict(zip(las['DEPTH'], las['TEMP'])))
+                )
+                session.add(new_therm)
+            n_load += 1
+    session.commit()
+    set_info(f'Для скважины {ui.listWidget_h_well.currentItem().text()} загружено {n_load} термограмм', 'green')
+
+
+def update_list_thermogram():
+    """Обновить список термограмм"""
+    ui.listWidget_thermogram.clear()
+    thermograms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
+    for therm in thermograms:
+        item = QListWidgetItem(therm.date_time.strftime('%d.%m.%Y %H-%M-%S'))
+        item.setData(Qt.UserRole, therm.id)
+        ui.listWidget_thermogram.addItem(item)
+    ui.label_25.setText(f'Thermograms: {len(thermograms)}')
+
+
+def show_thermogram():
+    """Показать термограмму"""
+    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    if not therm:
+        return
+    therm_data = json.loads(therm.therm_data)
+    x = [float(length) for length in therm_data.keys()]
+    y = [float(temp) for temp in therm_data.values()]
+    ui.graph.clear()
+    curve = pg.PlotCurveItem(x=x, y=y, pen='r', name='Температура')
+    ui.graph.addItem(curve)
+    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+
+
+def show_corr_therm():
+    """Показать коррелируемые термограммы"""
+    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    temp_curr = [float(temp) for temp in json.loads(therm.therm_data).values()]
+    fig = plt.figure(figsize=(18, 8))
+    ax = fig.add_subplot(111)
+    n_corr = 0
+    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+        temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        corr_spear, _ =spearmanr(temp_curr, temp_list)
+        if corr_spear > ui.doubleSpinBox_corr_therm.value():
+            ax.plot(temp_list, label=t.date_time.strftime('%d.%m.%Y %H-%M-%S'))
+            n_corr += 1
+    ax.legend()
+    ax.grid(True)
+    ax.set_title(f'Коррелируют {n_corr} термограмм')
+    plt.tight_layout()
+    plt.show()
+
+
+def remove_thermogram():
+    """Удалить термограмму и подобные"""
+    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    temp_curr = [float(temp) for temp in json.loads(therm.therm_data).values()]
+    n_rem = 0
+    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+        temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        corr_spear, _ =spearmanr(temp_curr, temp_list)
+        if corr_spear > ui.doubleSpinBox_corr_therm.value():
+            session.delete(t)
+            n_rem += 1
+    session.commit()
+    set_info(f'Удалено {n_rem} термограмм', 'green')
+    update_list_thermogram()
 
 
 def draw_param_h_well():
