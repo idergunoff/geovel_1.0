@@ -222,6 +222,8 @@ def load_thermogram_h_well():
         return
     file_dir = QFileDialog.getExistingDirectory(
         MainWindow, f'Выбрать папку с термограммами скважины {ui.listWidget_h_well.currentItem().text()}')
+    if not file_dir:
+        return
     ui.progressBar.setMaximum(len(os.listdir(file_dir)))
     n_load = 0
     for n_file, file in enumerate(os.listdir(file_dir)):
@@ -248,12 +250,13 @@ def load_thermogram_h_well():
             n_load += 1
     session.commit()
     set_info(f'Для скважины {ui.listWidget_h_well.currentItem().text()} загружено {n_load} термограмм', 'green')
+    update_list_thermogram()
 
 
 def update_list_thermogram():
     """Обновить список термограмм"""
     ui.listWidget_thermogram.clear()
-    thermograms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
+    thermograms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
     for therm in thermograms:
         item = QListWidgetItem(therm.date_time.strftime('%d.%m.%Y %H-%M-%S'))
         item.setData(Qt.UserRole, therm.id)
@@ -282,16 +285,18 @@ def show_corr_therm():
     fig = plt.figure(figsize=(18, 8))
     ax = fig.add_subplot(111)
     n_corr = 0
-    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all():
         temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        if len(temp_curr) != len(temp_list):
+            continue
         corr_spear, _ =spearmanr(temp_curr, temp_list)
         if corr_spear > ui.doubleSpinBox_corr_therm.value():
             ax.plot(temp_list, label=t.date_time.strftime('%d.%m.%Y %H-%M-%S'))
             n_corr += 1
-    ax.legend()
-    ax.grid(True)
     ax.set_title(f'Коррелируют {n_corr} термограмм')
     plt.tight_layout()
+    ax.legend()
+    ax.grid(True)
     plt.show()
 
 
@@ -302,6 +307,8 @@ def remove_thermogram():
     n_rem = 0
     for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
         temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        if len(temp_curr) != len(temp_list):
+            continue
         corr_spear, _ =spearmanr(temp_curr, temp_list)
         if corr_spear > ui.doubleSpinBox_corr_therm.value():
             session.delete(t)
