@@ -236,21 +236,47 @@ def load_thermogram_h_well():
                          f'в las-файле - {las.well["WELL"].value}', 'red')
                 continue
             date_time = datetime.datetime.strptime(las.well['DATE'].value, '%d.%m.%Y %H-%M-%S')
-            therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
-            if therm:
-                session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).update(
-                    {'therm_data': json.dumps(dict(zip(las['DEPTH'], las['TEMP'])))}, synchronize_session='fetch')
-            else:
-                new_therm = Thermogram(
-                    h_well_id=h_well_id,
-                    date_time=date_time,
-                    therm_data=json.dumps(dict(zip(las['DEPTH'], las['TEMP'])))
-                )
-                session.add(new_therm)
+            add_update_therm_to_db(h_well_id, date_time, list(las['DEPTH']), list(las['TEMP']))
             n_load += 1
+        elif file.endswith('.xls') or file.endswith('.xlsx'):
+            xl = pd.read_excel(os.path.join(file_dir, file))
+            date_row = 0
+            for i, row in xl.iterrows():
+                try:
+                    pd.to_datetime(row[0], format='%d.%m.%Y %H:%M')
+                    date_row = i
+                    break
+                except ValueError:
+                    pass
+            pd_therm = pd.read_excel(os.path.join(file_dir, file), header=date_row)
+            list_index = [0]
+            date = pd_therm.iloc[i, 0]
+            for i in pd_therm.index:
+                if pd_therm.iloc[i, 0] != date:
+                    list_index.append(i)
+                    date = pd_therm.iloc[i, 0]
+            for a, b in zip(list_index[:-1], list_index[1:]):
+                date_time = datetime.datetime.strptime(pd_therm.iloc[a, 0], '%d.%m.%Y %H:%M')
+                depth, therm = pd_therm.iloc[a:b, 1].tolist(), pd_therm.iloc[a:b, 2].tolist()
+                add_update_therm_to_db(h_well_id, date_time, depth, therm)
     session.commit()
     set_info(f'Для скважины {ui.listWidget_h_well.currentItem().text()} загружено {n_load} термограмм', 'green')
     update_list_thermogram()
+
+
+def add_update_therm_to_db(h_well_id: int, date_time: datetime.datetime, depth: list, temp: list) -> None:
+    """Добавить или обновить термограмму в базу"""
+    therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
+    if therm:
+        session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).update(
+            {'therm_data': json.dumps(dict(zip(depth, temp)))}, synchronize_session='fetch')
+    else:
+        new_therm = Thermogram(
+            h_well_id=h_well_id,
+            date_time=date_time,
+            therm_data=json.dumps(dict(zip(depth, temp)))
+        )
+        session.add(new_therm)
 
 
 def update_list_thermogram():
