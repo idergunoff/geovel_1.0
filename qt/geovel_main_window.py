@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'qt/geovel_main_window.ui'
+# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\geovel_main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -419,7 +419,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 98, 38))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 260, 111))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_18.setObjectName("gridLayout_18")
@@ -735,14 +735,14 @@ class Ui_MainWindow(object):
         self.pushButton_therm_h_well.setStyleSheet("background-color: rgb(191, 255, 191);")
         self.pushButton_therm_h_well.setObjectName("pushButton_therm_h_well")
         self.gridLayout_67.addWidget(self.pushButton_therm_h_well, 0, 0, 1, 1)
-        self.pushButton_set_start_therm = QtWidgets.QPushButton(self.tab_6)
-        self.pushButton_set_start_therm.setStyleSheet("background-color: rgb(148, 255, 232);")
-        self.pushButton_set_start_therm.setObjectName("pushButton_set_start_therm")
-        self.gridLayout_67.addWidget(self.pushButton_set_start_therm, 2, 0, 1, 1)
         self.pushButton_show_all_therm = QtWidgets.QPushButton(self.tab_6)
         self.pushButton_show_all_therm.setStyleSheet("background-color: rgb(255, 204, 121);")
         self.pushButton_show_all_therm.setObjectName("pushButton_show_all_therm")
         self.gridLayout_67.addWidget(self.pushButton_show_all_therm, 2, 1, 1, 1)
+        self.pushButton_set_start_therm = QtWidgets.QPushButton(self.tab_6)
+        self.pushButton_set_start_therm.setStyleSheet("background-color: rgb(148, 255, 232);")
+        self.pushButton_set_start_therm.setObjectName("pushButton_set_start_therm")
+        self.gridLayout_67.addWidget(self.pushButton_set_start_therm, 2, 0, 1, 1)
         self.doubleSpinBox_corr_therm = QtWidgets.QDoubleSpinBox(self.tab_6)
         self.doubleSpinBox_corr_therm.setMinimum(-0.99)
         self.doubleSpinBox_corr_therm.setMaximum(0.99)
@@ -758,13 +758,19 @@ class Ui_MainWindow(object):
         self.pushButton_show_corr_therm.setStyleSheet("background-color: rgb(255, 204, 121);")
         self.pushButton_show_corr_therm.setObjectName("pushButton_show_corr_therm")
         self.gridLayout_67.addWidget(self.pushButton_show_corr_therm, 0, 1, 1, 1)
+        self.doubleSpinBox_start_therm = QtWidgets.QDoubleSpinBox(self.tab_6)
+        self.doubleSpinBox_start_therm.setObjectName("doubleSpinBox_start_therm")
+        self.gridLayout_67.addWidget(self.doubleSpinBox_start_therm, 3, 1, 1, 1)
+        self.label_26 = QtWidgets.QLabel(self.tab_6)
+        self.label_26.setObjectName("label_26")
+        self.gridLayout_67.addWidget(self.label_26, 3, 0, 1, 1)
         self.gridLayout_65.addLayout(self.gridLayout_67, 1, 0, 1, 1)
         self.gridLayout_61.addLayout(self.gridLayout_65, 0, 1, 1, 1)
         self.gridLayout_56.addLayout(self.gridLayout_61, 1, 0, 1, 1)
         self.gridLayout_56.setRowStretch(0, 2)
         self.gridLayout_56.setRowStretch(1, 3)
         self.gridLayout_54.addLayout(self.gridLayout_56, 0, 0, 1, 1)
-        self.gridLayout_54.setRowStretch(0, 2)
+        self.gridLayout_54.setRowStretch(0, 3)
         self.gridLayout_54.setRowStretch(1, 1)
         self.gridLayout_55.addLayout(self.gridLayout_54, 0, 0, 1, 1)
         self.tabWidget_2.addTab(self.tab_6, "")
@@ -1358,7 +1364,7 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.progressBar, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 21))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -1461,10 +1467,11 @@ class Ui_MainWindow(object):
         self.pushButton_show_incl.setText(_translate("MainWindow", "Show Inclinomety"))
         self.label_25.setText(_translate("MainWindow", "Thermogram:"))
         self.pushButton_therm_h_well.setText(_translate("MainWindow", "Load"))
-        self.pushButton_set_start_therm.setText(_translate("MainWindow", "Set start"))
         self.pushButton_show_all_therm.setText(_translate("MainWindow", "Show all"))
+        self.pushButton_set_start_therm.setText(_translate("MainWindow", "Set start"))
         self.pushButto_remove_therm.setText(_translate("MainWindow", "Remove"))
         self.pushButton_show_corr_therm.setText(_translate("MainWindow", "Show Corr"))
+        self.label_26.setText(_translate("MainWindow", "Start therm:"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_6), _translate("MainWindow", "Monitoring"))
         self.pushButton_add_mark_lda.setText(_translate("MainWindow", "add marker"))
         self.pushButton_rem_mark_lda.setText(_translate("MainWindow", "remove marker"))
@@ -1560,3 +1567,13 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "TextLabel"))
         self.pushButton_color.setText(_translate("MainWindow", "color"))
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())

@@ -257,6 +257,7 @@ def load_thermogram_h_well():
                     list_index.append(i)
                     date = pd_therm.iloc[i, 0]
             for a, b in zip(list_index[:-1], list_index[1:]):
+                set_info(f'Термограмма {pd_therm.iloc[a, 0]}', 'blue')
                 date_time = datetime.datetime.strptime(pd_therm.iloc[a, 0], '%d.%m.%Y %H:%M')
                 depth, therm = pd_therm.iloc[a:b, 1].tolist(), pd_therm.iloc[a:b, 2].tolist()
                 add_update_therm_to_db(h_well_id, date_time, depth, therm)
