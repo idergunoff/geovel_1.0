@@ -20,7 +20,7 @@
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="7,1" columnminimumwidth="7,1">
         <item row="1" column="0">
-         <layout class="QGridLayout" name="gridLayout" rowstretch="7,2" columnstretch="7,2" rowminimumheight="7,2" columnminimumwidth="7,2">
+         <layout class="QGridLayout" name="gridLayout" rowstretch="7,3" columnstretch="7,2" rowminimumheight="7,3" columnminimumwidth="7,2">
           <item row="1" column="1">
            <widget class="QTextEdit" name="info">
             <property name="enabled">
@@ -784,8 +784,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>260</width>
-                         <height>111</height>
+                         <width>98</width>
+                         <height>38</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2670,7 +2670,7 @@
      <x>0</x>
      <y>0</y>
      <width>1552</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\geovel_main_window.ui'
+# Form implementation generated from reading ui file 'qt/geovel_main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -42,11 +42,11 @@ class Ui_MainWindow(object):
         self.gridLayout.setColumnMinimumWidth(0, 7)
         self.gridLayout.setColumnMinimumWidth(1, 2)
         self.gridLayout.setRowMinimumHeight(0, 7)
-        self.gridLayout.setRowMinimumHeight(1, 2)
+        self.gridLayout.setRowMinimumHeight(1, 3)
         self.gridLayout.setColumnStretch(0, 7)
         self.gridLayout.setColumnStretch(1, 2)
         self.gridLayout.setRowStretch(0, 7)
-        self.gridLayout.setRowStretch(1, 2)
+        self.gridLayout.setRowStretch(1, 3)
         self.gridLayout_2.addLayout(self.gridLayout, 1, 0, 1, 1)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
@@ -419,7 +419,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 260, 111))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 98, 38))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_18.setObjectName("gridLayout_18")
@@ -1358,7 +1358,7 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.progressBar, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -1560,13 +1560,3 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "TextLabel"))
         self.pushButton_color.setText(_translate("MainWindow", "color"))
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
