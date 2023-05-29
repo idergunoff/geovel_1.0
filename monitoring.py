@@ -49,7 +49,8 @@ def update_list_param_h_well():
         ui.listWidget_param_h_well.addItem(item)
     incl = session.query(ParameterHWell).filter_by(h_well_id=get_h_well_id(), parameter='Инклинометрия').first()
     if incl:
-        item = QListWidgetItem(incl.parameter)
+        length = max([p[3] for p in json.loads(incl.data)])
+        item = QListWidgetItem(f'{incl.parameter} - {round(length, 1)} m.')
         item.setData(Qt.UserRole, incl.id)
         item.setBackground(QBrush(QColor('#ADFCDF')))
         ui.listWidget_param_h_well.addItem(item)
@@ -284,7 +285,10 @@ def update_list_thermogram():
     ui.listWidget_thermogram.clear()
     thermograms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
     for therm in thermograms:
-        item = QListWidgetItem(therm.date_time.strftime('%d.%m.%Y %H-%M-%S'))
+        start_therm = min([float(p) for p in json.loads(therm.therm_data).keys()])
+        end_therm = max([float(p) for p in json.loads(therm.therm_data).keys()])
+        item = QListWidgetItem(f'{therm.date_time.strftime("%d.%m.%Y")} ({start_therm} - {end_therm})')
+        item.setToolTip(therm.date_time.strftime("%H:%M:%S"))
         item.setData(Qt.UserRole, therm.id)
         ui.listWidget_thermogram.addItem(item)
     ui.label_25.setText(f'Thermograms: {len(thermograms)}')
