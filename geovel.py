@@ -223,6 +223,9 @@ ui.pushButton_wellhead_batch.clicked.connect(load_wellhead_batch)
 ui.pushButton_show_incl.clicked.connect(show_inclinometry)
 ui.pushButto_remove_therm.clicked.connect(remove_thermogram)
 ui.pushButton_show_corr_therm.clicked.connect(show_corr_therm)
+ui.doubleSpinBox_start_therm.valueChanged.connect(show_start_therm)
+ui.pushButton_set_start_therm.clicked.connect(set_start_therm)
+ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
 
 roi.sigRegionChanged.connect(updatePlot)
 

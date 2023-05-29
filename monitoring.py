@@ -271,12 +271,12 @@ def add_update_therm_to_db(h_well_id: int, date_time: datetime.datetime, depth: 
     therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
     if therm:
         session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).update(
-            {'therm_data': json.dumps(dict(zip(depth, temp)))}, synchronize_session='fetch')
+            {'therm_data': json.dumps([[float(depth[i]), float(temp[i])] for i in range(len(depth))])}, synchronize_session='fetch')
     else:
         new_therm = Thermogram(
             h_well_id=h_well_id,
             date_time=date_time,
-            therm_data=json.dumps(dict(zip(depth, temp)))
+            therm_data=json.dumps([[float(depth[i]), float(temp[i])] for i in range(len(depth))])
         )
         session.add(new_therm)
 
@@ -286,8 +286,8 @@ def update_list_thermogram():
     ui.listWidget_thermogram.clear()
     thermograms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
     for therm in thermograms:
-        start_therm = min([float(p) for p in json.loads(therm.therm_data).keys()])
-        end_therm = max([float(p) for p in json.loads(therm.therm_data).keys()])
+        start_therm = min([l[0] for l in json.loads(therm.therm_data)])
+        end_therm = max([l[0] for l in json.loads(therm.therm_data)])
         item = QListWidgetItem(f'{therm.date_time.strftime("%d.%m.%Y")} ({start_therm} - {end_therm})')
         item.setToolTip(therm.date_time.strftime("%H:%M:%S"))
         item.setData(Qt.UserRole, therm.id)
@@ -301,26 +301,58 @@ def show_thermogram():
     if not therm:
         return
     therm_data = json.loads(therm.therm_data)
-    x = [float(length) for length in therm_data.keys()]
-    y = [float(temp) for temp in therm_data.values()]
+    x = [l[0] for l in therm_data]
+    y = [t[1] for t in therm_data]
     ui.graph.clear()
     curve = pg.PlotCurveItem(x=x, y=y, pen='r', name='Температура')
     ui.graph.addItem(curve)
     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+    show_start_therm()
+
+
+def show_start_therm():
+    """ Показать ноль термограммы """
+    global start_therm
+    if 'start_therm' in globals():
+        ui.graph.removeItem(globals()['start_therm'])
+    pos_start = ui.doubleSpinBox_start_therm.value()
+    start_therm = pg.InfiniteLine(pos=pos_start, angle=90, pen=pg.mkPen(color='green',width=3, dash=[8, 2]))
+    ui.graph.addItem(start_therm)
+
+
+def set_start_therm():
+    """ Установить ноль термограммы """
+    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    start_therm = min([l[0] for l in json.loads(therm.therm_data)])
+    end_therm = max([l[0] for l in json.loads(therm.therm_data)])
+    start_value, n_set = ui.doubleSpinBox_start_therm.value(), 0
+    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+        start_t = min([l[0] for l in json.loads(t.therm_data)])
+        end_t = max([l[0] for l in json.loads(t.therm_data)])
+
+        if start_t != start_therm or end_t != end_therm:
+            continue
+        new_therm = [[v[0] - start_value, v[1]] for v in json.loads(t.therm_data)]
+        session.query(Thermogram).filter_by(id=t.id).update({'therm_data': json.dumps(new_therm)}, synchronize_session='fetch')
+        n_set += 1
+    session.commit()
+    set_info(f'Обновлено {n_set} термограмм для скважины {ui.listWidget_h_well.currentItem().text()}', 'green')
+    ui.doubleSpinBox_start_therm.setValue(0)
+    update_list_thermogram()
 
 
 def show_corr_therm():
     """Показать коррелируемые термограммы"""
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [float(temp) for temp in json.loads(therm.therm_data).values()]
+    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
     fig = plt.figure(figsize=(18, 8))
     ax = fig.add_subplot(111)
     n_corr = 0
     for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all():
-        temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        temp_list = [temp[1] for temp in json.loads(t.therm_data)]
         if len(temp_curr) != len(temp_list):
             continue
-        corr_spear, _ =spearmanr(temp_curr, temp_list)
+        corr_spear, _ = spearmanr(temp_curr, temp_list)
         if corr_spear > ui.doubleSpinBox_corr_therm.value():
             ax.plot(temp_list, label=t.date_time.strftime('%d.%m.%Y %H-%M-%S'))
             n_corr += 1
@@ -334,10 +366,10 @@ def show_corr_therm():
 def remove_thermogram():
     """Удалить термограмму и подобные"""
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [float(temp) for temp in json.loads(therm.therm_data).values()]
+    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
     n_rem = 0
     for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
-        temp_list = [float(temp) for temp in json.loads(t.therm_data).values()]
+        temp_list = [temp[1] for temp in json.loads(t.therm_data)]
         if len(temp_curr) != len(temp_list):
             continue
         corr_spear, _ =spearmanr(temp_curr, temp_list)
@@ -540,3 +572,88 @@ def show_inclinometry():
 
     plt.tight_layout()
     plt.show()
+
+
+def coordinate_binding_thermogram():
+    """ Координатная привязка термограммы """
+    incl_param = session.query(ParameterHWell).filter_by(parameter='Инклинометрия', h_well_id=get_h_well_id()).first()
+    if not incl_param:
+        set_info(f'Нет инклинометрии для скважины {ui.listWidget_h_well.currentItem().text()}', 'red')
+        return
+    data_incl = json.loads(incl_param.data)
+    length_incl = [i[3] for i in data_incl]
+    therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
+    list_no_start = []
+    for therm in therms:
+        start_t = min([l[0] for l in json.loads(therm.therm_data)])
+        if start_t == 0:
+            list_no_start.append(therm.date_time.strftime('%Y-%m-%d %H:%M:%S'))
+    if len(list_no_start) > 0:
+        result = QtWidgets.QMessageBox.question(
+            MainWindow,
+            'Внимание!',
+            f'Для термограмм {", ".join(list_no_start[:10])}{" и др." if len(list_no_start) > 10 else ""} '
+            f'не установлена отметка устья скважины. Продолжить?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+        if result == QtWidgets.QMessageBox.No:
+            return
+    ui.progressBar.setMaximum(len(therms))
+    for n_therm, therm in enumerate(therms):
+        set_info(f'Привязка координат для термограммы {therm.date_time.strftime("%Y-%m-%d %H:%M:%S")}', 'blue')
+        ui.progressBar.setValue(n_therm)
+        t_data = json.loads(therm.therm_data)
+        for i, point_therm in enumerate(t_data):
+            if point_therm[0] < 0:
+                continue
+            l_therm = point_therm[0]
+            left_i, right_i = find_interval(length_incl, l_therm)
+            if left_i == right_i:
+                t_data[i] = [l_therm, point_therm[1], data_incl[left_i][0], data_incl[left_i][1], data_incl[left_i][2]]
+            else:
+                xt, yt, zt = calc_coord_point_of_therm(data_incl[left_i][0], data_incl[left_i][1], data_incl[left_i][2],
+                                                       data_incl[right_i][0], data_incl[right_i][1], data_incl[right_i][2],
+                                                       l_therm - length_incl[left_i],)
+                t_data[i] = [l_therm, point_therm[1], xt, yt, zt]
+        session.query(Thermogram).filter_by(id=therm.id).update({'therm_data': json.dumps(t_data)}, synchronize_session='fetch')
+    session.commit()
+    set_info('Координатная привязка термограмм завершена', 'green')
+
+
+
+def calc_coord_point_of_therm(x1, y1, z1, x2, y2, z2, l_therm):
+    """Рассчитать координату точки термограммы """
+    # Вычисление вектора между начальной и конечной точками
+    dx, dy, dz = x2 - x1, y2 - y1, z2 - z1
+    # Вычисление длины вектора
+    l = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    # Вычисление значения t по пропорции
+    t = l_therm / l
+    # Вычисление координат искомой точки на линии между начальной и конечной точками
+    x, y, z = x1 + t * dx, y1 + t * dy, z1 + t * dz
+    return x, y, z
+
+
+def find_interval(values, target):
+    """
+    Находит индексы ближайших элементов в списке values к числу target
+    """
+    left, right = 0, len(values) - 1
+
+    while left <= right:
+        middle = (left + right) // 2
+        if target < values[middle]:
+            right = middle - 1
+        elif target > values[middle]:
+            left = middle + 1
+        else:
+            return middle, middle
+
+    if right < 0:
+        return None, None
+
+    if left >= len(values):
+        return None, None
+
+    return right, left
