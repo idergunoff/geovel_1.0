@@ -289,8 +289,8 @@ def update_list_thermogram():
     for therm in thermograms:
         start_therm = min([l[0] for l in json.loads(therm.therm_data)])
         end_therm = max([l[0] for l in json.loads(therm.therm_data)])
-        item = QListWidgetItem(f'{therm.date_time.strftime("%d.%m.%Y")} ({start_therm} - {end_therm})')
-        item.setToolTip(therm.date_time.strftime("%H:%M:%S"))
+        item = QListWidgetItem(f'{therm.date_time.strftime("%d.%m.%Y %H:%M:%S")} ({start_therm} - {end_therm})')
+        # item.setToolTip(therm.date_time.strftime("%H:%M:%S"))
         item.setData(Qt.UserRole, therm.id)
         ui.listWidget_thermogram.addItem(item)
     ui.label_25.setText(f'Thermograms: {len(thermograms)}')
@@ -302,13 +302,49 @@ def show_thermogram():
     if not therm:
         return
     therm_data = json.loads(therm.therm_data)
-    x = [l[0] for l in therm_data]
-    y = [t[1] for t in therm_data]
-    ui.graph.clear()
-    curve = pg.PlotCurveItem(x=x, y=y, pen='r', name='Температура')
-    ui.graph.addItem(curve)
-    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
-    show_start_therm()
+    if ui.checkBox_3d_therm.isChecked():
+        fig = plt.figure(figsize=(10, 10), dpi=150)
+        ax = fig.add_subplot(111, projection='3d')
+        xs = [t[2] for t in therm_data if len(t) == 5]
+        ys = [t[3] for t in therm_data if len(t) == 5]
+        zs = [t[4] for t in therm_data if len(t) == 5]
+        ts = [t[1] for t in therm_data if len(t) == 5]
+
+        ax.scatter(xs, ys, zs, c=ts, cmap='plasma')
+
+        # Добавление цветной шкалы
+        cbar = plt.colorbar(ax.scatter(xs, ys, zs, c=ts, cmap='plasma'))
+        cbar.set_label('Температура')
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title(f'Термограмма {therm.date_time.strftime("%d.%m.%Y %H:%M:%S")} скважины {ui.listWidget_h_well.currentItem().text()}')
+
+        # задаем реальные масштабы для всех трех осей
+        x_range = max(xs) - min(xs)
+        y_range = max(ys) - min(ys)
+        z_range = max(zs) - min(zs)
+        max_range = max(x_range, y_range, z_range)
+        x_center = (max(xs) + min(xs)) / 2
+        y_center = (max(ys) + min(ys)) / 2
+        z_center = (max(zs) + min(zs)) / 2
+        ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
+        ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
+        ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+        plt.tight_layout()
+        plt.show()
+    else:
+        x = [l[0] for l in therm_data]
+        y = [t[1] for t in therm_data]
+        ui.doubleSpinBox_end_therm.setMaximum(max(x))
+        ui.doubleSpinBox_end_therm.setValue(max(x))
+        ui.graph.clear()
+        curve = pg.PlotCurveItem(x=x, y=y, pen='r', name='Температура')
+        ui.graph.addItem(curve)
+        ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+        show_start_therm()
+        show_end_therm()
 
 
 def show_start_therm():
@@ -321,17 +357,29 @@ def show_start_therm():
     ui.graph.addItem(start_therm)
 
 
+def show_end_therm():
+    """ Показать конец термограммы """
+    global end_therm
+    if 'end_therm' in globals():
+        ui.graph.removeItem(globals()['end_therm'])
+    pos_end = ui.doubleSpinBox_end_therm.value()
+    end_therm = pg.InfiniteLine(pos=pos_end, angle=90, pen=pg.mkPen(color='yellow',width=3, dash=[8, 2]))
+    ui.graph.addItem(end_therm)
+
+
 def set_start_therm():
     """ Установить ноль термограммы """
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
     start_therm = min([l[0] for l in json.loads(therm.therm_data)])
     end_therm = max([l[0] for l in json.loads(therm.therm_data)])
     start_value, n_set = ui.doubleSpinBox_start_therm.value(), 0
     for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
         start_t = min([l[0] for l in json.loads(t.therm_data)])
         end_t = max([l[0] for l in json.loads(t.therm_data)])
-
-        if start_t != start_therm or end_t != end_therm:
+        temp_list = [temp[1] for temp in json.loads(t.therm_data)]
+        corr_spear, _ = spearmanr(temp_curr, temp_list)
+        if start_t != start_therm or end_t != end_therm or corr_spear < ui.doubleSpinBox_corr_therm.value():
             continue
         new_therm = [[v[0] - start_value, v[1]] for v in json.loads(t.therm_data)]
         session.query(Thermogram).filter_by(id=t.id).update({'therm_data': json.dumps(new_therm)}, synchronize_session='fetch')
@@ -340,6 +388,35 @@ def set_start_therm():
     set_info(f'Обновлено {n_set} термограмм для скважины {ui.listWidget_h_well.currentItem().text()}', 'green')
     update_list_thermogram()
     ui.doubleSpinBox_start_therm.setValue(0)
+
+
+def cut_end_therm():
+    """ Убрать конец термограммы """
+    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    depth_curr = [d[0] for d in json.loads(therm.therm_data)]
+    cut_i = len(depth_curr)
+    for n, d in enumerate(depth_curr):
+        if d > ui.doubleSpinBox_end_therm.value():
+            cut_i = n
+            break
+    therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
+    ui.progressBar.setMaximum(len(therms))
+    n_cut = 0
+    for n_t, t in enumerate(therms):
+        temp_list = [temp[1] for temp in json.loads(t.therm_data)]
+        depth_list = [d[0] for d in json.loads(t.therm_data)]
+        if len(temp_curr) != len(temp_list) or min(depth_curr) != min(depth_list) or max(depth_curr) != max(depth_list):
+            continue
+        corr_spear, _ = spearmanr(temp_curr, temp_list)
+        if corr_spear > ui.doubleSpinBox_corr_therm.value():
+            t_therm_data = json.loads(t.therm_data)
+            session.query(Thermogram).filter_by(id=t.id).update({
+                'therm_data': json.dumps(t_therm_data[:cut_i])}, synchronize_session='fetch')
+            n_cut += 1
+    session.commit()
+    update_list_thermogram()
+    set_info(f'Выполнена обрезка {n_cut} термограмм для скважины {ui.listWidget_h_well.currentItem().text()}', 'green')
 
 
 def show_corr_therm():
@@ -584,11 +661,14 @@ def coordinate_binding_thermogram():
     data_incl = json.loads(incl_param.data)
     length_incl = [i[3] for i in data_incl]
     therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
-    list_no_start = []
+    list_no_start, list_too_long = [], []
     for therm in therms:
         start_t = min([l[0] for l in json.loads(therm.therm_data)])
+        end_t = max([l[0] for l in json.loads(therm.therm_data)])
         if start_t == 0:
             list_no_start.append(therm.date_time.strftime('%Y-%m-%d %H:%M:%S'))
+        if end_t > max(length_incl):
+            list_too_long.append(therm.date_time.strftime('%Y-%m-%d %H:%M:%S'))
     if len(list_no_start) > 0:
         result = QtWidgets.QMessageBox.question(
             MainWindow,
@@ -600,6 +680,11 @@ def coordinate_binding_thermogram():
         )
         if result == QtWidgets.QMessageBox.No:
             return
+    if len(list_too_long) > 0:
+        set_info('Координатная привязка термограмм не выполнена', 'red')
+        set_info(f'Длина термограмм больше длины инклинометрии: {", ".join(list_too_long[:10])}'
+                 f'{" и др." if len(list_too_long) > 10 else ""}', 'red')
+        return
     ui.progressBar.setMaximum(len(therms))
     for n_therm, therm in enumerate(therms):
         set_info(f'Привязка координат для термограммы {therm.date_time.strftime("%Y-%m-%d %H:%M:%S")}', 'blue')
