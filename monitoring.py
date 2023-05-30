@@ -303,17 +303,17 @@ def show_thermogram():
         return
     therm_data = json.loads(therm.therm_data)
     if ui.checkBox_3d_therm.isChecked():
-        fig = plt.figure(figsize=(10, 10), dpi=150)
+        fig = plt.figure(figsize=(10, 8), dpi=120)
         ax = fig.add_subplot(111, projection='3d')
         xs = [t[2] for t in therm_data if len(t) == 5]
         ys = [t[3] for t in therm_data if len(t) == 5]
         zs = [t[4] for t in therm_data if len(t) == 5]
         ts = [t[1] for t in therm_data if len(t) == 5]
 
-        ax.scatter(xs, ys, zs, c=ts, cmap='plasma')
+        ax.scatter(xs, ys, zs, c=ts, cmap='gist_rainbow_r')
 
         # Добавление цветной шкалы
-        cbar = plt.colorbar(ax.scatter(xs, ys, zs, c=ts, cmap='plasma'))
+        cbar = plt.colorbar(ax.scatter(xs, ys, zs, c=ts, cmap='gist_rainbow_r'))
         cbar.set_label('Температура')
 
         ax.set_xlabel('X')
