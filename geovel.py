@@ -228,6 +228,7 @@ ui.doubleSpinBox_end_therm.valueChanged.connect(show_end_therm)
 ui.pushButton_set_start_therm.clicked.connect(set_start_therm)
 ui.pushButton_cut_end_therm.clicked.connect(cut_end_therm)
 ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
+ui.pushButton_show_therms.clicked.connect(show_therms_animation)
 
 roi.sigRegionChanged.connect(updatePlot)
 
@@ -255,5 +256,5 @@ set_param_mlp_to_combobox()
 
 
 sys.excepthook = log_uncaught_exceptions
-
+# app.processEvents()
 sys.exit(app.exec_())

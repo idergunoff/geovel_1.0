@@ -1,8 +1,3 @@
-import lasio
-import numpy as np
-from pyqtgraph import DateAxisItem
-import matplotlib.dates as mdates
-
 from func import *
 
 def update_list_object_monitor():
@@ -231,7 +226,7 @@ def load_thermogram_h_well():
         ui.progressBar.setValue(n_file)
         set_info(f'Загружается термограмма {file}', 'blue')
         if file.endswith('.las'):
-            las = lasio.read(os.path.join(file_dir, file))
+            las = ls.read(os.path.join(file_dir, file))
             if str(las.well['WELL'].value) != ui.listWidget_h_well.currentItem().text():
                 set_info(f'Выбраная скважина ({ui.listWidget_h_well.currentItem().text()}) не совпадает с указанной '
                          f'в las-файле - {las.well["WELL"].value}', 'red')
@@ -743,3 +738,149 @@ def find_interval(values, target):
         return None, None
 
     return right, left
+
+
+
+def show_therms_animation():
+    """ Показать анимацию изменения термограмм """
+    therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
+
+    # Создание фигуры и осей
+    if ui.checkBox_3d_therm.isChecked():
+        fig = plt.figure(figsize=(12, 10), dpi=160)
+        ax = fig.add_subplot(111, projection='3d')
+        t_data = json.loads(therms[0].therm_data)
+        x_min = min([x[2] for x in t_data if len(x) > 4])
+        x_max = max([x[2] for x in t_data if len(x) > 4])
+        y_min = min([y[3] for y in t_data if len(y) > 4])
+        y_max = max([y[3] for y in t_data if len(y) > 4])
+        z_min = min([z[4] for z in t_data if len(z) > 4])
+        z_max = max([z[4] for z in t_data if len(z) > 4])
+        t_min = min([t[1] for t in t_data if len(t) > 4])
+        t_max = max([t[1] for t in t_data if len(t) > 4])
+        count_therm = len([t for t in t_data if len(t) > 4])
+        for t in therms:
+            t_data = json.loads(t.therm_data)
+            count_t = len([t for t in t_data if len(t) > 4])
+            count_therm = min(count_therm, count_t)
+            x = [l[2] for l in t_data if len(l) > 4][:count_therm]
+            y = [t[3] for t in t_data if len(t) > 4][:count_therm]
+            z = [t[4] for t in t_data if len(t) > 4][:count_therm]
+            t = [t[1] for t in t_data if len(t) > 4][:count_therm]
+            x_min, x_max = min(x_min, min(x)), max(x_max, max(x))
+            y_min, y_max = min(y_min, min(y)), max(y_max, max(y))
+            z_min, z_max = min(z_min, min(z)), max(z_max, max(z))
+            t_min, t_max = min(t_min, min(t)), max(t_max, max(t))
+        t_data = json.loads(therms[0].therm_data)
+        x = [l[2] for l in t_data if len(l) > 4][:count_therm]
+        y = [t[3] for t in t_data if len(t) > 4][:count_therm]
+        z = [t[4] for t in t_data if len(t) > 4][:count_therm]
+        t = [t[1] for t in t_data if len(t) > 4][:count_therm]
+
+        sc = ax.scatter(x, y, z, c=t, cmap='gist_rainbow_r')
+        cbar = plt.colorbar(ax.scatter(x, y, z, c=t, cmap='gist_rainbow_r'))
+        cbar.set_label('Температура')
+
+        label = ax.text(x[0], y[0], z[0], '', fontsize=14)
+        ax.set_ylim(y_min, y_max)
+        ax.set_xlim(x_min, x_max)
+        ax.set_zlim(z_min, z_max)
+        sc.set_clim(t_min, t_max)
+
+
+
+        # Функция обновления графика на каждом кадре анимации
+        def animate(frame):
+            t_date = json.loads(therms[frame].therm_data)
+            xi = [l[2] for l in t_date if len(l) > 4][:count_therm]
+            yi = [l[3] for l in t_date if len(l) > 4][:count_therm]
+            zi = [l[4] for l in t_date if len(l) > 4][:count_therm]
+            ti = [l[1] for l in t_date if len(l) > 4][:count_therm]
+            # print(t)
+            lbl = f'Термограмма {frame + 1} из {len(therms)}: {therms[frame].date_time.strftime("%Y-%m-%d %H:%M:%S")}'
+            sc._offset3d = (xi, yi, zi)
+            sc.set_array(ti)
+            label.set_text(lbl)
+            return sc, label
+
+            # return line, label
+        animation = FuncAnimation(fig, animate, frames=len(therms), blit=True, interval=30)
+
+        button_ax = fig.add_axes([0.2, 0.9, 0.1, 0.1])
+        pause_button = Button(button_ax, "Pause")
+
+        # Функция приостановки анимации при нажатии на кнопку
+        def pause_animation(event):
+
+            if pause_button.label.get_text() == "Pause":
+                animation.event_source.stop()
+                pause_button.label.set_text("Resume")
+            else:
+                animation.event_source.start()
+                pause_button.label.set_text("Pause")
+
+        # Подключение функции обработки события к кнопке
+        pause_button.on_clicked(pause_animation)
+        plt.tight_layout()
+
+    else:
+        fig, ax = plt.subplots(figsize=(16, 8))
+
+        # Инициализация пустого графика
+        line, = ax.plot([], [], label='', color='red', linewidth=2)
+        label = ax.text(0.05, 0.95, '', transform=ax.transAxes, fontsize=14, ha='left')
+
+        x_min = min([l[0] for l in json.loads(therms[0].therm_data)])
+        x_max = max([l[0] for l in json.loads(therms[0].therm_data)])
+        y_min = min([t[1] for t in json.loads(therms[0].therm_data)])
+        y_max = max([t[1] for t in json.loads(therms[0].therm_data)])
+        for t in therms:
+            x = [l[0] for l in json.loads(t.therm_data)]
+            y = [t[1] for t in json.loads(t.therm_data)]
+            x_min, x_max, y_min, y_max = min(x_min, min(x)),  max(x_max, max(x)), min(y_min, min(y)), max(y_max, max(y))
+        ax.set_ylim(y_min, y_max)
+        ax.set_xlim(x_min, x_max)
+        ax.grid(True)
+
+
+        # Функция инициализации анимации
+        def init():
+            line.set_data([], [])
+            label.set_text('')
+            return line, label
+
+        # Функция обновления графика на каждом кадре анимации
+        def update(frame):
+            global a
+            a = frame
+            x = [l[0] for l in json.loads(therms[frame].therm_data)]
+            y = [t[1] for t in json.loads(therms[frame].therm_data)]
+            lbl = f'Термограмма {frame + 1} из {len(therms)}: {therms[frame].date_time.strftime("%Y-%m-%d %H:%M:%S")}'
+            line.set_data(x, y)
+            label.set_text(lbl)
+
+            return line, label
+
+        # Создание анимации
+        animation = FuncAnimation(fig, update, frames=len(therms), init_func=init, blit=True, interval=30)
+
+        button_ax = fig.add_axes([0.2, 0.9, 0.1, 0.1])
+        pause_button = Button(button_ax, "Pause")
+
+        # Функция приостановки анимации при нажатии на кнопку
+        def pause_animation(event):
+
+            if pause_button.label.get_text() == "Pause":
+                animation.event_source.stop()
+                pause_button.label.set_text("Resume")
+            else:
+                animation.event_source.start()
+                pause_button.label.set_text("Pause")
+
+        # Подключение функции обработки события к кнопке
+        pause_button.on_clicked(pause_animation)
+    # Отображение
+
+    app.processEvents()
+    # plt.tight_layout()
+    plt.show()
