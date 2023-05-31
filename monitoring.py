@@ -264,6 +264,8 @@ def load_thermogram_h_well():
 
 def add_update_therm_to_db(h_well_id: int, date_time: datetime.datetime, depth: list, temp: list) -> None:
     """Добавить или обновить термограмму в базу"""
+    if len(depth) == 0 or len(temp) == 0:
+        return
     therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
     if therm:
         session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).update(
@@ -369,12 +371,16 @@ def set_start_therm():
     start_therm = min([l[0] for l in json.loads(therm.therm_data)])
     end_therm = max([l[0] for l in json.loads(therm.therm_data)])
     start_value, n_set = ui.doubleSpinBox_start_therm.value(), 0
-    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+    ui.progressBar.setMaximum(session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).count())
+    for n_t, t in enumerate(session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()):
+        ui.progressBar.setValue(n_t)
         start_t = min([l[0] for l in json.loads(t.therm_data)])
         end_t = max([l[0] for l in json.loads(t.therm_data)])
         temp_list = [temp[1] for temp in json.loads(t.therm_data)]
+        if start_t != start_therm or end_t != end_therm:
+            continue
         corr_spear, _ = spearmanr(temp_curr, temp_list)
-        if start_t != start_therm or end_t != end_therm or corr_spear < ui.doubleSpinBox_corr_therm.value():
+        if corr_spear < ui.doubleSpinBox_corr_therm.value():
             continue
         new_therm = [[v[0] - start_value, v[1]] for v in json.loads(t.therm_data)]
         session.query(Thermogram).filter_by(id=t.id).update({'therm_data': json.dumps(new_therm)}, synchronize_session='fetch')
@@ -747,7 +753,7 @@ def show_therms_animation():
 
     # Создание фигуры и осей
     if ui.checkBox_3d_therm.isChecked():
-        fig = plt.figure(figsize=(12, 10), dpi=160)
+        fig = plt.figure(figsize=(8, 6), dpi=120)
         ax = fig.add_subplot(111, projection='3d')
         t_data = json.loads(therms[0].therm_data)
         x_min = min([x[2] for x in t_data if len(x) > 4])
@@ -804,7 +810,7 @@ def show_therms_animation():
             return sc, label
 
             # return line, label
-        animation = FuncAnimation(fig, animate, frames=len(therms), blit=True, interval=30)
+        animation = FuncAnimation(fig, animate, frames=len(therms), blit=True, interval=ui.spinBox_interval_animation.value())
 
         button_ax = fig.add_axes([0.2, 0.9, 0.1, 0.1])
         pause_button = Button(button_ax, "Pause")
@@ -862,7 +868,7 @@ def show_therms_animation():
             return line, label
 
         # Создание анимации
-        animation = FuncAnimation(fig, update, frames=len(therms), init_func=init, blit=True, interval=30)
+        animation = FuncAnimation(fig, update, frames=len(therms), init_func=init, blit=True, interval=ui.spinBox_interval_animation.value())
 
         button_ax = fig.add_axes([0.2, 0.9, 0.1, 0.1])
         pause_button = Button(button_ax, "Pause")
