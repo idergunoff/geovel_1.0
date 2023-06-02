@@ -14,15 +14,14 @@ def update_list_h_well():
     """Обновить список горизонтальных скважин"""
     ui.listWidget_h_well.clear()
     for h_well in session.query(GeoradarObject).filter_by(id=get_obj_monitor_id()).first().h_wells:
-        item = QListWidgetItem(h_well.title)
+        count_therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).count()
+        item_text = f'{h_well.title}\t+{count_therm} термограмм' if count_therm > 0 else h_well.title
+        item = QListWidgetItem(item_text)
+        if count_therm > 0:
+            item.setBackground(QBrush(QColor('#FBD59E')))
         item.setData(Qt.UserRole, h_well.id)
         ui.listWidget_h_well.addItem(item)
     ui.listWidget_h_well.sortItems()
-
-
-def check_inclinometry_h_well():
-    """Проверить инклинометрические данные горизонтальных скважин"""
-    pass
 
 
 def update_list_param_h_well():
@@ -59,17 +58,82 @@ def update_list_param_h_well():
 
 def add_h_well():
     """Добавить горизонтальную скважину"""
-    pass
+    if ui.lineEdit_string.text() == '':
+        set_info('Внимание! Введите название горизонтальной скважины в поле ввода в верхней части окна', 'red')
+        return
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Добавление горизонтальной скважины',
+        f'Вы уверены, что хотите добавить горизонтальную скважину {ui.lineEdit_string.text()} для объекта'
+        f' {ui.comboBox_object_monitor.currentText()}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        h_well = HorizontalWell(title=ui.lineEdit_string.text(), object_id=get_obj_monitor_id())
+        session.add(h_well)
+        session.commit()
+        set_info(f'Горизонтальная скважина "{h_well.title}" добавлена', 'green')
+        update_list_h_well()
+    else:
+        set_info('Горизонтальная скважина не добавлена', 'blue')
 
 
 def remove_h_well():
     """Удалить горизонтальную скважину"""
-    pass
+    hw_id = get_h_well_id()
+    if hw_id is None:
+        set_info('Внимание! Не выбрана горизонтальная скважина', 'red')
+        return
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление горизонтальной скважины',
+        f'Вы уверены, что хотите удалить горизонтальную скважину {get_h_well_title()} вместе со всеми параметрами и данными термометрии?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+    if result == QtWidgets.QMessageBox.Yes:
+        result_new = QtWidgets.QMessageBox.question(
+            MainWindow,
+            'Последнее предупреждение об удаледении',
+            'Вы абсолютно уверены, что хотите удалить горизонтальную скважину? Для загрузки данных было затрачено огромное количество времени и сил.',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+        if result_new == QtWidgets.QMessageBox.Yes:
+            session.query(HorizontalWell).filter_by(id=hw_id).delete()
+            session.commit()
+            set_info(f'Горизонтальная скважина "{get_h_well_title()}" удалена', 'green')
+            update_list_h_well()
+        if result_new == QtWidgets.QMessageBox.No:
+            set_info('Горизонтальная скважина не удалена', 'blue')
+    if result == QtWidgets.QMessageBox.No:
+        set_info('Горизонтальная скважина не удалена', 'blue')
 
 
 def edit_h_well():
     """Редактировать горизонтальную скважину"""
-    pass
+    if ui.lineEdit_string.text() == '':
+        set_info('Внимание! Введите новое название горизонтальной скважины в поле ввода в верхней части окна', 'red')
+        return
+    hw_id = get_h_well_id()
+    if hw_id is None:
+        set_info('Внимание! Не выбрана горизонтальная скважина', 'red')
+        return
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Редактирование горизонтальной скважины',
+        f'Вы уверены, что хотите изменить название горизонтальной скважины '
+        f'"{get_h_well_title()}" на "{ui.lineEdit_string.text()}"?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(HorizontalWell).filter_by(id=hw_id).update({'title': ui.lineEdit_string.text()}, synchronize_session='fetch')
+        session.commit()
+        set_info(f'Название горизонтальной скважины "{get_h_well_title()}" изменено на "{ui.lineEdit_string.text()}"', 'green')
+        update_list_h_well()
+    if result == QtWidgets.QMessageBox.No:
+        pass
 
 
 def  load_param_h_well():
@@ -179,6 +243,13 @@ def get_h_well_id():
         return item.data(Qt.UserRole)
 
 
+def get_h_well_title():
+    """Получить название горизонтальной скважины"""
+    item = ui.listWidget_h_well.currentItem()
+    if item:
+        return item.text().split('\t')[0]
+
+
 def get_therm_id():
     """Получить id термограммы"""
     item = ui.listWidget_thermogram.currentItem()
@@ -265,6 +336,8 @@ def load_thermogram_h_well():
 def add_update_therm_to_db(h_well_id: int, date_time: datetime.datetime, depth: list, temp: list) -> None:
     """Добавить или обновить термограмму в базу"""
     if len(depth) == 0 or len(temp) == 0:
+        return
+    if len(set(temp)) == 1:
         return
     therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
     if therm:
@@ -1025,3 +1098,44 @@ def show_therms_animation_sep():
     app.processEvents()
     # plt.tight_layout()
     plt.show()
+
+
+def average_lists(lists):
+    # Проверка, что списки не пустые
+    if not lists:
+        return []
+    # Использование zip для объединения элементов на одной позиции из всех списков
+    combined = zip(*lists)
+    # Вычисление среднего значения на каждой позиции
+    average = [sum(values) / len(values) for values in combined]
+    return average
+
+
+def mean_day_thermogram():
+    """ Вычисление средней термограммы за день """
+    therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
+    uniq_dates = set(t.date_time.date() for t in therms)
+    ui.progressBar.setMaximum(len(uniq_dates))
+    for nd, d in enumerate(uniq_dates):
+        ui.progressBar.setValue(nd)
+        day_therm_list, id_therm_list = [], []
+        for t in therms:
+            if t.date_time.date() == d:
+                day_therm_list.append(json.loads(t.therm_data))
+                id_therm_list.append(t.id)
+        if not check_list_lengths(day_therm_list):
+            set_info(f'Не совпадает длина термограммы {d.strftime("%Y-%m-%d")}', 'red')
+        list_therm_temp = [[temp[1] for temp in day_therm] for day_therm in day_therm_list]
+        set_info(f'Усреднение {len(list_therm_temp)} термограмм за {d.strftime("%Y-%m-%d")}', 'blue')
+        averege_therm = average_lists(list_therm_temp)
+        depth_list = [d[0] for d in day_therm_list[0]]
+        for it in id_therm_list:
+            session.query(Thermogram).filter_by(id=it).delete()
+        add_update_therm_to_db(get_h_well_id(), d, depth_list, averege_therm)
+    session.commit()
+    update_list_thermogram()
+    count_therm = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).count()
+    item_text = f'{get_h_well_title()}\t+{count_therm} термограмм'
+    ui.listWidget_h_well.currentItem().setText(item_text)
+
+

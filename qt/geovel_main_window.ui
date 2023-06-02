@@ -784,8 +784,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>260</width>
-                         <height>111</height>
+                         <width>329</width>
+                         <height>119</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1476,9 +1476,12 @@
                          </widget>
                         </item>
                         <item row="0" column="0">
-                         <widget class="QPushButton" name="pushButton_3">
+                         <widget class="QPushButton" name="pushButton_therm_mean_day">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(148, 255, 232);</string>
+                          </property>
                           <property name="text">
-                           <string>PushButton</string>
+                           <string>Mean day</string>
                           </property>
                          </widget>
                         </item>
@@ -2724,7 +2727,7 @@
      <x>0</x>
      <y>0</y>
      <width>1552</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

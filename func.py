@@ -1079,3 +1079,13 @@ def get_mean_values(values: list, n: int) -> list:
 def get_mfcc(values: list, n: int):
     return list(mfcc(signal=np.array(values), samplerate=125000000, winlen=0.000004104, nfilt=513, nfft=513, numcep=n)[0])
 
+
+def check_list_lengths(list_of_lists):
+    """ Проверяет, что все остальные элементы имеют равную длину """
+    # Получаем длину первого элемента в списке
+    first_length = len(list_of_lists[0])
+
+    # Проверяем, что все остальные элементы имеют такую же длину
+    all_same_length = all(len(lst) == first_length for lst in list_of_lists[1:])
+
+    return all_same_length

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\geovel_main_window.ui'
+# Form implementation generated from reading ui file 'qt/geovel_main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -419,7 +419,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 260, 111))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 329, 119))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_18.setObjectName("gridLayout_18")
@@ -780,9 +780,10 @@ class Ui_MainWindow(object):
         self.pushButton_show_therms.setStyleSheet("background-color: rgb(255, 204, 121);")
         self.pushButton_show_therms.setObjectName("pushButton_show_therms")
         self.gridLayout_68.addWidget(self.pushButton_show_therms, 0, 2, 1, 1)
-        self.pushButton_3 = QtWidgets.QPushButton(self.tab_6)
-        self.pushButton_3.setObjectName("pushButton_3")
-        self.gridLayout_68.addWidget(self.pushButton_3, 0, 0, 1, 1)
+        self.pushButton_therm_mean_day = QtWidgets.QPushButton(self.tab_6)
+        self.pushButton_therm_mean_day.setStyleSheet("background-color: rgb(148, 255, 232);")
+        self.pushButton_therm_mean_day.setObjectName("pushButton_therm_mean_day")
+        self.gridLayout_68.addWidget(self.pushButton_therm_mean_day, 0, 0, 1, 1)
         self.spinBox_interval_animation = QtWidgets.QSpinBox(self.tab_6)
         self.spinBox_interval_animation.setMinimum(1)
         self.spinBox_interval_animation.setMaximum(100000)
@@ -1390,7 +1391,7 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.progressBar, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1552, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -1500,7 +1501,7 @@ class Ui_MainWindow(object):
         self.pushButton_cut_end_therm.setText(_translate("MainWindow", "Cut end"))
         self.pushButton_coord_therm.setText(_translate("MainWindow", "Binding"))
         self.pushButton_show_therms.setText(_translate("MainWindow", "Show therms"))
-        self.pushButton_3.setText(_translate("MainWindow", "PushButton"))
+        self.pushButton_therm_mean_day.setText(_translate("MainWindow", "Mean day"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_6), _translate("MainWindow", "Monitoring"))
         self.pushButton_add_mark_lda.setText(_translate("MainWindow", "add marker"))
         self.pushButton_rem_mark_lda.setText(_translate("MainWindow", "remove marker"))
@@ -1596,13 +1597,3 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "TextLabel"))
         self.pushButton_color.setText(_translate("MainWindow", "color"))
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
