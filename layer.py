@@ -55,10 +55,19 @@ def mouseClicked(evt):
         mousePoint = vb.mapSceneToView(scene_pos)
         count_sig = len(json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
         if 0 <= mousePoint.x() <= count_sig and 0 <= mousePoint.y() <= 513:
-            new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=int(mousePoint.x()), point_y=int(mousePoint.y()))
-            session.add(new_point)
+            if evt.button() == Qt.LeftButton:
+                new_point = PointsOfLayer(layer_id=get_layer_id(), point_x=int(mousePoint.x()), point_y=int(mousePoint.y()))
+                session.add(new_point)
+            elif evt.button() == Qt.RightButton:
+                session.query(PointsOfLayer).filter(
+                    PointsOfLayer.layer_id == get_layer_id(),
+                    PointsOfLayer.point_x <= int(mousePoint.x()) + 3,
+                    PointsOfLayer.point_x >= int(mousePoint.x()) - 3,
+                    PointsOfLayer.point_y <= int(mousePoint.y()) + 3,
+                    PointsOfLayer.point_y >= int(mousePoint.y()) - 3
+                ).delete()
             session.commit()
-            draw_layer(new_point.layer_id)
+            draw_layer(get_layer_id())
 
 
 def save_layer():

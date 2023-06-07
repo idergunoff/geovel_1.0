@@ -398,7 +398,7 @@ def draw_layer(layer_id, save=False):
         layer_y = np.array(query_to_list(session.query(PointsOfLayer.point_y).filter(PointsOfLayer.layer_id == layer_id).order_by(PointsOfLayer.point_x).all()))
         # Создаем объект точек и добавляем его на радарограмму
         scatter = pg.ScatterPlotItem(x=layer_x, y=layer_y, symbol='o', pen=pg.mkPen(None),
-                                     brush=pg.mkBrush(255, 255, 255, 120), size=10)
+                                     brush=pg.mkBrush('#FFE900'), size=12)
         radarogramma.addItem(scatter)
         globals()[f'scatter_id{layer_id}'] = scatter
         # Если точек для интерполяции больше двух, вычисляем кубический сплайн
