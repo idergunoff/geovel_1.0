@@ -139,14 +139,24 @@ def add_formation():
                 set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в радарпограмме и в границах кровли/подошвы', 'red')
             else:
                 ui.progressBar.setMaximum(len(layer_up))
-                width_json = session.query(Formation.width).filter(Formation.profile_id == get_profile_id()).first()[0]
-                top_json = session.query(Formation.top).filter(Formation.profile_id == get_profile_id()).first()[0]
-                land_json = session.query(Formation.land).filter(Formation.profile_id == get_profile_id()).first()[0]
-                if width_json and top_json and land_json:
-                    width, top, land = json.loads(width_json), json.loads(top_json), json.loads(land_json)
-                T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, Vt_mean_l, dAt_l, At_top_l, \
-                At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, speed_l, speed_cover_l = \
-                    [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
+                x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+                y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+                # width_json = session.query(Formation.width).filter(Formation.profile_id == get_profile_id()).first()[0]
+                # top_json = session.query(Formation.top).filter(Formation.profile_id == get_profile_id()).first()[0]
+                # land_json = session.query(Formation.land).filter(Formation.profile_id == get_profile_id()).first()[0]
+                # if width_json and top_json and land_json:
+                #     width, top, land = json.loads(width_json), json.loads(top_json), json.loads(land_json)
+                grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+                if grid_db:
+                    # считываем сетку грида из БД
+                    pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
+                    pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
+                    pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+                T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
+                    Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
+                    Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, speed_l, speed_cover_l, width_l,top_l, land_l = \
+                    [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
+                    [], [], [], [], [], [], []
                 for i in range(len(layer_up)):
                     signal = signals[i]
                     analytic_signal = hilbert(signal)
@@ -183,9 +193,29 @@ def add_formation():
                     k_var_l.append(float(np.var(signal[nt:nb])))
                     skew_l.append(skew(signal[nt:nb]))
                     kurt_l.append(kurtosis(signal[nt:nb]))
-                    if width_json and top_json and land_json:
-                        speed_l.append(width[i] * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
-                        speed_cover_l.append((land[i] - top[i]) * 100 / (layer_up[i] * 8))
+                    # if width_json and top_json and land_json:
+                    #     speed_l.append(width[i] * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
+                    #     speed_cover_l.append((land[i] - top[i]) * 100 / (layer_up[i] * 8))
+
+                    if grid_db and len(x_pulc) > 0 and len(y_pulc) > 0:
+                        pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc[i])
+                        pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc[i])
+                        pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc[i])
+                        pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc[i])
+                        pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc[i])
+                        pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc[i])
+                        i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
+                            pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
+                        i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
+                            pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
+                        i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
+                            pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+                        im = i_m if i_m > 0 else 0
+                        width_l.append(im)
+                        top_l.append(i_uf)
+                        land_l.append(i_r)
+                        speed_l.append(im * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
+                        speed_cover_l.append((i_r - i_uf) * 100 / (layer_up[i] * 8))
                     ui.progressBar.setValue(i + 1)
                 dict_signal = {'T_top': json.dumps(T_top_l),
                                'T_bottom': json.dumps(T_bottom_l),
@@ -214,7 +244,13 @@ def add_formation():
                                'k_var': json.dumps(k_var_l),
                                'skew': json.dumps(skew_l),
                                'kurt': json.dumps(kurt_l)}
-                if width_json and top_json and land_json:
+                # if width_json and top_json and land_json:
+                #     dict_signal['speed'] = json.dumps(speed_l)
+                #     dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+                if grid_db and len(x_pulc) > 0 and len(y_pulc) > 0:
+                    dict_signal['width'] = json.dumps(width_l)
+                    dict_signal['top'] = json.dumps(top_l)
+                    dict_signal['land'] = json.dumps(land_l)
                     dict_signal['speed'] = json.dumps(speed_l)
                     dict_signal['speed_cover'] = json.dumps(speed_cover_l)
                 session.query(Formation).filter(Formation.id == new_formation.id).update(dict_signal,
