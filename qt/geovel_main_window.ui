@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1552</width>
-    <height>833</height>
+    <width>1600</width>
+    <height>1200</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -66,6 +72,37 @@
               <string>Main</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
+              <item row="7" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QCheckBox" name="checkBox_2degree">
+                  <property name="text">
+                   <string>^2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_type_dct">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>4</number>
+                  </property>
+                  <property name="value">
+                   <number>2</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_ceps_koef">
+                  <property name="text">
+                   <string>koef</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="3" column="0">
                <layout class="QGridLayout" name="gridLayout_10">
                 <item row="1" column="1">
@@ -146,71 +183,6 @@
                 </item>
                </layout>
               </item>
-              <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_9">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_rfft2">
-                  <property name="text">
-                   <string>RFFT2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_rang">
-                  <property name="text">
-                   <string>RANG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_irfft2">
-                  <property name="text">
-                   <string>IRFFT2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_dct">
-                  <property name="text">
-                   <string>DCT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_log">
-                  <property name="text">
-                   <string>LOG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_idct">
-                  <property name="text">
-                   <string>IDCT</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_7">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                  <underline>false</underline>
-                  <strikeout>false</strikeout>
-                  <kerning>true</kerning>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Фурье</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
               <item row="6" column="0">
                <widget class="QLabel" name="label_9">
                 <property name="font">
@@ -224,6 +196,25 @@
                 </property>
                 <property name="text">
                  <string>Кепструм</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QLabel" name="label_26">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Карты</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -246,31 +237,140 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_3">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                  <underline>true</underline>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Фильтрация</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
+              <item row="5" column="0">
+               <layout class="QGridLayout" name="gridLayout_11">
+                <item row="0" column="2">
+                 <widget class="QDoubleSpinBox" name="doubleSpinBox_b_filtfilt">
+                  <property name="decimals">
+                   <number>3</number>
+                  </property>
+                  <property name="minimum">
+                   <double>0.001000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>0.050000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QPushButton" name="pushButton_medfilt">
+                  <property name="text">
+                   <string>medfilt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QPushButton" name="pushButton_wiener">
+                  <property name="text">
+                   <string>wiener</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QSpinBox" name="spinBox_b_savgol">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>2</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="2">
+                 <widget class="QSpinBox" name="spinBox_b_medfilt">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>2</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QSpinBox" name="spinBox_a_filtfilt">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QSpinBox" name="spinBox_b_wiener">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_filtfilt">
+                  <property name="text">
+                   <string>filtfilt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QSpinBox" name="spinBox_a_savgol">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>2</number>
+                  </property>
+                  <property name="value">
+                   <number>5</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QSpinBox" name="spinBox_a_wiener">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QSpinBox" name="spinBox_a_medfilt">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>2</number>
+                  </property>
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_savgol">
+                  <property name="text">
+                   <string>savgol</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
-              <item row="10" column="0">
-               <widget class="QPushButton" name="pushButton_save_signal">
+              <item row="9" column="0">
+               <widget class="QPushButton" name="pushButton_secret_filter">
                 <property name="text">
-                 <string>Выгрузить</string>
+                 <string> SFFAI</string>
                 </property>
                </widget>
               </item>
@@ -522,175 +622,100 @@
                 </item>
                </layout>
               </item>
-              <item row="7" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QCheckBox" name="checkBox_2degree">
-                  <property name="text">
-                   <string>^2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_type_dct">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>4</number>
-                  </property>
-                  <property name="value">
-                   <number>2</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_ceps_koef">
-                  <property name="text">
-                   <string>koef</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
+              <item row="10" column="0">
+               <widget class="QPushButton" name="pushButton_save_signal">
+                <property name="text">
+                 <string>Выгрузить</string>
+                </property>
+               </widget>
               </item>
-              <item row="5" column="0">
-               <layout class="QGridLayout" name="gridLayout_11">
+              <item row="8" column="0">
+               <layout class="QGridLayout" name="gridLayout_9">
                 <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_filtfilt">
+                 <widget class="QPushButton" name="pushButton_rfft2">
                   <property name="text">
-                   <string>filtfilt</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QSpinBox" name="spinBox_a_filtfilt">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QDoubleSpinBox" name="doubleSpinBox_b_filtfilt">
-                  <property name="decimals">
-                   <number>3</number>
-                  </property>
-                  <property name="minimum">
-                   <double>0.001000000000000</double>
-                  </property>
-                  <property name="singleStep">
-                   <double>0.010000000000000</double>
-                  </property>
-                  <property name="value">
-                   <double>0.050000000000000</double>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QSpinBox" name="spinBox_a_savgol">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>2</number>
-                  </property>
-                  <property name="value">
-                   <number>5</number>
+                   <string>RFFT2</string>
                   </property>
                  </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QSpinBox" name="spinBox_b_savgol">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>2</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QSpinBox" name="spinBox_a_wiener">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QPushButton" name="pushButton_medfilt">
+                 <widget class="QPushButton" name="pushButton_rang">
                   <property name="text">
-                   <string>medfilt</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QSpinBox" name="spinBox_a_medfilt">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>2</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
+                   <string>RANG</string>
                   </property>
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_savgol">
+                 <widget class="QPushButton" name="pushButton_irfft2">
                   <property name="text">
-                   <string>savgol</string>
+                   <string>IRFFT2</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="0">
-                 <widget class="QPushButton" name="pushButton_wiener">
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_dct">
                   <property name="text">
-                   <string>wiener</string>
+                   <string>DCT</string>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="2">
-                 <widget class="QSpinBox" name="spinBox_b_medfilt">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>2</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_log">
+                  <property name="text">
+                   <string>LOG</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="2">
-                 <widget class="QSpinBox" name="spinBox_b_wiener">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="value">
-                   <number>3</number>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_idct">
+                  <property name="text">
+                   <string>IDCT</string>
                   </property>
                  </widget>
                 </item>
                </layout>
               </item>
-              <item row="11" column="0">
-               <widget class="QPushButton" name="pushButton_maxmin">
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                  <underline>false</underline>
+                  <strikeout>false</strikeout>
+                  <kerning>true</kerning>
+                 </font>
+                </property>
                 <property name="text">
-                 <string>max/min</string>
+                 <string>Фурье</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                  <underline>true</underline>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Фильтрация</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0">
                <spacer name="verticalSpacer">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -703,12 +728,121 @@
                 </property>
                </spacer>
               </item>
-              <item row="9" column="0">
-               <widget class="QPushButton" name="pushButton_secret_filter">
-                <property name="text">
-                 <string> SFFAI</string>
-                </property>
-               </widget>
+              <item row="12" column="0">
+               <layout class="QGridLayout" name="gridLayout_69">
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_70">
+                  <item row="1" column="1">
+                   <widget class="QSpinBox" name="spinBox_nlags">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>1000</number>
+                    </property>
+                    <property name="value">
+                     <number>6</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QCheckBox" name="checkBox_weight">
+                    <property name="toolTip">
+                     <string>Флаг, указывающий, следует ли при автоматическом расчете модели вариограммы более сильно взвешивать полувариантность с меньшими задержками. В настоящее время процедура жестко запрограммирована таким образом, что веса вычисляются на основе логистической функции, поэтому веса при малых задержках равны ~ 1, а веса при самых больших задержках равны ~ 0; центр логистического взвешивания жестко запрограммирован так, чтобы он находился на 70% расстояния от наименьшего запаздывания до самого большого. самое большое отставание. Установка этого параметра в значение True указывает на то, что будут применены веса. </string>
+                    </property>
+                    <property name="text">
+                     <string>weight</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <widget class="QSpinBox" name="spinBox_grid">
+                    <property name="toolTip">
+                     <string>Размер сетки</string>
+                    </property>
+                    <property name="minimum">
+                     <number>20</number>
+                    </property>
+                    <property name="maximum">
+                     <number>250</number>
+                    </property>
+                    <property name="value">
+                     <number>75</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="label_28">
+                    <property name="toolTip">
+                     <string>Количество ячеек усреднения для вариограммы</string>
+                    </property>
+                    <property name="text">
+                     <string>nlags:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_27">
+                    <property name="text">
+                     <string>var_model:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QComboBox" name="comboBox_var_model">
+                    <item>
+                     <property name="text">
+                      <string>linear</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>power</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>gaussian</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>spherical</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>exponential</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QCheckBox" name="checkBox_vector">
+                    <property name="toolTip">
+                     <string>подход при кригинге</string>
+                    </property>
+                    <property name="text">
+                     <string>vectorized</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QComboBox" name="comboBox_cmap"/>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_map">
+                  <property name="text">
+                   <string>MAP</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
@@ -785,7 +919,7 @@
                          <x>0</x>
                          <y>0</y>
                          <width>329</width>
-                         <height>122</height>
+                         <height>196</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2726,7 +2860,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1552</width>
+     <width>1600</width>
      <height>22</height>
     </rect>
    </property>

@@ -11,6 +11,7 @@ from well import *
 from lda import *
 from mlp import *
 from monitoring import *
+from krige import *
 
 
 MainWindow.show()
@@ -95,7 +96,7 @@ ui.pushButton_wiener.clicked.connect(calc_wiener)
 ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
 ui.pushButton_reset.clicked.connect(reset_spinbox_fft)
-ui.pushButton_maxmin.clicked.connect(draw_max_min)
+# ui.pushButton_maxmin.clicked.connect(draw_max_min)
 ui.pushButton_rfft2.clicked.connect(calc_rfft2)
 ui.pushButton_irfft2.clicked.connect(calc_irfft2)
 ui.pushButton_dct.clicked.connect(calc_dctn)
@@ -230,6 +231,8 @@ ui.pushButton_cut_end_therm.clicked.connect(cut_end_therm)
 ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
 ui.pushButton_show_therms.clicked.connect(show_therms_animation)
 ui.pushButton_therm_mean_day.clicked.connect(mean_day_thermogram)
+
+ui.pushButton_map.clicked.connect(show_map)
 
 roi.sigRegionChanged.connect(updatePlot)
 
