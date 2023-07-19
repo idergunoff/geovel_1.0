@@ -405,7 +405,7 @@ class Ui_MainWindow(object):
         self.gridLayout_70.addWidget(self.checkBox_weight, 0, 2, 1, 1)
         self.spinBox_grid = QtWidgets.QSpinBox(self.tab_3)
         self.spinBox_grid.setMinimum(20)
-        self.spinBox_grid.setMaximum(300)
+        self.spinBox_grid.setMaximum(250)
         self.spinBox_grid.setProperty("value", 75)
         self.spinBox_grid.setObjectName("spinBox_grid")
         self.gridLayout_70.addWidget(self.spinBox_grid, 1, 3, 1, 1)

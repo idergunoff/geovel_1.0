@@ -2,6 +2,7 @@ import pandas as pd
 
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
+from krige import draw_map
 from qt.choose_formation_lda import *
 
 
@@ -522,6 +523,7 @@ def calc_MLP():
         colors[m.title] = m.color
     # colors['test'] = '#999999'
     working_data, data_tsne, curr_form, title_graph = get_working_data_mlp()
+    print(working_data, data_tsne, curr_form)
     fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
 
@@ -592,37 +594,86 @@ def calc_obj_mlp():
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
     data_train, list_param = build_table_train(True, 'mlp')
     list_param_mlp = data_train.columns.tolist()[2:]
-    training_samlpe = data_train[list_param_mlp].values.tolist()
+    training_sample = data_train[list_param_mlp].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
-    clf = LinearDiscriminantAnalysis()
-    try:
-        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
-    except ValueError:
-        ui.label_info.setText(
-            f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.')
-        ui.label_info.setStyleSheet('color: red')
-        return
-    data_trans_coef = pd.DataFrame(trans_coef)
-    data_trans_coef['mark'] = data_train['mark'].values.tolist()
-    data_trans_coef['shape'] = ['train'] * len(data_trans_coef)
-    list_cat = list(clf.classes_)
 
     try:
-        new_mark = clf.predict(working_data_result.iloc[:, 3:])
-        probability = clf.predict_proba(working_data_result.iloc[:, 3:])
+        # Нормализация данных
+        scaler = StandardScaler()
+        training_sample_norm = scaler.fit_transform(training_sample)
+
+        # Создание и тренировка MLP
+        layers = tuple(map(int, ui.lineEdit_layer_mlp.text().split()))
+        mlp = MLPClassifier(
+            hidden_layer_sizes=layers,
+            activation=ui.comboBox_activation_mlp.currentText(),
+            solver=ui.comboBox_solvar_mlp.currentText(),
+            alpha=ui.doubleSpinBox_alpha_mlp.value(),
+            max_iter=5000,
+            early_stopping=ui.checkBox_e_stop_mlp.isChecked(),
+            validation_fraction=ui.doubleSpinBox_valid_mlp.value(),
+            random_state=1
+        )
+        mlp.fit(training_sample_norm, markup)
+
+        # Оценка точности на обучающей выборке
+        train_accuracy = mlp.score(training_sample_norm, markup)
+
+        # Разделение данных на обучающую и тестовую выборки с использованием заданного значения test_size
+        training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
+            training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_mlp.value(), random_state=1)
+
+        # Оценка точности на тестовой выборке
+        test_accuracy = mlp.score(training_sample_test, markup_test)
+
+        # Вывод информации о параметрах MLP и точности модели
+        set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
+                 f'activation - {ui.comboBox_activation_mlp.currentText()}, '
+                 f'solver - {ui.comboBox_solvar_mlp.currentText()}, '
+                 f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, '
+                 f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}'
+                 f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}, '
+                 f'точность на всей обучающей выборке: {train_accuracy}, '
+                 f'точность на тестовой выборке: {test_accuracy}', 'blue')
     except ValueError:
-        data = imputer.fit_transform(working_data_result.iloc[:, 3:])
-        new_mark = clf.predict(data)
-        probability = clf.predict_proba(data)
-        for i in working_data_result.index:
-            p_nan = [working_data_result.columns[ic + 3] for ic, v in enumerate(working_data_result.iloc[i, 3:].tolist()) if
+        set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
+        return
+
+
+    list_cat = list(mlp.classes_)
+
+    # Подготовка тестовых данных для MLP
+    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
+    working_sample = scaler.fit_transform(working_data_result.iloc[:, 3:])
+
+    try:
+        # Предсказание меток для тестовых данных
+        new_mark = mlp.predict(working_sample)
+        probability = mlp.predict_proba(working_sample)
+    except ValueError:
+        # Обработка возможных ошибок в расчетах MLP для тестовых данных
+        data = imputer.fit_transform(working_sample)
+        new_mark = mlp.predict(data)
+        probability = mlp.predict_proba(data)
+        for i in working_data.index:
+            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
                      np.isnan(v)]
             if len(p_nan) > 0:
-                profile_title = session.query(Profile.title).filter_by(id=working_data_result['prof_index'][i].split('_')[0]).first()[0][0]
-                set_info(f'Внимание для измерения "{i}" на профиле "{profile_title}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-                         f' этого измерения может быть не корректен', 'red')
+                set_info(
+                    f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                    f' этого измерения может быть не корректен', 'red')
+
+    # Добавление предсказанных меток и вероятностей в рабочие данные
     working_data_result = pd.concat([working_data_result, pd.DataFrame(probability, columns=list_cat)], axis=1)
     working_data_result['mark'] = new_mark
+    x = list(working_data_result['x_pulc'])
+    y = list(working_data_result['y_pulc'])
+    if len(set(new_mark)) == 2:
+        z = list(working_data_result[list(set(new_mark))[0]])
+    else:
+        z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+    draw_map(x, y, z, 'mlp')
     try:
         file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
         fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,

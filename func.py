@@ -773,7 +773,11 @@ def add_param_mlp(param):
 
 
 def build_table_train(db=False, analisis='lda'):
+
+    # Получение списка параметров
     list_param = get_list_param_lda() if analisis == 'lda' else get_list_param_mlp()
+
+    # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
     if db:
         if analisis == 'lda':
             data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
@@ -781,52 +785,81 @@ def build_table_train(db=False, analisis='lda'):
             data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
         if data:
             data_train = pd.DataFrame(json.loads(data[0]))
+            # print(data_train.to_string(max_rows=None))
             return data_train, list_param
+
+    # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
+
+    # Получаем размеченные участки
     if analisis == 'lda':
         markups = session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all()
     else:
         markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
+
     ui.progressBar.setMaximum(len(markups))
+
     for nm, markup in enumerate(markups):
+        # Получение списка фиктивных меток и границ слоев из разметки
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
         list_up = json.loads(markup.formation.layer_up.layer_line)
         list_down = json.loads(markup.formation.layer_down.layer_line)
+
+        # Загрузка сигналов из профилей, необходимых для параметров 'distr', 'sep' и 'mfcc'
         for param in list_param:
+            # Если параметр является расчётным
             if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+                # Проверка, есть ли уже загруженный сигнал в локальных переменных
                 if not markup.profile.title + param.split('_')[1] in locals():
-                    locals()[markup.profile.title + param.split('_')[1]] = json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+                    # Загрузка сигнала из профиля
+                    locals()[markup.profile.title + param.split('_')[1]] = json.loads(
+                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+                    # Если параметр сохранён в базе
             else:
-                locals()[f'list_{param}'] = json.loads(
-                session.query(literal_column(f'Formation.{param}')).filter(Formation.id == markup.formation_id).first()[0])
+                # Загрузка значений параметра из формации
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
+                    Formation.id == markup.formation_id).first()[0])
+
+        # Обработка каждого измерения в разметке
         for measure in json.loads(markup.list_measure):
+            # Пропустить измерение, если оно является фиктивным
             if measure in list_fake:
                 continue
+
             dict_value = {}
             dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
             dict_value['mark'] = markup.marker.title
+
+            # Обработка каждого параметра в списке параметров
             for param in list_param:
                 if param.startswith('distr'):
+                    # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                     sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
                     distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
                 elif param.startswith('sep'):
+                    # Обработка параметра 'sep'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                     sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
                     sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
                 elif param.startswith('mfcc'):
+                    # Обработка параметра 'mfcc'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                     sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
                     mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
                 else:
+                    # Загрузка значения параметра из списка значений
                     dict_value[param] = locals()[f'list_{param}'][measure]
+
+            # Добавление данных в обучающую выборку
             data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
+
         ui.progressBar.setValue(nm + 1)
     data_train_to_db = json.dumps(data_train.to_dict())
     if analisis == 'lda':
@@ -952,20 +985,19 @@ def get_working_data_lda():
 
 
 def get_working_data_mlp():
+
+    # Получение обучающих данных для MLP
     data_train, list_param = build_table_train(True, 'mlp')
     list_param_mlp = data_train.columns.tolist()[2:]
     training_sample = data_train[list_param_mlp].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
+
     try:
         # Нормализация данных
         scaler = StandardScaler()
         training_sample_norm = scaler.fit_transform(training_sample)
-        # Разделение данных на обучающую и тестовую выборки
-        # training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-        #     training_sample_norm, markup, test_size=0.20, random_state=1
-        # )
-        # Создание и тренировка MLP
 
+        # Создание и тренировка MLP
         layers = tuple(map(int, ui.lineEdit_layer_mlp.text().split()))
         mlp = MLPClassifier(
             hidden_layer_sizes=layers,
@@ -978,11 +1010,18 @@ def get_working_data_mlp():
             random_state=1
         )
         mlp.fit(training_sample_norm, markup)
+
         # Оценка точности на обучающей выборке
         train_accuracy = mlp.score(training_sample_norm, markup)
+
+        # Разделение данных на обучающую и тестовую выборки с использованием заданного значения test_size
         training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
             training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_mlp.value(), random_state=1)
+
+        # Оценка точности на тестовой выборке
         test_accuracy = mlp.score(training_sample_test, markup_test)
+
+        # Вывод информации о параметрах MLP и точности модели
         set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
                  f'activation - {ui.comboBox_activation_mlp.currentText()}, '
                  f'solver - {ui.comboBox_solvar_mlp.currentText()}, '
@@ -996,6 +1035,7 @@ def get_working_data_mlp():
                  f'выборки.', 'red')
         return
 
+    # Создание и обучение модели t-SNE для отображения результата на графике
     tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
     preds_proba_train = mlp.predict_proba(training_sample_norm)
     preds_train = mlp.predict(training_sample_norm)
@@ -1004,14 +1044,19 @@ def get_working_data_mlp():
     data_probability['shape'] = ['train'] * len(preds_train)
 
     list_cat = list(mlp.classes_)
+
+    # Подготовка тестовых данных для MLP
     working_data, curr_form = build_table_test('mlp')
     profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
     set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
     working_sample = scaler.fit_transform(working_data.iloc[:, 3:])
+
     try:
+        # Предсказание меток для тестовых данных
         new_mark = mlp.predict(working_sample)
         probability = mlp.predict_proba(working_sample)
     except ValueError:
+        # Обработка возможных ошибок в расчетах MLP для тестовых данных
         data = imputer.fit_transform(working_sample)
         new_mark = mlp.predict(data)
         probability = mlp.predict_proba(data)
@@ -1021,6 +1066,8 @@ def get_working_data_mlp():
             if len(p_nan) > 0:
                 set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                          f' этого измерения может быть не корректен', 'red')
+
+    # Добавление предсказанных меток и вероятностей в рабочие данные
     working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
     working_data['mark'] = new_mark
 
@@ -1028,9 +1075,13 @@ def get_working_data_mlp():
     data_work_probability['mark'] = new_mark
     data_work_probability['shape'] = ['work'] * len(new_mark)
     data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+    # Вычисление t-SNE для обучающих и тестовых данных
     data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
     data_tsne['mark'] = data_probability['mark']
     data_tsne['shape'] = data_probability['shape']
+
+    # Формирование заголовка для графика
     title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
                   f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
                   f'{str(len(data_tsne.index))}\n' \
@@ -1089,3 +1140,18 @@ def check_list_lengths(list_of_lists):
     all_same_length = all(len(lst) == first_length for lst in list_of_lists[1:])
 
     return all_same_length
+
+
+def string_to_unique_number(strings, type_analysis):
+    unique_strings = {}  # Словарь для хранения уникальных строк и их численного представления
+    result = []  # Список для хранения результата
+    table = MarkerLDA if type_analysis == 'lda' else MarkerMLP
+    markers = session.query(table).filter(table.analysis_id == get_MLP_id()).all()
+
+    for marker in markers:
+        num = len(unique_strings) + 1
+        unique_strings[marker.title] = num
+    for s in strings:
+        result.append(unique_strings[s])
+
+    return result

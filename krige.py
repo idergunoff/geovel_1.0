@@ -1,3 +1,6 @@
+from numpy.linalg import LinAlgError
+from sqlalchemy.exc import OperationalError
+
 from func import *
 from qt.choose_formation_map import *
 
@@ -23,30 +26,36 @@ def show_map():
     for profile in r.profiles:
         list_x += (json.loads(profile.x_pulc))
         list_y += (json.loads(profile.y_pulc))
-        if len(profile.formations) == 1:
-            form = session.query(literal_column(f'Formation.{param}')).filter(Formation.profile_id == profile.id).first()
-            list_z += (json.loads(form[0]))
-        elif len(profile.formations) > 1:
-            Choose_Formation = QtWidgets.QDialog()
-            ui_cf = Ui_FormationMAP()
-            ui_cf.setupUi(Choose_Formation)
-            Choose_Formation.show()
-            Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-            for f in profile.formations:
-                ui_cf.listWidget_form_map.addItem(f'{f.title} id{f.id}')
-            ui_cf.listWidget_form_map.setCurrentRow(0)
-
-            def form_lda_ok():
-                global list_z
-                f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
-                form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
+        try:
+            if len(profile.formations) == 1:
+                form = session.query(literal_column(f'Formation.{param}')).filter(Formation.profile_id == profile.id).first()
                 list_z += (json.loads(form[0]))
-                Choose_Formation.close()
+            elif len(profile.formations) > 1:
+                Choose_Formation = QtWidgets.QDialog()
+                ui_cf = Ui_FormationMAP()
+                ui_cf.setupUi(Choose_Formation)
+                Choose_Formation.show()
+                Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                for f in profile.formations:
+                    ui_cf.listWidget_form_map.addItem(f'{f.title} id{f.id}')
+                ui_cf.listWidget_form_map.setCurrentRow(0)
 
-            ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
-            Choose_Formation.exec_()
+                def form_lda_ok():
+                    global list_z
+                    f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
+                    form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
+                    list_z += (json.loads(form[0]))
+                    Choose_Formation.close()
+
+                ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
+                Choose_Formation.exec_()
+        except OperationalError:
+            set_info('Не выбран пласт', 'red')
+            return
+    draw_map(list_x, list_y, list_z, param)
 
 
+def draw_map(list_x, list_y, list_z, param):
 
     # Создание набора данных
     x = np.array(list_x)
@@ -55,38 +64,51 @@ def show_map():
     grid_size = ui.spinBox_grid.value()
 
     # Создание сетки для интерполяции
-    gridx = np.linspace(min(list_x), max(list_x), grid_size)
-    gridy = np.linspace(min(list_y), max(list_y), grid_size)
+    gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
+    gridy = np.linspace(min(list_y) - 200, max(list_y) + 200, grid_size)
 
     # Создание объекта OrdinaryKriging
     var_model = ui.comboBox_var_model.currentText()
     nlags = ui.spinBox_nlags.value()
     weight = ui.checkBox_weight.isChecked()
     vector = 'vectorized' if ui.checkBox_vector.isChecked() else 'C'
-    clos_win = ui.spinBox_count_distr_lda.value()
-    color_map = ui.comboBox_cmap.currentText()
+    if param == 'lda':
+        markers_lda = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
+        colors_lda = [marker.color for marker in markers_lda]
+        color_map = ListedColormap(colors_lda)
+        legend = '\n'.join([f'{n+1}-{m.title}' for n, m in enumerate(markers_lda)])
+    elif param == 'mlp':
+        markers_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
+        colors_mlp = [marker.color for marker in markers_mlp]
+        color_map = ListedColormap(colors_mlp)
+        legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_mlp)])
+    else:
+        color_map = ui.comboBox_cmap.currentText()
+        legend = ''
     ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=True)
 
     # Интерполяция значений на сетке
-    if ui.checkBox_vector.isChecked():
-        z_interp, _ = ok.execute("grid", gridx, gridy)
-    else:
-        z_interp, _ = ok.execute("grid", gridx, gridy, backend='C', n_closest_points=clos_win)
+    try:
+        z_interp, _ = ok.execute("grid", gridx, gridy, backend=vector, n_closest_points=2 if vector == 'C' else None)
+    except LinAlgError:
+        set_info('LinalgError', 'red')
+        return
+
     # z_interp = z_interp.reshape(gridx.shape)
     # ok.display_variogram_model()
-
-
 
     # Визуализация результатов
     plt.figure(figsize=(12, 9))
     plt.contour(gridx, gridy, z_interp, colors='k', linewidths=0.5)
     plt.pcolormesh(gridx, gridy, z_interp, shading='auto', cmap=color_map)
     plt.scatter(x, y, c=z, cmap=color_map)
-    plt.colorbar(label='Z Value')
+    plt.colorbar(label=param)
     plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
     plt.xlabel('X')
     plt.ylabel('Y')
-    plt.title('Ordinary Kriging Interpolation')
+
+    plt.title(f'{get_object_name()} {get_research_name()} {param}\n{legend}\nМодель интерполяции: {var_model}\nКоличество ячеек '
+              f'усреднения вариограммы: {nlags}\nЛогистический вес: {weight}\nВекторизованная интерполяция: {vector}'
+              f'\nКол-во ячеек сетки: {grid_size}x{grid_size}')
     plt.tight_layout()
     plt.show()
-
