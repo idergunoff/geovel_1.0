@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DrawMapForm</class>
+ <widget class="QWidget" name="DrawMapForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>318</width>
+    <height>190</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Draw Map Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_27">
+       <property name="text">
+        <string>var_model:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="comboBox_var_model">
+       <item>
+        <property name="text">
+         <string>linear</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>power</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>gaussian</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>spherical</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>exponential</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QCheckBox" name="checkBox_weight">
+       <property name="toolTip">
+        <string>Флаг, указывающий, следует ли при автоматическом расчете модели вариограммы более сильно взвешивать полувариантность с меньшими задержками. В настоящее время процедура жестко запрограммирована таким образом, что веса вычисляются на основе логистической функции, поэтому веса при малых задержках равны ~ 1, а веса при самых больших задержках равны ~ 0; центр логистического взвешивания жестко запрограммирован так, чтобы он находился на 70% расстояния от наименьшего запаздывания до самого большого. самое большое отставание. Установка этого параметра в значение True указывает на то, что будут применены веса. </string>
+       </property>
+       <property name="text">
+        <string>weight</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_28">
+       <property name="toolTip">
+        <string>Количество ячеек усреднения для вариограммы</string>
+       </property>
+       <property name="text">
+        <string>nlags:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="spinBox_nlags">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="value">
+        <number>6</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QCheckBox" name="checkBox_vector">
+       <property name="toolTip">
+        <string>подход при кригинге</string>
+       </property>
+       <property name="text">
+        <string>vectorized</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="comboBox_cmap"/>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="spinBox_grid">
+       <property name="toolTip">
+        <string>Размер сетки</string>
+       </property>
+       <property name="minimum">
+        <number>20</number>
+       </property>
+       <property name="maximum">
+        <number>250</number>
+       </property>
+       <property name="value">
+        <number>75</number>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>cmap:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>grid:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="pushButton_map">
+     <property name="text">
+      <string>DRAW</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

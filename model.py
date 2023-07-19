@@ -428,5 +428,4 @@ class Thermogram(Base):
     h_well = relationship("HorizontalWell", back_populates="thermograms")
 
 
-
 Base.metadata.create_all(engine)

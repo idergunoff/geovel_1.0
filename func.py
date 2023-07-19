@@ -1146,7 +1146,10 @@ def string_to_unique_number(strings, type_analysis):
     unique_strings = {}  # Словарь для хранения уникальных строк и их численного представления
     result = []  # Список для хранения результата
     table = MarkerLDA if type_analysis == 'lda' else MarkerMLP
-    markers = session.query(table).filter(table.analysis_id == get_MLP_id()).all()
+    if type_analysis == 'lda':
+        markers = session.query(table).filter(table.analysis_id == get_LDA_id()).all()
+    else:
+        markers = session.query(table).filter(table.analysis_id == get_MLP_id()).all()
 
     for marker in markers:
         num = len(unique_strings) + 1

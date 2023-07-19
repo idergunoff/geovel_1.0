@@ -523,7 +523,6 @@ def calc_MLP():
         colors[m.title] = m.color
     # colors['test'] = '#999999'
     working_data, data_tsne, curr_form, title_graph = get_working_data_mlp()
-    print(working_data, data_tsne, curr_form)
     fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
 
