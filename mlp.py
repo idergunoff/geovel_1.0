@@ -1,5 +1,3 @@
-import pandas as pd
-
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 from krige import draw_map
@@ -68,7 +66,10 @@ def update_list_mlp(db=False):
     ui.comboBox_mlp_analysis.clear()
     for i in session.query(AnalysisMLP).order_by(AnalysisMLP.title).all():
         ui.comboBox_mlp_analysis.addItem(f'{i.title} id{i.id}')
-    update_list_marker_mlp(db)
+    if db:
+        update_list_marker_mlp_db()
+    else:
+        update_list_marker_mlp()
 
 
 def add_marker_mlp():
@@ -106,7 +107,7 @@ def remove_marker_mlp():
         pass
 
 
-def update_list_marker_mlp(db=False):
+def update_list_marker_mlp():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()
     for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.title).all():
@@ -115,7 +116,19 @@ def update_list_marker_mlp(db=False):
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
                                          Qt.BackgroundRole)
     update_list_well_markup_mlp()
-    update_list_param_mlp(db)
+    update_list_param_mlp(False)
+
+
+def update_list_marker_mlp_db():
+    """Обновить список маркеров MLP"""
+    ui.comboBox_mark_mlp.clear()
+    for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.title).all():
+        item = f'{i.title} id{i.id}'
+        ui.comboBox_mark_mlp.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
+                                         Qt.BackgroundRole)
+    update_list_well_markup_mlp()
+    update_list_param_mlp(True)
 
 
 def add_well_markup_mlp():
@@ -668,10 +681,11 @@ def calc_obj_mlp():
     working_data_result['mark'] = new_mark
     x = list(working_data_result['x_pulc'])
     y = list(working_data_result['y_pulc'])
-    if len(set(new_mark)) == 2:
-        z = list(working_data_result[list(set(new_mark))[0]])
-    else:
-        z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+    # if len(set(new_mark)) == 2:
+    #     z = list(working_data_result[list(set(new_mark))[0]])
+    # else:
+    #     z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+    z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
     draw_map(x, y, z, 'mlp')
     try:
         file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'

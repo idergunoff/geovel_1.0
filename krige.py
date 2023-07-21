@@ -12,9 +12,7 @@ cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purple
              'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20b', 'tab20c', 'flag', 'prism', 'ocean', 'gist_earth', 'terrain',
              'gist_stern', 'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'gist_rainbow', 'rainbow', 'jet',
              'turbo', 'nipy_spectral', 'gist_ncar']
-for i in cmap_list:
-    ui.comboBox_cmap.addItem(i)
-ui.comboBox_cmap.setCurrentText('gist_rainbow')
+
 
 
 
@@ -91,14 +89,17 @@ def draw_map(list_x, list_y, list_z, param):
             colors_lda = [marker.color for marker in markers_lda]
             color_map = ListedColormap(colors_lda)
             legend = '\n'.join([f'{n+1}-{m.title}' for n, m in enumerate(markers_lda)])
+            levels_count = len(markers_lda) - 1
         elif param == 'mlp':
             markers_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
             colors_mlp = [marker.color for marker in markers_mlp]
             color_map = ListedColormap(colors_mlp)
             legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_mlp)])
+            levels_count = len(markers_mlp) - 1
         else:
             color_map = ui_dm.comboBox_cmap.currentText()
             legend = ''
+            levels_count = 10
         ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=True)
 
         # Интерполяция значений на сетке
@@ -113,7 +114,7 @@ def draw_map(list_x, list_y, list_z, param):
 
         # Визуализация результатов
         plt.figure(figsize=(12, 9))
-        plt.contour(gridx, gridy, z_interp, colors='k', linewidths=0.5)
+        plt.contour(gridx, gridy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
         plt.pcolormesh(gridx, gridy, z_interp, shading='auto', cmap=color_map)
         plt.scatter(x, y, c=z, cmap=color_map)
         plt.colorbar(label=param)

@@ -10,6 +10,7 @@ from layer import *
 from well import *
 from lda import *
 from mlp import *
+from knn import *
 from monitoring import *
 from krige import *
 
@@ -120,6 +121,7 @@ ui.pushButton_add_lda.clicked.connect(add_lda)
 ui.pushButton_rem_lda.clicked.connect(remove_lda)
 ui.pushButton_copy_lda.clicked.connect(copy_lda)
 ui.pushButton_copy_lda_to_mlp.clicked.connect(copy_lda_to_mlp)
+ui.pushButton_copy_lda_to_knn.clicked.connect(copy_lda_to_knn)
 ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
 ui.pushButton_rem_mark_lda.clicked.connect(remove_marker_lda)
 ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
@@ -139,6 +141,8 @@ ui.pushButton_calc_lda.clicked.connect(calc_LDA)
 ui.pushButton_calc_obj_lda.clicked.connect(calc_obj_lda)
 ui.pushButton_add_mfcc.clicked.connect(add_param_mfcc_lda)
 ui.pushButton_add_all_mfcc.clicked.connect(add_all_param_mfcc_lda)
+ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
+ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda_db)
 # ui.pushButton_test.clicked.connect(test)
 
 #   mlp
@@ -162,7 +166,30 @@ ui.pushButton_calc_mlp.clicked.connect(calc_MLP)
 ui.pushButton_calc_obj_mlp.clicked.connect(calc_obj_mlp)
 ui.pushButton_add_mfcc_mlp.clicked.connect(add_param_mfcc_mlp)
 ui.pushButton_add_all_mfcc_mlp.clicked.connect(add_all_param_mfcc_mlp)
+ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp_db)
 
+#   knn
+ui.pushButton_add_knn.clicked.connect(add_knn)
+ui.pushButton_rem_knn.clicked.connect(remove_knn)
+ui.pushButton_copy_knn.clicked.connect(copy_knn)
+ui.pushButton_add_mark_knn.clicked.connect(add_marker_knn)
+ui.pushButton_rem_mark_knn.clicked.connect(remove_marker_knn)
+ui.pushButton_add_well_knn.clicked.connect(add_well_markup_knn)
+ui.pushButton_add_geovel_knn.clicked.connect(add_param_geovel_knn)
+ui.pushButton_add_all_geovel_knn.clicked.connect(add_all_param_geovel_knn)
+ui.pushButton_add_distr_knn.clicked.connect(add_param_distr_knn)
+ui.pushButton_add_sep_knn.clicked.connect(add_param_sep_knn)
+ui.pushButton_add_all_distr_knn.clicked.connect(add_all_param_distr_knn)
+ui.pushButton_update_well_knn.clicked.connect(update_well_markup_knn)
+ui.pushButton_rem_well_knn.clicked.connect(remove_well_markup_knn)
+ui.pushButton_rem_param_knn.clicked.connect(remove_param_geovel_knn)
+ui.pushButton_clear_params_knn.clicked.connect(remove_all_param_geovel_knn)
+ui.pushButton_draw_knn.clicked.connect(draw_KNN)
+ui.pushButton_calc_knn.clicked.connect(calc_KNN)
+# ui.pushButton_calc_obj_knn.clicked.connect(calc_obj_knn)
+ui.pushButton_add_mfcc_knn.clicked.connect(add_param_mfcc_knn)
+ui.pushButton_add_all_mfcc_knn.clicked.connect(add_all_param_mfcc_knn)
+ui.comboBox_knn_analysis.activated.connect(update_list_marker_knn_db)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
@@ -179,14 +206,11 @@ ui.comboBox_profile.activated.connect(update_formation_combobox)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
-ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda)
-ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp)
 
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
 ui.checkBox_all_formation.stateChanged.connect(draw_param)
 ui.checkBox_profile_well.stateChanged.connect(update_list_well)
-
 
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)
@@ -202,7 +226,6 @@ ui.doubleSpinBox_vsr.valueChanged.connect(draw_wells)
 ui.listWidget_well.currentItemChanged.connect(show_data_well)
 ui.listWidget_well.currentItemChanged.connect(update_boundaries)
 ui.listWidget_bound.currentItemChanged.connect(draw_bound_int)
-ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
 
 ###################################################################
 #########################   Monitoring   ##########################
@@ -251,8 +274,10 @@ set_info('Старт...', 'green')
 set_random_color()
 update_list_lda(True)
 update_list_mlp(True)
+update_list_knn(True)
 set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
+set_param_knn_to_combobox()
 
 # update_list_param_lda()
 

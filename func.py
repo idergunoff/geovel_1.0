@@ -692,7 +692,7 @@ def draw_boundary(bound_id, index):
 
 
 #################################################################
-########################## LDA MLP ##############################
+###################### LDA MLP KNN GPC ##########################
 #################################################################
 
 
@@ -704,12 +704,20 @@ def get_MLP_id():
     return ui.comboBox_mlp_analysis.currentText().split(' id')[-1]
 
 
+def get_KNN_id():
+    return ui.comboBox_knn_analysis.currentText().split(' id')[-1]
+
+
 def get_lda_title():
     return ui.comboBox_lda_analysis.currentText().split(' id')[0]
 
 
 def get_mlp_title():
     return ui.comboBox_mlp_analysis.currentText().split(' id')[0]
+
+
+def get_knn_title():
+    return ui.comboBox_knn_analysis.currentText().split(' id')[0]
 
 
 def get_marker_id():
@@ -720,12 +728,20 @@ def get_marker_mlp_id():
     return ui.comboBox_mark_mlp.currentText().split(' id')[-1]
 
 
+def get_marker_knn_id():
+    return ui.comboBox_mark_knn.currentText().split(' id')[-1]
+
+
 def get_marker_title():
     return ui.comboBox_mark_lda.currentText().split(' id')[0]
 
 
 def get_marker_mlp_title():
     return ui.comboBox_mark_mlp.currentText().split(' id')[0]
+
+
+def get_marker_knn_title():
+    return ui.comboBox_mark_knn.currentText().split(' id')[0]
 
 
 def get_markup_id():
@@ -738,6 +754,11 @@ def get_markup_mlp_id():
         return ui.listWidget_well_mlp.currentItem().text().split(' id')[-1]
 
 
+def get_markup_knn_id():
+    if ui.listWidget_well_knn.currentItem():
+        return ui.listWidget_well_knn.currentItem().text().split(' id')[-1]
+
+
 def set_param_lda_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_lda.addItem(param)
@@ -746,6 +767,11 @@ def set_param_lda_to_combobox():
 def set_param_mlp_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_mlp.addItem(param)
+
+
+def set_param_knn_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_knn.addItem(param)
 
 
 def add_param_lda(param):
@@ -772,30 +798,59 @@ def add_param_mlp(param):
     session.commit()
 
 
+def add_param_knn(param):
+    if param.startswith('distr') or param.startswith('sep'):
+        atr, count = ui.comboBox_atrib_distr_knn.currentText(), ui.spinBox_count_distr_knn.value()
+        param = f'{param}_{atr}_{count}'
+    elif param.startswith('mfcc'):
+        atr, count = ui.comboBox_atrib_mfcc_knn.currentText(), ui.spinBox_count_mfcc_knn.value()
+        param = f'{param}_{atr}_{count}'
+    new_param_knn = ParameterKNN(analysis_id=get_KNN_id(), parameter=param)
+    session.add(new_param_knn)
+    session.commit()
+
+
 def build_table_train(db=False, analisis='lda'):
 
     # Получение списка параметров
-    list_param = get_list_param_lda() if analisis == 'lda' else get_list_param_mlp()
+    if analisis == 'lda':
+        list_param = get_list_param_lda()
+        analisis_id = get_LDA_id()
+    elif analisis == 'mlp':
+        list_param = get_list_param_mlp()
+        analisis_id = get_MLP_id()
+    elif analisis == 'knn':
+        list_param = get_list_param_knn()
+        analisis_id = get_KNN_id()
 
     # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
     if db:
         if analisis == 'lda':
             data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
-        else:
+        elif analisis == 'mlp':
             data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
+        elif analisis == 'knn':
+            data = session.query(AnalysisKNN.data).filter_by(id=get_KNN_id()).first()
         if data:
             data_train = pd.DataFrame(json.loads(data[0]))
             # print(data_train.to_string(max_rows=None))
             return data_train, list_param
 
+    data_train, _ = build_table_test_no_db(analisis, analisis_id, list_param)
+    return data_train, list_param
+
+
+def build_table_test_no_db(analisis, analisis_id, list_param):
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
 
     # Получаем размеченные участки
     if analisis == 'lda':
-        markups = session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id()).all()
-    else:
-        markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
+        markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
+    elif analisis == 'mlp':
+        markups = session.query(MarkupMLP).filter_by(analysis_id=analisis_id).all()
+    elif analisis == 'knn':
+        markups = session.query(MarkupKNN).filter_by(analysis_id=analisis_id).all()
 
     ui.progressBar.setMaximum(len(markups))
 
@@ -863,16 +918,23 @@ def build_table_train(db=False, analisis='lda'):
         ui.progressBar.setValue(nm + 1)
     data_train_to_db = json.dumps(data_train.to_dict())
     if analisis == 'lda':
-        session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
-    else:
-        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': data_train_to_db}, synchronize_session='fetch')
+        session.query(AnalysisLDA).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+    elif analisis == 'mlp':
+        session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+    elif analisis == 'knn':
+        session.query(AnalysisKNN).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     session.commit()
     # print(data_train.to_string(max_rows=None))
     return data_train, list_param
 
 
 def build_table_test(analisis='lda'):
-    list_param = get_list_param_lda() if analisis == 'lda' else get_list_param_mlp()
+    if analisis == 'lda':
+        list_param, analisis_title = get_list_param_lda(), ui.comboBox_lda_analysis.currentText()
+    elif analisis == 'mlp':
+        list_param, analisis_title = get_list_param_mlp(), ui.comboBox_mlp_analysis.currentText()
+    elif analisis == 'knn':
+        list_param, analisis_title = get_list_param_knn(), ui.comboBox_knn_analysis.currentText()
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
     list_up = json.loads(curr_form.layer_up.layer_line)
@@ -887,7 +949,6 @@ def build_table_test(analisis='lda'):
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
     ui.progressBar.setMaximum(len(list_up))
-    analisis_title = ui.comboBox_lda_analysis.currentText() if analisis == 'lda' else ui.comboBox_mlp_analysis.currentText()
     set_info(f'Процесс сбора параметров {analisis_title} по профилю {curr_form.profile.title}',
              'blue')
     for i in range(len(list_up)):
@@ -931,6 +992,11 @@ def get_list_marker_mlp():
     return [m.title for m in markers]
 
 
+def get_list_marker_knn():
+    markers = session.query(MarkerKNN).filter_by(analysis_id=get_KNN_id()).all()
+    return [m.title for m in markers]
+
+
 def get_list_param_lda():
     parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
     return [p.parameter for p in parameters]
@@ -938,6 +1004,11 @@ def get_list_param_lda():
 
 def get_list_param_mlp():
     parameters = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
+    return [p.parameter for p in parameters]
+
+
+def get_list_param_knn():
+    parameters = session.query(ParameterKNN).filter_by(analysis_id=get_KNN_id()).all()
     return [p.parameter for p in parameters]
 
 
@@ -1093,6 +1164,114 @@ def get_working_data_mlp():
                   f'точность на тестовой выборке: {round(test_accuracy, 7)}'
     return working_data, data_tsne, curr_form, title_graph
 
+
+def get_working_data_knn():
+
+    """ Построить диаграмму рассеяния для модели анализа KNN """
+    data_train, list_param = build_table_train(True, 'knn')
+    list_param_knn = data_train.columns.tolist()[2:]
+    colors = {}
+    for m in session.query(MarkerKNN).filter(MarkerKNN.analysis_id == get_KNN_id()).all():
+        colors[m.title] = m.color
+    training_sample = data_train[list_param_knn].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+
+    try:
+        # # Нормализация данных
+        # scaler = StandardScaler()
+        # training_sample_norm = scaler.fit_transform(training_sample)
+        # Разделение данных на обучающую и тестовую выборки
+        # training_saknne_train, training_sample_test, markup_train, markup_test = train_test_split(
+        #     training_sample_norm, markup, test_size=0.20, random_state=1
+        # )
+        # Создание и тренировка KNN
+        n_knn = ui.spinBox_neighbors.value()
+        weights_knn = 'distance' if ui.checkBox_knn_weights.isChecked() else 'uniform'
+        algorithm_knn = ui.comboBox_knn_algorithm.currentText()
+        knn = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
+        knn.fit(training_sample, markup)
+        for i in knn.kneighbors(training_sample, return_distance=True):
+            print(i)
+        print(knn.kneighbors_graph(training_sample))
+
+
+    # Оценка точности на обучающей выборке
+    #     train_accuracy = knn.score(training_sample_norm, markup)
+    #     training_saknne_train, training_sample_test, markup_train, markup_test = train_test_split(
+    #         training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_knn.value(), random_state=1)
+    #     test_accuracy = knn.score(training_sample_test, markup_test)
+    #     set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
+    #              f'activation - {ui.comboBox_activation_knn.currentText()}, '
+    #              f'solver - {ui.comboBox_solvar_knn.currentText()}, '
+    #              f'alpha - {ui.doubleSpinBox_alpha_knn.value()}, '
+    #              f'{"early stopping, " if ui.checkBox_e_stop_knn.isChecked() else ""}'
+    #              f'validation_fraction - {ui.doubleSpinBox_valid_knn.value()}, '
+    #              f'точность на всей обучающей выборке: {train_accuracy}, '
+    #              f'точность на тестовой выборке: {test_accuracy}', 'blue')
+    except ValueError:
+        set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
+        return
+
+
+    # Создание и обучение модели t-SNE для отображения результата на графике
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+    preds_proba_train = knn.predict_proba(training_sample)
+    preds_train = knn.predict(training_sample)
+    data_probability = pd.DataFrame(preds_proba_train)
+    data_probability['mark'] = preds_train
+    data_probability['shape'] = ['train'] * len(preds_train)
+
+
+    list_cat = list(knn.classes_)
+
+    # Подготовка тестовых данных для MLP
+    working_data, curr_form = build_table_test('knn')
+    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
+    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
+    working_sample = working_data.iloc[:, 3:]
+
+    try:
+        # Предсказание меток для тестовых данных
+        new_mark = knn.predict(working_sample)
+        probability = knn.predict_proba(working_sample)
+    except ValueError:
+        # Обработка возможных ошибок в расчетах MLP для тестовых данных
+        data = imputer.fit_transform(working_sample)
+        new_mark = knn.predict(data)
+        probability = knn.predict_proba(data)
+        for i in working_data.index:
+            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                         f' этого измерения может быть не корректен', 'red')
+
+    # Добавление предсказанных меток и вероятностей в рабочие данные
+    working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data['mark'] = new_mark
+
+    data_work_probability = pd.DataFrame(probability)
+    data_work_probability['mark'] = new_mark
+    data_work_probability['shape'] = ['work'] * len(new_mark)
+    data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+    # Вычисление t-SNE для обучающих и тестовых данных
+    data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+    data_tsne['mark'] = data_probability['mark']
+    data_tsne['shape'] = data_probability['shape']
+
+    # Формирование заголовка для графика
+    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+                  # f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+                  # f'{str(len(data_tsne.index))}\n' \
+                  # f'hidden_layer_sizes - ({",".join(map(str, layers))}), ' \
+                  # f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, ' \
+                  # f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}' \
+                  # f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}\n' \
+                  # f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n' \
+                  # f'точность на тестовой выборке: {round(test_accuracy, 7)}'
+    return working_data, data_tsne, curr_form, title_graph
 
 def get_distribution(values: list, n: int) -> list:
     # Находим минимальное и максимальное значения в наборе данных
