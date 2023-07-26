@@ -96,6 +96,18 @@ def draw_map(list_x, list_y, list_z, param):
             color_map = ListedColormap(colors_mlp)
             legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_mlp)])
             levels_count = len(markers_mlp) - 1
+        elif param == 'knn':
+            markers_knn = session.query(MarkerKNN).filter(MarkerKNN.analysis_id == get_KNN_id()).all()
+            colors_knn = [marker.color for marker in markers_knn]
+            color_map = ListedColormap(colors_knn)
+            legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_knn)])
+            levels_count = len(markers_knn) - 1
+        elif param == 'gpc':
+            markers_gpc = session.query(MarkerGPC).filter(MarkerGPC.analysis_id == get_GPC_id()).all()
+            colors_gpc = [marker.color for marker in markers_gpc]
+            color_map = ListedColormap(colors_gpc)
+            legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_gpc)])
+            levels_count = len(markers_gpc) - 1
         else:
             color_map = ui_dm.comboBox_cmap.currentText()
             legend = ''

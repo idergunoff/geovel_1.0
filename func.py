@@ -708,6 +708,10 @@ def get_KNN_id():
     return ui.comboBox_knn_analysis.currentText().split(' id')[-1]
 
 
+def get_GPC_id():
+    return ui.comboBox_gpc_analysis.currentText().split(' id')[-1]
+
+
 def get_lda_title():
     return ui.comboBox_lda_analysis.currentText().split(' id')[0]
 
@@ -718,6 +722,10 @@ def get_mlp_title():
 
 def get_knn_title():
     return ui.comboBox_knn_analysis.currentText().split(' id')[0]
+
+
+def get_gpc_title():
+    return ui.comboBox_gpc_analysis.currentText().split(' id')[0]
 
 
 def get_marker_id():
@@ -732,6 +740,10 @@ def get_marker_knn_id():
     return ui.comboBox_mark_knn.currentText().split(' id')[-1]
 
 
+def get_marker_gpc_id():
+    return ui.comboBox_mark_gpc.currentText().split(' id')[-1]
+
+
 def get_marker_title():
     return ui.comboBox_mark_lda.currentText().split(' id')[0]
 
@@ -742,6 +754,10 @@ def get_marker_mlp_title():
 
 def get_marker_knn_title():
     return ui.comboBox_mark_knn.currentText().split(' id')[0]
+
+
+def get_marker_gpc_title():
+    return ui.comboBox_mark_gpc.currentText().split(' id')[0]
 
 
 def get_markup_id():
@@ -759,6 +775,11 @@ def get_markup_knn_id():
         return ui.listWidget_well_knn.currentItem().text().split(' id')[-1]
 
 
+def get_markup_gpc_id():
+    if ui.listWidget_well_gpc.currentItem():
+        return ui.listWidget_well_gpc.currentItem().text().split(' id')[-1]
+
+
 def set_param_lda_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_lda.addItem(param)
@@ -772,6 +793,11 @@ def set_param_mlp_to_combobox():
 def set_param_knn_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_knn.addItem(param)
+
+
+def set_param_gpc_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_gpc.addItem(param)
 
 
 def add_param_lda(param):
@@ -810,6 +836,18 @@ def add_param_knn(param):
     session.commit()
 
 
+def add_param_gpc(param):
+    if param.startswith('distr') or param.startswith('sep'):
+        atr, count = ui.comboBox_atrib_distr_gpc.currentText(), ui.spinBox_count_distr_gpc.value()
+        param = f'{param}_{atr}_{count}'
+    elif param.startswith('mfcc'):
+        atr, count = ui.comboBox_atrib_mfcc_gpc.currentText(), ui.spinBox_count_mfcc_gpc.value()
+        param = f'{param}_{atr}_{count}'
+    new_param_gpc = ParameterGPC(analysis_id=get_GPC_id(), parameter=param)
+    session.add(new_param_gpc)
+    session.commit()
+
+
 def build_table_train(db=False, analisis='lda'):
 
     # Получение списка параметров
@@ -822,6 +860,9 @@ def build_table_train(db=False, analisis='lda'):
     elif analisis == 'knn':
         list_param = get_list_param_knn()
         analisis_id = get_KNN_id()
+    elif analisis == 'gpc':
+        list_param = get_list_param_gpc()
+        analisis_id = get_GPC_id()
 
     # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
     if db:
@@ -831,6 +872,8 @@ def build_table_train(db=False, analisis='lda'):
             data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
         elif analisis == 'knn':
             data = session.query(AnalysisKNN.data).filter_by(id=get_KNN_id()).first()
+        elif analisis == 'gpc':
+            data = session.query(AnalysisGPC.data).filter_by(id=get_GPC_id()).first()
         if data:
             data_train = pd.DataFrame(json.loads(data[0]))
             # print(data_train.to_string(max_rows=None))
@@ -851,6 +894,8 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         markups = session.query(MarkupMLP).filter_by(analysis_id=analisis_id).all()
     elif analisis == 'knn':
         markups = session.query(MarkupKNN).filter_by(analysis_id=analisis_id).all()
+    elif analisis == 'gpc':
+        markups = session.query(MarkupGPC).filter_by(analysis_id=analisis_id).all()
 
     ui.progressBar.setMaximum(len(markups))
 
@@ -923,6 +968,8 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     elif analisis == 'knn':
         session.query(AnalysisKNN).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+    elif analisis == 'gpc':
+        session.query(AnalysisGPC).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     session.commit()
     # print(data_train.to_string(max_rows=None))
     return data_train, list_param
@@ -935,6 +982,8 @@ def build_table_test(analisis='lda'):
         list_param, analisis_title = get_list_param_mlp(), ui.comboBox_mlp_analysis.currentText()
     elif analisis == 'knn':
         list_param, analisis_title = get_list_param_knn(), ui.comboBox_knn_analysis.currentText()
+    elif analisis == 'gpc':
+        list_param, analisis_title = get_list_param_gpc(), ui.comboBox_gpc_analysis.currentText()
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
     list_up = json.loads(curr_form.layer_up.layer_line)
@@ -997,6 +1046,11 @@ def get_list_marker_knn():
     return [m.title for m in markers]
 
 
+def get_list_marker_gpc():
+    markers = session.query(MarkerGPC).filter_by(analysis_id=get_GPC_id()).all()
+    return [m.title for m in markers]
+
+
 def get_list_param_lda():
     parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
     return [p.parameter for p in parameters]
@@ -1009,6 +1063,11 @@ def get_list_param_mlp():
 
 def get_list_param_knn():
     parameters = session.query(ParameterKNN).filter_by(analysis_id=get_KNN_id()).all()
+    return [p.parameter for p in parameters]
+
+
+def get_list_param_gpc():
+    parameters = session.query(ParameterGPC).filter_by(analysis_id=get_GPC_id()).all()
     return [p.parameter for p in parameters]
 
 
@@ -1119,7 +1178,7 @@ def get_working_data_mlp():
     # Подготовка тестовых данных для MLP
     working_data, curr_form = build_table_test('mlp')
     profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
-    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
+    set_info(f'Процесс расчёта MLP. {ui.comboBox_mlp_analysis.currentText()} по профилю {profile_title}', 'blue')
     working_sample = scaler.fit_transform(working_data.iloc[:, 3:])
 
     try:
@@ -1228,7 +1287,7 @@ def get_working_data_knn():
     # Подготовка тестовых данных для MLP
     working_data, curr_form = build_table_test('knn')
     profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
-    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
+    set_info(f'Процесс расчёта KNN. {ui.comboBox_gpc_analysis.currentText()} по профилю {profile_title}', 'blue')
     working_sample = working_data.iloc[:, 3:]
 
     try:
@@ -1272,6 +1331,109 @@ def get_working_data_knn():
                   # f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n' \
                   # f'точность на тестовой выборке: {round(test_accuracy, 7)}'
     return working_data, data_tsne, curr_form, title_graph
+
+
+def get_working_data_gpc():
+
+    """ Построить диаграмму рассеяния для модели анализа GPC """
+    data_train, list_param = build_table_train(True, 'gpc')
+    list_param_gpc = data_train.columns.tolist()[2:]
+    colors = {}
+    for m in session.query(MarkerGPC).filter(MarkerGPC.analysis_id == get_GPC_id()).all():
+        colors[m.title] = m.color
+    training_sample = data_train[list_param_gpc].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+
+    try:
+
+        # Создание и тренировка GPC
+        gpc_kernel_width = ui.doubleSpinBox_gpc_wigth.value()
+        gpc_kernel_scale = ui.doubleSpinBox_gpc_scale.value()
+        n_restart_optimization = ui.spinBox_gpc_n_restart.value()
+        multi_class = ui.comboBox_gpc_multi.currentText()
+        kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+        gpc = GaussianProcessClassifier(
+            kernel=kernel,
+            n_restarts_optimizer=n_restart_optimization,
+            random_state = 0,
+            multi_class=multi_class,
+            n_jobs=-1
+        )
+        gpc.fit(training_sample, markup)
+
+        # Оценка точности на обучающей выборке
+        train_accuracy = gpc.score(training_sample, markup)
+        training_sagpce_train, training_sample_test, markup_train, markup_test = train_test_split(
+            training_sample, markup, test_size=0.2, random_state=1)
+        test_accuracy = gpc.score(training_sample_test, markup_test)
+        set_info(f'точность на всей обучающей выборке: {train_accuracy}, '
+                 f'точность на тестовой выборке: {test_accuracy}', 'blue')
+    except ValueError:
+        set_info(f'Ошибка в расчетах GPC! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
+        return
+
+
+
+    # Создание и обучение модели t-SNE для отображения результата на графике
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+    preds_proba_train = gpc.predict_proba(training_sample)
+    preds_train = gpc.predict(training_sample)
+    data_probability = pd.DataFrame(preds_proba_train)
+    data_probability['mark'] = preds_train
+    data_probability['shape'] = ['train'] * len(preds_train)
+
+
+    list_cat = list(gpc.classes_)
+
+    # Подготовка тестовых данных для MLP
+    working_data, curr_form = build_table_test('gpc')
+    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
+    set_info(f'Процесс расчёта GPC. {ui.comboBox_gpc_analysis.currentText()} по профилю {profile_title}', 'blue')
+    working_sample = working_data.iloc[:, 3:]
+
+    try:
+        # Предсказание меток для тестовых данных
+        new_mark = gpc.predict(working_sample)
+        probability = gpc.predict_proba(working_sample)
+    except ValueError:
+        # Обработка возможных ошибок в расчетах MLP для тестовых данных
+        data = imputer.fit_transform(working_sample)
+        new_mark = gpc.predict(data)
+        probability = gpc.predict_proba(data)
+        for i in working_data.index:
+            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                         f' этого измерения может быть не корректен', 'red')
+
+    # Добавление предсказанных меток и вероятностей в рабочие данные
+    working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data['mark'] = new_mark
+
+    data_work_probability = pd.DataFrame(probability)
+    data_work_probability['mark'] = new_mark
+    data_work_probability['shape'] = ['work'] * len(new_mark)
+    data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+    # Вычисление t-SNE для обучающих и тестовых данных
+    data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+    data_tsne['mark'] = data_probability['mark']
+    data_tsne['shape'] = data_probability['shape']
+
+    # Формирование заголовка для графика
+    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
+        # f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+    # f'{str(len(data_tsne.index))}\n' \
+    # f'hidden_layer_sizes - ({",".join(map(str, layers))}), ' \
+    # f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, ' \
+    # f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}' \
+    # f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}\n' \
+    # f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n' \
+    # f'точность на тестовой выборке: {round(test_accuracy, 7)}'
+    return working_data, data_tsne, curr_form, title_graph
+
 
 def get_distribution(values: list, n: int) -> list:
     # Находим минимальное и максимальное значения в наборе данных
@@ -1324,11 +1486,14 @@ def check_list_lengths(list_of_lists):
 def string_to_unique_number(strings, type_analysis):
     unique_strings = {}  # Словарь для хранения уникальных строк и их численного представления
     result = []  # Список для хранения результата
-    table = MarkerLDA if type_analysis == 'lda' else MarkerMLP
     if type_analysis == 'lda':
-        markers = session.query(table).filter(table.analysis_id == get_LDA_id()).all()
-    else:
-        markers = session.query(table).filter(table.analysis_id == get_MLP_id()).all()
+        markers = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
+    elif type_analysis == 'mlp':
+        markers = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
+    elif type_analysis == 'knn':
+        markers = session.query(MarkerKNN).filter(MarkerKNN.analysis_id == get_KNN_id()).all()
+    elif type_analysis == 'gpc':
+        markers = session.query(MarkerGPC).filter(MarkerGPC.analysis_id == get_GPC_id()).all()
 
     for marker in markers:
         num = len(unique_strings) + 1

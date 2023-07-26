@@ -578,119 +578,87 @@ def calc_KNN():
             pass
 
 
-# def calc_obj_knn():
-#     working_data_result = pd.DataFrame()
-#     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
-#         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
-#         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
-#         update_formation_combobox()
-#         if len(prof.formations) == 1:
-#             ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
-#         elif len(prof.formations) > 1:
-#             Choose_Formation = QtWidgets.QDialog()
-#             ui_cf = Ui_FormationLDA()
-#             ui_cf.setupUi(Choose_Formation)
-#             Choose_Formation.show()
-#             Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-#             for f in prof.formations:
-#                 ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
-#             ui_cf.listWidget_form_lda.setCurrentRow(0)
-#
-#             def form_knn_ok():
-#                 ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
-#                 Choose_Formation.close()
-#             ui_cf.pushButton_ok_form_lda.clicked.connect(form_knn_ok)
-#             Choose_Formation.exec_()
-#         working_data, curr_form = build_table_test('knn')
-#         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
-#     data_train, list_param = build_table_train(True, 'knn')
-#     list_param_knn = data_train.columns.tolist()[2:]
-#     training_sample = data_train[list_param_knn].values.tolist()
-#     markup = sum(data_train[['mark']].values.tolist(), [])
-#
-#     try:
-#         # Нормализация данных
-#         scaler = StandardScaler()
-#         training_sample_norm = scaler.fit_transform(training_sample)
-#
-#         # Создание и тренировка KNN
-#         layers = tuple(map(int, ui.lineEdit_layer_knn.text().split()))
-#         knn = KNNClassifier(
-#             hidden_layer_sizes=layers,
-#             activation=ui.comboBox_activation_knn.currentText(),
-#             solver=ui.comboBox_solvar_knn.currentText(),
-#             alpha=ui.doubleSpinBox_alpha_knn.value(),
-#             max_iter=5000,
-#             early_stopping=ui.checkBox_e_stop_knn.isChecked(),
-#             validation_fraction=ui.doubleSpinBox_valid_knn.value(),
-#             random_state=1
-#         )
-#         knn.fit(training_sample_norm, markup)
-#
-#         # Оценка точности на обучающей выборке
-#         train_accuracy = knn.score(training_sample_norm, markup)
-#
-#         # Разделение данных на обучающую и тестовую выборки с использованием заданного значения test_size
-#         training_saknne_train, training_sample_test, markup_train, markup_test = train_test_split(
-#             training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_knn.value(), random_state=1)
-#
-#         # Оценка точности на тестовой выборке
-#         test_accuracy = knn.score(training_sample_test, markup_test)
-#
-#         # Вывод информации о параметрах KNN и точности модели
-#         set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
-#                  f'activation - {ui.comboBox_activation_knn.currentText()}, '
-#                  f'solver - {ui.comboBox_solvar_knn.currentText()}, '
-#                  f'alpha - {ui.doubleSpinBox_alpha_knn.value()}, '
-#                  f'{"early stopping, " if ui.checkBox_e_stop_knn.isChecked() else ""}'
-#                  f'validation_fraction - {ui.doubleSpinBox_valid_knn.value()}, '
-#                  f'точность на всей обучающей выборке: {train_accuracy}, '
-#                  f'точность на тестовой выборке: {test_accuracy}', 'blue')
-#     except ValueError:
-#         set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
-#                  f'выборки.', 'red')
-#         return
-#
-#
-#     list_cat = list(knn.classes_)
-#
-#     # Подготовка тестовых данных для KNN
-#     set_info(f'Процесс расчёта KNN. {ui.comboBox_lda_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
-#     working_sample = scaler.fit_transform(working_data_result.iloc[:, 3:])
-#
-#     try:
-#         # Предсказание меток для тестовых данных
-#         new_mark = knn.predict(working_sample)
-#         probability = knn.predict_proba(working_sample)
-#     except ValueError:
-#         # Обработка возможных ошибок в расчетах KNN для тестовых данных
-#         data = imputer.fit_transform(working_sample)
-#         new_mark = knn.predict(data)
-#         probability = knn.predict_proba(data)
-#         for i in working_data.index:
-#             p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
-#                      np.isnan(v)]
-#             if len(p_nan) > 0:
-#                 set_info(
-#                     f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-#                     f' этого измерения может быть не корректен', 'red')
-#
-#     # Добавление предсказанных меток и вероятностей в рабочие данные
-#     working_data_result = pd.concat([working_data_result, pd.DataFrame(probability, columns=list_cat)], axis=1)
-#     working_data_result['mark'] = new_mark
-#     x = list(working_data_result['x_pulc'])
-#     y = list(working_data_result['y_pulc'])
-#     # if len(set(new_mark)) == 2:
-#     #     z = list(working_data_result[list(set(new_mark))[0]])
-#     # else:
-#     #     z = string_to_unique_number(list(working_data_result['mark']), 'knn')
-#     z = string_to_unique_number(list(working_data_result['mark']), 'knn')
-#     draw_map(x, y, z, 'knn')
-#     try:
-#         file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_knn_title()}.xlsx'
-#         fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-#                                          filter="Excel Files (*.xlsx)")
-#         working_data_result.to_excel(fn[0])
-#         set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-#     except ValueError:
-#         pass
+def calc_obj_knn():
+    working_data_result = pd.DataFrame()
+    for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
+        count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
+        ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        update_formation_combobox()
+        if len(prof.formations) == 1:
+            ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
+        elif len(prof.formations) > 1:
+            Choose_Formation = QtWidgets.QDialog()
+            ui_cf = Ui_FormationLDA()
+            ui_cf.setupUi(Choose_Formation)
+            Choose_Formation.show()
+            Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+            for f in prof.formations:
+                ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+            ui_cf.listWidget_form_lda.setCurrentRow(0)
+
+            def form_knn_ok():
+                ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
+                Choose_Formation.close()
+            ui_cf.pushButton_ok_form_lda.clicked.connect(form_knn_ok)
+            Choose_Formation.exec_()
+        working_data, curr_form = build_table_test('knn')
+        working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
+    data_train, list_param = build_table_train(True, 'knn')
+    list_param_knn = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_knn].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+
+    try:
+        n_knn = ui.spinBox_neighbors.value()
+        weights_knn = 'distance' if ui.checkBox_knn_weights.isChecked() else 'uniform'
+        algorithm_knn = ui.comboBox_knn_algorithm.currentText()
+        knn = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
+        knn.fit(training_sample, markup)
+    except ValueError:
+        set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                 f'выборки.', 'red')
+        return
+
+
+    list_cat = list(knn.classes_)
+
+    # Подготовка тестовых данных для KNN
+    set_info(f'Процесс расчёта KNN. {ui.comboBox_lda_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
+    working_sample = working_data_result.iloc[:, 3:]
+
+    try:
+        # Предсказание меток для тестовых данных
+        new_mark = knn.predict(working_sample)
+        probability = knn.predict_proba(working_sample)
+    except ValueError:
+        # Обработка возможных ошибок в расчетах KNN для тестовых данных
+        data = imputer.fit_transform(working_sample)
+        new_mark = knn.predict(data)
+        probability = knn.predict_proba(data)
+        for i in working_data_result.index:
+            p_nan = [working_data_result.columns[ic + 3] for ic, v in enumerate(working_data_result.iloc[i, 3:].tolist()) if
+                     np.isnan(v)]
+            if len(p_nan) > 0:
+                set_info(
+                    f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                    f' этого измерения может быть не корректен', 'red')
+
+    # Добавление предсказанных меток и вероятностей в рабочие данные
+    working_data_result = pd.concat([working_data_result, pd.DataFrame(probability, columns=list_cat)], axis=1)
+    working_data_result['mark'] = new_mark
+    x = list(working_data_result['x_pulc'])
+    y = list(working_data_result['y_pulc'])
+    # if len(set(new_mark)) == 2:
+    #     z = list(working_data_result[list(set(new_mark))[0]])
+    # else:
+    #     z = string_to_unique_number(list(working_data_result['mark']), 'knn')
+    z = string_to_unique_number(list(working_data_result['mark']), 'knn')
+    draw_map(x, y, z, 'knn')
+    try:
+        file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_knn_title()}.xlsx'
+        fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                         filter="Excel Files (*.xlsx)")
+        working_data_result.to_excel(fn[0])
+        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+    except ValueError:
+        pass

@@ -1,5 +1,6 @@
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
+from gpc import update_list_gpc
 from mlp import update_list_mlp
 from knn import update_list_knn
 from qt.choose_formation_lda import *
@@ -101,6 +102,35 @@ def copy_lda_to_knn():
     build_table_test_no_db('knn', new_knn.id, [])
     update_list_lda()
     update_list_knn()
+    set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
+
+
+def copy_lda_to_gpc():
+    """Скопировать анализ LDA в GPC"""
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название для копии анализа', 'red')
+        return
+    old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
+    new_gpc = AnalysisGPC(title=ui.lineEdit_string.text())
+    session.add(new_gpc)
+    session.commit()
+    for old_marker in old_lda.markers:
+        new_marker = MarkerGPC(analysis_id=new_gpc.id, title=old_marker.title, color=old_marker.color)
+        session.add(new_marker)
+        for old_markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id(), marker_id=old_marker.id):
+            new_markup = MarkupGPC(
+                analysis_id=new_gpc.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                marker_id=new_marker.id,
+                list_measure=old_markup.list_measure
+            )
+            session.add(new_markup)
+    session.commit()
+    build_table_test_no_db('knn', new_gpc.id, [])
+    update_list_lda()
+    update_list_gpc()
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
 
 
