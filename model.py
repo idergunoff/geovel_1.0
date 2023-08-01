@@ -226,6 +226,7 @@ class Formation(Base):
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
     markups_knn = relationship('MarkupKNN', back_populates='formation')
     markups_gpc = relationship('MarkupGPC', back_populates='formation')
+    model = relationship('FormationAI', back_populates='formation')
 
 
 class Well(Base):
@@ -553,6 +554,40 @@ class Thermogram(Base):
     therm_data = Column(Text)
 
     h_well = relationship("HorizontalWell", back_populates="thermograms")
+
+
+#####################################################
+##################  Formation AI  ###################
+#####################################################
+
+
+class ModelFormationAI(Base):
+    __tablename__ = 'model_formation_ai'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    formations = relationship('FormationAI', back_populates='model')
+
+
+class FormationAI(Base):
+    __tablename__ = 'formation_ai'
+
+    id = Column(Integer, primary_key=True)
+    model_id = Column(Integer, ForeignKey('model_formation_ai.id'))
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+
+    model = relationship('ModelFormationAI', back_populates='formations')
+    formation = relationship('Formation', back_populates='model')
+
+
+class TrainedModel(Base):
+    __tablename__ = 'trained_model'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    path_top = Column(String)
+    path_bottom = Column(String)
 
 
 Base.metadata.create_all(engine)

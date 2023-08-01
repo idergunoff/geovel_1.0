@@ -78,11 +78,11 @@ def draw_max_min():
     radar_max_min = []
     ui.progressBar.setMaximum(len(radar))
     for n, sig in enumerate(radar):
-        max_points, _ = find_peaks(np.array(sig))
-        min_points, _ = find_peaks(-np.array(sig))
-        # diff_signal = np.diff(sig) возможно 2min/max
-        # max_points = argrelmax(diff_signal)
-        # min_points = argrelmin(diff_signal)
+        # max_points, _ = find_peaks(np.array(sig))
+        # min_points, _ = find_peaks(-np.array(sig))
+        diff_signal = np.diff(sig) #возможно 2min/max
+        max_points = argrelmax(diff_signal)
+        min_points = argrelmin(diff_signal)
         signal_max_min = build_list(max_points, min_points)
 
         radar_max_min.append(signal_max_min)

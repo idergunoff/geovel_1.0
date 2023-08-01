@@ -28,9 +28,17 @@ from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.manifold import TSNE
+from sklearn.linear_model import LinearRegression, ElasticNet, Lasso
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn.neural_network import MLPRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
+
+from sklearn.metrics import mean_squared_error
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap
@@ -39,6 +47,8 @@ import seaborn as sns
 from python_speech_features import mfcc
 import lasio as ls
 from pykrige.ok import OrdinaryKriging
+
+import pickle
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()

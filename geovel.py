@@ -14,7 +14,7 @@ from knn import *
 from gpc import *
 from monitoring import *
 from krige import *
-
+from formation_ai import *
 
 MainWindow.show()
 
@@ -110,6 +110,7 @@ ui.pushButton_add_layer.clicked.connect(add_layer)
 ui.pushButton_add_formation.clicked.connect(add_formation)
 ui.pushButton_remove_layer.clicked.connect(remove_layer)
 ui.pushButton_edges_layer.clicked.connect(save_layer)
+ui.pushButton_layer_filt.clicked.connect(filter_layer)
 # ui.pushButton_find_oil.clicked.connect(show_globals)
 ui.pushButton_add_well.clicked.connect(add_well)
 ui.pushButton_edit_well.clicked.connect(edit_well)
@@ -281,6 +282,21 @@ ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
 ui.pushButton_show_therms.clicked.connect(show_therms_animation)
 ui.pushButton_therm_mean_day.clicked.connect(mean_day_thermogram)
 
+
+###################################################################
+#######################   formation AI   ##########################
+###################################################################
+
+ui.pushButton_add_formation_ai.clicked.connect(add_formation_ai)
+ui.pushButton_rem_formation_ai.clicked.connect(remove_formation_ai)
+ui.pushButton_clear_formation_ai.clicked.connect(clear_formation_ai)
+ui.pushButton_model_ai.clicked.connect(calc_model_ai)
+ui.pushButton_add_model.clicked.connect(add_model_ai)
+ui.pushButton_rem_model.clicked.connect(remove_model_ai)
+ui.comboBox_model_ai.activated.connect(update_list_formation_ai)
+ui.pushButton_model_calc_profile.clicked.connect(calc_model_profile)
+ui.pushButton_rem_trained_model.clicked.connect(remove_trained_model)
+
 ui.pushButton_map.clicked.connect(show_map)
 
 roi.sigRegionChanged.connect(updatePlot)
@@ -306,6 +322,8 @@ set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
 set_param_knn_to_combobox()
 set_param_gpc_to_combobox()
+update_combobox_model_ai()
+update_list_trained_models()
 
 # update_list_param_lda()
 

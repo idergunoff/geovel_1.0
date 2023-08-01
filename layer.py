@@ -270,7 +270,17 @@ def add_formation():
 
 
 def remove_formation():
+    session.query(FormationAI).filter_by(formation_id=get_formation_id()).delete()
     session.query(Formation).filter(Formation.id == get_formation_id()).delete()
     session.commit()
     set_info(f'Пласт {ui.comboBox_plast.currentText()} удалён из БД', 'green')
     update_formation_combobox()
+
+
+def filter_layer():
+    l_id = get_layer_id()
+    layer = session.query(Layers).filter(Layers.id == l_id).first()
+    filter_layer = list(map(int, savgol_filter(json.loads(layer.layer_line), 31, 3)))
+    session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(filter_layer)}, synchronize_session="fetch")
+    session.commit()
+    draw_layer(l_id)

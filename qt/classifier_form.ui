@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ClassifierForm</class>
+ <widget class="QWidget" name="ClassifierForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>583</width>
+    <height>313</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Classifier</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_5">
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="0" column="0">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>MLP</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_31">
+          <property name="text">
+           <string>hidden layer</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_32">
+          <property name="text">
+           <string>activat</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_33">
+          <property name="text">
+           <string>solver</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QLabel" name="label_34">
+          <property name="text">
+           <string>alpha</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QLabel" name="label_35">
+          <property name="text">
+           <string>valid %</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QLabel" name="label_19">
+          <property name="text">
+           <string>e-stop</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLineEdit" name="lineEdit_layer_mlp">
+          <property name="text">
+           <string>50 50</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="comboBox_activation_mlp">
+          <item>
+           <property name="text">
+            <string>relu</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>logistic</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>tanh</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>identity</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QComboBox" name="comboBox_solvar_mlp">
+          <item>
+           <property name="text">
+            <string>adam</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>lbfgs</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>sgd</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="maximum">
+           <double>100.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.000100000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="4">
+         <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.200000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="5">
+         <widget class="QCheckBox" name="checkBox_e_stop_mlp">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="pushButton_calc_mlp">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>MLP</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>KNN</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_39">
+          <property name="text">
+           <string>N neighbors:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_41">
+          <property name="text">
+           <string>weights distanse:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_36">
+          <property name="text">
+           <string>algorithm:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QSpinBox" name="spinBox_neighbors">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="checkBox_knn_weights">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QComboBox" name="comboBox_knn_algorithm">
+          <item>
+           <property name="text">
+            <string>auto</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>ball_tree</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>kd_tree</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>brute</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="pushButton_calc_knn">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>KNN</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="title">
+        <string>GPC</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_37">
+          <property name="text">
+           <string>Ядро (ширина и масшаб):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_40">
+          <property name="toolTip">
+           <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+          </property>
+          <property name="text">
+           <string>n_restarts_optimizer:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_27">
+          <property name="toolTip">
+           <string>Определяет подход к мультиклассовой классификации. Возможные варианты:
+
+&quot;one_vs_rest&quot; - Один против всех (по умолчанию). Строит бинарные классификаторы для каждого класса по отдельности.
+&quot;one_vs_one&quot; - Один против одного. Строит бинарные классификаторы для всех возможных пар классов.</string>
+          </property>
+          <property name="text">
+           <string>multi_class:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <layout class="QGridLayout" name="gridLayout_101">
+          <item row="0" column="0">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_gpc_wigth">
+            <property name="toolTip">
+             <string>Ширина ядра. В гауссовском процессе ширина ядра определяет, насколько далеко друг от друга могут находиться две точки, чтобы их взаимосвязь была учтена в модели. Большая ширина позволяет учитывать большее расстояние, что делает гауссовский процесс более гладким, но менее подстраивающимся под данные. Наоборот, маленькая ширина делает гауссовский процесс более чувствительным к данным.</string>
+            </property>
+            <property name="minimum">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>1.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_gpc_scale">
+            <property name="toolTip">
+             <string>Это коэффициент масштабирования, который влияет на общую масштабируемость и вклад ядра в модель. Применение этого коэффициента масштабирования может быть полезным, когда наблюдения имеют различные масштабы или когда у нас есть априорная информация о важности или распределении вклада ядра в модель. Он позволяет управлять &quot;весом&quot; ядра и его влиянием на предсказания.</string>
+            </property>
+            <property name="minimum">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>1.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="spinBox_gpc_n_restart">
+          <property name="toolTip">
+           <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QComboBox" name="comboBox_gpc_multi">
+          <property name="toolTip">
+           <string>Определяет подход к мультиклассовой классификации. Возможные варианты:
+
+&quot;one_vs_rest&quot; - Один против всех (по умолчанию). Строит бинарные классификаторы для каждого класса по отдельности.
+&quot;one_vs_one&quot; - Один против одного. Строит бинарные классификаторы для всех возможных пар классов.</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>one_vs_rest</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>one_vs_one</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPushButton" name="pushButton_calc_gpc">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>GPC</string>
+       </property>
+       <property name="autoRepeatInterval">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
