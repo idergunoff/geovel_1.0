@@ -47,7 +47,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
 import lasio as ls
-from pykrige.ok import OrdinaryKriging
+from skgstat import Variogram, OrdinaryKriging
+
 
 import pickle
 

@@ -70,14 +70,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
     def form_lda_ok():
 
         # Создание набора данных
-        x = np.array(list_x)
-        y = np.array(list_y)
-        z = np.array(list_z)
+        x = np.array(list_x[::2])
+        y = np.array(list_y[::2])
+        coord = np.column_stack([x, y])
+        z = np.array(list_z[::2])
         grid_size = ui_dm.spinBox_grid.value()
 
         # Создание сетки для интерполяции
         gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
         gridy = np.linspace(min(list_y) - 200, max(list_y) + 200, grid_size)
+        xx, yy = np.mgrid[min(list_x) - 200: max(list_x) + 200: grid_size, min(list_y) - 200: max(list_y) + 200: grid_size]
+        # print(xx, yy)
+
+
 
         # Создание объекта OrdinaryKriging
         var_model = ui_dm.comboBox_var_model.currentText()
@@ -101,22 +106,46 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
             levels_count = len(markers_mlp) - 1
         if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
-        ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=True)
-
-        # Интерполяция значений на сетке
-        try:
-            z_interp, _ = ok.execute("grid", gridx, gridy, backend=vector, n_closest_points=2 if vector == 'C' else None)
-        except LinAlgError:
-            set_info('LinalgError', 'red')
-            return
+        # ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=False)
+        # print(1)
+        # # Интерполяция значений на сетке
+        # try:
+        #     z_interp, _ = ok.execute("grid", gridx, gridy, backend=vector, n_closest_points=2 if vector == 'C' else None)
+        #     print(z_interp)
+        # except LinAlgError:
+        #     set_info('LinalgError', 'red')
+        #     return
 
         # z_interp = z_interp.reshape(gridx.shape)
         # ok.display_variogram_model()
 
+        # Интерполяция значений на сетке scikit-gstat
+
+        variogram = Variogram(coordinates=coord, values=z, estimator='cressie')
+        print(1)
+
+        variogram.fit()
+        print(2)
+        kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+        print(3)
+        z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+        print(len(z_interp))
+        print(z_interp)
+        # z_interp = savgol_filter(z_interp, 9, 3)
+
+        # интерполяция значений на сетке gstools
+        #
+        # model = gs.Spherical(dim=2)
+        # print(1)
+        # ok = gs.krige.Ordinary(model, [x, y], z)
+        # print(2)
+        # z_interp = ok.__call__((xx, yy))
+        # print(z_interp)
+
         # Визуализация результатов
         plt.figure(figsize=(12, 9))
-        plt.contour(gridx, gridy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
-        plt.pcolormesh(gridx, gridy, z_interp, shading='auto', cmap=color_map)
+        plt.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
+        plt.pcolormesh(xx, yy, z_interp, shading='auto', cmap=color_map)
         plt.scatter(x, y, c=z, cmap=color_map)
         plt.colorbar(label=param)
         plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
