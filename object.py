@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem
 from PyQt5.QtGui import QBrush, QColor
 
 from qt.geovel_main_window import *
+from qt.classifier_form import *
 from model import *
 import numpy as np
 import pyqtgraph as pg

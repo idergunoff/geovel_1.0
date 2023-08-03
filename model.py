@@ -58,8 +58,7 @@ class Profile(Base):
     formations = relationship('Formation', back_populates='profile')
     markups_lda = relationship('MarkupLDA', back_populates='profile')
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
-    markups_knn = relationship('MarkupKNN', back_populates='profile')
-    markups_gpc = relationship('MarkupGPC', back_populates='profile')
+
     # дальше всё убираем
 
     # T_top = Column(Text)
@@ -224,8 +223,6 @@ class Formation(Base):
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
     markups_lda = relationship('MarkupLDA', back_populates='formation')
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
-    markups_knn = relationship('MarkupKNN', back_populates='formation')
-    markups_gpc = relationship('MarkupGPC', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
 
 
@@ -242,9 +239,6 @@ class Well(Base):
     well_logs = relationship("WellLog", back_populates="well")
     markups_lda = relationship("MarkupLDA", back_populates="well")
     markups_mlp = relationship('MarkupMLP', back_populates='well')
-    markups_knn = relationship('MarkupKNN', back_populates='well')
-    markups_gpc = relationship('MarkupGPC', back_populates='well')
-
 
 class Boundary(Base):
     __tablename__ = 'boundary'
@@ -397,121 +391,6 @@ class MarkupMLP(Base):
     formation = relationship("Formation", back_populates="markups_mlp")
     marker = relationship("MarkerMLP", back_populates="markups")
 
-
-#####################################################
-######################  KNN  ########################
-#####################################################
-
-
-class AnalysisKNN(Base):
-    __tablename__ = 'analysis_knn'
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String)
-    data = Column(Text)
-
-    parameters = relationship('ParameterKNN', back_populates='analysis')
-    markers = relationship('MarkerKNN', back_populates='analysis')
-    markups = relationship('MarkupKNN', back_populates='analysis')
-
-
-class ParameterKNN(Base):
-    __tablename__ = 'parameter_knn'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_knn.id'))
-    parameter = Column(String)
-
-    analysis = relationship('AnalysisKNN', back_populates='parameters')
-
-
-class MarkerKNN(Base):
-    __tablename__ = 'marker_knn'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_knn.id'))
-    title = Column(String)
-    color = Column(String)
-
-    analysis = relationship('AnalysisKNN', back_populates='markers')
-    markups = relationship('MarkupKNN', back_populates='marker')
-
-
-class MarkupKNN(Base):
-    __tablename__ = 'markup_knn'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_knn.id'))
-    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    formation_id = Column(Integer, ForeignKey('formation.id'))
-    marker_id = Column(Integer, ForeignKey('marker_knn.id'))
-    list_measure = Column(Text)
-    list_fake = Column(Text)
-
-    analysis = relationship('AnalysisKNN', back_populates='markups')
-    well = relationship("Well", back_populates="markups_knn")
-    profile = relationship("Profile", back_populates="markups_knn")
-    formation = relationship("Formation", back_populates="markups_knn")
-    marker = relationship("MarkerKNN", back_populates="markups")
-
-
-#####################################################
-######################  GPC  ########################
-#####################################################
-
-
-class AnalysisGPC(Base):
-    __tablename__ = 'analysis_gpc'
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String)
-    data = Column(Text)
-
-    parameters = relationship('ParameterGPC', back_populates='analysis')
-    markers = relationship('MarkerGPC', back_populates='analysis')
-    markups = relationship('MarkupGPC', back_populates='analysis')
-
-
-class ParameterGPC(Base):
-    __tablename__ = 'parameter_gpc'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_gpc.id'))
-    parameter = Column(String)
-
-    analysis = relationship('AnalysisGPC', back_populates='parameters')
-
-
-class MarkerGPC(Base):
-    __tablename__ = 'marker_gpc'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_gpc.id'))
-    title = Column(String)
-    color = Column(String)
-
-    analysis = relationship('AnalysisGPC', back_populates='markers')
-    markups = relationship('MarkupGPC', back_populates='marker')
-
-
-class MarkupGPC(Base):
-    __tablename__ = 'markup_gpc'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_gpc.id'))
-    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    formation_id = Column(Integer, ForeignKey('formation.id'))
-    marker_id = Column(Integer, ForeignKey('marker_gpc.id'))
-    list_measure = Column(Text)
-    list_fake = Column(Text)
-
-    analysis = relationship('AnalysisGPC', back_populates='markups')
-    well = relationship("Well", back_populates="markups_gpc")
-    profile = relationship("Profile", back_populates="markups_gpc")
-    formation = relationship("Formation", back_populates="markups_gpc")
-    marker = relationship("MarkerGPC", back_populates="markups")
 
 
 #####################################################

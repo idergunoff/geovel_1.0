@@ -72,6 +72,53 @@
               <string>Main</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Кепструм</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0">
+               <widget class="QPushButton" name="pushButton_map">
+                <property name="text">
+                 <string>MAP</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                  <underline>true</underline>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Фильтрация</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
               <item row="5" column="0">
                <layout class="QGridLayout" name="gridLayout_11">
                 <item row="0" column="2">
@@ -202,15 +249,15 @@
                 </item>
                </layout>
               </item>
-              <item row="10" column="0">
-               <widget class="QPushButton" name="pushButton_save_signal">
+              <item row="9" column="0">
+               <widget class="QPushButton" name="pushButton_secret_filter">
                 <property name="text">
-                 <string>Выгрузить</string>
+                 <string> SFFAI</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_9">
+              <item row="12" column="0">
+               <widget class="QLabel" name="label_26">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
@@ -221,19 +268,137 @@
                  <enum>Qt::LeftToRight</enum>
                 </property>
                 <property name="text">
-                 <string>Кепструм</string>
+                 <string>Карты</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
-               <widget class="QPushButton" name="pushButton_secret_filter">
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
                 <property name="text">
-                 <string> SFFAI</string>
+                 <string>Другие</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
+              </item>
+              <item row="8" column="0">
+               <layout class="QGridLayout" name="gridLayout_9">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_rfft2">
+                  <property name="text">
+                   <string>RFFT2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_rang">
+                  <property name="text">
+                   <string>RANG</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_irfft2">
+                  <property name="text">
+                   <string>IRFFT2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_dct">
+                  <property name="text">
+                   <string>DCT</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_log">
+                  <property name="text">
+                   <string>LOG</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_idct">
+                  <property name="text">
+                   <string>IDCT</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                  <underline>false</underline>
+                  <strikeout>false</strikeout>
+                  <kerning>true</kerning>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Фурье</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="15" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="7" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QCheckBox" name="checkBox_2degree">
+                  <property name="text">
+                   <string>^2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_type_dct">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>4</number>
+                  </property>
+                  <property name="value">
+                   <number>2</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_ceps_koef">
+                  <property name="text">
+                   <string>koef</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_6">
@@ -483,128 +648,10 @@
                 </item>
                </layout>
               </item>
-              <item row="7" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QCheckBox" name="checkBox_2degree">
-                  <property name="text">
-                   <string>^2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_type_dct">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>4</number>
-                  </property>
-                  <property name="value">
-                   <number>2</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_ceps_koef">
-                  <property name="text">
-                   <string>koef</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
+              <item row="10" column="0">
+               <widget class="QPushButton" name="pushButton_save_signal">
                 <property name="text">
-                 <string>Другие</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="14" column="0">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_9">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_rfft2">
-                  <property name="text">
-                   <string>RFFT2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_rang">
-                  <property name="text">
-                   <string>RANG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_irfft2">
-                  <property name="text">
-                   <string>IRFFT2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_dct">
-                  <property name="text">
-                   <string>DCT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_log">
-                  <property name="text">
-                   <string>LOG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_idct">
-                  <property name="text">
-                   <string>IDCT</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_7">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                  <underline>false</underline>
-                  <strikeout>false</strikeout>
-                  <kerning>true</kerning>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Фурье</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <string>Выгрузить</string>
                 </property>
                </widget>
               </item>
@@ -688,50 +735,10 @@
                 </item>
                </layout>
               </item>
-              <item row="12" column="0">
-               <widget class="QLabel" name="label_26">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
+              <item row="14" column="0">
+               <widget class="QPushButton" name="pushButton_profiles">
                 <property name="text">
-                 <string>Карты</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_3">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                  <underline>true</underline>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Фильтрация</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="13" column="0">
-               <widget class="QPushButton" name="pushButton_map">
-                <property name="text">
-                 <string>MAP</string>
+                 <string>PROFILES</string>
                 </property>
                </widget>
               </item>
@@ -809,7 +816,7 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>327</width>
+                         <width>321</width>
                          <height>196</height>
                         </rect>
                        </property>
@@ -1742,36 +1749,15 @@
                    </widget>
                   </item>
                   <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_84">
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_copy_lda_to_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>copy to KNN</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_copy_lda">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>copy LDA</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
+                   <layout class="QGridLayout" name="gridLayout_84"/>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QPushButton" name="pushButton_copy_lda_to_gpc">
+                   <widget class="QPushButton" name="pushButton_copy_lda">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>copy to GPC</string>
+                     <string>copy LDA</string>
                     </property>
                    </widget>
                   </item>
@@ -2187,7 +2173,7 @@
             </widget>
             <widget class="QWidget" name="tab_5">
              <attribute name="title">
-              <string>MLP</string>
+              <string>Classifier</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_29">
               <item row="0" column="0">
@@ -2245,6 +2231,13 @@
                   </property>
                   <property name="text">
                    <string>copy MLP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QCheckBox" name="checkBox_draw_map">
+                  <property name="text">
+                   <string>draw map</string>
                   </property>
                  </widget>
                 </item>
@@ -2319,141 +2312,6 @@
                 <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_30">
                   <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_46">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_31">
-                      <property name="text">
-                       <string>hidden layer</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QLabel" name="label_32">
-                      <property name="text">
-                       <string>activat</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QLabel" name="label_33">
-                      <property name="text">
-                       <string>solver</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QLabel" name="label_34">
-                      <property name="text">
-                       <string>alpha</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="4">
-                     <widget class="QLabel" name="label_35">
-                      <property name="text">
-                       <string>valid %</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="5">
-                     <widget class="QLabel" name="label_19">
-                      <property name="text">
-                       <string>e-stop</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <widget class="QLineEdit" name="lineEdit_layer_mlp">
-                      <property name="text">
-                       <string>50 50</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="1">
-                     <widget class="QComboBox" name="comboBox_activation_mlp">
-                      <item>
-                       <property name="text">
-                        <string>relu</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>logistic</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>tanh</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>identity</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="1" column="2">
-                     <widget class="QComboBox" name="comboBox_solvar_mlp">
-                      <item>
-                       <property name="text">
-                        <string>adam</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>lbfgs</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>sgd</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="1" column="3">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
-                      <property name="decimals">
-                       <number>4</number>
-                      </property>
-                      <property name="maximum">
-                       <double>100.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.100000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="4">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
-                      <property name="decimals">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <double>1.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.100000000000000</double>
-                      </property>
-                      <property name="value">
-                       <double>0.200000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="5">
-                     <widget class="QCheckBox" name="checkBox_e_stop_mlp">
-                      <property name="text">
-                       <string/>
-                      </property>
-                      <property name="checked">
-                       <bool>true</bool>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_60">
                     <item row="0" column="0">
                      <widget class="QPushButton" name="pushButton_draw_mlp">
@@ -2461,7 +2319,7 @@
                        <string notr="true">background-color: rgb(255, 204, 121);</string>
                       </property>
                       <property name="text">
-                       <string>draw MLP</string>
+                       <string>Train</string>
                       </property>
                      </widget>
                     </item>
@@ -2471,7 +2329,7 @@
                        <string notr="true">background-color: rgb(255, 204, 121);</string>
                       </property>
                       <property name="text">
-                       <string>calc MLP</string>
+                       <string>Calc Profile</string>
                       </property>
                      </widget>
                     </item>
@@ -2481,7 +2339,7 @@
                        <string notr="true">background-color: rgb(175, 255, 243);</string>
                       </property>
                       <property name="text">
-                       <string>save profile MLP</string>
+                       <string>save profile</string>
                       </property>
                      </widget>
                     </item>
@@ -2491,7 +2349,7 @@
                        <string notr="true">background-color: rgb(175, 255, 243);</string>
                       </property>
                       <property name="text">
-                       <string>calc Object MLP</string>
+                       <string>Calc Object</string>
                       </property>
                      </widget>
                     </item>
@@ -2757,1074 +2615,6 @@
                   </item>
                   <item row="5" column="0">
                    <widget class="Line" name="line_12">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="tab_7">
-             <attribute name="title">
-              <string>KNN</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_83">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_69" columnstretch="3,0,0">
-                <item row="3" column="1">
-                 <widget class="QPushButton" name="pushButton_add_mark_knn">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_add_knn">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add KNN</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_knn">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove KNN</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_knn_analysis"/>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_mark_knn">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QComboBox" name="comboBox_mark_knn"/>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_copy_knn">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>copy KNN</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <widget class="Line" name="line_8">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <layout class="QGridLayout" name="gridLayout_70">
-                <item row="0" column="0">
-                 <widget class="QListWidget" name="listWidget_well_knn"/>
-                </item>
-                <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_73">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_75">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_draw_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw KNN</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_calc_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>calc KNN</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_save_prof_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>save profile KNN</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_calc_obj_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>calc Object KNN</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_71">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_72">
-                    <item row="0" column="0">
-                     <widget class="QSpinBox" name="spinBox_well_dist_knn">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>1000</number>
-                      </property>
-                      <property name="singleStep">
-                       <number>5</number>
-                      </property>
-                      <property name="value">
-                       <number>15</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_rem_well_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_update_well_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>update well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_add_well_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add_well</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_100">
-                  <item row="0" column="1">
-                   <widget class="QLabel" name="label_41">
-                    <property name="text">
-                     <string>weights distanse:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_36">
-                    <property name="text">
-                     <string>algorithm:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_39">
-                    <property name="text">
-                     <string>N neighbors:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QSpinBox" name="spinBox_neighbors">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>1000</number>
-                    </property>
-                    <property name="value">
-                     <number>5</number>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QComboBox" name="comboBox_knn_algorithm">
-                    <item>
-                     <property name="text">
-                      <string>auto</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>ball_tree</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>kd_tree</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>brute</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QCheckBox" name="checkBox_knn_weights">
-                    <property name="text">
-                     <string/>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="Line" name="line_13">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <layout class="QGridLayout" name="gridLayout_76">
-                <item row="0" column="0">
-                 <widget class="QListWidget" name="listWidget_param_knn"/>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_77">
-                  <item row="2" column="0">
-                   <layout class="QGridLayout" name="gridLayout_78">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_28">
-                      <property name="font">
-                       <font>
-                        <pointsize>10</pointsize>
-                        <weight>50</weight>
-                        <italic>true</italic>
-                        <bold>false</bold>
-                        <underline>true</underline>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Мгновенные атрибуты</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <layout class="QGridLayout" name="gridLayout_79" columnstretch="3,1,1">
-                      <item row="0" column="0">
-                       <widget class="QComboBox" name="comboBox_geovel_param_knn"/>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_geovel_knn">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>add</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_all_geovel_knn">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(148, 255, 232);</string>
-                        </property>
-                        <property name="text">
-                         <string>add all</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="4" column="0">
-                   <layout class="QGridLayout" name="gridLayout_80" columnstretch="1,3,2,2,1">
-                    <item row="0" column="1">
-                     <widget class="QComboBox" name="comboBox_atrib_distr_knn">
-                      <item>
-                       <property name="text">
-                        <string>Abase</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>diff</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>At</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Vt</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Pht</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Wt</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QSpinBox" name="spinBox_count_distr_knn">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>100</number>
-                      </property>
-                      <property name="value">
-                       <number>10</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_add_sep_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add sep</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_add_distr_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add distr</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="4">
-                     <widget class="QPushButton" name="pushButton_add_all_distr_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(148, 255, 232);</string>
-                      </property>
-                      <property name="text">
-                       <string>add all</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="6" column="0">
-                   <layout class="QGridLayout" name="gridLayout_81" columnstretch="0,0,0,0">
-                    <item row="1" column="1">
-                     <widget class="QComboBox" name="comboBox_atrib_mfcc_knn">
-                      <item>
-                       <property name="text">
-                        <string>Abase</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>diff</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>At</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Vt</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Pht</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Wt</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="1" column="2">
-                     <widget class="QPushButton" name="pushButton_add_mfcc_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add MFCC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <widget class="QSpinBox" name="spinBox_count_mfcc_knn">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>100</number>
-                      </property>
-                      <property name="value">
-                       <number>13</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="3">
-                     <widget class="QPushButton" name="pushButton_add_all_mfcc_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(148, 255, 232);</string>
-                      </property>
-                      <property name="text">
-                       <string>add all MFCC</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_82">
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_clear_params_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>--- clear parameters</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_rem_param_knn">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>- remove parameter</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="Line" name="line_14">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="Line" name="line_15">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="Line" name="line_16">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="tab_8">
-             <attribute name="title">
-              <string>GPC</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_99">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_85" columnstretch="3,0,0">
-                <item row="3" column="1">
-                 <widget class="QPushButton" name="pushButton_add_mark_gpc">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_add_gpc">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add GPC</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_gpc">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove GPC</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_gpc_analysis"/>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_mark_gpc">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QComboBox" name="comboBox_mark_gpc"/>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_copy_gpc">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>copy GPC</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <widget class="Line" name="line_17">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <layout class="QGridLayout" name="gridLayout_86">
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_87">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_88">
-                    <item row="0" column="0">
-                     <widget class="QSpinBox" name="spinBox_well_dist_gpc">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>1000</number>
-                      </property>
-                      <property name="singleStep">
-                       <number>5</number>
-                      </property>
-                      <property name="value">
-                       <number>15</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_rem_well_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_update_well_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>update well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_add_well_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add_well</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_89">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_91">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_draw_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw GPC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_calc_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>calc GPC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_save_prof_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>save profile GPC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_calc_obj_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>calc Object GPC</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QListWidget" name="listWidget_well_gpc"/>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_74">
-                  <item row="0" column="1">
-                   <widget class="QLabel" name="label_40">
-                    <property name="toolTip">
-                     <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
-                    </property>
-                    <property name="text">
-                     <string>n_restarts_optimizer:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_27">
-                    <property name="toolTip">
-                     <string>Определяет подход к мультиклассовой классификации. Возможные варианты:
-
-&quot;one_vs_rest&quot; - Один против всех (по умолчанию). Строит бинарные классификаторы для каждого класса по отдельности.
-&quot;one_vs_one&quot; - Один против одного. Строит бинарные классификаторы для всех возможных пар классов.</string>
-                    </property>
-                    <property name="text">
-                     <string>multi_class:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_37">
-                    <property name="text">
-                     <string>Ядро (ширина и масшаб):</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QComboBox" name="comboBox_gpc_multi">
-                    <property name="toolTip">
-                     <string>Определяет подход к мультиклассовой классификации. Возможные варианты:
-
-&quot;one_vs_rest&quot; - Один против всех (по умолчанию). Строит бинарные классификаторы для каждого класса по отдельности.
-&quot;one_vs_one&quot; - Один против одного. Строит бинарные классификаторы для всех возможных пар классов.</string>
-                    </property>
-                    <item>
-                     <property name="text">
-                      <string>one_vs_rest</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>one_vs_one</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_101">
-                    <item row="0" column="0">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_gpc_wigth">
-                      <property name="toolTip">
-                       <string>Ширина ядра. В гауссовском процессе ширина ядра определяет, насколько далеко друг от друга могут находиться две точки, чтобы их взаимосвязь была учтена в модели. Большая ширина позволяет учитывать большее расстояние, что делает гауссовский процесс более гладким, но менее подстраивающимся под данные. Наоборот, маленькая ширина делает гауссовский процесс более чувствительным к данным.</string>
-                      </property>
-                      <property name="minimum">
-                       <double>0.010000000000000</double>
-                      </property>
-                      <property name="maximum">
-                       <double>100.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.100000000000000</double>
-                      </property>
-                      <property name="value">
-                       <double>1.000000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_gpc_scale">
-                      <property name="toolTip">
-                       <string>Это коэффициент масштабирования, который влияет на общую масштабируемость и вклад ядра в модель. Применение этого коэффициента масштабирования может быть полезным, когда наблюдения имеют различные масштабы или когда у нас есть априорная информация о важности или распределении вклада ядра в модель. Он позволяет управлять &quot;весом&quot; ядра и его влиянием на предсказания.</string>
-                      </property>
-                      <property name="minimum">
-                       <double>0.010000000000000</double>
-                      </property>
-                      <property name="maximum">
-                       <double>100.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.100000000000000</double>
-                      </property>
-                      <property name="value">
-                       <double>1.000000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QSpinBox" name="spinBox_gpc_n_restart">
-                    <property name="toolTip">
-                     <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="Line" name="line_18">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <layout class="QGridLayout" name="gridLayout_92">
-                <item row="0" column="0">
-                 <widget class="QListWidget" name="listWidget_param_gpc"/>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_93">
-                  <item row="2" column="0">
-                   <layout class="QGridLayout" name="gridLayout_94">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_30">
-                      <property name="font">
-                       <font>
-                        <pointsize>10</pointsize>
-                        <weight>50</weight>
-                        <italic>true</italic>
-                        <bold>false</bold>
-                        <underline>true</underline>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Мгновенные атрибуты</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <layout class="QGridLayout" name="gridLayout_95" columnstretch="3,1,1">
-                      <item row="0" column="0">
-                       <widget class="QComboBox" name="comboBox_geovel_param_gpc"/>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_geovel_gpc">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>add</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_all_geovel_gpc">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(148, 255, 232);</string>
-                        </property>
-                        <property name="text">
-                         <string>add all</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="4" column="0">
-                   <layout class="QGridLayout" name="gridLayout_96" columnstretch="1,3,2,2,1">
-                    <item row="0" column="1">
-                     <widget class="QComboBox" name="comboBox_atrib_distr_gpc">
-                      <item>
-                       <property name="text">
-                        <string>Abase</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>diff</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>At</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Vt</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Pht</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Wt</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QSpinBox" name="spinBox_count_distr_gpc">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>100</number>
-                      </property>
-                      <property name="value">
-                       <number>10</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_add_sep_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add sep</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_add_distr_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add distr</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="4">
-                     <widget class="QPushButton" name="pushButton_add_all_distr_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(148, 255, 232);</string>
-                      </property>
-                      <property name="text">
-                       <string>add all</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="6" column="0">
-                   <layout class="QGridLayout" name="gridLayout_97" columnstretch="0,0,0,0">
-                    <item row="1" column="1">
-                     <widget class="QComboBox" name="comboBox_atrib_mfcc_gpc">
-                      <item>
-                       <property name="text">
-                        <string>Abase</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>diff</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>At</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Vt</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Pht</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Wt</string>
-                       </property>
-                      </item>
-                     </widget>
-                    </item>
-                    <item row="1" column="2">
-                     <widget class="QPushButton" name="pushButton_add_mfcc_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add MFCC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <widget class="QSpinBox" name="spinBox_count_mfcc_gpc">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>100</number>
-                      </property>
-                      <property name="value">
-                       <number>13</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="3">
-                     <widget class="QPushButton" name="pushButton_add_all_mfcc_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(148, 255, 232);</string>
-                      </property>
-                      <property name="text">
-                       <string>add all MFCC</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_98">
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_clear_params_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>--- clear parameters</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_rem_param_gpc">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>- remove parameter</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="Line" name="line_19">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="Line" name="line_20">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="Line" name="line_21">
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>

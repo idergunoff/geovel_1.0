@@ -411,131 +411,467 @@ def draw_MLP():
     training_sample = data_train[list_param_mlp].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
 
-    try:
-        # Нормализация данных
-        scaler = StandardScaler()
-        training_sample_norm = scaler.fit_transform(training_sample)
-        # Разделение данных на обучающую и тестовую выборки
-        # training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
-        #     training_sample_norm, markup, test_size=0.20, random_state=1
-        # )
-        # Создание и тренировка MLP
-        layers = tuple(map(int, ui.lineEdit_layer_mlp.text().split()))
-        mlp = MLPClassifier(
-            hidden_layer_sizes=layers,
-            activation=ui.comboBox_activation_mlp.currentText(),
-            solver=ui.comboBox_solvar_mlp.currentText(),
-            alpha=ui.doubleSpinBox_alpha_mlp.value(),
-            max_iter=5000,
-            early_stopping=ui.checkBox_e_stop_mlp.isChecked(),
-            validation_fraction=ui.doubleSpinBox_valid_mlp.value(),
-            random_state=1
-        )
-        mlp.fit(training_sample_norm, markup)
+
+    Classifier = QtWidgets.QDialog()
+    ui_cls = Ui_ClassifierForm()
+    ui_cls.setupUi(Classifier)
+    Classifier.show()
+    Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    def calc_mlp_form():
+        try:
+            # Нормализация данных
+            scaler = StandardScaler()
+            training_sample_norm = scaler.fit_transform(training_sample)
+
+            # Разделение данных на обучающую и тестовую выборки
+            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+                training_sample_norm, markup, test_size=0.20, random_state=1
+            )
+            # Создание и тренировка MLP
+            layers = tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split()))
+            mlp = MLPClassifier(
+                hidden_layer_sizes=layers,
+                activation=ui_cls.comboBox_activation_mlp.currentText(),
+                solver=ui_cls.comboBox_solvar_mlp.currentText(),
+                alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
+                random_state=1
+            )
+            mlp.fit(training_sample_train, markup_train)
+
+            # Оценка точности на всей обучающей выборке
+            train_accuracy = mlp.score(training_sample_norm, markup)
+            test_accuracy = mlp.score(training_sample_test, markup_test)
+
+            set_info(f'**MLP**: \nhidden_layer_sizes: ({",".join(map(str, layers))}), '
+                     f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
+                     f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
+                     f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, '
+                     f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
+                     f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}, '
+                     f'точность на всей обучающей выборке: {train_accuracy}, '
+                     f'точность на тестовой выборке: {test_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        preds_proba_train = mlp.predict_proba(training_sample_norm)
+        preds_train = mlp.predict(training_sample_norm)
+        train_tsne = tsne.fit_transform(preds_proba_train)
+        data_tsne = pd.DataFrame(train_tsne)
+        data_tsne['mark'] = preds_train
+        fig = plt.figure(figsize=(10, 10))
+        ax = plt.subplot()
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
+        ax.grid()
+        ax.xaxis.grid(True, "minor", linewidth=.25)
+        ax.yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = f'Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки' \
+                      f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+                      f'{str(len(data_tsne.index))}\n' \
+                      f'hidden_layer_sizes: ({",".join(map(str, layers))}), ' \
+                      f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, ' \
+                      f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}' \
+                      f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}\n' \
+                      f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'\
+                      f'точность на тестовой выборке: {round(test_accuracy, 7)}'
+        plt.title(title_graph, fontsize=16)
+        plt.tight_layout()
+        fig.show()
+
+
+    def calc_knn_form():
+        try:
+            # Разделение данных на обучающую и тестовую выборки
+            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+                training_sample, markup, test_size=0.20, random_state=1)
+
+            # Создание и тренировка KNN
+            n_knn = ui_cls.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
+            algorithm_knn = ui_cls.comboBox_knn_algorithm.currentText()
+            knn = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
+            knn.fit(training_sample_train, markup_train)
+
+            # Оценка точности
+            train_accuracy = knn.score(training_sample, markup)
+            test_accuracy = knn.score(training_sample_test, markup_test)
+            set_info(f'**KNN**: \nn_neighbors: {n_knn}, '
+                     f'\nweights: {weights_knn}, '
+                     f'\nalgorithm: {algorithm_knn}, '
+                     f'точность на всей обучающей выборке: {train_accuracy}, '
+                     f'точность на тестовой выборке: {test_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        preds_proba_train = knn.predict_proba(training_sample)
+        preds_train = knn.predict(training_sample)
+        train_tsne = tsne.fit_transform(preds_proba_train)
+        data_tsne = pd.DataFrame(train_tsne)
+        data_tsne['mark'] = preds_train
+        fig = plt.figure(figsize=(10, 10))
+        ax = plt.subplot()
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
+        ax.grid()
+        ax.xaxis.grid(True, "minor", linewidth=.25)
+        ax.yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'Диаграмма рассеяния для канонических значений KNN\nдля обучающей выборки и тестовой выборки\n'
+                       f'n_neighbors: {n_knn}\n'
+                       f'weights: {weights_knn}\n'
+                       f'algorithm: {algorithm_knn}\n'
+                       f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
+                       f'точность на тестовой выборке: {round(test_accuracy, 7)}')
+        plt.title(title_graph, fontsize=16)
+        plt.tight_layout()
+        fig.show()
+
+
+    def calc_gpc_form():
+        try:
+            # Разделение данных на обучающую и тестовую выборки
+            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+                training_sample, markup, test_size=0.20, random_state=1)
+            # Создание и тренировка GPC
+            gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_cls.spinBox_gpc_n_restart.value()
+            multi_class = ui_cls.comboBox_gpc_multi.currentText()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            gpc = GaussianProcessClassifier(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state = 0,
+                multi_class=multi_class,
+                n_jobs=-1
+            )
+            gpc.fit(training_sample, markup)
+
         # Оценка точности на обучающей выборке
-        train_accuracy = mlp.score(training_sample_norm, markup)
-        training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
-            training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_mlp.value(), random_state=1)
-        test_accuracy = mlp.score(training_sample_test, markup_test)
-        set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
-                 f'activation - {ui.comboBox_activation_mlp.currentText()}, '
-                 f'solver - {ui.comboBox_solvar_mlp.currentText()}, '
-                 f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, '
-                 f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}'
-                 f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}, '
-                 f'точность на всей обучающей выборке: {train_accuracy}, '
-                 f'точность на тестовой выборке: {test_accuracy}', 'blue')
-    except ValueError:
-        set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
-                 f'выборки.', 'red')
-        return
-    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-    preds_proba_train = mlp.predict_proba(training_sample_norm)
-    preds_train = mlp.predict(training_sample_norm)
-    train_tsne = tsne.fit_transform(preds_proba_train)
-    data_tsne = pd.DataFrame(train_tsne)
-    data_tsne['mark'] = preds_train
-    fig = plt.figure(figsize=(10, 10))
-    ax = plt.subplot()
-    sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', palette=colors)
-    ax.grid()
-    ax.xaxis.grid(True, "minor", linewidth=.25)
-    ax.yaxis.grid(True, "minor", linewidth=.25)
-    title_graph = f'Диаграмма рассеяния для канонических значений для обучающей выборки' \
-                  f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
-                  f'{str(len(data_tsne.index))}\n' \
-                  f'hidden_layer_sizes - ({",".join(map(str, layers))}), '\
-                  f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, '\
-                  f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}'\
-                  f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}\n'\
-                  f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'\
-                  f'точность на тестовой выборке: {round(test_accuracy, 7)}'
-    plt.title(title_graph, fontsize=16)
-    plt.tight_layout()
-    fig.show()
+            train_accuracy = gpc.score(training_sample, markup)
+            test_accuracy = gpc.score(training_sample_test, markup_test)
+            set_info(f'**GPC**: \nwidth kernal: {gpc_kernel_width}, '
+                     f'\nscale kernal: {gpc_kernel_scale}, '
+                     f'\nn restart: {n_restart_optimization}, '
+                     f'\nmulti_class: {multi_class} ,'
+                     f'точность на всей обучающей выборке: {train_accuracy}, '
+                     f'точность на тестовой выборке: {test_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах GPC! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        preds_train = gpc.predict(training_sample)
+        preds_proba_train = gpc.predict_proba(training_sample)
+        train_tsne = tsne.fit_transform(preds_proba_train)
+        data_tsne = pd.DataFrame(train_tsne)
+        data_tsne['mark'] = preds_train
+        fig = plt.figure(figsize=(10, 10))
+        ax = plt.subplot()
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
+        ax.grid()
+        ax.xaxis.grid(True, "minor", linewidth=.25)
+        ax.yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'Диаграмма рассеяния для канонических значений GPC\nдля обучающей и тестовой выборки\n'
+                       f'scale kernal: {gpc_kernel_scale}\n'
+                       f'n restart: {n_restart_optimization}\n'
+                       f'multi_class: {multi_class}\n'
+                       f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
+                       f'точность на тестовой выборке: {round(test_accuracy, 7)}')
+        plt.title(title_graph, fontsize=16)
+        plt.tight_layout()
+        fig.show()
 
-
-def calc_verify_mlp():
-    data_train, list_param = build_table_train(True, 'mlp')
-    list_param_mlp = data_train.columns.tolist()[2:]
-    # colors = [m.color for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-    training_sample = data_train[list_param_mlp].values.tolist()
-    markup = sum(data_train[['mark']].values.tolist(), [])
-    clf = LinearDiscriminantAnalysis()
-    try:
-        clf.fit(training_sample, markup)
-    except ValueError:
-        set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей выборки.', 'red')
-        return
-    n, k = 0, 0
-    ui.progressBar.setMaximum(len(data_train.index))
-    for i in data_train.index:
-        new_mark = clf.predict([data_train.loc[i].loc[list_param_mlp].tolist()])[0]
-        if data_train['mark'][i] != new_mark:
-            prof_id = data_train['prof_well_index'][i].split('_')[0]
-            well_id = data_train['prof_well_index'][i].split('_')[1]
-            ix = int(data_train['prof_well_index'][i].split('_')[2])
-            old_list_fake = session.query(MarkupMLP.list_fake).filter(
-                MarkupMLP.analysis_id == get_MLP_id(),
-                MarkupMLP.profile_id == prof_id,
-                MarkupMLP.well_id == well_id
-            ).first()[0]
-            if old_list_fake:
-                new_list_fake = json.loads(old_list_fake)
-                new_list_fake.append(ix)
-            else:
-                new_list_fake = [ix]
-            session.query(MarkupMLP).filter(
-                MarkupMLP.analysis_id == get_MLP_id(),
-                MarkupMLP.profile_id == prof_id,
-                MarkupMLP.well_id == well_id
-            ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
-            session.commit()
-            n += 1
-        k += 1
-        ui.progressBar.setValue(k)
-    session.commit()
-    set_info(f'Из обучающей выборки удалено {n} измерений.', 'blue')
-    update_list_well_markup_mlp()
-    db = True if n == 0 else False
-    update_list_param_mlp(db)
-
-
-def reset_verify_mlp():
-    session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).update({'list_fake': None},
-                                                                                  synchronize_session='fetch')
-    session.commit()
-    set_info(f'Выбросы для анализа "{ui.comboBox_mlp_analysis.currentText()}" очищены.', 'green')
-    update_list_well_markup_mlp()
-    update_list_param_mlp()
+    ui_cls.pushButton_calc_mlp.clicked.connect(calc_mlp_form)
+    ui_cls.pushButton_calc_knn.clicked.connect(calc_knn_form)
+    ui_cls.pushButton_calc_gpc.clicked.connect(calc_gpc_form)
+    Classifier.exec_()
 
 
 def calc_MLP():
+    # Получение обучающих данных для MLP
+    data_train, list_param = build_table_train(True, 'mlp')
+    list_param_mlp = data_train.columns.tolist()[2:]
+    training_sample = data_train[list_param_mlp].values.tolist()
+    markup = sum(data_train[['mark']].values.tolist(), [])
+
+    # Подготовка тестовых данных для MLP
+    working_data, curr_form = build_table_test('mlp')
+    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
+    working_data_new = working_data.copy()
+
+    Classifier = QtWidgets.QDialog()
+    ui_cls = Ui_ClassifierForm()
+    ui_cls.setupUi(Classifier)
+    Classifier.show()
+    Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    def calc_mlp_form():
+        set_info(f'Процесс расчёта MLP. {ui.comboBox_mlp_analysis.currentText()} по профилю {profile_title}', 'blue')
+        try:
+            # Нормализация данных
+            scaler = StandardScaler()
+            training_sample_norm = scaler.fit_transform(training_sample)
+            working_sample = scaler.fit_transform(working_data_new.iloc[:, 3:])
+
+            # Создание и тренировка MLP
+            layers = tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split()))
+            mlp = MLPClassifier(
+                hidden_layer_sizes=layers,
+                activation=ui_cls.comboBox_activation_mlp.currentText(),
+                solver=ui_cls.comboBox_solvar_mlp.currentText(),
+                alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
+                random_state=1
+            )
+            mlp.fit(training_sample_norm, markup)
+
+            # Оценка точности на обучающей выборке
+            train_accuracy = mlp.score(training_sample_norm, markup)
+
+            # Вывод информации о параметрах MLP и точности модели
+            set_info(f'**MLP**: \nhidden_layer_sizes: ({",".join(map(str, layers))}), '
+                     f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
+                     f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
+                     f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, '
+                     f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
+                     f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}, '
+                     f'\nточность на обучающей выборке: {train_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+
+        # Создание и обучение модели t-SNE для отображения результата на графике
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        preds_proba_train = mlp.predict_proba(training_sample_norm)
+        preds_train = mlp.predict(training_sample_norm)
+        data_probability = pd.DataFrame(preds_proba_train)
+        data_probability['mark'] = preds_train
+        data_probability['shape'] = ['train'] * len(preds_train)
+
+        list_cat = list(mlp.classes_)
+
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = mlp.predict(working_sample)
+            probability = mlp.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах MLP для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = mlp.predict(data)
+            probability = mlp.predict_proba(data)
+            for i in working_data_new.index:
+                p_nan = [working_data_new.columns[ic + 3] for ic, v in enumerate(working_data_new.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                             f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data = pd.concat([working_data_new, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data['mark'] = new_mark
+
+        data_work_probability = pd.DataFrame(probability)
+        data_work_probability['mark'] = new_mark
+        data_work_probability['shape'] = ['work'] * len(new_mark)
+        data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+        # Вычисление t-SNE для обучающих и тестовых данных
+        data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+        data_tsne['mark'] = data_probability['mark']
+        data_tsne['shape'] = data_probability['shape']
+
+        # Формирование заголовка для графика
+        title_graph = f'Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки' \
+                      f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+                      f'{str(len(data_tsne.index))}\n' \
+                      f'hidden_layer_sizes: ({",".join(map(str, layers))}), ' \
+                      f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, ' \
+                      f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}' \
+                      f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}\n' \
+                      f'точность на обучающей выборке: {round(train_accuracy, 7)}'
+        draw_result_mlp(working_data, data_tsne, curr_form, title_graph)
+
+
+    def calc_knn_form():
+        set_info(f'Процесс расчёта KNN. {ui.comboBox_mlp_analysis.currentText()} по профилю {profile_title}', 'blue')
+        try:
+            # Создание и тренировка KNN
+            n_knn = ui_cls.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
+            algorithm_knn = ui_cls.comboBox_knn_algorithm.currentText()
+            knn = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
+            knn.fit(training_sample, markup)
+
+            # Оценка точности на обучающей выборке
+            train_accuracy = knn.score(training_sample, markup)
+
+            set_info(f'**KNN**: \nn_neighbors: {n_knn}, '
+                     f'\nweights: {weights_knn}, '
+                     f'\nalgorithm: {algorithm_knn}, '
+                     f'\nточность на обучающей выборке: {train_accuracy}, ', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+
+
+        # Создание и обучение модели t-SNE для отображения результата на графике
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        preds_proba_train = knn.predict_proba(training_sample)
+        preds_train = knn.predict(training_sample)
+        data_probability = pd.DataFrame(preds_proba_train)
+        data_probability['mark'] = preds_train
+        data_probability['shape'] = ['train'] * len(preds_train)
+
+
+        list_cat = list(knn.classes_)
+
+
+        working_sample = working_data_new.iloc[:, 3:]
+
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = knn.predict(working_sample)
+            probability = knn.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах KNN для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = knn.predict(data)
+            probability = knn.predict_proba(data)
+            for i in working_data_new.index:
+                p_nan = [working_data_new.columns[ic + 3] for ic, v in enumerate(working_data_new.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                             f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data = pd.concat([working_data_new, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data['mark'] = new_mark
+
+        data_work_probability = pd.DataFrame(probability)
+        data_work_probability['mark'] = new_mark
+        data_work_probability['shape'] = ['work'] * len(new_mark)
+        data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+        # Вычисление t-SNE для обучающих и тестовых данных
+        data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+        data_tsne['mark'] = data_probability['mark']
+        data_tsne['shape'] = data_probability['shape']
+
+        # Формирование заголовка для графика
+        title_graph = (f'Диаграмма рассеяния для канонических значений KNN\nдля обучающей выборки и тестовой выборки\n'
+                       f'n_neighbors: {n_knn}\n'
+                       f'weights: {weights_knn}\n'
+                       f'algorithm: {algorithm_knn}\n'
+                       f'точность на всей обучающей выборке: {train_accuracy}')
+        draw_result_mlp(working_data, data_tsne, curr_form, title_graph)
+
+
+    def calc_gpc_form():
+        set_info(f'Процесс расчёта GPC. {ui.comboBox_mlp_analysis.currentText()} по профилю {profile_title}', 'blue')
+        try:
+            # Создание и тренировка GPC
+            gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_cls.spinBox_gpc_n_restart.value()
+            multi_class = ui_cls.comboBox_gpc_multi.currentText()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            gpc = GaussianProcessClassifier(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state = 0,
+                multi_class=multi_class,
+                n_jobs=-1
+            )
+            gpc.fit(training_sample, markup)
+
+            # Оценка точности на обучающей выборке
+            train_accuracy = gpc.score(training_sample, markup)
+            set_info(f'**GPC**: \nwidth kernal: {gpc_kernel_width}, '
+                     f'\nscale kernal: {gpc_kernel_scale}, '
+                     f'\nn restart: {n_restart_optimization}, '
+                     f'\nmulti_class: {multi_class} ,'
+                     f'\nточность на обучающей выборке: {train_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах GPC! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+
+        # Создание и обучение модели t-SNE для отображения результата на графике
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+
+        preds_proba_train = gpc.predict_proba(training_sample)
+        preds_train = gpc.predict(training_sample)
+        data_probability = pd.DataFrame(preds_proba_train)
+        data_probability['mark'] = preds_train
+        data_probability['shape'] = ['train'] * len(preds_train)
+
+
+        list_cat = list(gpc.classes_)
+
+        # Подготовка тестовых данных для MLP
+        working_sample = working_data_new.iloc[:, 3:]
+
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = gpc.predict(working_sample)
+            probability = gpc.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах MLP для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = gpc.predict(data)
+            probability = gpc.predict_proba(data)
+            for i in working_data_new.index:
+                p_nan = [working_data_new.columns[ic + 3] for ic, v in enumerate(working_data_new.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                             f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data = pd.concat([working_data_new, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data['mark'] = new_mark
+
+        data_work_probability = pd.DataFrame(probability)
+        data_work_probability['mark'] = new_mark
+        data_work_probability['shape'] = ['work'] * len(new_mark)
+        data_probability = pd.concat([data_probability, data_work_probability], ignore_index=True)
+
+        # Вычисление t-SNE для обучающих и тестовых данных
+        data_tsne = pd.DataFrame(tsne.fit_transform(data_probability.iloc[:, :-2]))
+        data_tsne['mark'] = data_probability['mark']
+        data_tsne['shape'] = data_probability['shape']
+
+        # Формирование заголовка для графика
+        title_graph = (f'Диаграмма рассеяния для канонических значений GPC\nдля обучающей и тестовой выборки\n'
+                       f'scale kernal: {gpc_kernel_scale}\n'
+                       f'n restart: {n_restart_optimization}\n'
+                       f'multi_class: {multi_class}\n'
+                       f'точность на обучающей выборке: {train_accuracy}')
+
+        draw_result_mlp(working_data, data_tsne, curr_form, title_graph)
+
+
+    ui_cls.pushButton_calc_mlp.clicked.connect(calc_mlp_form)
+    ui_cls.pushButton_calc_knn.clicked.connect(calc_knn_form)
+    ui_cls.pushButton_calc_gpc.clicked.connect(calc_gpc_form)
+    Classifier.exec_()
+
+
+def draw_result_mlp(working_data, data_tsne, curr_form, title_graph):
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
-    # colors['test'] = '#999999'
-    working_data, data_tsne, curr_form, title_graph = get_working_data_mlp()
     fig = plt.figure(figsize=(10, 10))
     ax = plt.subplot()
 
@@ -609,92 +945,242 @@ def calc_obj_mlp():
     training_sample = data_train[list_param_mlp].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
 
-    try:
-        # Нормализация данных
-        scaler = StandardScaler()
-        training_sample_norm = scaler.fit_transform(training_sample)
+    working_data_result_copy = working_data_result.copy()
 
-        # Создание и тренировка MLP
-        layers = tuple(map(int, ui.lineEdit_layer_mlp.text().split()))
-        mlp = MLPClassifier(
-            hidden_layer_sizes=layers,
-            activation=ui.comboBox_activation_mlp.currentText(),
-            solver=ui.comboBox_solvar_mlp.currentText(),
-            alpha=ui.doubleSpinBox_alpha_mlp.value(),
-            max_iter=5000,
-            early_stopping=ui.checkBox_e_stop_mlp.isChecked(),
-            validation_fraction=ui.doubleSpinBox_valid_mlp.value(),
-            random_state=1
-        )
-        mlp.fit(training_sample_norm, markup)
+    Classifier = QtWidgets.QDialog()
+    ui_cls = Ui_ClassifierForm()
+    ui_cls.setupUi(Classifier)
+    Classifier.show()
+    Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-        # Оценка точности на обучающей выборке
-        train_accuracy = mlp.score(training_sample_norm, markup)
+    def calc_mlp_form():
+        try:
+            # Нормализация данных
+            scaler = StandardScaler()
+            training_sample_norm = scaler.fit_transform(training_sample)
 
-        # Разделение данных на обучающую и тестовую выборки с использованием заданного значения test_size
-        training_samlpe_train, training_sample_test, markup_train, markup_test = train_test_split(
-            training_sample_norm, markup, test_size=ui.doubleSpinBox_valid_mlp.value(), random_state=1)
+            # Создание и тренировка MLP
+            layers = tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split()))
+            mlp = MLPClassifier(
+                hidden_layer_sizes=layers,
+                activation=ui_cls.comboBox_activation_mlp.currentText(),
+                solver=ui_cls.comboBox_solvar_mlp.currentText(),
+                alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
+                random_state=1
+            )
+            mlp.fit(training_sample_norm, markup)
 
-        # Оценка точности на тестовой выборке
-        test_accuracy = mlp.score(training_sample_test, markup_test)
+            # Оценка точности на обучающей выборке
+            train_accuracy = mlp.score(training_sample_norm, markup)
 
-        # Вывод информации о параметрах MLP и точности модели
-        set_info(f'hidden_layer_sizes - ({",".join(map(str, layers))}), '
-                 f'activation - {ui.comboBox_activation_mlp.currentText()}, '
-                 f'solver - {ui.comboBox_solvar_mlp.currentText()}, '
-                 f'alpha - {ui.doubleSpinBox_alpha_mlp.value()}, '
-                 f'{"early stopping, " if ui.checkBox_e_stop_mlp.isChecked() else ""}'
-                 f'validation_fraction - {ui.doubleSpinBox_valid_mlp.value()}, '
-                 f'точность на всей обучающей выборке: {train_accuracy}, '
-                 f'точность на тестовой выборке: {test_accuracy}', 'blue')
-    except ValueError:
-        set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
-                 f'выборки.', 'red')
-        return
+            # Вывод информации о параметрах MLP и точности модели
+            set_info(f'**MLP**: \nhidden_layer_sizes: ({",".join(map(str, layers))}), '
+                     f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
+                     f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
+                     f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, '
+                     f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
+                     f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}, '
+                     f'\nточность на обучающей выборке: {train_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах MLP! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+
+        list_cat = list(mlp.classes_)
+
+        # Подготовка тестовых данных для MLP
+        set_info(f'Процесс расчёта MLP. {ui.comboBox_mlp_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
+        working_sample = scaler.fit_transform(working_data_result_copy.iloc[:, 3:])
+
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = mlp.predict(working_sample)
+            probability = mlp.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах MLP для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = mlp.predict(data)
+            probability = mlp.predict_proba(data)
+            for i in working_data.index:
+                p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(
+                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = new_mark
+        x = list(working_data_result['x_pulc'])
+        y = list(working_data_result['y_pulc'])
+        if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
+            z = list(working_data_result[list(set(new_mark))[0]])
+            color_marker = False
+        else:
+            z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            color_marker = True
+        if ui.checkBox_draw_map.isChecked():
+            draw_map(x, y, z, 'mlp', color_marker)
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                             filter="Excel Files (*.xlsx)")
+            working_data_result.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+
+    def calc_knn_form():
+        try:
+            n_knn = ui_cls.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
+            algorithm_knn = ui_cls.comboBox_knn_algorithm.currentText()
+            knn = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
+            knn.fit(training_sample, markup)
+
+            # Оценка точности на обучающей выборке
+            train_accuracy = knn.score(training_sample, markup)
+
+            set_info(f'**KNN**: \nn_neighbors: {n_knn}, '
+                     f'\nweights: {weights_knn}, '
+                     f'\nalgorithm: {algorithm_knn}, '
+                     f'\nточность на обучающей выборке: {train_accuracy}, ', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах KNN! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
 
 
-    list_cat = list(mlp.classes_)
+        list_cat = list(knn.classes_)
 
-    # Подготовка тестовых данных для MLP
-    set_info(f'Процесс расчёта MLP. {ui.comboBox_lda_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
-    working_sample = scaler.fit_transform(working_data_result.iloc[:, 3:])
+        # Подготовка тестовых данных для KNN
+        set_info(f'Процесс расчёта KNN. {ui.comboBox_mlp_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
+        working_sample = working_data_result_copy.iloc[:, 3:]
 
-    try:
-        # Предсказание меток для тестовых данных
-        new_mark = mlp.predict(working_sample)
-        probability = mlp.predict_proba(working_sample)
-    except ValueError:
-        # Обработка возможных ошибок в расчетах MLP для тестовых данных
-        data = imputer.fit_transform(working_sample)
-        new_mark = mlp.predict(data)
-        probability = mlp.predict_proba(data)
-        for i in working_data.index:
-            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
-                     np.isnan(v)]
-            if len(p_nan) > 0:
-                set_info(
-                    f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-                    f' этого измерения может быть не корректен', 'red')
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = knn.predict(working_sample)
+            probability = knn.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах KNN для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = knn.predict(data)
+            probability = knn.predict_proba(data)
+            for i in working_data_result_copy.index:
+                p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in enumerate(working_data_result_copy.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(
+                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
 
-    # Добавление предсказанных меток и вероятностей в рабочие данные
-    working_data_result = pd.concat([working_data_result, pd.DataFrame(probability, columns=list_cat)], axis=1)
-    working_data_result['mark'] = new_mark
-    x = list(working_data_result['x_pulc'])
-    y = list(working_data_result['y_pulc'])
-    # if len(set(new_mark)) == 2:
-    #     z = list(working_data_result[list(set(new_mark))[0]])
-    # else:
-    #     z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
-    z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
-    draw_map(x, y, z, 'mlp')
-    try:
-        file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-        fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                         filter="Excel Files (*.xlsx)")
-        working_data_result.to_excel(fn[0])
-        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-    except ValueError:
-        pass
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = new_mark
+        x = list(working_data_result['x_pulc'])
+        y = list(working_data_result['y_pulc'])
+        if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
+            z = list(working_data_result[list(set(new_mark))[0]])
+            color_marker = False
+        else:
+            z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            color_marker = True
+        if ui.checkBox_draw_map.isChecked():
+            draw_map(x, y, z, 'mlp', color_marker)
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                             filter="Excel Files (*.xlsx)")
+            working_data_result.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+
+
+    def calc_gpc_form():
+        try:
+            # Создание и тренировка GPC
+            gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_cls.spinBox_gpc_n_restart.value()
+            multi_class = ui_cls.comboBox_gpc_multi.currentText()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            gpc = GaussianProcessClassifier(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state = 0,
+                multi_class=multi_class,
+                n_jobs=-1
+            )
+            gpc.fit(training_sample, markup)
+
+            train_accuracy = gpc.score(training_sample, markup)
+            set_info(f'**GPC**: \nwidth kernal: {gpc_kernel_width}, '
+                     f'\nscale kernal: {gpc_kernel_scale}, '
+                     f'\nn restart: {n_restart_optimization}, '
+                     f'\nmulti_class: {multi_class} ,'
+                     f'\nточность на обучающей выборке: {train_accuracy}', 'blue')
+        except ValueError:
+            set_info(f'Ошибка в расчетах GPC! Возможно значения одного из параметров отсутствуют в интервале обучающей '
+                     f'выборки.', 'red')
+            return
+
+
+        list_cat = list(gpc.classes_)
+
+        # Подготовка тестовых данных для GPC
+        set_info(f'Процесс расчёта GPC. {ui.comboBox_mlp_analysis.currentText()} по {get_object_name()} {get_research_name()}', 'blue')
+        working_sample = working_data_result_copy.iloc[:, 3:]
+
+        try:
+            # Предсказание меток для тестовых данных
+            new_mark = gpc.predict(working_sample)
+            probability = gpc.predict_proba(working_sample)
+        except ValueError:
+            # Обработка возможных ошибок в расчетах GPC для тестовых данных
+            data = imputer.fit_transform(working_sample)
+            new_mark = gpc.predict(data)
+            probability = gpc.predict_proba(data)
+            for i in working_data_result_copy.index:
+                p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in enumerate(working_data_result_copy.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = new_mark
+        x = list(working_data_result['x_pulc'])
+        y = list(working_data_result['y_pulc'])
+        if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
+            z = list(working_data_result[list(set(new_mark))[0]])
+            color_marker = False
+        else:
+            z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            color_marker = True
+        if ui.checkBox_draw_map.isChecked():
+            draw_map(x, y, z, 'mlp', color_marker)
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                             filter="Excel Files (*.xlsx)")
+            working_data_result.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+
+
+    ui_cls.pushButton_calc_mlp.clicked.connect(calc_mlp_form)
+    ui_cls.pushButton_calc_knn.clicked.connect(calc_knn_form)
+    ui_cls.pushButton_calc_gpc.clicked.connect(calc_gpc_form)
+    Classifier.exec_()
+
+
 
 
 

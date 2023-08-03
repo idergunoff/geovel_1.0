@@ -54,7 +54,7 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param):
+def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -84,6 +84,9 @@ def draw_map(list_x, list_y, list_z, param):
         nlags = ui_dm.spinBox_nlags.value()
         weight = ui_dm.checkBox_weight.isChecked()
         vector = 'vectorized' if ui_dm.checkBox_vector.isChecked() else 'C'
+        legend = ''
+        levels_count = 10
+        color_map = ui_dm.comboBox_cmap.currentText()
         if param == 'lda':
             markers_lda = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
             colors_lda = [marker.color for marker in markers_lda]
@@ -96,22 +99,8 @@ def draw_map(list_x, list_y, list_z, param):
             color_map = ListedColormap(colors_mlp)
             legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_mlp)])
             levels_count = len(markers_mlp) - 1
-        elif param == 'knn':
-            markers_knn = session.query(MarkerKNN).filter(MarkerKNN.analysis_id == get_KNN_id()).all()
-            colors_knn = [marker.color for marker in markers_knn]
-            color_map = ListedColormap(colors_knn)
-            legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_knn)])
-            levels_count = len(markers_knn) - 1
-        elif param == 'gpc':
-            markers_gpc = session.query(MarkerGPC).filter(MarkerGPC.analysis_id == get_GPC_id()).all()
-            colors_gpc = [marker.color for marker in markers_gpc]
-            color_map = ListedColormap(colors_gpc)
-            legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_gpc)])
-            levels_count = len(markers_gpc) - 1
-        else:
+        if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
-            legend = ''
-            levels_count = 10
         ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=True)
 
         # Интерполяция значений на сетке
@@ -145,3 +134,23 @@ def draw_map(list_x, list_y, list_z, param):
     Draw_Map.exec_()
 
 
+def show_profiles():
+    r_id = get_research_id()
+    r = session.query(Research).filter_by(id=r_id).first()
+    list_x, list_y = [], []
+    for profile in r.profiles:
+        list_x += (json.loads(profile.x_pulc))
+        list_y += (json.loads(profile.y_pulc))
+
+    x = np.array(list_x)
+    y = np.array(list_y)
+
+    plt.figure(figsize=(12, 9))
+
+    plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
+    plt.xlabel('X')
+    plt.ylabel('Y')
+
+    plt.title('Профили')
+    plt.tight_layout()
+    plt.show()

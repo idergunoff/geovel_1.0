@@ -10,8 +10,6 @@ from layer import *
 from well import *
 from lda import *
 from mlp import *
-from knn import *
-from gpc import *
 from monitoring import *
 from krige import *
 from formation_ai import *
@@ -123,8 +121,6 @@ ui.pushButton_add_lda.clicked.connect(add_lda)
 ui.pushButton_rem_lda.clicked.connect(remove_lda)
 ui.pushButton_copy_lda.clicked.connect(copy_lda)
 ui.pushButton_copy_lda_to_mlp.clicked.connect(copy_lda_to_mlp)
-ui.pushButton_copy_lda_to_knn.clicked.connect(copy_lda_to_knn)
-ui.pushButton_copy_lda_to_gpc.clicked.connect(copy_lda_to_gpc)
 ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
 ui.pushButton_rem_mark_lda.clicked.connect(remove_marker_lda)
 ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
@@ -171,52 +167,7 @@ ui.pushButton_add_mfcc_mlp.clicked.connect(add_param_mfcc_mlp)
 ui.pushButton_add_all_mfcc_mlp.clicked.connect(add_all_param_mfcc_mlp)
 ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp_db)
 
-#   knn
-ui.pushButton_add_knn.clicked.connect(add_knn)
-ui.pushButton_rem_knn.clicked.connect(remove_knn)
-ui.pushButton_copy_knn.clicked.connect(copy_knn)
-ui.pushButton_add_mark_knn.clicked.connect(add_marker_knn)
-ui.pushButton_rem_mark_knn.clicked.connect(remove_marker_knn)
-ui.pushButton_add_well_knn.clicked.connect(add_well_markup_knn)
-ui.pushButton_add_geovel_knn.clicked.connect(add_param_geovel_knn)
-ui.pushButton_add_all_geovel_knn.clicked.connect(add_all_param_geovel_knn)
-ui.pushButton_add_distr_knn.clicked.connect(add_param_distr_knn)
-ui.pushButton_add_sep_knn.clicked.connect(add_param_sep_knn)
-ui.pushButton_add_all_distr_knn.clicked.connect(add_all_param_distr_knn)
-ui.pushButton_update_well_knn.clicked.connect(update_well_markup_knn)
-ui.pushButton_rem_well_knn.clicked.connect(remove_well_markup_knn)
-ui.pushButton_rem_param_knn.clicked.connect(remove_param_geovel_knn)
-ui.pushButton_clear_params_knn.clicked.connect(remove_all_param_geovel_knn)
-ui.pushButton_draw_knn.clicked.connect(draw_KNN)
-ui.pushButton_calc_knn.clicked.connect(calc_KNN)
-ui.pushButton_calc_obj_knn.clicked.connect(calc_obj_knn)
-ui.pushButton_add_mfcc_knn.clicked.connect(add_param_mfcc_knn)
-ui.pushButton_add_all_mfcc_knn.clicked.connect(add_all_param_mfcc_knn)
-ui.comboBox_knn_analysis.activated.connect(update_list_marker_knn_db)
 
-
-#   gpc
-ui.pushButton_add_gpc.clicked.connect(add_gpc)
-ui.pushButton_rem_gpc.clicked.connect(remove_gpc)
-ui.pushButton_copy_gpc.clicked.connect(copy_gpc)
-ui.pushButton_add_mark_gpc.clicked.connect(add_marker_gpc)
-ui.pushButton_rem_mark_gpc.clicked.connect(remove_marker_gpc)
-ui.pushButton_add_well_gpc.clicked.connect(add_well_markup_gpc)
-ui.pushButton_add_geovel_gpc.clicked.connect(add_param_geovel_gpc)
-ui.pushButton_add_all_geovel_gpc.clicked.connect(add_all_param_geovel_gpc)
-ui.pushButton_add_distr_gpc.clicked.connect(add_param_distr_gpc)
-ui.pushButton_add_sep_gpc.clicked.connect(add_param_sep_gpc)
-ui.pushButton_add_all_distr_gpc.clicked.connect(add_all_param_distr_gpc)
-ui.pushButton_update_well_gpc.clicked.connect(update_well_markup_gpc)
-ui.pushButton_rem_well_gpc.clicked.connect(remove_well_markup_gpc)
-ui.pushButton_rem_param_gpc.clicked.connect(remove_param_geovel_gpc)
-ui.pushButton_clear_params_gpc.clicked.connect(remove_all_param_geovel_gpc)
-ui.pushButton_draw_gpc.clicked.connect(draw_GPC)
-ui.pushButton_calc_gpc.clicked.connect(calc_GPC)
-ui.pushButton_calc_obj_gpc.clicked.connect(calc_obj_gpc)
-ui.pushButton_add_mfcc_gpc.clicked.connect(add_param_mfcc_gpc)
-ui.pushButton_add_all_mfcc_gpc.clicked.connect(add_all_param_mfcc_gpc)
-ui.comboBox_gpc_analysis.activated.connect(update_list_marker_gpc_db)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
@@ -298,6 +249,7 @@ ui.pushButton_model_calc_profile.clicked.connect(calc_model_profile)
 ui.pushButton_rem_trained_model.clicked.connect(remove_trained_model)
 
 ui.pushButton_map.clicked.connect(show_map)
+ui.pushButton_profiles.clicked.connect(show_profiles)
 
 roi.sigRegionChanged.connect(updatePlot)
 
@@ -316,12 +268,8 @@ set_info('Старт...', 'green')
 set_random_color()
 update_list_lda(True)
 update_list_mlp(True)
-update_list_knn(True)
-update_list_gpc(True)
 set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
-set_param_knn_to_combobox()
-set_param_gpc_to_combobox()
 update_combobox_model_ai()
 update_list_trained_models()
 
