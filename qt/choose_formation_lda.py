@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\choose_formation_lda.ui'
+# Form implementation generated from reading ui file 'qt/choose_formation_lda.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_FormationLDA(object):
     def setupUi(self, FormationLDA):
         FormationLDA.setObjectName("FormationLDA")
-        FormationLDA.resize(170, 191)
+        FormationLDA.resize(300, 300)
         self.gridLayout = QtWidgets.QGridLayout(FormationLDA)
         self.gridLayout.setObjectName("gridLayout")
         self.listWidget_form_lda = QtWidgets.QListWidget(FormationLDA)
@@ -32,13 +32,3 @@ class Ui_FormationLDA(object):
         _translate = QtCore.QCoreApplication.translate
         FormationLDA.setWindowTitle(_translate("FormationLDA", "Formation LDA"))
         self.pushButton_ok_form_lda.setText(_translate("FormationLDA", "ОК"))
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    FormationLDA = QtWidgets.QWidget()
-    ui = Ui_FormationLDA()
-    ui.setupUi(FormationLDA)
-    FormationLDA.show()
-    sys.exit(app.exec_())

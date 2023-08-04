@@ -86,7 +86,7 @@ def add_marker_mlp():
         session.add(new_marker)
         set_info(f'Добавлен новый маркер MLP - "{ui.lineEdit_string.text()}"', 'green')
     session.commit()
-    update_list_marker_mlp(True)
+    update_list_marker_mlp()
 
 
 def remove_marker_mlp():
@@ -1023,8 +1023,9 @@ def calc_obj_mlp():
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             color_marker = True
+            working_data_result['mark_number'] = z
         if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'mlp', color_marker)
+            draw_map(x, y, z, 'Classifier MLP', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
@@ -1088,9 +1089,10 @@ def calc_obj_mlp():
             color_marker = False
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z
             color_marker = True
         if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'mlp', color_marker)
+            draw_map(x, y, z, 'Classifier KNN', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
@@ -1162,9 +1164,10 @@ def calc_obj_mlp():
             color_marker = False
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z
             color_marker = True
         if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'mlp', color_marker)
+            draw_map(x, y, z, 'Classifier GPC', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,

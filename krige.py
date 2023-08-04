@@ -14,6 +14,11 @@ cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purple
              'turbo', 'nipy_spectral', 'gist_ncar']
 
 
+dist_func_list = ['euclidean', 'braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation', 'cosine', 'ice',
+                  'hamming', 'jaccard', 'jensenshannon', 'kulczynski1', 'mahalanobis', 'matching', 'minkowski',
+                  'rogerstanimoto', 'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean', 'yule']
+
+
 
 
 def show_map():
@@ -65,20 +70,23 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
     for i in cmap_list:
         ui_dm.comboBox_cmap.addItem(i)
     ui_dm.comboBox_cmap.setCurrentText('gist_rainbow')
+    for i in dist_func_list:
+        ui_dm.comboBox_dist_func.addItem(i)
 
 
     def form_lda_ok():
 
+        sparse = ui_dm.spinBox_sparse.value()
         # Создание набора данных
-        x = np.array(list_x[::2])
-        y = np.array(list_y[::2])
+        x = np.array(list_x[::sparse])
+        y = np.array(list_y[::sparse])
         coord = np.column_stack([x, y])
-        z = np.array(list_z[::2])
+        z = np.array(list_z[::sparse])
         grid_size = ui_dm.spinBox_grid.value()
 
         # Создание сетки для интерполяции
-        gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
-        gridy = np.linspace(min(list_y) - 200, max(list_y) + 200, grid_size)
+        # gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
+        # gridy = np.linspace(min(list_y) - 200, max(list_y) + 200, grid_size)
         xx, yy = np.mgrid[min(list_x) - 200: max(list_x) + 200: grid_size, min(list_y) - 200: max(list_y) + 200: grid_size]
         # print(xx, yy)
 
@@ -86,9 +94,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
         # Создание объекта OrdinaryKriging
         var_model = ui_dm.comboBox_var_model.currentText()
+        estimator = ui_dm.comboBox_estimator.currentText()
+        dist_func = ui_dm.comboBox_dist_func.currentText()
+        bin_func = ui_dm.comboBox_bin_func.currentText()
+        filt_power = ui_dm.spinBox_filt.value()
         nlags = ui_dm.spinBox_nlags.value()
-        weight = ui_dm.checkBox_weight.isChecked()
-        vector = 'vectorized' if ui_dm.checkBox_vector.isChecked() else 'C'
         legend = ''
         levels_count = 10
         color_map = ui_dm.comboBox_cmap.currentText()
@@ -98,7 +108,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
             color_map = ListedColormap(colors_lda)
             legend = '\n'.join([f'{n+1}-{m.title}' for n, m in enumerate(markers_lda)])
             levels_count = len(markers_lda) - 1
-        elif param == 'mlp':
+        elif param.startswith('Classifier'):
             markers_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
             colors_mlp = [marker.color for marker in markers_mlp]
             color_map = ListedColormap(colors_mlp)
@@ -120,18 +130,33 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         # ok.display_variogram_model()
 
         # Интерполяция значений на сетке scikit-gstat
-
-        variogram = Variogram(coordinates=coord, values=z, estimator='cressie')
+        try:
+            variogram = Variogram(coordinates=coord, values=z, estimator=estimator, dist_func=dist_func, bin_func=bin_func)
+        except MemoryError:
+            set_info('MemoryError', 'red')
+            return
+        except ValueError:
+            set_info('ValueError: variogram', 'red')
+            return
         print(1)
 
-        variogram.fit()
+        # variogram.fit()
         print(2)
         kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
         print(3)
-        z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+        try:
+            z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+        except LinAlgError:
+            set_info('LinAlgError: Singular matrix', 'red')
+            return
         print(len(z_interp))
         print(z_interp)
-        # z_interp = savgol_filter(z_interp, 9, 3)
+        if ui_dm.checkBox_filt.isChecked():
+            try:
+                z_interp = savgol_filter(z_interp, filt_power, 3)
+            except ValueError:
+                set_info('ValueError in savgol filter', 'red')
+                return
 
         # интерполяция значений на сетке gstools
         #
@@ -152,9 +177,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         plt.xlabel('X')
         plt.ylabel('Y')
 
-        plt.title(f'{get_object_name()} {get_research_name()} {param}\n{legend}\nМодель интерполяции: {var_model}\nКоличество ячеек '
-                  f'усреднения вариограммы: {nlags}\nЛогистический вес: {weight}\nВекторизованная интерполяция: {vector}'
-                  f'\nКол-во ячеек сетки: {grid_size}x{grid_size}')
+        plt.title(f'{get_object_name()} {get_research_name()} {param}\n{legend}\nМодель интерполяции: {var_model}'
+                  f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
+                  f'\nКоличество ячеек усреднения вариограммы: {nlags}'
+                  f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
+                  f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
         plt.show()
 

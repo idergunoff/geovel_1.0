@@ -816,8 +816,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>321</width>
-                         <height>196</height>
+                         <width>98</width>
+                         <height>38</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1749,7 +1749,15 @@
                    </widget>
                   </item>
                   <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_84"/>
+                   <layout class="QGridLayout" name="gridLayout_84">
+                    <item row="0" column="0">
+                     <widget class="QCheckBox" name="checkBox_color_marker">
+                      <property name="text">
+                       <string>color marker</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </item>
                   <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_copy_lda">
@@ -2238,6 +2246,9 @@
                  <widget class="QCheckBox" name="checkBox_draw_map">
                   <property name="text">
                    <string>draw map</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
                   </property>
                  </widget>
                 </item>

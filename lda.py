@@ -74,63 +74,6 @@ def copy_lda_to_mlp():
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
 
 
-def copy_lda_to_knn():
-    """Скопировать анализ LDA в KNN"""
-    if ui.lineEdit_string.text() == '':
-        set_info('Введите название для копии анализа', 'red')
-        return
-    old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
-    new_knn = AnalysisKNN(title=ui.lineEdit_string.text())
-    session.add(new_knn)
-    session.commit()
-    for old_marker in old_lda.markers:
-        new_marker = MarkerKNN(analysis_id=new_knn.id, title=old_marker.title, color=old_marker.color)
-        session.add(new_marker)
-        for old_markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id(), marker_id=old_marker.id):
-            new_markup = MarkupKNN(
-                analysis_id=new_knn.id,
-                well_id=old_markup.well_id,
-                profile_id=old_markup.profile_id,
-                formation_id=old_markup.formation_id,
-                marker_id=new_marker.id,
-                list_measure=old_markup.list_measure
-            )
-            session.add(new_markup)
-    session.commit()
-    build_table_test_no_db('knn', new_knn.id, [])
-    update_list_lda()
-    update_list_knn()
-    set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
-
-
-def copy_lda_to_gpc():
-    """Скопировать анализ LDA в GPC"""
-    if ui.lineEdit_string.text() == '':
-        set_info('Введите название для копии анализа', 'red')
-        return
-    old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
-    new_gpc = AnalysisGPC(title=ui.lineEdit_string.text())
-    session.add(new_gpc)
-    session.commit()
-    for old_marker in old_lda.markers:
-        new_marker = MarkerGPC(analysis_id=new_gpc.id, title=old_marker.title, color=old_marker.color)
-        session.add(new_marker)
-        for old_markup in session.query(MarkupLDA).filter_by(analysis_id=get_LDA_id(), marker_id=old_marker.id):
-            new_markup = MarkupGPC(
-                analysis_id=new_gpc.id,
-                well_id=old_markup.well_id,
-                profile_id=old_markup.profile_id,
-                formation_id=old_markup.formation_id,
-                marker_id=new_marker.id,
-                list_measure=old_markup.list_measure
-            )
-            session.add(new_markup)
-    session.commit()
-    build_table_test_no_db('knn', new_gpc.id, [])
-    update_list_lda()
-    update_list_gpc()
-    set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
-
 
 def remove_lda():
     """Удалить анализ LDA"""
@@ -694,12 +637,14 @@ def calc_obj_lda():
     working_data_result['mark'] = new_mark
     x = list(working_data_result['x_pulc'])
     y = list(working_data_result['y_pulc'])
-    # if len(set(new_mark)) == 2:
-    #     z = list(working_data_result[list(set(new_mark))[0]])
-    # else:
-    #     z = string_to_unique_number(list(working_data_result['mark']), 'lda')
-    z = string_to_unique_number(list(working_data_result['mark']), 'lda')
-    draw_map(x, y, z, 'lda')
+    if len(set(new_mark)) == 2 and not ui.checkBox_color_marker.isChecked():
+        z = list(working_data_result[list(set(new_mark))[0]])
+        color_marker = False
+    else:
+        z = string_to_unique_number(list(working_data_result['mark']), 'lda')
+        color_marker = True
+        working_data_result['mark_number'] = z
+    draw_map(x, y, z, 'lda', color_marker)
     try:
         file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_lda_title()}.xlsx'
         fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат LDA "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
