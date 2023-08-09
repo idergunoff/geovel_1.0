@@ -558,42 +558,58 @@ def calc_atrib_measure(rad, atr):
 ############################   Well   #############################
 ###################################################################
 
-def distance(x1, y1, x2, y2):
-    return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
-
 
 # Функция для нахождения ближайшей точки на профиле к заданной скважине
 def closest_point(well_x, well_y, profile_x, profile_y):
     # используем lambda-функцию для нахождения расстояния между скважиной и каждой точкой на профиле
-    closest = min(range(len(profile_x)), key=lambda i: distance(well_x, well_y, profile_x[i], profile_y[i]))
+    closest = min(range(len(profile_x)), key=lambda i: calc_distance(well_x, well_y, profile_x[i], profile_y[i]))
     # возвращает индекс ближайшей точки и расстояние до нее
-    return (closest, distance(well_x, well_y, profile_x[closest], profile_y[closest]))
+    return (closest, calc_distance(well_x, well_y, profile_x[closest], profile_y[closest]))
 
 
 def update_list_well():
+    """Обновить виджет списка скважин"""
     for key, value in globals().items():
         if key.startswith('bound_') or key.startswith('well_'):
             radarogramma.removeItem(globals()[key])
     ui.listWidget_well.clear()
-    wells = session.query(Well).order_by(Well.name).all()
-    if ui.checkBox_profile_well.isChecked():
-        if session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
-            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
-            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
-            profile_plus_dist = distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
-            for w in wells:
-                start_profile_dist = distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
-                end_profile_dist = distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
-                if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
-                    index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
-                    if dist <= ui.spinBox_well_distance.value():
-                        ui.listWidget_well.addItem(f'скв.№ {w.name} - ({index}) {round(dist, 2)} м. id{w.id}')
+    if ui.checkBox_profile_intersec.isChecked():
+        intersections = session.query(Intersection).order_by(Intersection.name).all()
+        if ui.checkBox_profile_well.isChecked():
+            for intersec in intersections:
+                if intersec.profile_id == get_profile_id():
+                    ui.listWidget_well.addItem(f'{intersec.name} id{intersec.id}')
             draw_wells()
         else:
-            ui.listWidget_well.addItem('Координаты профиля не загружены')
+            for intersec in intersections:
+                ui.listWidget_well.addItem(f'{intersec.name} id{intersec.id}')
     else:
-        for w in wells:
-            ui.listWidget_well.addItem(f'скв.№ {w.name} id{w.id}')
+        wells = session.query(Well).order_by(Well.name).all()
+        if ui.checkBox_profile_well.isChecked():
+            if session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
+                x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+                y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+                profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
+                for w in wells:
+                    start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
+                    end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
+                    if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
+                        index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                        if dist <= ui.spinBox_well_distance.value():
+                            ui.listWidget_well.addItem(f'скв.№ {w.name} - ({index}) {round(dist, 2)} м. id{w.id}')
+                draw_wells()
+            else:
+                ui.listWidget_well.addItem('Координаты профиля не загружены')
+        else:
+            for w in wells:
+                ui.listWidget_well.addItem(f'скв.№ {w.name} id{w.id}')
+
+
+def set_title_list_widget_wells():
+    if ui.checkBox_profile_intersec.isChecked():
+        ui.label_11.setText('Intersections:')
+    else:
+        ui.label_11.setText('Wells:')
 
 
 def get_well_id():
@@ -632,7 +648,7 @@ def draw_wells():
     #         radarogramma.removeItem(globals()[key])
     for i in range(ui.listWidget_well.count()):
         well_id = ui.listWidget_well.item(i).text().split(' id')[-1]
-        draw_well(well_id)
+        draw_intersection(well_id) if ui.checkBox_profile_intersec.isChecked() else draw_well(well_id)
 
 
 def draw_well(well_id):
@@ -650,7 +666,9 @@ def draw_well(well_id):
     radarogramma.addItem(curve)
     globals()[f'well_curve_id{well_id}'] = curve
 
-    text_item = pg.TextItem(text=f'{well.name} ({round(dist, 2)})', color='white')
+
+    well_text = f'int ({well.name.split("/")[2]})' if well.name.startswith('int') else well.name
+    text_item = pg.TextItem(text=f'{well_text} ({round(dist, 2)})', color='white')
     text_item.setPos(index, -30)
     radarogramma.addItem(text_item)
     globals()[f'well_text_id{well_id}'] = text_item
@@ -661,6 +679,28 @@ def draw_well(well_id):
     #         radarogramma.removeItem(globals()[key])
     for b in boundaries:
         draw_boundary(b.id, index)
+
+
+
+def draw_intersection(int_id):
+    # если существуют глобальные объекты линий и точек, удаляем их с радарограммы
+    if f'well_curve_id{int_id}' in globals():
+        radarogramma.removeItem(globals()[f'well_curve_id{int_id}'])
+    if f'well_text_id{int_id}' in globals():
+        radarogramma.removeItem(globals()[f'well_text_id{int_id}'])
+
+    intersection = session.query(Intersection).filter_by(id=int_id).first()
+
+    curve = pg.PlotCurveItem(x=[intersection.i_profile, intersection.i_profile], y=[0, 512], pen=pg.mkPen(color='white', width=2))
+    radarogramma.addItem(curve)
+    globals()[f'well_curve_id{int_id}'] = curve
+
+
+    well_text = intersection.name.split("_")[0]
+    text_item = pg.TextItem(text=f'{well_text} ({round(intersection.temperature, 2)} °C)', color='white')
+    text_item.setPos(intersection.i_profile, -30)
+    radarogramma.addItem(text_item)
+    globals()[f'well_text_id{int_id}'] = text_item
 
 
 def draw_boundary(bound_id, index):
@@ -1061,3 +1101,44 @@ def string_to_unique_number(strings, type_analysis):
         result.append(unique_strings[s])
 
     return result
+
+
+def calc_distance(x1, y1, x2, y2):
+    """ Функция для вычисления расстояния между двумя точками """
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+
+def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
+    """ Функция для поиска точек пересечения и выбора ближайшей """
+    intersection_points = []
+
+    # Перебираем все пары соседних точек в профилях
+    for i in range(len(list_x1) - 1):
+        for j in range(len(list_x2) - 1):
+            x1, y1 = list_x1[i], list_y1[i]
+            x2, y2 = list_x1[i + 1], list_y1[i + 1]
+            x3, y3 = list_x2[j], list_y2[j]
+            x4, y4 = list_x2[j + 1], list_y2[j + 1]
+
+            # Вычисляем знаменатель для проверки пересечения отрезков
+            den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+
+            # Если отрезки пересекаются, вычисляем координаты точки пересечения
+            if den != 0:
+                ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den
+                ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den
+
+                # Проверяем, что точка пересечения находится на отрезках
+                if 0 <= ua <= 1 and 0 <= ub <= 1:
+                    intersect_x = x1 + ua * (x2 - x1)
+                    intersect_y = y1 + ua * (y2 - y1)
+                    intersection_points.append((intersect_x, intersect_y, i, j))
+    return intersection_points
+
+    # # Если нет точек пересечения, возвращаем пустой список
+    # if not intersection_points:
+    #     return []
+    #
+    # # Находим ближайшую точку пересечения к началу координат
+    # closest_point = min(intersection_points, key=lambda p: calc_distance(0, 0, p[0], p[1]))
+    # return closest_point[2], closest_point[3]

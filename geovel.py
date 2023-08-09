@@ -189,6 +189,8 @@ ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
 ui.checkBox_all_formation.stateChanged.connect(draw_param)
 ui.checkBox_profile_well.stateChanged.connect(update_list_well)
+ui.checkBox_profile_intersec.stateChanged.connect(update_list_well)
+ui.checkBox_profile_intersec.stateChanged.connect(set_title_list_widget_wells)
 
 ui.spinBox_ftt_up.valueChanged.connect(draw_fft_spectr)
 ui.spinBox_fft_down.valueChanged.connect(draw_fft_spectr)
@@ -232,6 +234,7 @@ ui.pushButton_cut_end_therm.clicked.connect(cut_end_therm)
 ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
 ui.pushButton_show_therms.clicked.connect(show_therms_animation)
 ui.pushButton_therm_mean_day.clicked.connect(mean_day_thermogram)
+ui.pushButton_add_intersec.clicked.connect(add_intersection)
 
 
 ###################################################################

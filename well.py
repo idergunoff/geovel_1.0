@@ -93,7 +93,12 @@ def add_wells():
                                       Well.y_coord == float(process_string(pd_wells['y'][i]))).count() > 0:
             set_info(f'Скважина {pd_wells["name"][i]} уже есть в БД', 'red')
         else:
-            new_well = Well(name=str(pd_wells['name'][i]), x_coord=float(process_string(pd_wells['x'][i])), y_coord=float(process_string(pd_wells['y'][i])), alt=float(process_string(pd_wells['alt'][i])))
+            new_well = Well(
+                name=str(pd_wells['name'][i]),
+                x_coord=float(process_string(pd_wells['x'][i])),
+                y_coord=float(process_string(pd_wells['y'][i])),
+                alt=float(process_string(pd_wells['alt'][i]))
+            )
             session.add(new_well)
         ui.progressBar.setValue(i + 1)
     session.commit()
@@ -102,9 +107,22 @@ def add_wells():
 
 def show_data_well():
     ui.textEdit_datawell.clear()
-    well = session.query(Well).filter_by(id=get_well_id()).first()
-    if well:
-        ui.textEdit_datawell.append(f'<p><b>Скважина №</b> {well.name}</p>'
+    if ui.checkBox_profile_intersec.isChecked():
+        inter = session.query(Intersection).filter_by(id=get_well_id()).first()
+        if inter:
+            therm = session.query(Thermogram).filter_by(id=inter.therm_id).first()
+            target_date = session.query(Research).filter_by(id=get_research_id()).first().date_research
+            target_datetime = datetime.datetime.combine(target_date, datetime.datetime.min.time())
+            ui.textEdit_datawell.append(f'<p><b>Пересечение:</b> {inter.name}</p>'
+                                        f'<p><b>X:</b> {round(inter.x_coord, 2)}</p>'
+                                        f'<p><b>Y:</b> {round(inter.y_coord, 2)}</p>'
+                                        f'<p><b>Дата термограммы:</b> {therm.date_time.strftime("%d.%m.%Y")} '
+                                        f'({(therm.date_time - target_datetime).days} дней)</p>'
+                                        f'<p><b>Температура:</b> {round(inter.temperature, 2)} °C</p>')
+    else:
+        well = session.query(Well).filter_by(id=get_well_id()).first()
+        if well:
+            ui.textEdit_datawell.append(f'<p><b>Скважина №</b> {well.name}</p>'
                                 f'<p><b>X:</b> {well.x_coord}</p>'
                                 f'<p><b>Y:</b> {well.y_coord}</p>'
                                 f'<p><b>Альтитуда:</b> {well.alt} м.</p>')

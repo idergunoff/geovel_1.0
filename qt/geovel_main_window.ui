@@ -817,7 +817,7 @@
                          <x>0</x>
                          <y>0</y>
                          <width>321</width>
-                         <height>196</height>
+                         <height>172</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1173,8 +1173,8 @@
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0">
-                    <item row="0" column="0" colspan="2">
+                   <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0">
+                    <item row="0" column="1" colspan="2">
                      <widget class="QLabel" name="label_15">
                       <property name="font">
                        <font>
@@ -1186,7 +1186,7 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QSpinBox" name="spinBox_well_distance">
                       <property name="minimum">
                        <number>1</number>
@@ -1199,6 +1199,18 @@
                       </property>
                       <property name="value">
                        <number>50</number>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="0">
+                     <widget class="QCheckBox" name="checkBox_profile_intersec">
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>intersection</string>
                       </property>
                      </widget>
                     </item>
@@ -1399,6 +1411,9 @@
                      <layout class="QGridLayout" name="gridLayout_59">
                       <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_rem_h_well">
+                        <property name="toolTip">
+                         <string>Удалить горизонтальную скважину</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
@@ -1407,28 +1422,11 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="2" column="0">
-                       <widget class="QPushButton" name="pushButton_edit_h_well">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>Edit h.well</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="4" column="0">
-                       <widget class="QPushButton" name="pushButton_param_h_well">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(148, 255, 232);</string>
-                        </property>
-                        <property name="text">
-                         <string>Parameters</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_add_h_well">
+                        <property name="toolTip">
+                         <string>Добавить одну горизонтальную скважину</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(191, 255, 191);</string>
                         </property>
@@ -1437,22 +1435,66 @@
                         </property>
                        </widget>
                       </item>
-                     </layout>
-                    </item>
-                    <item row="0" column="2">
-                     <layout class="QGridLayout" name="gridLayout_61">
-                      <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_wellhead">
+                      <item row="2" column="0">
+                       <widget class="QPushButton" name="pushButton_edit_h_well">
+                        <property name="toolTip">
+                         <string>Изменить название скважины</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>Edit h.well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="5" column="0">
+                       <widget class="QPushButton" name="pushButton_param_h_well">
+                        <property name="toolTip">
+                         <string>Загрузить параметры разработки из файла Excel</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(148, 255, 232);</string>
                         </property>
                         <property name="text">
-                         <string>Wellhead</string>
+                         <string>Parameters</string>
                         </property>
                        </widget>
                       </item>
+                      <item row="4" column="0">
+                       <layout class="QGridLayout" name="gridLayout_46">
+                        <item row="0" column="0">
+                         <widget class="QCheckBox" name="checkBox_incl_prof">
+                          <property name="text">
+                           <string>p</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QCheckBox" name="checkBox_incl_therm">
+                          <property name="text">
+                           <string>t</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QCheckBox" name="checkBox_incl_int">
+                          <property name="text">
+                           <string>i</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="2">
+                     <layout class="QGridLayout" name="gridLayout_61">
                       <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_wellhead_batch">
+                        <property name="toolTip">
+                         <string>Пакетная загрузка координат устьев скважин из txt-файла. Формат файла номер скв -&gt; x -&gt; y, разделитель табуляция</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(0, 255, 255);</string>
                         </property>
@@ -1463,6 +1505,9 @@
                       </item>
                       <item row="2" column="0">
                        <widget class="QPushButton" name="pushButton_inclin_h_well">
+                        <property name="toolTip">
+                         <string>Загрузка инклинометрии для горизонтальных скважин</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(148, 255, 232);</string>
                         </property>
@@ -1471,13 +1516,42 @@
                         </property>
                        </widget>
                       </item>
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_wellhead">
+                        <property name="toolTip">
+                         <string>Загрузить координаты устья выбранной горизонтальной скважины</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
+                        </property>
+                        <property name="text">
+                         <string>Wellhead</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="3" column="0">
                        <widget class="QPushButton" name="pushButton_show_incl">
+                        <property name="toolTip">
+                         <string>Отобразить инклинометрию</string>
+                        </property>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 204, 121);</string>
                         </property>
                         <property name="text">
                          <string>Show Incl</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QPushButton" name="pushButton_add_intersec">
+                        <property name="toolTip">
+                         <string>Найти пересечения термограмм с профилями и добавить их в список скважин (Well)</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>Add Intersec</string>
                         </property>
                        </widget>
                       </item>
@@ -1540,6 +1614,9 @@
                        <layout class="QGridLayout" name="gridLayout_66">
                         <item row="0" column="0">
                          <widget class="QPushButton" name="pushButton_therm_h_well">
+                          <property name="toolTip">
+                           <string>Загрузить термограммы для выбранной скважины</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(191, 255, 191);</string>
                           </property>
@@ -1550,6 +1627,9 @@
                         </item>
                         <item row="0" column="1">
                          <widget class="QDoubleSpinBox" name="doubleSpinBox_corr_therm">
+                          <property name="toolTip">
+                           <string>значение корреляции термограммы для редактирования нескольких термограмм </string>
+                          </property>
                           <property name="minimum">
                            <double>-0.990000000000000</double>
                           </property>
@@ -1566,6 +1646,9 @@
                         </item>
                         <item row="0" column="2">
                          <widget class="QPushButton" name="pushButton_show_corr_therm">
+                          <property name="toolTip">
+                           <string>Отобразить схожие термограммы</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(255, 204, 121);</string>
                           </property>
@@ -1576,6 +1659,9 @@
                         </item>
                         <item row="0" column="3">
                          <widget class="QPushButton" name="pushButto_remove_therm">
+                          <property name="toolTip">
+                           <string>Удалить схожие термограммы</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(255, 185, 185);</string>
                           </property>
@@ -1590,6 +1676,9 @@
                        <layout class="QGridLayout" name="gridLayout_67">
                         <item row="0" column="0">
                          <widget class="QDoubleSpinBox" name="doubleSpinBox_start_therm">
+                          <property name="toolTip">
+                           <string>Значение для установки ноля термограммы</string>
+                          </property>
                           <property name="minimum">
                            <double>-10000.000000000000000</double>
                           </property>
@@ -1600,6 +1689,9 @@
                         </item>
                         <item row="0" column="1">
                          <widget class="QPushButton" name="pushButton_set_start_therm">
+                          <property name="toolTip">
+                           <string>Установить ноль термограммы</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(148, 255, 232);</string>
                           </property>
@@ -1609,10 +1701,17 @@
                          </widget>
                         </item>
                         <item row="0" column="2">
-                         <widget class="QDoubleSpinBox" name="doubleSpinBox_end_therm"/>
+                         <widget class="QDoubleSpinBox" name="doubleSpinBox_end_therm">
+                          <property name="toolTip">
+                           <string>Значение для обрезки хвоста термограммы</string>
+                          </property>
+                         </widget>
                         </item>
                         <item row="0" column="3">
                          <widget class="QPushButton" name="pushButton_cut_end_therm">
+                          <property name="toolTip">
+                           <string>Обрезать хвост термограммы</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(148, 255, 232);</string>
                           </property>
@@ -1627,6 +1726,9 @@
                        <layout class="QGridLayout" name="gridLayout_68">
                         <item row="0" column="3">
                          <widget class="QPushButton" name="pushButton_coord_therm">
+                          <property name="toolTip">
+                           <string>Привязка точек термограммы по инклинометрии</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(148, 255, 232);</string>
                           </property>
@@ -1647,6 +1749,9 @@
                         </item>
                         <item row="0" column="0">
                          <widget class="QPushButton" name="pushButton_therm_mean_day">
+                          <property name="toolTip">
+                           <string>Расчет средней термограммы за день и удаление остальных</string>
+                          </property>
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(148, 255, 232);</string>
                           </property>
@@ -1657,6 +1762,9 @@
                         </item>
                         <item row="0" column="1">
                          <widget class="QSpinBox" name="spinBox_interval_animation">
+                          <property name="toolTip">
+                           <string>Интервал в мс для анимации термограмм</string>
+                          </property>
                           <property name="minimum">
                            <number>1</number>
                           </property>

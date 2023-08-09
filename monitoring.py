@@ -688,23 +688,58 @@ def save_wellhead_to_db(x, y, land_grid, h_well_id):
 
 def show_inclinometry():
     """Показать инклинометрию всех скважин объекта"""
+    fig = plt.figure(figsize=(14, 14))
+    ax = fig.add_subplot(111, projection='3d')
+
     data_incl = session.query(ParameterHWell).join(HorizontalWell).filter(
         HorizontalWell.object_id == get_obj_monitor_id(),
         ParameterHWell.parameter == 'Инклинометрия').all()
-    all_x, all_y, all_z = [], [], []
+
+    intersections = session.query(Intersection).join(Profile).join(Research).filter(Research.object_id == get_obj_monitor_id()).all()
+
+    all_x, all_y, all_z, all_x_t, all_y_t, all_z_t = [], [], [], [], [], []
+
     for incl in data_incl:
         coord_inc = json.loads(incl.data)
         xs = [coord[0] for coord in coord_inc]
         ys = [coord[1] for coord in coord_inc]
         zs = [coord[2] for coord in coord_inc]
-        all_x.extend(xs)
-        all_y.extend(ys)
-        all_z.extend(zs)
-
-    fig = plt.figure(figsize=(14, 14))
-    ax = fig.add_subplot(111, projection='3d')
+        if len(incl.h_well.thermograms) > 0:
+            all_x_t.extend(xs)
+            all_y_t.extend(ys)
+            all_z_t.extend(zs)
+        else:
+            all_x.extend(xs)
+            all_y.extend(ys)
+            all_z.extend(zs)
 
     ax.plot(all_x, all_y, all_z, '.')
+    ax.plot(all_x_t, all_y_t, all_z_t, '.', color='red')
+
+    if ui.checkBox_incl_prof.isChecked():
+        research_id = session.query(Research.id).filter(Research.object_id == get_obj_monitor_id()).first()[-1]
+        profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
+        all_x_p, all_y_p, all_z_p = [], [], []
+        for p in profiles:
+            xs = json.loads(p.x_pulc)
+            ys = json.loads(p.y_pulc)
+            zs = json.loads(session.query(Formation.land).filter(Formation.profile_id == p.id).first()[0])
+            all_x_p.extend(xs)
+            all_y_p.extend(ys)
+            all_z_p.extend(zs)
+            ax.plot(all_x_p, all_y_p, all_z_p, '.', color='green')
+
+    if ui.checkBox_incl_int.isChecked():
+        for int_db in intersections:
+            ax.plot([int_db.x_coord, int_db.x_coord], [int_db.y_coord, int_db.y_coord], [-1000, 1000], color='#ff7800', linewidth=2)
+            ax.scatter(int_db.x_coord, int_db.y_coord, 1000, 'o', s=100, color='#ff7800')
+
+    if ui.checkBox_incl_therm.isChecked():
+        for int_db in intersections:
+            xs_tm = [i[2] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+            ys_tm = [i[3] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+            zs_tm = [i[4] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+            ax.plot(xs_tm, ys_tm, zs_tm, '.', color='darkred')
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -1139,3 +1174,75 @@ def mean_day_thermogram():
     ui.listWidget_h_well.currentItem().setText(item_text)
 
 
+def add_intersection():
+    """ Добавление пересечений профилей в базу данных """
+
+    # Получение данных инклинометрии по скважинам выбранного объекта
+    data_incl = session.query(ParameterHWell).join(HorizontalWell).filter(
+        HorizontalWell.object_id == get_obj_monitor_id(),
+        ParameterHWell.parameter == 'Инклинометрия'
+    ).all()
+
+    # Цикл по исследованиям на объекте
+    count_add_int = 0
+    for res in session.query(Research).filter(Research.object_id == get_obj_monitor_id()).all():
+        ui.progressBar.setMaximum(session.query(Profile).filter(Profile.research_id == res.id).count())
+        for n_prof, prof in enumerate(session.query(Profile).filter(Profile.research_id == res.id).all()):
+            print(prof.title)
+            ui.progressBar.setValue(n_prof + 1)
+            xs_prof = json.loads(prof.x_pulc)
+            ys_prof = json.loads(prof.y_pulc)
+            target_date = prof.research.date_research
+            target_datetime = datetime.datetime.combine(target_date, datetime.datetime.min.time())
+
+            for incl in data_incl:
+                if len(incl.h_well.thermograms) > 0:
+                    coord_inc = json.loads(incl.data)  # данные по инклинометрии
+                    xs_hwell = [coord[0] for coord in coord_inc]
+                    ys_hwell = [coord[1] for coord in coord_inc]
+
+                    int_p_hw = find_intersection_points(xs_prof, ys_prof, xs_hwell, ys_hwell)
+                    print(int_p_hw)
+                    if len(int_p_hw) > 0:
+
+                        therm1 = session.query(Thermogram).filter(
+                            Thermogram.h_well_id == incl.h_well_id,
+                            Thermogram.date_time > target_date
+                        ).order_by(Thermogram.date_time.asc()).first()
+                        therm2 = session.query(Thermogram).filter(
+                            Thermogram.h_well_id == incl.h_well_id,
+                            Thermogram.date_time < target_date
+                        ).order_by(Thermogram.date_time.desc()).first()
+
+
+                        therm1_diff = (therm1.date_time - target_datetime).total_seconds() if therm1 else math.inf
+                        therm2_diff = (target_datetime - therm2.date_time).total_seconds() if therm2 else math.inf
+
+                        print(therm1_diff/86400, therm2_diff/86400)
+
+                        result_therm = therm1 if therm1_diff < therm2_diff else therm2
+
+                        xs_therm = [t[2] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+                        ys_therm = [t[3] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+                        ts_therm = [t[1] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+
+                        int_p_th = find_intersection_points(xs_prof, ys_prof, xs_therm, ys_therm)
+                        print(int_p_th)
+
+                        for intersect in int_p_th:
+                            name_int = f'{incl.h_well.title}_{prof.id}_{result_therm.id}_{intersect[2]}_{intersect[3]}'
+                            print(name_int)
+                            if session.query(Intersection).filter_by(name=name_int).count() > 0:
+                                set_info(f'Пересечение {name_int} уже есть в БД', 'red')
+                            else:
+                                new_int = Intersection(
+                                    therm_id = result_therm.id, profile_id=prof.id, name=name_int,
+                                    x_coord=intersect[0], y_coord=intersect[1], temperature=ts_therm[intersect[3]],
+                                    i_therm=intersect[3], i_profile=intersect[2]
+                                )
+                                session.add(new_int)
+                                session.commit()
+                                count_add_int += 1
+
+    set_info(f'Добавлено {count_add_int} пересечений', 'green')
+    update_list_well()

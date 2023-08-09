@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Date, Text, text, literal_column, or_
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Date, Text, text, literal_column, or_, func
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -58,6 +58,7 @@ class Profile(Base):
     formations = relationship('Formation', back_populates='profile')
     markups_lda = relationship('MarkupLDA', back_populates='profile')
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
+    intersections = relationship('Intersection', back_populates='profile')
 
     # дальше всё убираем
 
@@ -326,6 +327,7 @@ class MarkupLDA(Base):
     marker_id = Column(Integer, ForeignKey('marker_lda.id'))
     list_measure = Column(Text)
     list_fake = Column(Text)
+    type_markup = Column(String)
 
     analysis = relationship('AnalysisLDA', back_populates='markups')
     well = relationship("Well", back_populates="markups_lda")
@@ -384,6 +386,7 @@ class MarkupMLP(Base):
     marker_id = Column(Integer, ForeignKey('marker_mlp.id'))
     list_measure = Column(Text)
     list_fake = Column(Text)
+    type_markup = Column(String)
 
     analysis = relationship('AnalysisMLP', back_populates='markups')
     well = relationship("Well", back_populates="markups_mlp")
@@ -433,6 +436,25 @@ class Thermogram(Base):
     therm_data = Column(Text)
 
     h_well = relationship("HorizontalWell", back_populates="thermograms")
+    intersections = relationship('Intersection', back_populates='thermogram')
+
+
+class Intersection(Base):
+    """ Точки пересечения термограмм с профилями """
+    __tablename__ = 'intersection'
+
+    id = Column(Integer, primary_key=True)
+    therm_id = Column(Integer, ForeignKey('thermogram.id'))
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    name = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    temperature = Column(Float)
+    i_therm = Column(Integer)
+    i_profile = Column(Integer)
+
+    profile = relationship("Profile", back_populates="intersections")
+    thermogram = relationship("Thermogram", back_populates="intersections")
 
 
 #####################################################
