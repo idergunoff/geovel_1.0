@@ -166,6 +166,7 @@ ui.pushButton_calc_obj_mlp.clicked.connect(calc_obj_mlp)
 ui.pushButton_add_mfcc_mlp.clicked.connect(add_param_mfcc_mlp)
 ui.pushButton_add_all_mfcc_mlp.clicked.connect(add_all_param_mfcc_mlp)
 ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp_db)
+ui.listWidget_well_mlp.currentItemChanged.connect(choose_marker_mlp)
 
 
 

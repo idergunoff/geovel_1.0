@@ -35,7 +35,8 @@ def copy_mlp():
                 profile_id=old_markup.profile_id,
                 formation_id=old_markup.formation_id,
                 marker_id=new_marker.id,
-                list_measure=old_markup.list_measure
+                list_measure=old_markup.list_measure,
+                type_markup=old_markup.type_markup
             )
             session.add(new_markup)
     session.commit()
@@ -144,17 +145,28 @@ def add_well_markup_mlp():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
                 set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
                 return
-        well = session.query(Well).filter(Well.id == well_id).first()
-        x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
-        y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == profile_id).first()[0])
-        index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
-        well_dist = ui.spinBox_well_dist.value()
-        start = index - well_dist if index - well_dist > 0 else 0
-        stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
-        list_measure = list(range(start, stop))
-        new_markup_mlp = MarkupMLP(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
-                                   marker_id=marker_id, formation_id=formation_id,
-                                   list_measure=json.dumps(list_measure))
+        if ui.checkBox_profile_intersec.isChecked():
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
+            inter = session.query(Intersection).filter(Intersection.id == well_id).first()
+            well_dist = ui.spinBox_well_dist.value()
+            start = inter.i_profile - well_dist if inter.i_profile - well_dist > 0 else 0
+            stop = inter.i_profile + well_dist if inter.i_profile + well_dist < len(x_prof) else len(x_prof)
+            list_measure = list(range(start, stop))
+            new_markup_mlp = MarkupLDA(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
+                                       marker_id=marker_id, formation_id=formation_id,
+                                       list_measure=json.dumps(list_measure), type_markup='intersection')
+        else:
+            well = session.query(Well).filter(Well.id == well_id).first()
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
+            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == profile_id).first()[0])
+            index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+            well_dist = ui.spinBox_well_dist.value()
+            start = index - well_dist if index - well_dist > 0 else 0
+            stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+            list_measure = list(range(start, stop))
+            new_markup_mlp = MarkupMLP(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
+                                       marker_id=marker_id, formation_id=formation_id,
+                                       list_measure=json.dumps(list_measure))
         session.add(new_markup_mlp)
         session.commit()
         set_info(f'Добавлена новая обучающая скважина для MLP - "{get_well_name()} {get_marker_mlp_title()}"', 'green')
@@ -167,14 +179,22 @@ def update_well_markup_mlp():
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
         return
-    well = session.query(Well).filter(Well.id == markup.well_id).first()
-    x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
-    y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == markup.profile_id).first()[0])
-    index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
-    well_dist = ui.spinBox_well_dist.value()
-    start = index - well_dist if index - well_dist > 0 else 0
-    stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
-    list_measure = list(range(start, stop))
+    if markup.type_markup == 'intersection':
+        x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
+        well = session.query(Intersection).filter(Intersection.id == markup.well_id).first()
+        well_dist = ui.spinBox_well_dist.value()
+        start = well.i_profile - well_dist if well.i_profile - well_dist > 0 else 0
+        stop = well.i_profile + well_dist if well.i_profile + well_dist < len(x_prof) else len(x_prof)
+        list_measure = list(range(start, stop))
+    else:
+        well = session.query(Well).filter(Well.id == markup.well_id).first()
+        x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
+        y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == markup.profile_id).first()[0])
+        index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+        well_dist = ui.spinBox_well_dist.value()
+        start = index - well_dist if index - well_dist > 0 else 0
+        stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+        list_measure = list(range(start, stop))
     session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).update(
         {'marker_id': get_marker_mlp_id(), 'list_measure': json.dumps(list_measure)})
     session.commit()
@@ -208,7 +228,11 @@ def update_list_well_markup_mlp():
     for i in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
         fake = len(json.loads(i.list_fake)) if i.list_fake else 0
         measure = len(json.loads(i.list_measure))
-        item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
+        if i.type_markup == 'intersection':
+            inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+        else:
+            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
         ui.listWidget_well_mlp.addItem(item)
         i_item = ui.listWidget_well_mlp.findItems(item, Qt.MatchContains)[0]
         i_item.setBackground(QBrush(QColor(i.marker.color)))
@@ -237,7 +261,7 @@ def choose_marker_mlp():
     draw_radarogram()
     ui.comboBox_plast.setCurrentText(f'{markup.formation.title} id{markup.formation_id}')
     draw_formation()
-    draw_well(markup.well_id)
+    draw_intersection(markup.well_id) if markup.type_markup == 'intersection' else draw_well(markup.well_id)
     list_measure = json.loads(markup.list_measure)  # Получение списка измерений
     list_fake = json.loads(markup.list_fake) if markup.list_fake else []  # Получение списка пропущенных измерений
     list_up = json.loads(markup.formation.layer_up.layer_line)  # Получение списка с верхними границами формации
