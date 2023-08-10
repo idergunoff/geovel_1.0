@@ -1,4 +1,5 @@
 from func import *
+from monitoring import update_list_h_well
 from qt.add_well_dialog import *
 from qt.add_boundary_dialog import *
 
@@ -119,6 +120,29 @@ def show_data_well():
                                         f'<p><b>Дата термограммы:</b> {therm.date_time.strftime("%d.%m.%Y")} '
                                         f'({(therm.date_time - target_datetime).days} дней)</p>'
                                         f'<p><b>Температура:</b> {round(inter.temperature, 2)} °C</p>')
+            for i in range(ui.comboBox_object_monitor.count()):
+                if ui.comboBox_object_monitor.itemData(i)['id'] == get_object_id():
+                    ui.comboBox_object_monitor.setCurrentIndex(i)
+                    break
+            update_list_h_well()
+            for i in range(ui.listWidget_h_well.count()):
+                if ui.listWidget_h_well.item(i).data(Qt.UserRole) == inter.thermogram.h_well_id:
+                    ui.listWidget_h_well.setCurrentRow(i)
+                    break
+            for i in range(ui.listWidget_thermogram.count()):
+                if ui.listWidget_thermogram.item(i).data(Qt.UserRole) == inter.therm_id:
+                    ui.listWidget_thermogram.setCurrentRow(i)
+                    break
+            data_therm = [i for i in json.loads(inter.thermogram.therm_data) if len(i) > 2]
+            int_therm = pg.InfiniteLine(pos=data_therm[inter.i_therm][0], angle=90, pen=pg.mkPen(color='#ff7800',width=3, dash=[8, 2]))
+            ui.graph.addItem(int_therm)
+            int_temp = pg.InfiniteLine(pos=inter.temperature, angle=0, pen=pg.mkPen(color='#ff7800',width=1, dash=[2, 2]))
+            ui.graph.addItem(int_temp)
+            text_item = pg.TextItem(text=get_profile_name().split(' (')[0], color='#ff7800')
+            text_item.setFont(QtGui.QFont("Arial", 8))
+            text_item.setPos(data_therm[inter.i_therm][0] + 5, data_therm[inter.i_therm][1] - 5)
+            ui.graph.addItem(text_item)
+
     else:
         well = session.query(Well).filter_by(id=get_well_id()).first()
         if well:
