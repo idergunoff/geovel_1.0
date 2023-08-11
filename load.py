@@ -127,103 +127,107 @@ def load_param():
             Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l = \
             [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
 
-        for i in range(len(layer_top)):
-            signal = signals[i]
-            analytic_signal = hilbert(signal)
-            At = np.hypot(signal, np.imag(analytic_signal)).tolist()
-            Vt = np.imag(analytic_signal).tolist()
-            Pht = np.angle(analytic_signal).tolist()
-            Wt = np.diff(np.angle(analytic_signal)).tolist()
-            nt = layer_top[i]
-            nb = layer_bottom[i]
-            T_top_l.append(layer_top[i] * 8)
-            T_bottom_l.append(layer_bottom[i] * 8)
-            dT_l.append(layer_bottom[i] * 8 - layer_top[i] * 8)
-            A_top_l.append(signal[nt])
-            A_bottom_l.append(signal[nb])
-            dA_l.append(signal[nb] - signal[nt])
-            A_sum_l.append(float(np.sum(signal[nt:nb])))
-            A_mean_l.append(float(np.mean(signal[nt:nb])))
-            dVt_l.append(Vt[nb] - Vt[nt])
-            Vt_top_l.append(Vt[nt])
-            Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
-            Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
-            dAt_l.append(At[nb] - At[nt])
-            At_top_l.append(At[nt])
-            At_sum_l.append(float(np.sum(At[nt:nb])))
-            At_mean_l.append(float(np.mean(At[nt:nb])))
-            dPht_l.append(Pht[nb] - Pht[nt])
-            Pht_top_l.append(Pht[nt])
-            Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
-            Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
-            Wt_top_l.append(Wt[nt])
-            Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
-            Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
-            std_l.append(float(np.std(signal[nt:nb])))
-            k_var_l.append(float(np.var(signal[nt:nb])))
-            skew_l.append(skew(signal[nt:nb]))
-            kurt_l.append(kurtosis(signal[nt:nb]))
+        try:
+            for i in range(len(layer_top)):
+                signal = signals[i]
+                analytic_signal = hilbert(signal)
+                At = np.hypot(signal, np.imag(analytic_signal)).tolist()
+                Vt = np.imag(analytic_signal).tolist()
+                Pht = np.angle(analytic_signal).tolist()
+                Wt = np.diff(np.angle(analytic_signal)).tolist()
+                nt = layer_top[i]
+                nb = layer_bottom[i]
+                T_top_l.append(layer_top[i] * 8)
+                T_bottom_l.append(layer_bottom[i] * 8)
+                dT_l.append(layer_bottom[i] * 8 - layer_top[i] * 8)
+                A_top_l.append(signal[nt])
+                A_bottom_l.append(signal[nb])
+                dA_l.append(signal[nb] - signal[nt])
+                A_sum_l.append(float(np.sum(signal[nt:nb])))
+                A_mean_l.append(float(np.mean(signal[nt:nb])))
+                dVt_l.append(Vt[nb] - Vt[nt])
+                Vt_top_l.append(Vt[nt])
+                Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
+                Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
+                dAt_l.append(At[nb] - At[nt])
+                At_top_l.append(At[nt])
+                At_sum_l.append(float(np.sum(At[nt:nb])))
+                At_mean_l.append(float(np.mean(At[nt:nb])))
+                dPht_l.append(Pht[nb] - Pht[nt])
+                Pht_top_l.append(Pht[nt])
+                Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
+                Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
+                Wt_top_l.append(Wt[nt])
+                Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
+                Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
+                std_l.append(float(np.std(signal[nt:nb])))
+                k_var_l.append(float(np.var(signal[nt:nb])))
+                skew_l.append(skew(signal[nt:nb]))
+                kurt_l.append(kurtosis(signal[nt:nb]))
+                if grid_db:
+                    pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc_l[i])
+                    pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc_l[i])
+                    pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc_l[i])
+                    pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc_l[i])
+                    pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc_l[i])
+                    pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc_l[i])
+                    i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
+                        pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
+                    i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
+                        pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
+                    i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
+                        pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+                    im = i_m if i_m > 0 else 0
+                    width_l.append(im)
+                    top_l.append(i_uf)
+                    land_l.append(i_r)
+                    speed_l.append(im * 100 / (layer_bottom[i] * 8 - layer_top[i] * 8))
+                    speed_cover_l.append((i_r - i_uf) * 100 / (layer_top[i] * 8))
+                ui.progressBar.setValue(i + 1)
+            dict_signal = {'T_top': json.dumps(T_top_l),
+                           'T_bottom': json.dumps(T_bottom_l),
+                           'dT': json.dumps(dT_l),
+                           'A_top': json.dumps(A_top_l),
+                           'A_bottom': json.dumps(A_bottom_l),
+                           'dA': json.dumps(dA_l),
+                           'A_sum': json.dumps(A_sum_l),
+                           'A_mean': json.dumps(A_mean_l),
+                           'dVt': json.dumps(dVt_l),
+                           'Vt_top': json.dumps(Vt_top_l),
+                           'Vt_sum': json.dumps(Vt_sum_l),
+                           'Vt_mean': json.dumps(Vt_mean_l),
+                           'dAt': json.dumps(dAt_l),
+                           'At_top': json.dumps(At_top_l),
+                           'At_sum': json.dumps(At_sum_l),
+                           'At_mean': json.dumps(At_mean_l),
+                           'dPht': json.dumps(dPht_l),
+                           'Pht_top': json.dumps(Pht_top_l),
+                           'Pht_sum': json.dumps(Pht_sum_l),
+                           'Pht_mean': json.dumps(Pht_mean_l),
+                           'Wt_top': json.dumps(Wt_top_l),
+                           'Wt_mean': json.dumps(Wt_mean_l),
+                           'Wt_sum': json.dumps(Wt_sum_l),
+                           'std': json.dumps(std_l),
+                           'k_var': json.dumps(k_var_l),
+                           'skew': json.dumps(skew_l),
+                           'kurt': json.dumps(kurt_l)}
             if grid_db:
-                pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc_l[i])
-                pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc_l[i])
-                pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc_l[i])
-                pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc_l[i])
-                pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc_l[i])
-                pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc_l[i])
-                i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
-                    pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
-                i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
-                    pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
-                i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
-                    pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
-                im = i_m if i_m > 0 else 0
-                width_l.append(im)
-                top_l.append(i_uf)
-                land_l.append(i_r)
-                speed_l.append(im * 100 / (layer_bottom[i] * 8 - layer_top[i] * 8))
-                speed_cover_l.append((i_r - i_uf) * 100 / (layer_top[i] * 8))
-            ui.progressBar.setValue(i + 1)
-        dict_signal = {'T_top': json.dumps(T_top_l),
-                       'T_bottom': json.dumps(T_bottom_l),
-                       'dT': json.dumps(dT_l),
-                       'A_top': json.dumps(A_top_l),
-                       'A_bottom': json.dumps(A_bottom_l),
-                       'dA': json.dumps(dA_l),
-                       'A_sum': json.dumps(A_sum_l),
-                       'A_mean': json.dumps(A_mean_l),
-                       'dVt': json.dumps(dVt_l),
-                       'Vt_top': json.dumps(Vt_top_l),
-                       'Vt_sum': json.dumps(Vt_sum_l),
-                       'Vt_mean': json.dumps(Vt_mean_l),
-                       'dAt': json.dumps(dAt_l),
-                       'At_top': json.dumps(At_top_l),
-                       'At_sum': json.dumps(At_sum_l),
-                       'At_mean': json.dumps(At_mean_l),
-                       'dPht': json.dumps(dPht_l),
-                       'Pht_top': json.dumps(Pht_top_l),
-                       'Pht_sum': json.dumps(Pht_sum_l),
-                       'Pht_mean': json.dumps(Pht_mean_l),
-                       'Wt_top': json.dumps(Wt_top_l),
-                       'Wt_mean': json.dumps(Wt_mean_l),
-                       'Wt_sum': json.dumps(Wt_sum_l),
-                       'std': json.dumps(std_l),
-                       'k_var': json.dumps(k_var_l),
-                       'skew': json.dumps(skew_l),
-                       'kurt': json.dumps(kurt_l)}
-        if grid_db:
-            dict_signal['width'] = json.dumps(width_l)
-            dict_signal['top'] = json.dumps(top_l)
-            dict_signal['land'] = json.dumps(land_l)
-            dict_signal['speed'] = json.dumps(speed_l)
-            dict_signal['speed_cover'] = json.dumps(speed_cover_l)
-        form_krot = session.query(Formation).filter(Formation.profile_id == get_profile_id(), Formation.title == 'KROT').first()
-        session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
-        session.commit()
-        update_formation_combobox()
-        check_coordinates_profile()
-        check_coordinates_research()
+                dict_signal['width'] = json.dumps(width_l)
+                dict_signal['top'] = json.dumps(top_l)
+                dict_signal['land'] = json.dumps(land_l)
+                dict_signal['speed'] = json.dumps(speed_l)
+                dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+            form_krot = session.query(Formation).filter(Formation.profile_id == get_profile_id(), Formation.title == 'KROT').first()
+            session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
+            session.commit()
+            update_formation_combobox()
+            check_coordinates_profile()
+            check_coordinates_research()
 
-        set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
+            set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
+        except ZeroDivisionError:
+            set_info('ZeroDivisionError, проверьте файл выделенного интервала пласта', 'red')
+            set_info(f'Невозможно добавить пласт - "KROT" на профиле - "{get_profile_name()}".', 'red')
 
 
 # def load_param():
