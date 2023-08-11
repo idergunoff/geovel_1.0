@@ -40,7 +40,10 @@ def get_obj_monitor_name():
 
 # Функция получения id выбранного профиля
 def get_profile_id():
-    return int(ui.comboBox_profile.currentText().split(' id')[-1])
+    try:
+        return int(ui.comboBox_profile.currentText().split(' id')[-1])
+    except ValueError:
+        return False
 
 
 # Функция получения имени выбранного профиля
@@ -177,6 +180,8 @@ def update_profile_combobox():
         ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
         ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
 
+    check_coordinates_profile()
+
 
 def update_object():
     """ Функция для обновления списка объектов в выпадающем списке """
@@ -188,6 +193,8 @@ def update_object():
         ui.comboBox_object.addItem(f'{i.title} id{i.id}')
     # Обновление выпадающего списка профилей
     update_research_combobox()
+    check_coordinates_research()
+    check_coordinates_profile()
 
 
 def update_research_combobox():
@@ -195,6 +202,8 @@ def update_research_combobox():
     for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
         ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
     update_profile_combobox()
+    check_coordinates_profile()
+    check_coordinates_research()
 
 
 def update_param_combobox():
@@ -523,6 +532,29 @@ def update_formation_combobox():
     # Обновляем список выбора параметров для выбранного пласта
     update_param_combobox()
     update_list_well()
+
+
+def check_coordinates_profile():
+    profile_id = get_profile_id()
+    if profile_id:
+        x_pulc = session.query(Profile.x_pulc).filter(Profile.id == profile_id).scalar()
+        ui.label_5.setStyleSheet('background: #D6FCE5' if x_pulc else 'background: #F7B9B9')
+    else:
+        ui.label_5.setStyleSheet('background: #F7B9B9')
+
+
+
+def check_coordinates_research():
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    if len(profiles) == 0:
+        ui.label_4.setStyleSheet('background: #F7B9B9')
+        return
+    for prof in profiles:
+        if not prof.x_pulc:
+            ui.label_4.setStyleSheet('background: #F7B9B9')
+            return
+    else:
+        ui.label_4.setStyleSheet('background: #D6FCE5')
 
 
 def calc_atrib(rad, atr):

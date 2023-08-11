@@ -181,7 +181,9 @@ ui.toolButton_crop_down.clicked.connect(crop_down)
 
 ui.comboBox_object.activated.connect(update_research_combobox)
 ui.comboBox_research.activated.connect(update_profile_combobox)
+ui.comboBox_research.activated.connect(check_coordinates_research)
 ui.comboBox_profile.activated.connect(update_formation_combobox)
+ui.comboBox_profile.activated.connect(check_coordinates_profile)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
@@ -276,6 +278,8 @@ set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
 update_combobox_model_ai()
 update_list_trained_models()
+check_coordinates_profile()
+check_coordinates_research()
 
 # update_list_param_lda()
 
