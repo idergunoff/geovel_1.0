@@ -220,6 +220,8 @@ def load_param():
         session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
         session.commit()
         update_formation_combobox()
+        check_coordinates_profile()
+        check_coordinates_research()
 
         set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
 
