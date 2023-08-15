@@ -201,11 +201,25 @@ def show_profiles():
     x = np.array(list_x)
     y = np.array(list_y)
 
+    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    min_x_r, max_x_r = min([g[0] for g in json.loads(grid.grid_table_r)]), max([g[0] for g in json.loads(grid.grid_table_r)])
+    min_y_r, max_y_r = min([g[1] for g in json.loads(grid.grid_table_r)]), max([g[1] for g in json.loads(grid.grid_table_r)])
+
+    min_x_uf, max_x_uf = min([g[0] for g in json.loads(grid.grid_table_uf)]), max([g[0] for g in json.loads(grid.grid_table_uf)])
+    min_y_uf, max_y_uf = min([g[1] for g in json.loads(grid.grid_table_uf)]), max([g[1] for g in json.loads(grid.grid_table_uf)])
+
+    min_x_m, max_x_m = min([g[0] for g in json.loads(grid.grid_table_m)]), max([g[0] for g in json.loads(grid.grid_table_m)])
+    min_y_m, max_y_m = min([g[1] for g in json.loads(grid.grid_table_m)]), max([g[1] for g in json.loads(grid.grid_table_m)])
+
     plt.figure(figsize=(12, 9))
 
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
+    plt.plot([min_x_r, max_x_r, max_x_r, min_x_r, min_x_r], [min_y_r, min_y_r, max_y_r, max_y_r, min_y_r], color='blue', label='сетка рельефа')
+    plt.plot([min_x_m, max_x_m, max_x_m, min_x_m, min_x_m], [min_y_m, min_y_m, max_y_m, max_y_m, min_y_m], color='green', label='сетка мощности')
+    plt.plot([min_x_uf, max_x_uf, max_x_uf, min_x_uf, min_x_uf], [min_y_uf, min_y_uf, max_y_uf, max_y_uf, min_y_uf], color='red', label='сетка уфы')
     plt.xlabel('X')
     plt.ylabel('Y')
+    plt.legend()
 
     plt.title('Профили')
     plt.tight_layout()

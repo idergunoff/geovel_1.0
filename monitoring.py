@@ -18,7 +18,15 @@ def update_list_h_well():
         item_text = f'{h_well.title}\t+{count_therm} термограмм' if count_therm > 0 else h_well.title
         item = QListWidgetItem(item_text)
         if count_therm > 0:
-            item.setBackground(QBrush(QColor('#FBD59E')))
+            therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).first()
+            incl = False
+            for i in json.loads(therm.therm_data):
+                if len(i) > 2:
+                    item.setBackground(QBrush(QColor('#ADFCDF')))
+                    incl = True
+                    break
+            if not incl:
+                item.setBackground(QBrush(QColor('#FBD59E')))
         item.setData(Qt.UserRole, h_well.id)
         ui.listWidget_h_well.addItem(item)
     ui.listWidget_h_well.sortItems()
@@ -297,7 +305,11 @@ def load_thermogram_h_well():
         ui.progressBar.setValue(n_file)
         set_info(f'Загружается термограмма {file}', 'blue')
         if file.endswith('.las'):
-            las = ls.read(os.path.join(file_dir, file))
+            try:
+                las = ls.read(os.path.join(file_dir, file))
+            except KeyError:
+                set_info(f'Ошибка при чтении файла {file}', 'red')
+                continue
             if str(las.well['WELL'].value) != ui.listWidget_h_well.currentItem().text():
                 set_info(f'Выбраная скважина ({ui.listWidget_h_well.currentItem().text()}) не совпадает с указанной '
                          f'в las-файле - {las.well["WELL"].value}', 'red')
@@ -316,28 +328,35 @@ def load_thermogram_h_well():
                 except ValueError:
                     pass
             pd_therm = pd.read_excel(os.path.join(file_dir, file), header=date_row)
+            print(pd_therm)
             list_index = [0]
             date = pd_therm.iloc[i, 0]
+            print(date)
             for i in pd_therm.index:
                 if pd_therm.iloc[i, 0] != date:
                     list_index.append(i)
                     date = pd_therm.iloc[i, 0]
+            list_index.append(i)
             for a, b in zip(list_index[:-1], list_index[1:]):
                 set_info(f'Термограмма {pd_therm.iloc[a, 0]}', 'blue')
                 date_time = datetime.datetime.strptime(pd_therm.iloc[a, 0], '%d.%m.%Y %H:%M')
                 depth, therm = pd_therm.iloc[a:b, 1].tolist(), pd_therm.iloc[a:b, 2].tolist()
                 add_update_therm_to_db(h_well_id, date_time, depth, therm)
                 n_load += 1
+
     session.commit()
     set_info(f'Для скважины {ui.listWidget_h_well.currentItem().text()} загружено {n_load} термограмм', 'green')
     update_list_thermogram()
+    update_list_h_well()
 
 
 def add_update_therm_to_db(h_well_id: int, date_time: datetime.datetime, depth: list, temp: list) -> None:
     """Добавить или обновить термограмму в базу"""
     if len(depth) == 0 or len(temp) == 0:
+        set_info('Пустая термограмма', 'red')
         return
     if len(set(temp)) == 1:
+        set_info('Термограмма с одним значением температуры', 'red')
         return
     therm = session.query(Thermogram).filter_by(h_well_id=h_well_id, date_time=date_time).first()
     if therm:
@@ -440,7 +459,11 @@ def show_end_therm():
 def set_start_therm():
     """ Установить ноль термограммы """
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    try:
+        temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    except AttributeError:
+        set_info('Выберите термограмму', 'red')
+        return
     start_therm = min([l[0] for l in json.loads(therm.therm_data)])
     end_therm = max([l[0] for l in json.loads(therm.therm_data)])
     start_value, n_set = ui.doubleSpinBox_start_therm.value(), 0
@@ -496,7 +519,11 @@ def cut_end_therm():
 def show_corr_therm():
     """Показать коррелируемые термограммы"""
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    try:
+        temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    except AttributeError:
+        set_info('Выберите термограмму', 'red')
+        return
     fig = plt.figure(figsize=(18, 8))
     ax = fig.add_subplot(111)
     n_corr = 0
@@ -517,20 +544,36 @@ def show_corr_therm():
 
 def remove_thermogram():
     """Удалить термограмму и подобные"""
-    therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
-    n_rem = 0
-    for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
-        temp_list = [temp[1] for temp in json.loads(t.therm_data)]
-        if len(temp_curr) != len(temp_list):
-            continue
-        corr_spear, _ =spearmanr(temp_curr, temp_list)
-        if corr_spear > ui.doubleSpinBox_corr_therm.value():
-            session.delete(t)
-            n_rem += 1
+    h_well_id = get_h_well_id()
+    i_therm = ui.listWidget_thermogram.currentRow()
+    if ui.checkBox_only_one.isChecked():
+        session.query(Thermogram).filter_by(id=get_therm_id()).delete()
+        set_info('Термограмма удалена', 'green')
+    else:
+        therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
+        try:
+            temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+        except AttributeError:
+            set_info('Выберите термограмму', 'red')
+            return
+        n_rem = 0
+        for t in session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all():
+            temp_list = [temp[1] for temp in json.loads(t.therm_data)]
+            if len(temp_curr) != len(temp_list):
+                continue
+            corr_spear, _ =spearmanr(temp_curr, temp_list)
+            if corr_spear > ui.doubleSpinBox_corr_therm.value():
+                session.delete(t)
+                n_rem += 1
+        set_info(f'Удалено {n_rem} термограмм', 'green')
     session.commit()
-    set_info(f'Удалено {n_rem} термограмм', 'green')
+    update_list_h_well()
+    for i in range(ui.listWidget_h_well.count()):
+        if ui.listWidget_h_well.item(i).data(Qt.UserRole) == h_well_id:
+            ui.listWidget_h_well.setCurrentRow(i)
+            break
     update_list_thermogram()
+    ui.listWidget_thermogram.setCurrentRow(i_therm)
 
 
 def draw_param_h_well():
@@ -717,7 +760,7 @@ def show_inclinometry():
     ax.plot(all_x_t, all_y_t, all_z_t, '.', color='red')
 
     if ui.checkBox_incl_prof.isChecked():
-        research_id = session.query(Research.id).filter(Research.object_id == get_obj_monitor_id()).first()[-1]
+        research_id = session.query(Research.id).filter(Research.object_id == get_obj_monitor_id()).first()[0]
         profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
         all_x_p, all_y_p, all_z_p = [], [], []
         for p in profiles:
@@ -756,6 +799,13 @@ def show_inclinometry():
     ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
     ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
     ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+
+
+    if ui.checkBox_animation.isChecked():
+        def rotate(angle):
+            ax.view_init(azim=angle)
+
+        ani = FuncAnimation(fig, rotate, frames=np.arange(0, 360, 1), interval=ui.spinBox_interval_animation.value())
 
     plt.tight_layout()
     plt.show()
@@ -814,6 +864,7 @@ def coordinate_binding_thermogram():
         session.query(Thermogram).filter_by(id=therm.id).update({'therm_data': json.dumps(t_data)}, synchronize_session='fetch')
     session.commit()
     set_info('Координатная привязка термограмм завершена', 'green')
+    update_list_h_well()
 
 
 
@@ -860,7 +911,11 @@ def show_therms_animation():
     ax1 = fig.add_subplot(211, projection='3d')
 
     therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).order_by(Thermogram.date_time).all()
-    t_data = json.loads(therms[0].therm_data)
+    try:
+        t_data = json.loads(therms[0].therm_data)
+    except IndexError:
+        set_info('Выберите горизонтальную скважину', 'red')
+        return
     x_min = min([x[2] for x in t_data if len(x) > 4])
     x_max = max([x[2] for x in t_data if len(x) > 4])
     y_min = min([y[3] for y in t_data if len(y) > 4])
@@ -1149,19 +1204,25 @@ def average_lists(lists):
 def mean_day_thermogram():
     """ Вычисление средней термограммы за день """
     therms = session.query(Thermogram).filter_by(h_well_id=get_h_well_id()).all()
-    uniq_dates = set(t.date_time.date() for t in therms)
+    uniq_dates = sorted(set(t.date_time.date() for t in therms))
     ui.progressBar.setMaximum(len(uniq_dates))
     for nd, d in enumerate(uniq_dates):
-        ui.progressBar.setValue(nd)
+        ui.progressBar.setValue(nd + 1)
         day_therm_list, id_therm_list = [], []
         for t in therms:
             if t.date_time.date() == d:
                 day_therm_list.append(json.loads(t.therm_data))
                 id_therm_list.append(t.id)
+        if len(day_therm_list) == 1:
+            continue
         if not check_list_lengths(day_therm_list):
-            set_info(f'Не совпадает длина термограммы {d.strftime("%Y-%m-%d")}', 'red')
+            set_info(f'Не совпадает длина термограммы {d.strftime("%d.%m.%Y")}', 'red')
+            day_therm_list = trim_lists(day_therm_list, 30)
+            if not day_therm_list:
+                set_info(f'Не совпадает длина термограммы {d.strftime("%d.%m.%Y")}, обрезка не возможна', 'red')
+                continue
         list_therm_temp = [[temp[1] for temp in day_therm] for day_therm in day_therm_list]
-        set_info(f'Усреднение {len(list_therm_temp)} термограмм за {d.strftime("%Y-%m-%d")}', 'blue')
+        set_info(f'Усреднение {len(list_therm_temp)} термограмм за {d.strftime("%d.%m.%Y")}', 'blue')
         averege_therm = average_lists(list_therm_temp)
         depth_list = [d[0] for d in day_therm_list[0]]
         for it in id_therm_list:
@@ -1221,6 +1282,9 @@ def add_intersection():
                         print(therm1_diff/86400, therm2_diff/86400)
 
                         result_therm = therm1 if therm1_diff < therm2_diff else therm2
+                        result_therm_diff = (abs(result_therm.date_time - target_datetime).total_seconds()) / 86400
+                        if result_therm_diff > 100:
+                            continue
 
                         xs_therm = [t[2] for t in json.loads(result_therm.therm_data) if len(t) > 2]
                         ys_therm = [t[3] for t in json.loads(result_therm.therm_data) if len(t) > 2]
@@ -1246,3 +1310,31 @@ def add_intersection():
 
     set_info(f'Добавлено {count_add_int} пересечений', 'green')
     update_list_well()
+
+
+def trim_lists(list_of_lists, max_difference):
+    if not list_of_lists:
+        return []
+
+    min_length = min(len(lst) for lst in list_of_lists)
+    max_length = max(len(lst) for lst in list_of_lists)
+    if max_length - min_length > max_difference:
+        return False
+    trimmed_lists = [lst[:min_length] for lst in list_of_lists]
+
+    return trimmed_lists
+
+
+def test():
+    h = session.query(HorizontalWell).filter_by(object_id=get_obj_monitor_id()).all()
+    x = [i.x_coord for i in h]
+    y = [i.y_coord for i in h]
+    title = [i.title for i in h]
+    fig, ax = plt.subplots(figsize=(16, 8))
+
+    ax.scatter(x, y)
+
+    for i, label in enumerate(title):
+        plt.annotate(label, (x[i], y[i]))
+
+    plt.show()

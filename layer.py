@@ -284,3 +284,18 @@ def filter_layer():
     session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(filter_layer)}, synchronize_session="fetch")
     session.commit()
     draw_layer(l_id)
+
+
+def remove_well():
+    w_id = get_well_id()
+    if ui.checkBox_profile_intersec.isChecked():
+        session.query(Intersection).filter_by(id=w_id).delete()
+        set_info('Пересечение удалено', 'green')
+    else:
+        session.query(Boundary).filter_by(well_id=w_id).delete()
+        session.query(MarkupLDA).filter_by(well_id=w_id).delete()
+        session.query(MarkupMLP).filter_by(well_id=w_id).delete()
+        session.query(Well).filter_by(id=w_id).delete()
+        set_info('Скважина удалена', 'green')
+    session.commit()
+    update_list_well()
