@@ -64,6 +64,24 @@ def update_list_param_h_well():
         ui.listWidget_param_h_well.addItem(item)
 
 
+def remove_parameter():
+    """Удалить параметр"""
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление параметра',
+        f'Вы уверены, что хотите удалить параметр {ui.listWidget_param_h_well.currentItem().text()}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        id_param = ui.listWidget_param_h_well.currentItem().data(Qt.UserRole)
+        # print(id_param)
+        session.query(ParameterHWell).filter_by(id=id_param).delete()
+        session.commit()
+        update_list_param_h_well()
+    else:
+        pass
+
+
 def add_h_well():
     """Добавить горизонтальную скважину"""
     if ui.lineEdit_string.text() == '':
@@ -382,6 +400,8 @@ def update_list_thermogram():
         # item.setToolTip(therm.date_time.strftime("%H:%M:%S"))
         item.setData(Qt.UserRole, therm.id)
         ui.listWidget_thermogram.addItem(item)
+        if len(therm.intersections) > 0:
+            item.setBackground(QBrush(QColor('#FBD59E')))
     ui.label_25.setText(f'Thermograms: {len(thermograms)}')
 
 
@@ -490,7 +510,11 @@ def set_start_therm():
 def cut_end_therm():
     """ Убрать конец термограммы """
     therm = session.query(Thermogram).filter_by(id=get_therm_id()).first()
-    temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    try:
+        temp_curr = [temp[1] for temp in json.loads(therm.therm_data)]
+    except AttributeError:
+        set_info('Выберите термограмму', 'red')
+        return
     depth_curr = [d[0] for d in json.loads(therm.therm_data)]
     cut_i = len(depth_curr)
     for n, d in enumerate(depth_curr):
@@ -738,7 +762,13 @@ def show_inclinometry():
         HorizontalWell.object_id == get_obj_monitor_id(),
         ParameterHWell.parameter == 'Инклинометрия').all()
 
-    intersections = session.query(Intersection).join(Profile).join(Research).filter(Research.object_id == get_obj_monitor_id()).all()
+    obj = get_object_id()
+    obj_m = get_obj_monitor_id()
+
+    if obj_m == obj:
+        intersections = session.query(Intersection).join(Profile).filter(Profile.research_id == get_research_id()).all()
+    else:
+        intersections = session.query(Intersection).join(Profile).join(Research).filter(Research.object_id == obj_m).all()
 
     all_x, all_y, all_z, all_x_t, all_y_t, all_z_t = [], [], [], [], [], []
 

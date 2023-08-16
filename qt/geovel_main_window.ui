@@ -903,8 +903,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>334</width>
-                         <height>172</height>
+                         <width>98</width>
+                         <height>38</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1507,16 +1507,16 @@
                 </item>
                 <item row="0" column="1">
                  <layout class="QGridLayout" name="gridLayout_59">
-                  <item row="5" column="0">
-                   <widget class="QPushButton" name="pushButton_show_incl">
+                  <item row="2" column="0">
+                   <widget class="QPushButton" name="pushButton_edit_h_well">
                     <property name="toolTip">
-                     <string>Отобразить инклинометрию</string>
+                     <string>Изменить название скважины</string>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                     <string notr="true">background-color: rgb(255, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>Show Incl</string>
+                     <string>Edit h.well</string>
                     </property>
                    </widget>
                   </item>
@@ -1533,45 +1533,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="8" column="0">
-                   <spacer name="verticalSpacer_4">
-                    <property name="orientation">
-                     <enum>Qt::Vertical</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>20</width>
-                      <height>40</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QPushButton" name="pushButton_edit_h_well">
-                    <property name="toolTip">
-                     <string>Изменить название скважины</string>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>Edit h.well</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QPushButton" name="pushButton_param_h_well">
-                    <property name="toolTip">
-                     <string>Загрузить параметры разработки из файла Excel</string>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(148, 255, 232);</string>
-                    </property>
-                    <property name="text">
-                     <string>Parameters</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="0">
                    <widget class="QPushButton" name="pushButton_rem_h_well">
                     <property name="toolTip">
@@ -1585,7 +1546,20 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
+                  <item row="9" column="0">
+                   <spacer name="verticalSpacer_4">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="7" column="0">
                    <layout class="QGridLayout" name="gridLayout_46">
                     <item row="0" column="1">
                      <widget class="QCheckBox" name="checkBox_incl_therm">
@@ -1610,10 +1584,46 @@
                     </item>
                    </layout>
                   </item>
-                  <item row="7" column="0">
+                  <item row="8" column="0">
                    <widget class="QCheckBox" name="checkBox_animation">
                     <property name="text">
                      <string>animatiom</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QPushButton" name="pushButton_show_incl">
+                    <property name="toolTip">
+                     <string>Отобразить инклинометрию</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>Show Incl</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QPushButton" name="pushButton_param_h_well">
+                    <property name="toolTip">
+                     <string>Загрузить параметры разработки из файла Excel</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(148, 255, 232);</string>
+                    </property>
+                    <property name="text">
+                     <string>Parameters</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QPushButton" name="pushButton_rem_param">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>Remove Par.</string>
                     </property>
                    </widget>
                   </item>

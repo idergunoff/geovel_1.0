@@ -729,8 +729,12 @@ def draw_intersection(int_id):
 
 
     well_text = intersection.name.split("_")[0]
-    text_item = pg.TextItem(text=f'{well_text} ({round(intersection.temperature, 2)} °C)', color='white')
-    text_item.setPos(intersection.i_profile, -30)
+    text_item = pg.TextItem(text=f'{well_text}', color='white')
+    font = QtGui.QFont()
+    font.setPointSize(7)  # Установите размер шрифта, который вам нужен
+    text_item.setFont(font)
+
+    text_item.setPos(intersection.i_profile, -10)
     radarogramma.addItem(text_item)
     globals()[f'well_text_id{int_id}'] = text_item
 
