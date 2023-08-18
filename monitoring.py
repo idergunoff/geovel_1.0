@@ -756,7 +756,10 @@ def save_wellhead_to_db(x, y, land_grid, h_well_id):
 def show_inclinometry():
     """Показать инклинометрию всех скважин объекта"""
     fig = plt.figure(figsize=(14, 14))
-    ax = fig.add_subplot(111, projection='3d')
+    if ui.checkBox_2d.isChecked():
+        ax = fig.add_subplot(111)
+    else:
+        ax = fig.add_subplot(111, projection='3d')
 
     data_incl = session.query(ParameterHWell).join(HorizontalWell).filter(
         HorizontalWell.object_id == get_obj_monitor_id(),
@@ -786,56 +789,79 @@ def show_inclinometry():
             all_y.extend(ys)
             all_z.extend(zs)
 
-    ax.plot(all_x, all_y, all_z, '.')
-    ax.plot(all_x_t, all_y_t, all_z_t, '.', color='red')
+    if ui.checkBox_incl_int.isChecked():
+        for int_db in intersections:
+            if ui.checkBox_2d.isChecked():
+                ax.scatter(int_db.x_coord, int_db.y_coord, marker='o', color='#2C145E', s=150)
+            else:
+                ax.plot([int_db.x_coord, int_db.x_coord], [int_db.y_coord, int_db.y_coord], [-1000, 1000], color='#ff7800', linewidth=2)
+                ax.scatter(int_db.x_coord, int_db.y_coord, 1000, 'o', s=100, color='#ff7800')
+
+    if ui.checkBox_2d.isChecked():
+        ax.plot(all_x, all_y, '.')
+        ax.plot(all_x_t, all_y_t, '.', color='red')
+    else:
+        ax.plot(all_x, all_y, all_z, '.')
+        ax.plot(all_x_t, all_y_t, all_z_t, '.', color='red')
 
     if ui.checkBox_incl_prof.isChecked():
-        research_id = session.query(Research.id).filter(Research.object_id == get_obj_monitor_id()).first()[0]
-        profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
+
+        if obj_m == obj:
+            profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        else:
+            research_id = session.query(Research.id).filter(Research.object_id == obj_m).first()[0]
+            profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
         all_x_p, all_y_p, all_z_p = [], [], []
         for p in profiles:
             xs = json.loads(p.x_pulc)
             ys = json.loads(p.y_pulc)
-            zs = json.loads(session.query(Formation.land).filter(Formation.profile_id == p.id).first()[0])
+            try:
+                zs = json.loads(session.query(Formation.land).filter(Formation.profile_id == p.id).first()[0])
+            except TypeError:
+                set_info('Для профилей не рассчитан рельеф', 'red')
+                return
             all_x_p.extend(xs)
             all_y_p.extend(ys)
             all_z_p.extend(zs)
-            ax.plot(all_x_p, all_y_p, all_z_p, '.', color='green')
-
-    if ui.checkBox_incl_int.isChecked():
-        for int_db in intersections:
-            ax.plot([int_db.x_coord, int_db.x_coord], [int_db.y_coord, int_db.y_coord], [-1000, 1000], color='#ff7800', linewidth=2)
-            ax.scatter(int_db.x_coord, int_db.y_coord, 1000, 'o', s=100, color='#ff7800')
+            if ui.checkBox_2d.isChecked():
+                ax.plot(xs, ys, '.', color='green')
+            else:
+                ax.plot(all_x_p, all_y_p, all_z_p, '.', color='green')
 
     if ui.checkBox_incl_therm.isChecked():
         for int_db in intersections:
             xs_tm = [i[2] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
             ys_tm = [i[3] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
             zs_tm = [i[4] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
-            ax.plot(xs_tm, ys_tm, zs_tm, '.', color='darkred')
+            if ui.checkBox_2d.isChecked():
+                ax.plot(xs_tm, ys_tm, '.', color='darkred')
+            else:
+                ax.plot(xs_tm, ys_tm, zs_tm, '.', color='darkred')
+
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    if not ui.checkBox_2d.isChecked():
+        ax.set_zlabel('Z')
 
-    # задаем реальные масштабы для всех трех осей
-    x_range = max(all_x) - min(all_x)
-    y_range = max(all_y) - min(all_y)
-    z_range = max(all_z) - min(all_z)
-    max_range = max(x_range, y_range, z_range)
-    x_center = (max(all_x) + min(all_x)) / 2
-    y_center = (max(all_y) + min(all_y)) / 2
-    z_center = (max(all_z) + min(all_z)) / 2
-    ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
-    ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
-    ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
+        # задаем реальные масштабы для всех трех осей
+        x_range = max(all_x) - min(all_x)
+        y_range = max(all_y) - min(all_y)
+        z_range = max(all_z) - min(all_z)
+        max_range = max(x_range, y_range, z_range)
+        x_center = (max(all_x) + min(all_x)) / 2
+        y_center = (max(all_y) + min(all_y)) / 2
+        z_center = (max(all_z) + min(all_z)) / 2
+        ax.set_xlim((x_center - max_range / 2, x_center + max_range / 2))
+        ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
+        ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
 
 
-    if ui.checkBox_animation.isChecked():
-        def rotate(angle):
-            ax.view_init(azim=angle)
+        if ui.checkBox_animation.isChecked():
+            def rotate(angle):
+                ax.view_init(azim=angle)
 
-        ani = FuncAnimation(fig, rotate, frames=np.arange(0, 360, 1), interval=ui.spinBox_interval_animation.value())
+            ani = FuncAnimation(fig, rotate, frames=np.arange(0, 360, 1), interval=ui.spinBox_interval_animation.value())
 
     plt.tight_layout()
     plt.show()
@@ -845,7 +871,7 @@ def coordinate_binding_thermogram():
     """ Координатная привязка термограммы """
     incl_param = session.query(ParameterHWell).filter_by(parameter='Инклинометрия', h_well_id=get_h_well_id()).first()
     if not incl_param:
-        set_info(f'Нет инклинометрии для скважины {ui.listWidget_h_well.currentItem().text()}', 'red')
+        set_info(f'Нет инклинометрии для скважины {incl_param.h_well.title}', 'red')
         return
     data_incl = json.loads(incl_param.data)
     length_incl = [i[3] for i in data_incl]
