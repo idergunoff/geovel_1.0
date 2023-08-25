@@ -25,11 +25,15 @@ def update_list_formation_ai():
     """ Обновить список пластов """
     ui.listWidget_formation_ai.clear()
     for i in session.query(FormationAI).filter_by(model_id=get_model_id()).all():
-        item_text = (f'{i.formation.title} ({i.formation.profile.title}, {i.formation.profile.research.object.title}, '
-                     f'{i.formation.profile.research.date_research.year})')
-        item = QListWidgetItem(item_text)
-        item.setData(Qt.UserRole, i.id)
-        ui.listWidget_formation_ai.addItem(item)
+        try:
+            item_text = (f'{i.formation.title} ({i.formation.profile.title}, {i.formation.profile.research.object.title}, '
+                         f'{i.formation.profile.research.date_research.year})')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_formation_ai.addItem(item)
+        except AttributeError:
+            session.query(FormationAI).filter_by(id=i.id).delete()
+            session.commit()
 
 
 def add_model_ai():

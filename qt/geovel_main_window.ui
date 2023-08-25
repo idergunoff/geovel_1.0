@@ -761,18 +761,15 @@
                  <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,4">
                   <item>
                    <layout class="QGridLayout" name="gridLayout_14">
-                    <item row="0" column="1">
-                     <spacer name="horizontalSpacer_2">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_add_formation">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
                       </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
+                      <property name="text">
+                       <string>+ formation</string>
                       </property>
-                     </spacer>
+                     </widget>
                     </item>
                     <item row="0" column="0">
                      <widget class="QLabel" name="label_10">
@@ -788,7 +785,20 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="3">
+                    <item row="0" column="1">
+                     <spacer name="horizontalSpacer_2">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item row="0" column="4">
                      <widget class="QCheckBox" name="checkBox_draw_layer">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(175, 255, 243);</string>
@@ -798,13 +808,13 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_add_formation">
+                    <item row="0" column="3">
+                     <widget class="QCheckBox" name="checkBox_draw_line">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
                       </property>
                       <property name="text">
-                       <string>+ formation</string>
+                       <string>draw line</string>
                       </property>
                      </widget>
                     </item>

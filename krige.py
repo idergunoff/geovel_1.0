@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from numpy.linalg import LinAlgError
 from sqlalchemy.exc import OperationalError
 
@@ -138,12 +139,9 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         except ValueError:
             set_info('ValueError: variogram', 'red')
             return
-        print(1)
 
         # variogram.fit()
-        print(2)
         kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
-        print(3)
         try:
             z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
         except LinAlgError:
@@ -195,28 +193,44 @@ def show_profiles():
     r = session.query(Research).filter_by(id=r_id).first()
     list_x, list_y = [], []
     for profile in r.profiles:
-        list_x += (json.loads(profile.x_pulc))
-        list_y += (json.loads(profile.y_pulc))
+        try:
+            list_x += (json.loads(profile.x_pulc))
+            list_y += (json.loads(profile.y_pulc))
+        except TypeError:
+            set_info(f'Не загружены координаты {profile.title}', 'red')
+            pass
 
     x = np.array(list_x)
     y = np.array(list_y)
 
-    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-    min_x_r, max_x_r = min([g[0] for g in json.loads(grid.grid_table_r)]), max([g[0] for g in json.loads(grid.grid_table_r)])
-    min_y_r, max_y_r = min([g[1] for g in json.loads(grid.grid_table_r)]), max([g[1] for g in json.loads(grid.grid_table_r)])
-
-    min_x_uf, max_x_uf = min([g[0] for g in json.loads(grid.grid_table_uf)]), max([g[0] for g in json.loads(grid.grid_table_uf)])
-    min_y_uf, max_y_uf = min([g[1] for g in json.loads(grid.grid_table_uf)]), max([g[1] for g in json.loads(grid.grid_table_uf)])
-
-    min_x_m, max_x_m = min([g[0] for g in json.loads(grid.grid_table_m)]), max([g[0] for g in json.loads(grid.grid_table_m)])
-    min_y_m, max_y_m = min([g[1] for g in json.loads(grid.grid_table_m)]), max([g[1] for g in json.loads(grid.grid_table_m)])
-
     plt.figure(figsize=(12, 9))
 
+    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    if grid:
+        min_x_r, max_x_r = min([g[0] for g in json.loads(grid.grid_table_r)]), max([g[0] for g in json.loads(grid.grid_table_r)])
+        min_y_r, max_y_r = min([g[1] for g in json.loads(grid.grid_table_r)]), max([g[1] for g in json.loads(grid.grid_table_r)])
+
+        min_x_uf, max_x_uf = min([g[0] for g in json.loads(grid.grid_table_uf)]), max([g[0] for g in json.loads(grid.grid_table_uf)])
+        min_y_uf, max_y_uf = min([g[1] for g in json.loads(grid.grid_table_uf)]), max([g[1] for g in json.loads(grid.grid_table_uf)])
+
+        min_x_m, max_x_m = min([g[0] for g in json.loads(grid.grid_table_m)]), max([g[0] for g in json.loads(grid.grid_table_m)])
+        min_y_m, max_y_m = min([g[1] for g in json.loads(grid.grid_table_m)]), max([g[1] for g in json.loads(grid.grid_table_m)])
+
+        plt.plot([min_x_r, max_x_r, max_x_r, min_x_r, min_x_r], [min_y_r, min_y_r, max_y_r, max_y_r, min_y_r], color='blue', label='сетка рельефа')
+        plt.plot([min_x_m, max_x_m, max_x_m, min_x_m, min_x_m], [min_y_m, min_y_m, max_y_m, max_y_m, min_y_m], color='green', label='сетка мощности')
+        plt.plot([min_x_uf, max_x_uf, max_x_uf, min_x_uf, min_x_uf], [min_y_uf, min_y_uf, max_y_uf, max_y_uf, min_y_uf], color='red', label='сетка уфы')
+
+
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
-    plt.plot([min_x_r, max_x_r, max_x_r, min_x_r, min_x_r], [min_y_r, min_y_r, max_y_r, max_y_r, min_y_r], color='blue', label='сетка рельефа')
-    plt.plot([min_x_m, max_x_m, max_x_m, min_x_m, min_x_m], [min_y_m, min_y_m, max_y_m, max_y_m, min_y_m], color='green', label='сетка мощности')
-    plt.plot([min_x_uf, max_x_uf, max_x_uf, min_x_uf, min_x_uf], [min_y_uf, min_y_uf, max_y_uf, max_y_uf, min_y_uf], color='red', label='сетка уфы')
+    if ui.checkBox_profile_well.isChecked():
+        for profile in r.profiles:
+            wells = get_list_nearest_well(profile.id)
+            if not wells:
+                continue
+            for well in wells:
+                plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+                plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
+
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.legend()

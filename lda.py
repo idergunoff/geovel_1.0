@@ -174,10 +174,13 @@ def add_well_markup_lda():
     marker_id = get_marker_id()
 
     if analysis_id and well_id and profile_id and marker_id and formation_id:
-        for param in get_list_param_lda():
-            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
-                set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
-                return
+        remove_all_param_geovel_lda()
+        # for param in get_list_param_lda():
+        #     if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+        #         continue
+        #     if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
+        #         set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
+        #         return
         if ui.checkBox_profile_intersec.isChecked():
             x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
             inter = session.query(Intersection).filter(Intersection.id == well_id).first()
@@ -628,7 +631,11 @@ def calc_obj_lda():
                 Choose_Formation.close()
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_lda_ok)
             Choose_Formation.exec_()
-        working_data, curr_form = build_table_test()
+        try:
+            working_data, curr_form = build_table_test()
+        except TypeError:
+            set_info('Для выбранной залежи не хватает параметров выбранных в модели анализа.', 'red')
+            return
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
     data_train, list_param = build_table_train(True)
     list_param_lda = data_train.columns.tolist()[2:]

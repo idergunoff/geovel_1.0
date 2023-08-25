@@ -3,7 +3,7 @@ import random, math
 from sqlite3 import connect
 
 from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox
 from PyQt5.QtGui import QBrush, QColor
 
 from qt.geovel_main_window import *

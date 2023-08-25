@@ -70,6 +70,39 @@ def mouseClicked(evt):
             draw_layer(get_layer_id())
 
 
+def mouseLine(evt):
+    if not ui.checkBox_draw_line.isChecked():
+        return
+
+    # Проверка на нажатие клавиши "Shift"
+    if QApplication.keyboardModifiers() != Qt.ShiftModifier:
+        return
+
+    count_check = 0
+    for i in ui.widget_layer.findChildren(QtWidgets.QCheckBox):
+        if i.isChecked():
+            count_check += 1
+    if count_check > 1 or count_check == 0:
+        QMessageBox.information(MainWindow, 'Внимание', 'Выберите один слой')
+
+
+    pos = evt
+    vb = radarogramma.vb
+
+    # Проверка, находится ли курсор в пределах области графика
+    if radarogramma.sceneBoundingRect().contains(pos):
+        mousePoint = vb.mapSceneToView(pos)
+        y = json.loads(session.query(Layers.layer_line).filter(Layers.id == get_layer_first_checkbox_id()).first()[0])
+        try:
+            y[int(mousePoint.x())] = int(mousePoint.y())
+        except IndexError:
+            return
+        session.query(Layers).filter(Layers.id == get_layer_first_checkbox_id()).update({Layers.layer_line: json.dumps(y)}, synchronize_session="fetch")
+        session.commit()
+        draw_layer(get_layer_first_checkbox_id())
+
+
+
 def save_layer():
     l_id = get_layer_id()
     layer_x = query_to_list(session.query(PointsOfLayer.point_x).filter(PointsOfLayer.layer_id == l_id).order_by(PointsOfLayer.point_x).all())

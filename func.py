@@ -347,6 +347,13 @@ def get_layer_id():
             return int(i.text())
 
 
+def get_layer_first_checkbox_id():
+    # Найти id выбранного слоя в списке радиокнопок
+    for i in ui.widget_layer.findChildren(QtWidgets.QCheckBox):
+        if i.isChecked():
+            return int(i.text().split(' id')[-1])
+
+
 def get_layer_id_to_crop():
     # Найти id слоя, который нужно обрезать, из списка чекбоксов слоев
     l_id = get_layer_id()
@@ -616,25 +623,36 @@ def update_list_well():
             for intersec in intersections:
                 ui.listWidget_well.addItem(f'{intersec.name} id{intersec.id}')
     else:
-        wells = session.query(Well).order_by(Well.name).all()
         if ui.checkBox_profile_well.isChecked():
-            if session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0]:
-                x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
-                y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
-                profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
+            wells = get_list_nearest_well(get_profile_id())
+            if wells:
                 for w in wells:
-                    start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
-                    end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
-                    if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
-                        index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
-                        if dist <= ui.spinBox_well_distance.value():
-                            ui.listWidget_well.addItem(f'скв.№ {w.name} - ({index}) {round(dist, 2)} м. id{w.id}')
+                    ui.listWidget_well.addItem(f'скв.№ {w[0].name} - ({w[1]}) {round(w[2], 2)} м. id{w[0].id}')
                 draw_wells()
-            else:
-                ui.listWidget_well.addItem('Координаты профиля не загружены')
         else:
+            wells = session.query(Well).order_by(Well.name).all()
             for w in wells:
                 ui.listWidget_well.addItem(f'скв.№ {w.name} id{w.id}')
+
+
+def get_list_nearest_well(profile_id):
+    profile = session.query(Profile).filter_by(id=profile_id).first()
+    if session.query(Profile.x_pulc).filter_by(id=profile_id).first()[0]:
+        x_prof = json.loads(profile.x_pulc)
+        y_prof = json.loads(profile.y_pulc)
+        profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
+        wells = session.query(Well).order_by(Well.name).all()
+        list_nearest_well = []
+        for w in wells:
+            start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
+            end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
+            if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
+                index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                if dist <= ui.spinBox_well_distance.value():
+                    list_nearest_well.append([w, index, dist])
+        return list_nearest_well
+    else:
+        ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
 
 
 def set_title_list_widget_wells():
@@ -868,7 +886,6 @@ def build_table_train(db=False, analisis='lda'):
 
         if data[0]:
             data_train = pd.DataFrame(json.loads(data[0]))
-            # print(data_train.to_string(max_rows=None))
             return data_train, list_param
 
     data_train, _ = build_table_test_no_db(analisis, analisis_id, list_param)
@@ -876,6 +893,7 @@ def build_table_train(db=False, analisis='lda'):
 
 
 def build_table_test_no_db(analisis, analisis_id, list_param):
+
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
 
@@ -898,11 +916,11 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
             # Если параметр является расчётным
             if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 # Проверка, есть ли уже загруженный сигнал в локальных переменных
-                if not markup.profile.title + param.split('_')[1] in locals():
+                if not str(markup.profile.id) + '_signal' in locals():
                     # Загрузка сигнала из профиля
-                    locals()[markup.profile.title + param.split('_')[1]] = json.loads(
+                    locals()[str(markup.profile.id) + '_signal'] = json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
-                    # Если параметр сохранён в базе
+            # Если параметр сохранён в базе
             else:
                 # Загрузка значений параметра из формации
                 locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
@@ -920,24 +938,25 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
 
             # Обработка каждого параметра в списке параметров
             for param in list_param:
+
                 if param.startswith('distr'):
                     # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
                 elif param.startswith('sep'):
                     # Обработка параметра 'sep'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
                 elif param.startswith('mfcc'):
                     # Обработка параметра 'mfcc'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[markup.profile.title + atr][measure], atr)
+                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
@@ -955,7 +974,6 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
     elif analisis == 'mlp':
         session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     session.commit()
-    # print(data_train.to_string(max_rows=None))
     return data_train, list_param
 
 
@@ -972,8 +990,8 @@ def build_table_test(analisis='lda'):
     y_pulc = json.loads(curr_form.profile.y_pulc)
     for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
-            if not curr_form.profile.title + param.split('_')[1] in locals():
-                locals()[curr_form.profile.title + param.split('_')[1]] = json.loads(
+            if not str(curr_form.profile.id) + '_signal' in locals():
+                locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
@@ -985,19 +1003,19 @@ def build_table_test(analisis='lda'):
         for param in list_param:
             if param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 distr = get_distribution(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
             elif param.startswith('sep'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 sep = get_mean_values(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
             elif param.startswith('mfcc'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[curr_form.profile.title + atr][i], atr)
+                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 mfcc = get_mfcc(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]

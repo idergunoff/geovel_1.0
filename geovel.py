@@ -25,6 +25,8 @@ MainWindow.show()
 def mouse_moved_to_signal(evt):
     """ Отслеживаем координаты курсора и отображение на графике сигнала """
     global hor_line_sig, hor_line_rad, vert_line_rad, vert_line_graph
+
+
     # Удаление предыдущих линий при движении мыши
     if 'hor_line_sig' in globals():
         ui.signal.removeItem(hor_line_sig)
@@ -79,6 +81,8 @@ def change_color():
 
 
 img.scene().sigMouseClicked.connect(mouseClicked)
+img.scene().sigMouseMoved.connect(mouseLine)
+
 
 
 ui.pushButton_save_signal.clicked.connect(save_signal)
