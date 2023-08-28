@@ -70,7 +70,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
     for i in cmap_list:
         ui_dm.comboBox_cmap.addItem(i)
-    ui_dm.comboBox_cmap.setCurrentText('gist_rainbow')
+    ui_dm.comboBox_cmap.setCurrentText('jet')
     for i in dist_func_list:
         ui_dm.comboBox_dist_func.addItem(i)
 
@@ -147,8 +147,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         except LinAlgError:
             set_info('LinAlgError: Singular matrix', 'red')
             return
-        print(len(z_interp))
-        print(z_interp)
+        # print(len(z_interp))
+        # print(z_interp)
         if ui_dm.checkBox_filt.isChecked():
             try:
                 z_interp = savgol_filter(z_interp, filt_power, 3)

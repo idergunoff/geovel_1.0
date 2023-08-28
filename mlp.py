@@ -141,10 +141,11 @@ def add_well_markup_mlp():
     marker_id = get_marker_mlp_id()
 
     if analysis_id and well_id and profile_id and marker_id and formation_id:
-        for param in get_list_param_mlp():
-            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
-                set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
-                return
+        remove_all_param_geovel_mlp()
+        # for param in get_list_param_mlp():
+        #     if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == formation_id).first()[0]:
+        #         set_info(f'Параметр {param} отсутствует для профиля {get_profile_name()}', 'red')
+        #         return
         if ui.checkBox_profile_intersec.isChecked():
             x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
             inter = session.query(Intersection).filter(Intersection.id == well_id).first()
@@ -1042,7 +1043,9 @@ def calc_obj_mlp():
         x = list(working_data_result['x_pulc'])
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
-            z = list(working_data_result[list(set(new_mark))[0]])
+            marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
+            print(marker_mlp.title)
+            z = list(working_data_result[marker_mlp.title])
             color_marker = False
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
@@ -1109,7 +1112,9 @@ def calc_obj_mlp():
         x = list(working_data_result['x_pulc'])
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
-            z = list(working_data_result[list(set(new_mark))[0]])
+            marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
+            print(marker_mlp.title)
+            z = list(working_data_result[marker_mlp.title])
             color_marker = False
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
@@ -1184,7 +1189,9 @@ def calc_obj_mlp():
         x = list(working_data_result['x_pulc'])
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
-            z = list(working_data_result[list(set(new_mark))[0]])
+            marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
+            print(marker_mlp.title)
+            z = list(working_data_result[marker_mlp.title])
             color_marker = False
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')

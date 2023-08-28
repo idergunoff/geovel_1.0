@@ -673,7 +673,9 @@ def calc_obj_lda():
     x = list(working_data_result['x_pulc'])
     y = list(working_data_result['y_pulc'])
     if len(set(new_mark)) == 2 and not ui.checkBox_color_marker.isChecked():
-        z = list(working_data_result[list(set(new_mark))[0]])
+        marker_lda = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).order_by(MarkerLDA.id).first()
+        print(marker_lda.title)
+        z = list(working_data_result[marker_lda.title])
         color_marker = False
     else:
         z = string_to_unique_number(list(working_data_result['mark']), 'lda')
