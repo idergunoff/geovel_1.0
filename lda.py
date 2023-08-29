@@ -1,6 +1,5 @@
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
-from mlp import update_list_mlp
 from qt.choose_formation_lda import *
 from krige import draw_map
 
@@ -21,6 +20,7 @@ def copy_lda():
     """Скопировать анализ LDA"""
     if ui.lineEdit_string.text() == '':
         set_info('Введите название для копии анализа', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите название для копии анализа в поле в верхней части главного окна')
         return
     old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
     new_lda = AnalysisLDA(title=ui.lineEdit_string.text())
@@ -48,8 +48,11 @@ def copy_lda():
 
 def copy_lda_to_mlp():
     """Скопировать анализ LDA в MLP"""
+    from mlp import update_list_mlp
+
     if ui.lineEdit_string.text() == '':
         set_info('Введите название для копии анализа', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите название для копии анализа в поле в верхней части главного окна')
         return
     old_lda = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
     new_mlp = AnalysisMLP(title=ui.lineEdit_string.text())
@@ -71,7 +74,6 @@ def copy_lda_to_mlp():
             session.add(new_markup)
     session.commit()
     build_table_test_no_db('mlp', new_mlp.id, [])
-    update_list_lda()
     update_list_mlp()
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
 
@@ -687,17 +689,30 @@ def calc_obj_lda():
         print(marker_lda.title)
         z = list(working_data_result[marker_lda.title])
         color_marker = False
+        z_number = string_to_unique_number(list(working_data_result['mark']), 'lda')
+        working_data_result['mark_number'] = z_number
     else:
         z = string_to_unique_number(list(working_data_result['mark']), 'lda')
         color_marker = True
         working_data_result['mark_number'] = z
     draw_map(x, y, z, 'lda', color_marker)
-    try:
-        file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_lda_title()}.xlsx'
-        fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат LDA "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                         filter="Excel Files (*.xlsx)")
-        working_data_result.to_excel(fn[0])
-        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-    except ValueError:
+    result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта LDA?', QMessageBox.Yes, QMessageBox.No)
+    if result1 == QMessageBox.Yes:
+        result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
+        if result2 == QMessageBox.Yes:
+            list_col = [i.title for i in session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()]
+            list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+            working_data_result = working_data_result[list_col]
+        else:
+            pass
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_lda_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                             filter="Excel Files (*.xlsx)")
+            working_data_result.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+    else:
         pass
 

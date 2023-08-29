@@ -44,6 +44,38 @@ def copy_mlp():
     set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
 
+def copy_mlp_to_lda():
+    """Скопировать анализ MLP в LDA"""
+    from lda import update_list_lda
+
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название для копии анализа', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите название для копии анализа в поле в верхней части главного окна')
+        return
+    old_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    new_lda = AnalysisLDA(title=ui.lineEdit_string.text())
+    session.add(new_lda)
+    session.commit()
+    for old_marker in old_mlp.markers:
+        new_marker = MarkerLDA(analysis_id=new_lda.id, title=old_marker.title, color=old_marker.color)
+        session.add(new_marker)
+        for old_markup in session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id(), marker_id=old_marker.id):
+            new_markup = MarkupLDA(
+                analysis_id=new_lda.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                marker_id=new_marker.id,
+                list_measure=old_markup.list_measure,
+                type_markup=old_markup.type_markup
+            )
+            session.add(new_markup)
+    session.commit()
+    build_table_test_no_db('lda', new_lda.id, [])
+    update_list_lda()
+    set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
+
+
 def remove_mlp():
     """Удалить анализ MLP"""
     mlp_title = get_mlp_title()
@@ -434,6 +466,7 @@ def update_list_param_mlp(db=False):
             i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
+
 
 def draw_MLP():
     """ Построить диаграмму рассеяния для модели анализа MLP """
@@ -1056,19 +1089,33 @@ def calc_obj_mlp():
             print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
+            z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z_number
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             color_marker = True
             working_data_result['mark_number'] = z
         draw_map(x, y, z, 'Classifier MLP', color_marker)
-        try:
-            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                             filter="Excel Files (*.xlsx)")
-            working_data_result.to_excel(fn[0])
-            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-        except ValueError:
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                                 filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
             pass
+
 
     def calc_knn_form():
         try:
@@ -1124,18 +1171,31 @@ def calc_obj_mlp():
             print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
+            z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z_number
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             working_data_result['mark_number'] = z
             color_marker = True
         draw_map(x, y, z, 'Classifier KNN', color_marker)
-        try:
-            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                             filter="Excel Files (*.xlsx)")
-            working_data_result.to_excel(fn[0])
-            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-        except ValueError:
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта KNN?', QMessageBox.Yes, QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                                 filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
             pass
 
 
@@ -1200,18 +1260,31 @@ def calc_obj_mlp():
             print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
+            z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z_number
         else:
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             working_data_result['mark_number'] = z
             color_marker = True
         draw_map(x, y, z, 'Classifier GPC', color_marker)
-        try:
-            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-            fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                             filter="Excel Files (*.xlsx)")
-            working_data_result.to_excel(fn[0])
-            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-        except ValueError:
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта GPC?', QMessageBox.Yes, QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                                 filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
             pass
 
 
