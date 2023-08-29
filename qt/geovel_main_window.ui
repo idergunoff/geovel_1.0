@@ -1949,15 +1949,7 @@
                    </widget>
                   </item>
                   <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_84">
-                    <item row="0" column="0">
-                     <widget class="QCheckBox" name="checkBox_color_marker">
-                      <property name="text">
-                       <string>color marker</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
+                   <layout class="QGridLayout" name="gridLayout_84"/>
                   </item>
                   <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_copy_lda">
@@ -1980,10 +1972,10 @@
                 </item>
                 <item>
                  <layout class="QGridLayout" name="gridLayout_31">
-                  <item row="0" column="0">
+                  <item row="1" column="0">
                    <widget class="QListWidget" name="listWidget_well_lda"/>
                   </item>
-                  <item row="1" column="0">
+                  <item row="2" column="0">
                    <layout class="QGridLayout" name="gridLayout_32">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_33">
@@ -2108,6 +2100,18 @@
                     </item>
                    </layout>
                   </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_count_markup_lda">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>count markup lda</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                 <item>
@@ -2119,10 +2123,7 @@
                 </item>
                 <item>
                  <layout class="QGridLayout" name="gridLayout_35">
-                  <item row="0" column="0">
-                   <widget class="QListWidget" name="listWidget_param_lda"/>
-                  </item>
-                  <item row="1" column="0">
+                  <item row="2" column="0">
                    <layout class="QGridLayout" name="gridLayout_36">
                     <item row="2" column="0">
                      <layout class="QGridLayout" name="gridLayout_38">
@@ -2373,6 +2374,21 @@
                     </item>
                    </layout>
                   </item>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidget_param_lda"/>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_count_param_lda">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>count param lda</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                </layout>
@@ -2443,12 +2459,12 @@
                  </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QCheckBox" name="checkBox_draw_map">
-                  <property name="text">
-                   <string>draw map</string>
+                 <widget class="QPushButton" name="pushButton_copy_to_lda">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
-                  <property name="checked">
-                   <bool>true</bool>
+                  <property name="text">
+                   <string>copy to LDA</string>
                   </property>
                  </widget>
                 </item>
@@ -2463,10 +2479,10 @@
               </item>
               <item row="2" column="0">
                <layout class="QGridLayout" name="gridLayout_43">
-                <item row="0" column="0">
+                <item row="1" column="0">
                  <widget class="QListWidget" name="listWidget_well_mlp"/>
                 </item>
-                <item row="1" column="0">
+                <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_44">
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_45">
@@ -2520,7 +2536,7 @@
                   </item>
                  </layout>
                 </item>
-                <item row="2" column="0">
+                <item row="3" column="0">
                  <layout class="QGridLayout" name="gridLayout_30">
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_60">
@@ -2568,6 +2584,18 @@
                   </item>
                  </layout>
                 </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_count_markup_mlp">
+                  <property name="font">
+                   <font>
+                    <pointsize>9</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>count markup mlp</string>
+                  </property>
+                 </widget>
+                </item>
                </layout>
               </item>
               <item row="3" column="0">
@@ -2579,10 +2607,10 @@
               </item>
               <item row="4" column="0">
                <layout class="QGridLayout" name="gridLayout_47">
-                <item row="0" column="0">
+                <item row="1" column="0">
                  <widget class="QListWidget" name="listWidget_param_mlp"/>
                 </item>
-                <item row="1" column="0">
+                <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_48">
                   <item row="2" column="0">
                    <layout class="QGridLayout" name="gridLayout_49">
@@ -2832,6 +2860,18 @@
                    </widget>
                   </item>
                  </layout>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_count_param_mlp">
+                  <property name="font">
+                   <font>
+                    <pointsize>9</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>count param mlp</string>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>

@@ -226,18 +226,27 @@ def remove_well_markup_mlp():
 def update_list_well_markup_mlp():
     """Обновление списка обучающих скважин MLP"""
     ui.listWidget_well_mlp.clear()
+    count_markup, count_measure = 0, 0
     for i in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
-        fake = len(json.loads(i.list_fake)) if i.list_fake else 0
-        measure = len(json.loads(i.list_measure))
-        if i.type_markup == 'intersection':
-            inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
-            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
-        else:
-            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
-        ui.listWidget_well_mlp.addItem(item)
-        i_item = ui.listWidget_well_mlp.findItems(item, Qt.MatchContains)[0]
-        i_item.setBackground(QBrush(QColor(i.marker.color)))
-        # ui.listWidget_well_mlp.setItemData(ui.listWidget_well_mlp.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        try:
+            fake = len(json.loads(i.list_fake)) if i.list_fake else 0
+            measure = len(json.loads(i.list_measure))
+            if i.type_markup == 'intersection':
+                inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+            else:
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
+            ui.listWidget_well_mlp.addItem(item)
+            i_item = ui.listWidget_well_mlp.findItems(item, Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor(i.marker.color)))
+            count_markup += 1
+            count_measure += measure - fake
+            # ui.listWidget_well_mlp.setItemData(ui.listWidget_well_mlp.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        except AttributeError:
+            set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+            session.delete(i)
+            session.commit()
+    ui.label_count_markup_mlp.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> измерений')
 
 
 def choose_marker_mlp():
@@ -424,7 +433,7 @@ def update_list_param_mlp(db=False):
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
-
+    ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
 
 def draw_MLP():
     """ Построить диаграмму рассеяния для модели анализа MLP """
@@ -1051,8 +1060,7 @@ def calc_obj_mlp():
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             color_marker = True
             working_data_result['mark_number'] = z
-        if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'Classifier MLP', color_marker)
+        draw_map(x, y, z, 'Classifier MLP', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
@@ -1120,8 +1128,7 @@ def calc_obj_mlp():
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             working_data_result['mark_number'] = z
             color_marker = True
-        if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'Classifier KNN', color_marker)
+        draw_map(x, y, z, 'Classifier KNN', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат KNN "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
@@ -1197,8 +1204,7 @@ def calc_obj_mlp():
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             working_data_result['mark_number'] = z
             color_marker = True
-        if ui.checkBox_draw_map.isChecked():
-            draw_map(x, y, z, 'Classifier GPC', color_marker)
+        draw_map(x, y, z, 'Classifier GPC', color_marker)
         try:
             file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
             fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат GPC "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,

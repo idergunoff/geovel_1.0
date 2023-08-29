@@ -264,18 +264,27 @@ def remove_well_markup_lda():
 def update_list_well_markup_lda():
     """Обновление списка обучающих скважин LDA"""
     ui.listWidget_well_lda.clear()
+    count_markup, count_measure = 0, 0
     for i in session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).all():
         fake = len(json.loads(i.list_fake)) if i.list_fake else 0
         measure = len(json.loads(i.list_measure))
-        if i.type_markup == 'intersection':
-            inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
-            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
-        else:
-            item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
-        ui.listWidget_well_lda.addItem(item)
-        i_item = ui.listWidget_well_lda.findItems(item, Qt.MatchContains)[0]
-        i_item.setBackground(QBrush(QColor(i.marker.color)))
-        # ui.listWidget_well_lda.setItemData(ui.listWidget_well_lda.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        try:
+            if i.type_markup == 'intersection':
+                inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+            else:
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
+            ui.listWidget_well_lda.addItem(item)
+            i_item = ui.listWidget_well_lda.findItems(item, Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor(i.marker.color)))
+            count_markup += 1
+            count_measure += measure - fake
+            # ui.listWidget_well_lda.setItemData(ui.listWidget_well_lda.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        except AttributeError:
+            set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+            session.delete(i)
+            session.commit()
+    ui.label_count_markup_lda.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> измерений')
 
 
 def choose_marker_lda():
@@ -462,6 +471,7 @@ def update_list_param_lda(db=False):
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
+    ui.label_count_param_lda.setText(f'<i><u>{ui.listWidget_param_lda.count()}</u></i> параметров')
 
 
 def draw_LDA():
