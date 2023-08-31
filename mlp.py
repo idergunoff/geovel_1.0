@@ -1287,7 +1287,6 @@ def calc_obj_mlp():
         else:
             pass
 
-
     ui_cls.pushButton_calc_mlp.clicked.connect(calc_mlp_form)
     ui_cls.pushButton_calc_knn.clicked.connect(calc_knn_form)
     ui_cls.pushButton_calc_gpc.clicked.connect(calc_gpc_form)
