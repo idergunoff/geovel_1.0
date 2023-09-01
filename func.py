@@ -798,6 +798,10 @@ def get_MLP_id():
     return ui.comboBox_mlp_analysis.currentText().split(' id')[-1]
 
 
+def get_regmod_id():
+    return ui.comboBox_regmod.currentText().split(' id')[-1]
+
+
 def get_lda_title():
     return ui.comboBox_lda_analysis.currentText().split(' id')[0]
 
@@ -805,6 +809,9 @@ def get_lda_title():
 def get_mlp_title():
     return ui.comboBox_mlp_analysis.currentText().split(' id')[0]
 
+
+def get_regmod_title():
+    return ui.comboBox_regmod.currentText().split(' id')[0]
 
 
 def get_marker_id():

@@ -13,6 +13,7 @@ from mlp import *
 from monitoring import *
 from krige import *
 from formation_ai import *
+from regression import *
 
 MainWindow.show()
 
@@ -175,6 +176,29 @@ ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp_db)
 ui.listWidget_well_mlp.currentItemChanged.connect(choose_marker_mlp)
 
 
+#   regression
+ui.pushButton_add_regmod.clicked.connect(add_regression_model)
+ui.pushButton_rem_regmod.clicked.connect(remove_reg)
+# ui.pushButton_copy_reg.clicked.connect(copy_reg)
+# ui.pushButton_copy_to_lda.clicked.connect(copy_reg_to_lda)
+ui.pushButton_add_well_reg.clicked.connect(add_well_markup_reg)
+# ui.pushButton_add_geovel_reg.clicked.connect(add_param_geovel_reg)
+# ui.pushButton_add_all_geovel_reg.clicked.connect(add_all_param_geovel_reg)
+# ui.pushButton_add_distr_reg.clicked.connect(add_param_distr_reg)
+# ui.pushButton_add_sep_reg.clicked.connect(add_param_sep_reg)
+# ui.pushButton_add_all_distr_reg.clicked.connect(add_all_param_distr_reg)
+# ui.pushButton_update_well_reg.clicked.connect(update_well_markup_reg)
+# ui.pushButton_rem_well_reg.clicked.connect(remove_well_markup_reg)
+# ui.pushButton_rem_param_reg.clicked.connect(remove_param_geovel_reg)
+# ui.pushButton_clear_params_reg.clicked.connect(remove_all_param_geovel_reg)
+# ui.pushButton_draw_reg.clicked.connect(draw_reg)
+# ui.pushButton_calc_reg.clicked.connect(calc_reg)
+# ui.pushButton_calc_obj_reg.clicked.connect(calc_obj_reg)
+# ui.pushButton_add_mfcc_reg.clicked.connect(add_param_mfcc_reg)
+# ui.pushButton_add_all_mfcc_reg.clicked.connect(add_all_param_mfcc_reg)
+# ui.comboBox_reg_analysis.activated.connect(update_list_marker_reg_db)
+# ui.listWidget_well_reg.currentItemChanged.connect(choose_marker_reg)
+
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
@@ -245,6 +269,7 @@ ui.pushButton_coord_therm.clicked.connect(coordinate_binding_thermogram)
 ui.pushButton_show_therms.clicked.connect(show_therms_animation)
 ui.pushButton_therm_mean_day.clicked.connect(mean_day_thermogram)
 ui.pushButton_add_intersec.clicked.connect(add_intersection)
+ui.pushButton_draw_map_therm.clicked.connect(draw_map_by_thermogram)
 
 
 ###################################################################
@@ -281,6 +306,7 @@ set_info('Старт...', 'green')
 set_random_color()
 update_list_lda(True)
 update_list_mlp(True)
+update_list_reg(True)
 set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
 update_combobox_model_ai()

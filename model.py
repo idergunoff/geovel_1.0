@@ -58,6 +58,7 @@ class Profile(Base):
     formations = relationship('Formation', back_populates='profile')
     markups_lda = relationship('MarkupLDA', back_populates='profile')
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
+    markups_reg = relationship('MarkupReg', back_populates='profile')
     intersections = relationship('Intersection', back_populates='profile')
 
     # дальше всё убираем
@@ -224,6 +225,7 @@ class Formation(Base):
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
     markups_lda = relationship('MarkupLDA', back_populates='formation')
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
+    markups_reg = relationship('MarkupReg', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
 
 
@@ -240,6 +242,7 @@ class Well(Base):
     well_logs = relationship("WellLog", back_populates="well")
     markups_lda = relationship("MarkupLDA", back_populates="well")
     markups_mlp = relationship('MarkupMLP', back_populates='well')
+    markups_reg = relationship('MarkupReg', back_populates='well')
 
 class Boundary(Base):
     __tablename__ = 'boundary'
@@ -394,6 +397,62 @@ class MarkupMLP(Base):
     formation = relationship("Formation", back_populates="markups_mlp")
     marker = relationship("MarkerMLP", back_populates="markups")
 
+
+#####################################################
+################## Regression #######################
+#####################################################
+
+
+class AnalysisReg(Base):
+    __tablename__ = 'analysis_reg'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    data = Column(Text)
+
+    parameters = relationship('ParameterReg', back_populates='analysis')
+    markups = relationship('MarkupReg', back_populates='analysis')
+    trained_models = relationship('TrainedModelReg', back_populates='analysis')
+
+
+class ParameterReg(Base):
+    __tablename__ = 'parameter_reg'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
+    parameter = Column(String)
+
+    analysis = relationship('AnalysisReg', back_populates='parameters')
+
+
+class MarkupReg(Base):
+    __tablename__ = 'markup_reg'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
+    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    target_value = Column(Float)
+    list_measure = Column(Text)
+    list_fake = Column(Text)
+    type_markup = Column(String)
+
+    analysis = relationship('AnalysisReg', back_populates='markups')
+    well = relationship("Well", back_populates="markups_reg")
+    profile = relationship("Profile", back_populates="markups_reg")
+    formation = relationship("Formation", back_populates="markups_reg")
+
+
+class TrainedModelReg(Base):
+    __tablename__ = 'trained_model_reg'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
+    title = Column(String)
+    path_model = Column(String)
+
+    analysis = relationship('AnalysisReg', back_populates='trained_models')
 
 
 #####################################################

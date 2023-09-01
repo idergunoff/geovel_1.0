@@ -1,5 +1,3 @@
-import numpy as np
-
 from func import *
 from qt.formation_ai_form import *
 

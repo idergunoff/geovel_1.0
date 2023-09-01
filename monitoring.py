@@ -1,4 +1,6 @@
 from func import *
+from krige import draw_map
+
 
 def update_list_object_monitor():
     """Обновить список объектов"""
@@ -1305,7 +1307,6 @@ def add_intersection():
     for res in session.query(Research).filter(Research.object_id == get_obj_monitor_id()).all():
         ui.progressBar.setMaximum(session.query(Profile).filter(Profile.research_id == res.id).count())
         for n_prof, prof in enumerate(session.query(Profile).filter(Profile.research_id == res.id).all()):
-            print(prof.title)
             ui.progressBar.setValue(n_prof + 1)
             xs_prof = json.loads(prof.x_pulc)
             ys_prof = json.loads(prof.y_pulc)
@@ -1379,6 +1380,46 @@ def trim_lists(list_of_lists, max_difference):
     trimmed_lists = [lst[:min_length] for lst in list_of_lists]
 
     return trimmed_lists
+
+
+def draw_map_by_thermogram():
+    research = session.query(Research).filter_by(id=get_research_id()).first()
+    target_date = research.date_research
+    target_datetime = datetime.datetime.combine(target_date, datetime.datetime.min.time())
+    list_x, list_y, list_t = [], [], []
+    for h_well in session.query(HorizontalWell).filter_by(object_id=get_object_id()).all():
+        if len(h_well.thermograms) > 0:
+            therm1 = session.query(Thermogram).filter(
+                Thermogram.h_well_id == h_well.id,
+                Thermogram.date_time > target_date
+            ).order_by(Thermogram.date_time.asc()).first()
+            therm2 = session.query(Thermogram).filter(
+                Thermogram.h_well_id == h_well.id,
+                Thermogram.date_time < target_date
+            ).order_by(Thermogram.date_time.desc()).first()
+
+            therm1_diff = (therm1.date_time - target_datetime).total_seconds() if therm1 else math.inf
+            therm2_diff = (target_datetime - therm2.date_time).total_seconds() if therm2 else math.inf
+
+            result_therm = therm1 if therm1_diff < therm2_diff else therm2
+            result_therm_diff = (abs(result_therm.date_time - target_datetime).total_seconds()) / 86400
+            if result_therm_diff < 100:
+                xs_therm = [t[2] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+                ys_therm = [t[3] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+                ts_therm = [t[1] for t in json.loads(result_therm.therm_data) if len(t) > 2]
+                list_x += xs_therm
+                list_y += ys_therm
+                list_t += ts_therm
+    draw_map(list_x, list_y, list_t, f'{research.object.title} {target_date.strftime("%d.%m.%Y")}', False)
+    result = QMessageBox.question(MainWindow, 'Сохранить рабочий набор?', 'Сохранить рабочий набор?', QMessageBox.Yes, QMessageBox.No)
+    if result == QMessageBox.Yes:
+        result_table = pd.DataFrame({'x': list_x, 'y': list_y, 'temp': list_t})
+        file_name = f'{research.object.title}_{target_date.strftime("%d.%m.%Y")}.xlsx'
+        fn = QFileDialog.getSaveFileName(caption='Сохранить рабочий набор', directory=file_name, filter="Excel Files (*.xlsx)")
+        result_table.to_excel(fn[0], index=False)
+        set_info(f'Рабочий набор сохранен в файл {fn[0]}', 'green')
+    else:
+        pass
 
 
 def test():
