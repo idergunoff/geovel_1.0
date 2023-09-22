@@ -45,6 +45,7 @@ def mouse_moved_to_signal(evt):
         hor_line_rad = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
         vert_line_rad = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
         vert_line_graph = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+
         # Добавление линий на соответствующие графики
         ui.signal.addItem(hor_line_sig)
         radarogramma.addItem(hor_line_rad)
@@ -52,7 +53,16 @@ def mouse_moved_to_signal(evt):
         ui.graph.addItem(vert_line_graph)
 
 
+def clear_info(evt):
+    ui.info.clear()
+
+# очистка информации
+ui.info.mouseDoubleClickEvent = clear_info
+
+
 proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mouse_moved_to_signal)
+
+
 
 
 def log_uncaught_exceptions(ex_cls, ex, tb):
@@ -296,6 +306,7 @@ roi.sigRegionChanged.connect(updatePlot)
 
 ui.pushButton_find_oil.clicked.connect(filter19)
 ui.pushButton_secret_filter.clicked.connect(secret_filter)
+
 
 update_object()
 update_list_object_monitor()

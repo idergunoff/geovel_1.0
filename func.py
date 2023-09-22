@@ -156,6 +156,7 @@ def updatePlot():
 
 def update_profile_combobox():
     """ Обновление списка профилей в выпадающем списке """
+    ui.label_4.setText(f'Объект ({calc_object_measures()} изм)')
     # Очистка выпадающего списка
     ui.comboBox_profile.clear()
     try:
@@ -1255,4 +1256,8 @@ def get_attributes():
 
 
 def calc_object_measures():
-    pass
+    """ Расчет количества измерений на объекте """
+    count_measure = 0
+    for i in session.query(Profile).filter_by(research_id=get_research_id()).all():
+        count_measure += len(json.loads(i.signal))
+    return count_measure
