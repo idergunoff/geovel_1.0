@@ -22,7 +22,7 @@
         <string>color_marker</string>
        </property>
        <property name="checked">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -176,7 +176,7 @@
         <item row="1" column="0">
          <widget class="QLineEdit" name="lineEdit_layer_mlp">
           <property name="text">
-           <string>50 50</string>
+           <string>500</string>
           </property>
          </widget>
         </item>
@@ -206,6 +206,12 @@
         </item>
         <item row="1" column="2">
          <widget class="QComboBox" name="comboBox_solvar_mlp">
+          <property name="currentText">
+           <string>lbfgs</string>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
           <item>
            <property name="text">
             <string>adam</string>

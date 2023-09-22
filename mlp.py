@@ -2,6 +2,7 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fil
 from func import *
 from krige import draw_map
 from qt.choose_formation_lda import *
+from regression import update_list_reg
 
 
 def add_mlp():
@@ -75,6 +76,56 @@ def copy_mlp_to_lda():
     update_list_lda()
     set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
+
+def copy_mlp_to_regmod():
+    """Скопировать анализ MLP в регрессионную модель"""
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название для копии анализа', 'red')
+        return
+    old_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    new_regmod = AnalysisReg(title=ui.lineEdit_string.text())
+    session.add(new_regmod)
+    session.commit()
+
+    for old_markup in session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()):
+        if old_markup.type_markup == 'intersection':
+            intersection = session.query(Intersection).filter(Intersection.id == old_markup.well_id).first()
+            well_dist = ui.spinBox_well_dist_reg.value()
+            start = intersection.i_profile - well_dist if intersection.i_profile - well_dist > 0 else 0
+            len_prof = len(json.loads(intersection.profile.x_pulc))
+            stop = intersection.i_profile + well_dist if intersection.i_profile + well_dist < len_prof else len_prof
+            list_measure = list(range(start, stop))
+            new_markup = MarkupReg(
+                analysis_id=new_regmod.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                target_value=round(intersection.temperature, 2),
+                list_measure=json.dumps(list_measure),
+                type_markup=old_markup.type_markup
+            )
+        else:
+            well = session.query(Well).filter(Well.id == old_markup.well_id).first()
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == old_markup.profile_id).first()[0])
+            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == old_markup.profile_id).first()[0])
+            index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+            well_dist = ui.spinBox_well_dist_reg.value()
+            start = index - well_dist if index - well_dist > 0 else 0
+            stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+            list_measure = list(range(start, stop))
+            new_markup = MarkupReg(
+                analysis_id=new_regmod.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                target_value=0,
+                list_measure=json.dumps(list_measure),
+                type_markup=old_markup.type_markup
+            )
+        session.add(new_markup)
+    session.commit()
+    update_list_reg()
+    set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
 def remove_mlp():
     """Удалить анализ MLP"""
@@ -181,7 +232,7 @@ def add_well_markup_mlp():
         if ui.checkBox_profile_intersec.isChecked():
             x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
             inter = session.query(Intersection).filter(Intersection.id == well_id).first()
-            well_dist = ui.spinBox_well_dist.value()
+            well_dist = ui.spinBox_well_dist_mlp.value()
             start = inter.i_profile - well_dist if inter.i_profile - well_dist > 0 else 0
             stop = inter.i_profile + well_dist if inter.i_profile + well_dist < len(x_prof) else len(x_prof)
             list_measure = list(range(start, stop))
@@ -193,7 +244,7 @@ def add_well_markup_mlp():
             x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
             y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == profile_id).first()[0])
             index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
-            well_dist = ui.spinBox_well_dist.value()
+            well_dist = ui.spinBox_well_dist_mlp.value()
             start = index - well_dist if index - well_dist > 0 else 0
             stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
             list_measure = list(range(start, stop))
@@ -215,7 +266,7 @@ def update_well_markup_mlp():
     if markup.type_markup == 'intersection':
         x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
         well = session.query(Intersection).filter(Intersection.id == markup.well_id).first()
-        well_dist = ui.spinBox_well_dist.value()
+        well_dist = ui.spinBox_well_dist_mlp.value()
         start = well.i_profile - well_dist if well.i_profile - well_dist > 0 else 0
         stop = well.i_profile + well_dist if well.i_profile + well_dist < len(x_prof) else len(x_prof)
         list_measure = list(range(start, stop))
@@ -224,7 +275,7 @@ def update_well_markup_mlp():
         x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
         y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == markup.profile_id).first()[0])
         index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
-        well_dist = ui.spinBox_well_dist.value()
+        well_dist = ui.spinBox_well_dist_mlp.value()
         start = index - well_dist if index - well_dist > 0 else 0
         stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
         list_measure = list(range(start, stop))
@@ -984,12 +1035,15 @@ def draw_result_mlp(working_data, data_tsne, curr_form, title_graph):
 
 def calc_obj_mlp():
     working_data_result = pd.DataFrame()
+    list_formation = []
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        set_info(f'Профиль {prof.title} ({count_measure} измерений)', 'blue')
         update_formation_combobox()
         if len(prof.formations) == 1:
-            ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
+            # ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
+            list_formation.append(f'{prof.formations[0].title} id{prof.formations[0].id}')
         elif len(prof.formations) > 1:
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
@@ -1001,10 +1055,16 @@ def calc_obj_mlp():
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
-                ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
+                # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
+                list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
                 Choose_Formation.close()
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
+    for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
+        count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
+        ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        update_formation_combobox()
+        ui.comboBox_plast.setCurrentText(list_formation[n])
         working_data, curr_form = build_table_test('mlp')
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
     data_train, list_param = build_table_train(True, 'mlp')

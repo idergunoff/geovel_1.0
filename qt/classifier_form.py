@@ -20,7 +20,7 @@ class Ui_ClassifierForm(object):
         self.gridLayout_4 = QtWidgets.QGridLayout()
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.checkBox_color_marker = QtWidgets.QCheckBox(ClassifierForm)
-        self.checkBox_color_marker.setChecked(True)
+        self.checkBox_color_marker.setChecked(False)
         self.checkBox_color_marker.setObjectName("checkBox_color_marker")
         self.gridLayout_4.addWidget(self.checkBox_color_marker, 0, 0, 1, 1)
         self.groupBox_2 = QtWidgets.QGroupBox(ClassifierForm)
@@ -173,6 +173,7 @@ class Ui_ClassifierForm(object):
         self.gridLayout_5.addLayout(self.gridLayout_4, 0, 0, 1, 1)
 
         self.retranslateUi(ClassifierForm)
+        self.comboBox_solvar_mlp.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(ClassifierForm)
 
     def retranslateUi(self, ClassifierForm):
@@ -195,11 +196,12 @@ class Ui_ClassifierForm(object):
         self.label_34.setText(_translate("ClassifierForm", "alpha"))
         self.label_35.setText(_translate("ClassifierForm", "valid %"))
         self.label_19.setText(_translate("ClassifierForm", "e-stop"))
-        self.lineEdit_layer_mlp.setText(_translate("ClassifierForm", "50 50"))
+        self.lineEdit_layer_mlp.setText(_translate("ClassifierForm", "500"))
         self.comboBox_activation_mlp.setItemText(0, _translate("ClassifierForm", "relu"))
         self.comboBox_activation_mlp.setItemText(1, _translate("ClassifierForm", "logistic"))
         self.comboBox_activation_mlp.setItemText(2, _translate("ClassifierForm", "tanh"))
         self.comboBox_activation_mlp.setItemText(3, _translate("ClassifierForm", "identity"))
+        self.comboBox_solvar_mlp.setCurrentText(_translate("ClassifierForm", "lbfgs"))
         self.comboBox_solvar_mlp.setItemText(0, _translate("ClassifierForm", "adam"))
         self.comboBox_solvar_mlp.setItemText(1, _translate("ClassifierForm", "lbfgs"))
         self.comboBox_solvar_mlp.setItemText(2, _translate("ClassifierForm", "sgd"))

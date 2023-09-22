@@ -104,12 +104,13 @@ class Ui_DrawMapForm(object):
         self.checkBox_filt = QtWidgets.QCheckBox(DrawMapForm)
         self.checkBox_filt.setContextMenuPolicy(QtCore.Qt.PreventContextMenu)
         self.checkBox_filt.setLayoutDirection(QtCore.Qt.RightToLeft)
+        self.checkBox_filt.setChecked(True)
         self.checkBox_filt.setObjectName("checkBox_filt")
         self.gridLayout.addWidget(self.checkBox_filt, 4, 0, 1, 1)
         self.spinBox_filt = QtWidgets.QSpinBox(DrawMapForm)
-        self.spinBox_filt.setMinimum(3)
+        self.spinBox_filt.setMinimum(5)
         self.spinBox_filt.setSingleStep(2)
-        self.spinBox_filt.setProperty("value", 3)
+        self.spinBox_filt.setProperty("value", 13)
         self.spinBox_filt.setObjectName("spinBox_filt")
         self.gridLayout.addWidget(self.spinBox_filt, 4, 1, 1, 1)
         self.pushButton_map = QtWidgets.QPushButton(DrawMapForm)
@@ -157,3 +158,13 @@ class Ui_DrawMapForm(object):
         self.label.setText(_translate("DrawMapForm", "cmap:"))
         self.checkBox_filt.setText(_translate("DrawMapForm", "filter"))
         self.pushButton_map.setText(_translate("DrawMapForm", "DRAW"))
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    DrawMapForm = QtWidgets.QWidget()
+    ui = Ui_DrawMapForm()
+    ui.setupUi(DrawMapForm)
+    DrawMapForm.show()
+    sys.exit(app.exec_())

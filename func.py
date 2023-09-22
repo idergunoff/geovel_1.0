@@ -840,6 +840,11 @@ def get_markup_mlp_id():
         return ui.listWidget_well_mlp.currentItem().text().split(' id')[-1]
 
 
+def get_markup_regmod_id():
+    if ui.listWidget_well_regmod.currentItem():
+        return ui.listWidget_well_regmod.currentItem().text().split(' id')[-1]
+
+
 def set_param_lda_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_lda.addItem(param)
@@ -848,6 +853,11 @@ def set_param_lda_to_combobox():
 def set_param_mlp_to_combobox():
     for param in list_param_geovel:
         ui.comboBox_geovel_param_mlp.addItem(param)
+
+
+def set_param_regmod_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_reg.addItem(param)
 
 
 def add_param_lda(param):
@@ -874,9 +884,20 @@ def add_param_mlp(param):
     session.commit()
 
 
+def add_param_regmod(param):
+    if param.startswith('distr') or param.startswith('sep'):
+        atr, count = ui.comboBox_atrib_distr_reg.currentText(), ui.spinBox_count_distr_reg.value()
+        param = f'{param}_{atr}_{count}'
+    elif param.startswith('mfcc'):
+        atr, count = ui.comboBox_atrib_mfcc_reg.currentText(), ui.spinBox_count_mfcc_reg.value()
+        param = f'{param}_{atr}_{count}'
+    new_param_regmod = ParameterReg(analysis_id=get_regmod_id(), parameter=param)
+    session.add(new_param_regmod)
+    session.commit()
+
+
 
 def build_table_train(db=False, analisis='lda'):
-
     # Получение списка параметров
     if analisis == 'lda':
         list_param = get_list_param_lda()
@@ -884,12 +905,17 @@ def build_table_train(db=False, analisis='lda'):
     elif analisis == 'mlp':
         list_param = get_list_param_mlp()
         analisis_id = get_MLP_id()
+    elif analisis == 'regmod':
+        list_param = get_list_param_regmod()
+        analisis_id = get_regmod_id()
     # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
     if db:
         if analisis == 'lda':
             data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
         elif analisis == 'mlp':
             data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
+        elif analisis == 'regmod':
+            data = session.query(AnalysisReg.data).filter_by(id=get_regmod_id()).first()
 
         if data[0]:
             data_train = pd.DataFrame(json.loads(data[0]))
@@ -902,13 +928,18 @@ def build_table_train(db=False, analisis='lda'):
 def build_table_test_no_db(analisis, analisis_id, list_param):
 
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
-    data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
+    if analisis == 'regmod':
+        data_train = pd.DataFrame(columns=['prof_well_index', 'target_value'])
+    else:
+        data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
 
     # Получаем размеченные участки
     if analisis == 'lda':
         markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
     elif analisis == 'mlp':
         markups = session.query(MarkupMLP).filter_by(analysis_id=analisis_id).all()
+    elif analisis == 'regmod':
+        markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
 
     ui.progressBar.setMaximum(len(markups))
 
@@ -941,7 +972,10 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
 
             dict_value = {}
             dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
-            dict_value['mark'] = markup.marker.title
+            if analisis == 'regmod':
+                dict_value['target_value'] = markup.target_value
+            else:
+                dict_value['mark'] = markup.marker.title
 
             # Обработка каждого параметра в списке параметров
             for param in list_param:
@@ -980,6 +1014,8 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         session.query(AnalysisLDA).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     elif analisis == 'mlp':
         session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+    elif analisis == 'regmod':
+        session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
     session.commit()
     return data_train, list_param
 
@@ -989,6 +1025,9 @@ def build_table_test(analisis='lda'):
         list_param, analisis_title = get_list_param_lda(), ui.comboBox_lda_analysis.currentText()
     elif analisis == 'mlp':
         list_param, analisis_title = get_list_param_mlp(), ui.comboBox_mlp_analysis.currentText()
+    elif analisis == 'regmod':
+        model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        list_param, analisis_title = json.loads(model.list_params), model.title
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
     list_up = json.loads(curr_form.layer_up.layer_line)
@@ -1053,6 +1092,11 @@ def get_list_param_lda():
 
 def get_list_param_mlp():
     parameters = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
+    return [p.parameter for p in parameters]
+
+
+def get_list_param_regmod():
+    parameters = session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).all()
     return [p.parameter for p in parameters]
 
 
@@ -1203,3 +1247,12 @@ def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
     # # Находим ближайшую точку пересечения к началу координат
     # closest_point = min(intersection_points, key=lambda p: calc_distance(0, 0, p[0], p[1]))
     # return closest_point[2], closest_point[3]
+
+
+def get_attributes():
+    pass
+    # attr = session.query()
+
+
+def calc_object_measures():
+    pass

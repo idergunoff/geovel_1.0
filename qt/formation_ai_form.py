@@ -210,6 +210,7 @@ class Ui_Form_formation_ai(object):
         self.gridLayout_8.addWidget(self.pushButton_calc_model, 4, 1, 1, 1)
 
         self.retranslateUi(Form_formation_ai)
+        self.comboBox_solvar_mlp.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(Form_formation_ai)
 
     def retranslateUi(self, Form_formation_ai):
@@ -275,7 +276,7 @@ class Ui_Form_formation_ai(object):
         self.label_19.setToolTip(_translate("Form_formation_ai", "Если включено, процесс обучения будет автоматически прекращен, когда метрика качества на валидационном наборе перестанет улучшаться после некоторого числа итераций (эпох). Другими словами, обучение будет остановлено, когда модель начнет переобучаться и метрика качества на валидационном наборе начнет ухудшаться."))
         self.label_19.setText(_translate("Form_formation_ai", "e-stop"))
         self.lineEdit_layer_mlp.setToolTip(_translate("Form_formation_ai", "Это кортеж, определяющий количество нейронов в каждом скрытом слое. Например, \"100\" означает один скрытый слой с 100 нейронами, а \"50 30\" означает два скрытых слоя, в первом 50 нейронов, во втором - 30 нейронов. Вы можете экспериментировать с различными комбинациями слоев и нейронов, чтобы получить лучшие результаты."))
-        self.lineEdit_layer_mlp.setText(_translate("Form_formation_ai", "50 50"))
+        self.lineEdit_layer_mlp.setText(_translate("Form_formation_ai", "500"))
         self.comboBox_activation_mlp.setToolTip(_translate("Form_formation_ai", "Этот параметр определяет функцию активации для скрытых слоев. Функция активации добавляет нелинейность в модель, что позволяет ей обучаться сложным зависимостям в данных."))
         self.comboBox_activation_mlp.setItemText(0, _translate("Form_formation_ai", "relu"))
         self.comboBox_activation_mlp.setItemText(1, _translate("Form_formation_ai", "logistic"))

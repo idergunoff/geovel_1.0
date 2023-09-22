@@ -418,7 +418,7 @@
          <string>Это кортеж, определяющий количество нейронов в каждом скрытом слое. Например, &quot;100&quot; означает один скрытый слой с 100 нейронами, а &quot;50 30&quot; означает два скрытых слоя, в первом 50 нейронов, во втором - 30 нейронов. Вы можете экспериментировать с различными комбинациями слоев и нейронов, чтобы получить лучшие результаты.</string>
         </property>
         <property name="text">
-         <string>50 50</string>
+         <string>500</string>
         </property>
        </widget>
       </item>
@@ -453,6 +453,9 @@
        <widget class="QComboBox" name="comboBox_solvar_mlp">
         <property name="toolTip">
          <string>Этот параметр определяет метод оптимизации весов в нейронной сети. </string>
+        </property>
+        <property name="currentIndex">
+         <number>1</number>
         </property>
         <item>
          <property name="text">

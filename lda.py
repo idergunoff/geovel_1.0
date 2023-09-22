@@ -622,12 +622,15 @@ def calc_LDA():
 
 def calc_obj_lda():
     working_data_result = pd.DataFrame()
+    list_formation = []
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        set_info(f'Профиль {prof.title} ({count_measure} измерений)', 'blue')
         update_formation_combobox()
         if len(prof.formations) == 1:
-            ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
+            # ui.comboBox_plast.setCurrentText(f'{prof.formations[0].title} id{prof.formations[0].id}')
+            list_formation.append(f'{prof.formations[0].title} id{prof.formations[0].id}')
         elif len(prof.formations) > 1:
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
@@ -639,10 +642,16 @@ def calc_obj_lda():
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_lda_ok():
-                ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
+                # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
+                list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
                 Choose_Formation.close()
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_lda_ok)
             Choose_Formation.exec_()
+    for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
+        count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
+        ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        update_formation_combobox()
+        ui.comboBox_plast.setCurrentText(list_formation[n])
         try:
             working_data, curr_form = build_table_test()
         except TypeError:

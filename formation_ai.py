@@ -1,3 +1,6 @@
+import datetime
+import time
+
 from func import *
 from qt.formation_ai_form import *
 
@@ -312,6 +315,7 @@ def calc_model_ai():
     Form_AI.show()
     Form_AI.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     def calc_model_formation_ai():
+        start_time = datetime.datetime.now()
         model = ui_fai.comboBox_model_ai.currentText()
 
         x_train_top, x_test_top, y_train_top, y_test_top = train_test_split(
@@ -400,10 +404,10 @@ def calc_model_ai():
 
         mse_top = mean_squared_error(y_test_top, y_pred_top)
         mse_bottom = mean_squared_error(y_test_bottom, y_pred_bottom)
-
+        train_time = datetime.datetime.now() - start_time
         set_info(f'Модель {model}:\n точность для top: {model_ai_top.score(x_test_top, y_test_top)} '
                  f'\n точность для bottom: {model_ai_bottom.score(x_test_bottom, y_test_bottom)}\n'
-                 f' Mean Squared Error\n top: {mse_top} \n bottom: {mse_bottom}', 'blue')
+                 f' Mean Squared Error\n top: {mse_top} \n bottom: {mse_bottom}, \n время обучения: {train_time}', 'blue')
 
         result = QtWidgets.QMessageBox.question(
                     MainWindow,
