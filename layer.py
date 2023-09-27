@@ -186,51 +186,148 @@ def add_formation():
                     pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
                     pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
                 T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
-                    Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
-                    Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, speed_l, speed_cover_l, width_l,top_l, land_l = \
-                    [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
-                    [], [], [], [], [], [], []
+                Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
+                Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
+                A_max_l, Vt_max_l, At_max_l, Pht_max_l, Wt_max_l, A_T_max_l, Vt_T_max_l, At_T_max_l, Pht_T_max_l, Wt_T_max_l, \
+                A_Sn_l, Vt_Sn_l, At_Sn_l, Pht_Sn_l, Wt_Sn_l, A_wmf_l, Vt_wmf_l, At_wmf_l, Pht_wmf_l, Wt_wmf_l, A_Qf_l, \
+                Vt_Qf_l, At_Qf_l, Pht_Qf_l, Wt_Qf_l, A_Sn_wmf_l, Vt_Sn_wmf_l, At_Sn_wmf_l, Pht_Sn_wmf_l, Wt_Sn_wmf_l, k_r_l= \
+                [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
+                [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
+                [], [], [], [], [], [], []
+
+                list_param_1 = []
+
                 for i in range(len(layer_up)):
+                    list_param_2 = []
                     signal = signals[i]
                     analytic_signal = hilbert(signal)
                     At = np.hypot(signal, np.imag(analytic_signal)).tolist()
                     Vt = np.imag(analytic_signal).tolist()
                     Pht = np.angle(analytic_signal).tolist()
-                    Wt = np.diff(Pht).tolist()
+                    Wt = np.diff(np.angle(analytic_signal)).tolist()
                     nt = layer_up[i]
                     nb = layer_down[i]
                     T_top_l.append(layer_up[i] * 8)
+                    list_param_2.append(T_top_l[-1])
                     T_bottom_l.append(layer_down[i] * 8)
+                    list_param_2.append(T_bottom_l[-1])
                     dT_l.append(layer_down[i] * 8 - layer_up[i] * 8)
+                    list_param_2.append(dT_l[-1])
                     A_top_l.append(signal[nt])
+                    list_param_2.append(A_top_l[-1])
                     A_bottom_l.append(signal[nb])
+                    list_param_2.append(A_bottom_l[-1])
                     dA_l.append(signal[nb] - signal[nt])
+                    list_param_2.append(dA_l[-1])
                     A_sum_l.append(float(np.sum(signal[nt:nb])))
+                    list_param_2.append(A_sum_l[-1])
                     A_mean_l.append(float(np.mean(signal[nt:nb])))
+                    list_param_2.append(A_mean_l[-1])
                     dVt_l.append(Vt[nb] - Vt[nt])
+                    list_param_2.append(dVt_l[-1])
                     Vt_top_l.append(Vt[nt])
+                    list_param_2.append(Vt_top_l[-1])
                     Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
+                    list_param_2.append(Vt_sum_l[-1])
                     Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
+                    list_param_2.append(Vt_mean_l[-1])
                     dAt_l.append(At[nb] - At[nt])
+                    list_param_2.append(dAt_l[-1])
                     At_top_l.append(At[nt])
+                    list_param_2.append(At_top_l[-1])
                     At_sum_l.append(float(np.sum(At[nt:nb])))
+                    list_param_2.append(At_sum_l[-1])
                     At_mean_l.append(float(np.mean(At[nt:nb])))
+                    list_param_2.append(At_mean_l[-1])
                     dPht_l.append(Pht[nb] - Pht[nt])
+                    list_param_2.append(dPht_l[-1])
                     Pht_top_l.append(Pht[nt])
+                    list_param_2.append(Pht_top_l[-1])
                     Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
+                    list_param_2.append(Pht_sum_l[-1])
                     Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
+                    list_param_2.append(Pht_mean_l[-1])
                     Wt_top_l.append(Wt[nt])
+                    list_param_2.append(Wt_top_l[-1])
                     Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
+                    list_param_2.append(Wt_mean_l[-1])
                     Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
+                    list_param_2.append(Wt_sum_l[-1])
                     std_l.append(float(np.std(signal[nt:nb])))
+                    list_param_2.append(std_l[-1])
                     k_var_l.append(float(np.var(signal[nt:nb])))
+                    list_param_2.append(k_var_l[-1])
                     skew_l.append(skew(signal[nt:nb]))
+                    list_param_2.append(skew_l[-1])
                     kurt_l.append(kurtosis(signal[nt:nb]))
-                    # if width_json and top_json and land_json:
-                    #     speed_l.append(width[i] * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
-                    #     speed_cover_l.append((land[i] - top[i]) * 100 / (layer_up[i] * 8))
+                    list_param_2.append(kurt_l[-1])
+                    A_max_l.append(max(signal[nt:nb]))
+                    list_param_2.append(A_max_l[-1])
+                    Vt_max_l.append(max(Vt[nt:nb]))
+                    list_param_2.append(Vt_max_l[-1])
+                    At_max_l.append(max(At[nt:nb]))
+                    list_param_2.append(At_max_l[-1])
+                    Pht_max_l.append(max(Pht[nt:nb]))
+                    list_param_2.append(Pht_max_l[-1])
+                    Wt_max_l.append(max(Wt[nt:nb]))
+                    list_param_2.append(Wt_max_l[-1])
+                    A_T_max_l.append((signal[nt:nb].index(max(signal[nt:nb])) + nt) * 8)
+                    list_param_2.append(A_T_max_l[-1])
+                    Vt_T_max_l.append((Vt[nt:nb].index(max(Vt[nt:nb])) + nt) * 8)
+                    list_param_2.append(Vt_T_max_l[-1])
+                    At_T_max_l.append((At[nt:nb].index(max(At[nt:nb])) + nt) * 8)
+                    list_param_2.append(At_T_max_l[-1])
+                    Pht_T_max_l.append((Pht[nt:nb].index(max(Pht[nt:nb])) + nt) * 8)
+                    list_param_2.append(Pht_T_max_l[-1])
+                    Wt_T_max_l.append((Wt[nt:nb].index(max(Wt[nt:nb])) + nt) * 8)
+                    list_param_2.append(Wt_T_max_l[-1])
+                    A_Sn, A_wmf, A_Qf, A_Sn_wmf = calc_fft_attributes(signal[nt:nb])
+                    Vt_Sn, Vt_wmf, Vt_Qf, Vt_Sn_wmf = calc_fft_attributes(Vt[nt:nb])
+                    At_Sn, At_wmf, At_Qf, At_Sn_wmf = calc_fft_attributes(At[nt:nb])
+                    Pht_Sn, Pht_wmf, Pht_Qf, Pht_Sn_wmf = calc_fft_attributes(Pht[nt:nb])
+                    Wt_Sn, Wt_wmf, Wt_Qf, Wt_Sn_wmf = calc_fft_attributes(Wt[nt:nb])
+                    A_Sn_l.append(A_Sn)
+                    list_param_2.append(A_Sn_l[-1])
+                    Vt_Sn_l.append(Vt_Sn)
+                    list_param_2.append(Vt_Sn_l[-1])
+                    At_Sn_l.append(At_Sn)
+                    list_param_2.append(At_Sn_l[-1])
+                    Pht_Sn_l.append(Pht_Sn)
+                    list_param_2.append(Pht_Sn_l[-1])
+                    Wt_Sn_l.append(Wt_Sn)
+                    list_param_2.append(Wt_Sn_l[-1])
+                    A_wmf_l.append(At_wmf)
+                    list_param_2.append(A_wmf_l[-1])
+                    Vt_wmf_l.append(Vt_wmf)
+                    list_param_2.append(Vt_wmf_l[-1])
+                    At_wmf_l.append(At_wmf)
+                    list_param_2.append(At_wmf_l[-1])
+                    Pht_wmf_l.append(Pht_wmf)
+                    list_param_2.append(Pht_wmf_l[-1])
+                    Wt_wmf_l.append(Wt_wmf)
+                    list_param_2.append(Wt_wmf_l[-1])
+                    A_Qf_l.append(A_Qf)
+                    list_param_2.append(A_Qf_l[-1])
+                    Vt_Qf_l.append(Vt_Qf)
+                    list_param_2.append(Vt_Qf_l[-1])
+                    At_Qf_l.append(At_Qf)
+                    list_param_2.append(At_Qf_l[-1])
+                    Pht_Qf_l.append(Pht_Qf)
+                    list_param_2.append(Pht_Qf_l[-1])
+                    Wt_Qf_l.append(Wt_Qf)
+                    list_param_2.append(Wt_Qf_l[-1])
+                    A_Sn_wmf_l.append(A_Sn_wmf)
+                    list_param_2.append(A_Sn_wmf_l[-1])
+                    Vt_Sn_wmf_l.append(Vt_Sn_wmf)
+                    list_param_2.append(Vt_Sn_wmf_l[-1])
+                    At_Sn_wmf_l.append(At_Sn_wmf)
+                    list_param_2.append(At_Sn_wmf_l[-1])
+                    Pht_Sn_wmf_l.append(Pht_Sn_wmf)
+                    list_param_2.append(Pht_Sn_wmf_l[-1])
+                    Wt_Sn_wmf_l.append(Wt_Sn_wmf)
+                    list_param_2.append(Wt_Sn_wmf_l[-1])
 
-                    if grid_db and len(x_pulc) > 0 and len(y_pulc) > 0:
+                    if grid_db:
                         pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc[i])
                         pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc[i])
                         pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc[i])
@@ -245,11 +342,20 @@ def add_formation():
                             pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
                         im = i_m if i_m > 0 else 0
                         width_l.append(im)
+                        list_param_2.append(width_l[-1])
                         top_l.append(i_uf)
+                        list_param_2.append(top_l[-1])
                         land_l.append(i_r)
+                        list_param_2.append(land_l[-1])
                         speed_l.append(im * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
+                        list_param_2.append(speed_l[-1])
                         speed_cover_l.append((i_r - i_uf) * 100 / (layer_up[i] * 8))
+                        list_param_2.append(speed_cover_l[-1])
+                    if len(list_param_1) == len(list_param_2):
+                        k_r_l.append(np.corrcoef(list_param_1, list_param_2)[0, 1])
+                    list_param_1 = list_param_2.copy()
                     ui.progressBar.setValue(i + 1)
+                k_r_l.append(k_r_l[-1])
                 dict_signal = {'T_top': json.dumps(T_top_l),
                                'T_bottom': json.dumps(T_bottom_l),
                                'dT': json.dumps(dT_l),
@@ -276,16 +382,46 @@ def add_formation():
                                'std': json.dumps(std_l),
                                'k_var': json.dumps(k_var_l),
                                'skew': json.dumps(skew_l),
-                               'kurt': json.dumps(kurt_l)}
-                # if width_json and top_json and land_json:
-                #     dict_signal['speed'] = json.dumps(speed_l)
-                #     dict_signal['speed_cover'] = json.dumps(speed_cover_l)
-                if grid_db and len(x_pulc) > 0 and len(y_pulc) > 0:
+                               'kurt': json.dumps(kurt_l),
+                               'A_max': json.dumps(A_max_l),
+                               'Vt_max': json.dumps(Vt_max_l),
+                               'At_max': json.dumps(At_max_l),
+                               'Pht_max': json.dumps(Pht_max_l),
+                               'Wt_max': json.dumps(Wt_max_l),
+                               'A_T_max': json.dumps(A_T_max_l),
+                               'Vt_T_max': json.dumps(Vt_T_max_l),
+                               'At_T_max': json.dumps(At_T_max_l),
+                               'Pht_T_max': json.dumps(Pht_T_max_l),
+                               'Wt_T_max': json.dumps(Wt_T_max_l),
+                               'A_Sn': json.dumps(A_Sn_l),
+                               'Vt_Sn': json.dumps(Vt_Sn_l),
+                               'At_Sn': json.dumps(At_Sn_l),
+                               'Pht_Sn': json.dumps(Pht_Sn_l),
+                               'Wt_Sn': json.dumps(Wt_Sn_l),
+                               'A_wmf': json.dumps(A_wmf_l),
+                               'Vt_wmf': json.dumps(Vt_wmf_l),
+                               'At_wmf': json.dumps(At_wmf_l),
+                               'Pht_wmf': json.dumps(Pht_wmf_l),
+                               'Wt_wmf': json.dumps(Wt_wmf_l),
+                               'A_Qf': json.dumps(A_Qf_l),
+                               'Vt_Qf': json.dumps(Vt_Qf_l),
+                               'At_Qf': json.dumps(At_Qf_l),
+                               'Pht_Qf': json.dumps(Pht_Qf_l),
+                               'Wt_Qf': json.dumps(Wt_Qf_l),
+                               'A_Sn_wmf': json.dumps(A_Sn_wmf_l),
+                               'Vt_Sn_wmf': json.dumps(Vt_Sn_wmf_l),
+                               'At_Sn_wmf': json.dumps(At_Sn_wmf_l),
+                               'Pht_Sn_wmf': json.dumps(Pht_Sn_wmf_l),
+                               'Wt_Sn_wmf': json.dumps(Wt_Sn_wmf_l),
+                               'k_r': json.dumps(k_r_l)}
+
+                if grid_db:
                     dict_signal['width'] = json.dumps(width_l)
                     dict_signal['top'] = json.dumps(top_l)
                     dict_signal['land'] = json.dumps(land_l)
                     dict_signal['speed'] = json.dumps(speed_l)
                     dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+
                 session.query(Formation).filter(Formation.id == new_formation.id).update(dict_signal,
                                                                                      synchronize_session="fetch")
                 session.commit()

@@ -512,6 +512,11 @@ def update_list_param_mlp(db=False):
         for mark in list_marker:
             groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
         F, p = f_oneway(*groups)
+        if np.isnan(F) or np.isnan(p):
+            session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+            session.commit()
+            set_info(f'Параметр {param} удален', 'red')
+            continue
         ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]

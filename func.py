@@ -1,11 +1,17 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from object import *
 
-list_param_geovel = ['T_top', 'T_bottom', 'dT', 'A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'dVt', 'Vt_top', 'Vt_sum',
-              'Vt_mean', 'dAt', 'At_top', 'At_sum', 'At_mean', 'dPht', 'Pht_top', 'Pht_sum', 'Pht_mean', 'Wt_top',
-              'Wt_mean', 'Wt_sum', 'width', 'top', 'land', 'speed', 'speed_cover', 'skew', 'kurt', 'std', 'k_var']
-
+list_param_geovel = [
+    'T_top', 'T_bottom', 'dT', 'A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'dVt', 'Vt_top', 'Vt_sum', 'Vt_mean',
+    'dAt', 'At_top', 'At_sum', 'At_mean', 'dPht', 'Pht_top', 'Pht_sum', 'Pht_mean', 'Wt_top', 'Wt_mean', 'Wt_sum',
+    'width', 'top', 'land', 'speed', 'speed_cover', 'skew', 'kurt', 'std', 'k_var', 'A_max', 'Vt_max', 'At_max',
+    'Pht_max', 'Wt_max', 'A_T_max', 'Vt_T_max', 'At_T_max', 'Pht_T_max', 'Wt_T_max', 'A_Sn', 'Vt_Sn', 'At_Sn',
+    'Pht_Sn', 'Wt_Sn', 'A_wmf', 'Vt_wmf', 'At_wmf', 'Pht_wmf', 'Wt_wmf', 'A_Qf', 'Vt_Qf', 'At_Qf', 'Pht_Qf', 'Wt_Qf',
+    'A_Sn_wmf', 'Vt_Sn_wmf', 'At_Sn_wmf', 'Pht_Sn_wmf', 'Wt_Sn_wmf', 'k_r'
+    ]
 
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
@@ -965,6 +971,7 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
                 locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
                     Formation.id == markup.formation_id).first()[0])
 
+
         # Обработка каждого измерения в разметке
         for measure in json.loads(markup.list_measure):
             # Пропустить измерение, если оно является фиктивным
@@ -1261,3 +1268,103 @@ def calc_object_measures():
     for i in session.query(Profile).filter_by(research_id=get_research_id()).all():
         count_measure += len(json.loads(i.signal))
     return count_measure
+
+
+def calc_fft_attributes(signal):
+    """ Расчет аттрибутов спектра Фурье """
+
+    if len(signal) < 3:
+        return np.NaN, np.NaN, np.NaN, np.NaN
+
+    # Вычислите преобразование Фурье сигнала
+    # result = dct(signal)
+    result = rfft(signal)
+    # result_real = result.real
+    # print(result)
+
+
+    # Найдите модуль комплексных чисел преобразования Фурье
+    magnitude = np.abs(result)
+    # magnitude_real = np.abs(result_real)
+    # plt.plot(magnitude[1:])
+    # plt.plot(magnitude_real[1:])
+    # plt.plot(result_real[1:])
+    # plt.show()
+
+    # Нормализуйте спектр, разделив на длину сигнала
+    normalized_magnitude = magnitude / len(signal)
+
+    # Рассчитайте площадь нормированного спектра
+    area_under_spectrum = np.sum(normalized_magnitude)
+
+    # Получите частоты, соответствующие спектру
+    n = len(signal)
+    frequencies = rfftfreq(n, 8E-9)
+
+    # Рассчитайте средневзвешенную частоту
+    weighted_average_frequency = np.sum(frequencies * magnitude) / np.sum(magnitude)
+
+    # Найдите максимальную амплитуду и соответствующую центральную частоту
+    max_amplitude = np.max(magnitude[1:])
+    index_max_amplitude = list(magnitude[1:]).index(max_amplitude) + 1
+    central_frequency = frequencies[index_max_amplitude]
+
+    # Определите пороговое значение
+    threshold = 0.7 * max_amplitude
+
+    left_index, right_index = 0, len(frequencies) - 1
+    for i in range(index_max_amplitude, -1, -1):
+        if magnitude[i] < threshold:
+            left_index = i
+            break
+    for i in range(index_max_amplitude, len(frequencies)):
+        if magnitude[i] < threshold:
+            right_index = i
+            break
+
+    # Найдите ширину спектра
+    spectrum_width = frequencies[right_index] - frequencies[left_index]
+
+    # Вычислите Q-фактор
+    q_factor = central_frequency / spectrum_width
+
+    return area_under_spectrum, weighted_average_frequency, q_factor, area_under_spectrum / weighted_average_frequency
+
+
+def calc_fft_attributes_profile(signals, top, bottom):
+
+    list_Sn, list_fcb, list_Q_f, list_Sn_fcb = [], [], [], []
+
+    for i in range(len(top)):
+        signal = signals[i]
+        form_signal = signal[top[i]:bottom[i]]
+        try:
+            Sn, fcb, Q_f, Sn_fcb = calc_fft_attributes(form_signal)
+            list_Sn.append(Sn)
+            list_fcb.append(fcb)
+            list_Q_f.append(Q_f)
+            list_Sn_fcb.append(Sn_fcb)
+        except ValueError:
+            list_Sn.append(np.NaN)
+            list_fcb.append(np.NaN)
+            list_Q_f.append(np.NaN)
+            list_Sn_fcb.append(np.NaN)
+            print('ValueError')
+        except TypeError:
+            list_Sn.append(np.NaN)
+            list_fcb.append(np.NaN)
+            list_Q_f.append(np.NaN)
+            list_Sn_fcb.append(np.NaN)
+            print('TypeError')
+        except IndexError:
+            list_Sn.append(np.NaN)
+            list_fcb.append(np.NaN)
+            list_Q_f.append(np.NaN)
+            list_Sn_fcb.append(np.NaN)
+            print('IndexError')
+
+    return list_Sn, list_fcb, list_Q_f, list_Sn_fcb
+
+
+def calc_correlation_profile():
+    pass

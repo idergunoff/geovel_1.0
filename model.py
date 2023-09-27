@@ -61,44 +61,6 @@ class Profile(Base):
     markups_reg = relationship('MarkupReg', back_populates='profile')
     intersections = relationship('Intersection', back_populates='profile')
 
-    # дальше всё убираем
-
-    # T_top = Column(Text)
-    # T_bottom = Column(Text)
-    # dT = Column(Text)
-    #
-    # A_top = Column(Text)
-    # A_bottom = Column(Text)
-    # dA = Column(Text)
-    # A_sum = Column(Text)
-    # A_mean = Column(Text)
-    # dVt = Column(Text)
-    # Vt_top = Column(Text)
-    # Vt_sum = Column(Text)
-    # Vt_mean = Column(Text)
-    # dAt = Column(Text)
-    # At_top = Column(Text)
-    # At_sum = Column(Text)
-    # At_mean = Column(Text)
-    # dPht = Column(Text)
-    # Pht_top = Column(Text)
-    # Pht_sum = Column(Text)
-    # Pht_mean = Column(Text)
-    # Wt_top = Column(Text)
-    # Wt_mean = Column(Text)
-    # Wt_sum = Column(Text)
-    #
-    # width = Column(Text)
-    # top = Column(Text)
-    # land = Column(Text)
-    # speed = Column(Text)
-    # speed_cover = Column(Text)
-    #
-    # skew = Column(Text)
-    # kurt = Column(Text)
-    # std = Column(Text)
-    # k_var = Column(Text)
-
 
 class CurrentProfile(Base):
     __tablename__ = 'current_profile'
@@ -219,6 +181,44 @@ class Formation(Base):
     kurt = Column(Text)
     std = Column(Text)
     k_var = Column(Text)
+
+    A_max = Column(Text)
+    Vt_max = Column(Text)
+    At_max = Column(Text)
+    Pht_max = Column(Text)
+    Wt_max = Column(Text)
+
+    A_T_max = Column(Text)
+    Vt_T_max = Column(Text)
+    At_T_max = Column(Text)
+    Pht_T_max = Column(Text)
+    Wt_T_max = Column(Text)
+
+    A_Sn = Column(Text)
+    Vt_Sn = Column(Text)
+    At_Sn = Column(Text)
+    Pht_Sn = Column(Text)
+    Wt_Sn = Column(Text)
+
+    A_wmf = Column(Text)
+    Vt_wmf = Column(Text)
+    At_wmf = Column(Text)
+    Pht_wmf = Column(Text)
+    Wt_wmf = Column(Text)
+
+    A_Qf = Column(Text)
+    Vt_Qf = Column(Text)
+    At_Qf = Column(Text)
+    Pht_Qf = Column(Text)
+    Wt_Qf = Column(Text)
+
+    A_Sn_wmf = Column(Text)
+    Vt_Sn_wmf = Column(Text)
+    At_Sn_wmf = Column(Text)
+    Pht_Sn_wmf = Column(Text)
+    Wt_Sn_wmf = Column(Text)
+
+    k_r = Column(Text)
 
     profile = relationship('Profile', back_populates='formations')
     layer_up = relationship('Layers', back_populates='formation_up', foreign_keys=[up])

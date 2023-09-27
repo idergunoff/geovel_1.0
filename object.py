@@ -17,7 +17,7 @@ import json
 from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr
 
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
-from scipy.fft import rfft2, irfft2
+from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis

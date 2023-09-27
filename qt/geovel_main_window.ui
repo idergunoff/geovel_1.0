@@ -26,7 +26,7 @@
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="7,1" columnminimumwidth="7,1">
         <item row="1" column="0">
-         <layout class="QGridLayout" name="gridLayout" rowstretch="7,3" columnstretch="7,2">
+         <layout class="QGridLayout" name="gridLayout" rowstretch="7,3" columnstretch="7,2" rowminimumheight="7,3" columnminimumwidth="7,2">
           <item row="1" column="1">
            <widget class="QTextEdit" name="info">
             <property name="enabled">
@@ -40,14 +40,14 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="PlotWidget" name="graph"/>
+          <item row="0" column="0">
+           <widget class="GraphicsLayoutWidget" name="radarogram"/>
           </item>
           <item row="0" column="1">
            <widget class="PlotWidget" name="signal"/>
           </item>
-          <item row="0" column="0">
-           <widget class="GraphicsLayoutWidget" name="radarogram"/>
+          <item row="1" column="0">
+           <widget class="PlotWidget" name="graph"/>
           </item>
          </layout>
         </item>
@@ -2525,6 +2525,66 @@ Therm</string>
                 <item row="1" column="0">
                  <widget class="QListWidget" name="listWidget_well_mlp"/>
                 </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_count_markup_mlp">
+                  <property name="font">
+                   <font>
+                    <pointsize>9</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>count markup mlp</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <layout class="QGridLayout" name="gridLayout_30">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_60">
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_draw_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>Train</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_calc_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>Calc Profile</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QCheckBox" name="checkBox_save_prof_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>save profile</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="3">
+                     <widget class="QPushButton" name="pushButton_calc_obj_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>Calc Object</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
                 <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_44">
                   <item row="0" column="0">
@@ -2578,66 +2638,6 @@ Therm</string>
                    </layout>
                   </item>
                  </layout>
-                </item>
-                <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_30">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_60">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_draw_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>Train</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_calc_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>Calc Profile</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_save_prof_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>save profile</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_calc_obj_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>Calc Object</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_count_markup_mlp">
-                  <property name="font">
-                   <font>
-                    <pointsize>9</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>count markup mlp</string>
-                  </property>
-                 </widget>
                 </item>
                </layout>
               </item>
@@ -2905,16 +2905,43 @@ Therm</string>
                  </layout>
                 </item>
                 <item row="0" column="0">
-                 <widget class="QLabel" name="label_count_param_mlp">
-                  <property name="font">
-                   <font>
-                    <pointsize>9</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>count param mlp</string>
-                  </property>
-                 </widget>
+                 <layout class="QGridLayout" name="gridLayout_89">
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_count_param_mlp">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>count param mlp</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_corr_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>CORR</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <spacer name="horizontalSpacer_3">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </item>
@@ -2926,79 +2953,7 @@ Therm</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_87">
               <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_64" rowstretch="0,0,0">
-                <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_69">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_70" columnstretch="3,0,0">
-                    <item row="0" column="0">
-                     <widget class="QComboBox" name="comboBox_regmod"/>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_rem_regmod">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove RegMod</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_add_regmod">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add RegMod</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_71">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_19">
-                      <property name="text">
-                       <string>Target variable:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_target_val">
-                      <property name="decimals">
-                       <number>3</number>
-                      </property>
-                      <property name="maximum">
-                       <double>100000.000000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <widget class="QPushButton" name="pushButton_copy_reg">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>copy RegMod</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_sum_regmod">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>sum RegMod</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
+               <layout class="QGridLayout" name="gridLayout_64" rowstretch="0,0,0,0">
                 <item row="1" column="0">
                  <layout class="QGridLayout" name="gridLayout_72">
                   <item row="1" column="0">
@@ -3120,9 +3075,9 @@ Therm</string>
                   </item>
                  </layout>
                 </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_77" rowstretch="0,0,0">
-                  <item row="2" column="0">
+                <item row="3" column="0">
+                 <layout class="QGridLayout" name="gridLayout_77" rowstretch="0,0">
+                  <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_78">
                     <item row="2" column="0">
                      <layout class="QGridLayout" name="gridLayout_79" columnstretch="1,3,2,2,1">
@@ -3353,22 +3308,7 @@ Therm</string>
                    </layout>
                   </item>
                   <item row="0" column="0">
-                   <widget class="QLabel" name="label_count_param_regmod">
-                    <property name="font">
-                     <font>
-                      <pointsize>9</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>count param RegMod</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_85">
-                    <item row="0" column="0">
-                     <widget class="QListWidget" name="listWidget_param_reg"/>
-                    </item>
                     <item row="0" column="1">
                      <layout class="QGridLayout" name="gridLayout_86">
                       <item row="0" column="0">
@@ -3386,7 +3326,121 @@ Therm</string>
                       </item>
                      </layout>
                     </item>
+                    <item row="0" column="0">
+                     <widget class="QListWidget" name="listWidget_param_reg"/>
+                    </item>
                    </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_69">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_70" columnstretch="3,0,0">
+                    <item row="0" column="0">
+                     <widget class="QComboBox" name="comboBox_regmod"/>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_rem_regmod">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>remove RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_add_regmod">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QGridLayout" name="gridLayout_71">
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_19">
+                      <property name="text">
+                       <string>Target variable:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QDoubleSpinBox" name="doubleSpinBox_target_val">
+                      <property name="decimals">
+                       <number>3</number>
+                      </property>
+                      <property name="maximum">
+                       <double>100000.000000000000000</double>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QPushButton" name="pushButton_copy_reg">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>copy RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QPushButton" name="pushButton_sum_regmod">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>sum RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="2" column="0">
+                 <layout class="QGridLayout" name="gridLayout_92">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_count_param_regmod">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>count param RegMod</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton_corr_regmod">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>CORR</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <spacer name="horizontalSpacer_4">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
                   </item>
                  </layout>
                 </item>

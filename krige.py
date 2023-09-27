@@ -172,6 +172,17 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         plt.scatter(x, y, c=z, cmap=color_map)
         plt.colorbar(label=param)
         plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
+
+        if ui.checkBox_profile_well.isChecked():
+            r = session.query(Research).filter_by(id=get_research_id()).first()
+            for profile in r.profiles:
+                wells = get_list_nearest_well(profile.id)
+                if not wells:
+                    continue
+                for well in wells:
+                    plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+                    plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
+
         plt.xlabel('X')
         plt.ylabel('Y')
 
