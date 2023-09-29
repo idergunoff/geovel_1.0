@@ -486,8 +486,8 @@ def update_list_param_lda(db=False):
         F, p = f_oneway(*groups)
         if np.isnan(F) or np.isnan(p):
             session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(), parameter=param).delete()
-            data_train.drop(param)
-            session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train}, synchronize_session='fetch')
+            data_train.drop(param, axis=1, inplace=True)
+            session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
             session.commit()
             set_info(f'Параметр {param} удален', 'red')
             continue
