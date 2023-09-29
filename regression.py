@@ -204,6 +204,8 @@ def update_well_markup_reg():
 
 
 def add_param_geovel_reg():
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     param = ui.comboBox_geovel_param_reg.currentText()
     for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
         if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
@@ -233,6 +235,8 @@ def add_all_param_geovel_reg():
             set_info(f'Параметр {param} уже добавлен', 'red')
             continue
         add_param_regmod(param)
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_regmod()
 
 
@@ -248,6 +252,8 @@ def add_param_distr_reg():
                      f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
             return
     add_param_regmod('distr')
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_reg.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
@@ -265,6 +271,8 @@ def add_param_sep_reg():
                      f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
             return
     add_param_regmod('sep')
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_regmod()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_reg.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
@@ -281,6 +289,7 @@ def add_all_param_distr_reg():
         new_param = f'{distr_param}_{count}'
         new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=new_param)
         session.add(new_param_reg)
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_regmod()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
@@ -298,6 +307,8 @@ def add_param_mfcc_reg():
                      f'{ui.comboBox_atrib_mfcc_reg.currentText()}', 'green')
             return
     add_param_regmod('mfcc')
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_reg.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_reg.currentText()}', 'green')
@@ -314,6 +325,7 @@ def add_all_param_mfcc_reg():
         new_param = f'{mfcc_param}_{count}'
         new_param_mlp = ParameterReg(analysis_id=get_regmod_id(), parameter=new_param)
         session.add(new_param_mlp)
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_regmod()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
@@ -334,11 +346,15 @@ def remove_param_geovel_reg():
         else:
             session.query(ParameterReg).filter_by(analysis_id=get_regmod_id(), parameter=param ).delete()
         session.commit()
-        update_list_param_regmod()
+        ui.listWidget_param_reg.takeItem(ui.listWidget_param_reg.currentRow())
+        session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+        session.commit()
+        set_color_button_updata_regmod()
 
 
 def remove_all_param_geovel_reg():
     session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_regmod()
 
@@ -351,6 +367,13 @@ def update_list_param_regmod(db=False):
         ui.listWidget_param_reg.addItem(f'{param}')
     ui.label_count_param_regmod.setText(f'<i><u>{ui.listWidget_param_reg.count()}</u></i> параметров')
     update_list_trained_models_regmod()
+    set_color_button_updata_regmod()
+
+
+def set_color_button_updata_regmod():
+    reg = session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first()
+    btn_color = 'background-color: rgb(191, 255, 191);' if reg.up_data else 'background-color: rgb(255, 185, 185);'
+    ui.pushButton_updata_regmod.setStyleSheet(btn_color)
 
 
 def train_regression_model():
@@ -670,3 +693,32 @@ def copy_regmod():
     update_list_reg()
     set_info(f'Скопирован набор для регрессионного анализа - "{old_regmod.title}"', 'green')
 
+
+def calc_corr_regmod():
+    if not session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first().up_data:
+        update_list_param_regmod()
+    data_train, list_param = build_table_train(True, 'regmod')
+    data_corr = data_train.iloc[:, 2:]
+
+    list_param = list(data_corr.columns)
+    corr_gist = []
+    for i in data_corr.corr():
+        corr_gist.append(np.abs(data_corr.corr()[i]).mean())
+
+    fig = plt.figure(figsize=(20, 12))
+    colors = ['#57e389', '#f66151'] * (len(list_param) // 2)
+    if len(list_param) > 60:
+        plt.bar(list_param, corr_gist, align='edge', width=1, color=colors)
+        plt.tick_params(rotation=90)
+        plt.grid()
+    else:
+        ax = plt.subplot2grid((1, 3), (0, 0), colspan=2)
+        sns.heatmap(data_corr.corr(), xticklabels=list_param, yticklabels=list_param, cmap='RdYlGn', annot=True)
+        ax = plt.subplot2grid((1, 3), (0, 2))
+        ax.barh(range(1, len(list_param) + 1), corr_gist, align='edge', tick_label=list_param, color=colors)
+        plt.xlim(np.min(corr_gist) - 0.05, np.max(corr_gist) + 0.05)
+        plt.ylim(1, len(list_param) + 1)
+        ax.invert_yaxis()
+        ax.grid()
+    fig.tight_layout()
+    fig.show()

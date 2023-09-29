@@ -8,6 +8,7 @@ from PyQt5.QtGui import QBrush, QColor
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *
+from qt.test import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
@@ -43,6 +44,8 @@ from sklearn.metrics import mean_squared_error
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc

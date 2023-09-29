@@ -909,14 +909,17 @@ def build_table_train(db=False, analisis='lda'):
     if analisis == 'lda':
         list_param = get_list_param_lda()
         analisis_id = get_LDA_id()
+        analis = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
     elif analisis == 'mlp':
         list_param = get_list_param_mlp()
         analisis_id = get_MLP_id()
+        analis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
     elif analisis == 'regmod':
         list_param = get_list_param_regmod()
         analisis_id = get_regmod_id()
+        analis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
     # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
-    if db:
+    if db or analis.up_data:
         if analisis == 'lda':
             data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
         elif analisis == 'mlp':
@@ -1019,11 +1022,11 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         ui.progressBar.setValue(nm + 1)
     data_train_to_db = json.dumps(data_train.to_dict())
     if analisis == 'lda':
-        session.query(AnalysisLDA).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+        session.query(AnalysisLDA).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
     elif analisis == 'mlp':
-        session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+        session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
     elif analisis == 'regmod':
-        session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': data_train_to_db}, synchronize_session='fetch')
+        session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
     session.commit()
     return data_train, list_param
 

@@ -324,6 +324,8 @@ def choose_marker_lda():
 
 
 def add_param_geovel_lda():
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     param = ui.comboBox_geovel_param_lda.currentText()
     for m in session.query(MarkupLDA).filter(MarkupLDA.analysis_id == get_LDA_id()).all():
         if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
@@ -353,6 +355,8 @@ def add_all_param_geovel_lda():
             set_info(f'Параметр {param} уже добавлен', 'red')
             continue
         add_param_lda(param)
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_lda()
 
 
@@ -367,6 +371,7 @@ def add_param_distr_lda():
             set_info(f'В параметры добавлены {ui.spinBox_count_distr_lda.value()} интервалов распределения по '
                      f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
             return
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
     add_param_lda('distr')
     update_list_param_lda()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_lda.value()} интервалов распределения по '
@@ -385,6 +390,8 @@ def add_param_sep_lda():
                 f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
             return
     add_param_lda('sep')
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_lda()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_lda.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_lda.currentText()}', 'green')
@@ -401,6 +408,7 @@ def add_all_param_distr_lda():
         new_param = f'{distr_param}_{count}'
         new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=new_param)
         session.add(new_param_lda)
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_lda()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
@@ -417,6 +425,8 @@ def add_param_mfcc_lda():
             set_info(f'В параметры добавлены {ui.spinBox_count_mfcc.value()} кепстральных коэффициентов '
                 f'{ui.comboBox_atrib_mfcc_lda.currentText()}', 'green')
             return
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     add_param_lda('mfcc')
     update_list_param_lda()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc.value()} кепстральных коэффициентов '
@@ -434,6 +444,7 @@ def add_all_param_mfcc_lda():
         new_param = f'{mfcc_param}_{count}'
         new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=new_param)
         session.add(new_param_lda)
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_lda()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
@@ -450,11 +461,15 @@ def remove_param_geovel_lda():
         else:
             session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(), parameter=param ).delete()
         session.commit()
-        update_list_param_lda()
+        ui.listWidget_param_lda.takeItem(ui.listWidget_param_lda.currentRow())
+        session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
+        session.commit()
+        set_color_button_updata_lda()
 
 
 def remove_all_param_geovel_lda():
     session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).delete()
+    session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_lda()
 
@@ -469,11 +484,25 @@ def update_list_param_lda(db=False):
         for mark in list_marker:
             groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
         F, p = f_oneway(*groups)
+        if np.isnan(F) or np.isnan(p):
+            session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id(), parameter=param).delete()
+            data_train.drop(param)
+            session.query(AnalysisLDA).filter_by(id=get_LDA_id()).update({'data': data_train}, synchronize_session='fetch')
+            session.commit()
+            set_info(f'Параметр {param} удален', 'red')
+            continue
         ui.listWidget_param_lda.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_lda.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
     ui.label_count_param_lda.setText(f'<i><u>{ui.listWidget_param_lda.count()}</u></i> параметров')
+    set_color_button_updata_lda()
+
+
+def set_color_button_updata_lda():
+    lda = session.query(AnalysisLDA).filter(AnalysisLDA.id == get_LDA_id()).first()
+    btn_color = 'background-color: rgb(191, 255, 191);' if lda.up_data else 'background-color: rgb(255, 185, 185);'
+    ui.pushButton_updata_lda.setStyleSheet(btn_color)
 
 
 def draw_LDA():
@@ -725,3 +754,73 @@ def calc_obj_lda():
     else:
         pass
 
+
+def calc_corr_lda():
+    if not session.query(AnalysisLDA).filter(AnalysisLDA.id == get_LDA_id()).first().up_data:
+        update_list_param_lda()
+    data_train, list_param = build_table_train(True, 'lda')
+    data_corr = data_train.iloc[:, 2:]
+
+    list_param = list(data_corr.columns)
+    corr_gist = []
+    for i in data_corr.corr():
+        corr_gist.append(np.abs(data_corr.corr()[i]).mean())
+
+    fig = plt.figure(figsize=(20, 12))
+    colors = ['#57e389', '#f66151'] * (len(list_param) // 2)
+    if len(list_param) > 60:
+        plt.bar(list_param, corr_gist, align='edge', width=1, color=colors)
+        plt.tick_params(rotation=90)
+        plt.grid()
+    else:
+        ax = plt.subplot2grid((1, 3), (0, 0), colspan=2)
+        sns.heatmap(data_corr.corr(), xticklabels=list_param, yticklabels=list_param, cmap='RdYlGn', annot=True)
+        ax = plt.subplot2grid((1, 3), (0, 2))
+        ax.barh(range(1, len(list_param) + 1), corr_gist, align='edge', tick_label=list_param, color=colors)
+        plt.xlim(np.min(corr_gist) - 0.05, np.max(corr_gist) + 0.05)
+        plt.ylim(1, len(list_param) + 1)
+        ax.invert_yaxis()
+        ax.grid()
+    fig.tight_layout()
+    fig.show()
+
+
+def anova_lda():
+    Anova = QtWidgets.QDialog()
+    ui_anova = Ui_Anova()
+    ui_anova.setupUi(Anova)
+    Anova.show()
+    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
+
+    # ui_anova.graphicsView.setBackground('w')
+
+    data_plot, _ = build_table_train(True, 'lda')
+
+    figure = plt.figure()
+    canvas = FigureCanvas(figure)
+    ui_anova.horizontalLayout.addWidget(canvas)
+
+    for i in session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all():
+        ui_anova.listWidget.addItem(f'{i.parameter} id{i.id}')
+
+    def draw_graph_anova():
+        figure.clear()
+        param = ui_anova.listWidget.currentItem().text().split(' id')[0]
+        if ui_anova.radioButton_box.isChecked():
+            sns.boxplot(data=data_plot, y=param, x='mark', orient='v')
+        if ui_anova.radioButton_violin.isChecked():
+            sns.violinplot(data=data_plot, y=param, x='mark', orient='v')
+        if ui_anova.radioButton_strip.isChecked():
+            sns.stripplot(data=data_plot, y=param, x='mark', hue='mark', orient='v')
+        if ui_anova.radioButton_boxen.isChecked():
+            sns.boxenplot(data=data_plot, y=param, x='mark', orient='v')
+        figure.tight_layout()
+        canvas.draw()
+
+    ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
+    ui_anova.radioButton_boxen.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_strip.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_violin.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
+
+    Anova.exec_()

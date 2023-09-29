@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 from krige import draw_map
@@ -367,6 +369,8 @@ def choose_marker_mlp():
 
 
 def add_param_geovel_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     param = ui.comboBox_geovel_param_mlp.currentText()
     for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
         if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
@@ -396,6 +400,8 @@ def add_all_param_geovel_mlp():
             set_info(f'Параметр {param} уже добавлен', 'red')
             continue
         add_param_mlp(param)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_mlp()
 
 
@@ -411,6 +417,8 @@ def add_param_distr_mlp():
                      f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
             return
     add_param_mlp('distr')
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_mlp()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_mlp.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
@@ -428,6 +436,8 @@ def add_param_sep_mlp():
                      f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
             return
     add_param_mlp('sep')
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_mlp()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_mlp.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
@@ -444,6 +454,7 @@ def add_all_param_distr_mlp():
         new_param = f'{distr_param}_{count}'
         new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
         session.add(new_param_mlp)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_mlp()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
@@ -461,6 +472,8 @@ def add_param_mfcc_mlp():
                      f'{ui.comboBox_atrib_mfcc_mlp.currentText()}', 'green')
             return
     add_param_mlp('mfcc')
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
     update_list_param_mlp()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_mlp.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_mlp.currentText()}', 'green')
@@ -477,6 +490,7 @@ def add_all_param_mfcc_mlp():
         new_param = f'{mfcc_param}_{count}'
         new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
         session.add(new_param_mlp)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_mlp()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
@@ -493,11 +507,15 @@ def remove_param_geovel_mlp():
         else:
             session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param ).delete()
         session.commit()
-        update_list_param_mlp()
+        ui.listWidget_param_mlp.takeItem(ui.listWidget_param_mlp.currentRow())
+        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+        session.commit()
+        set_color_button_updata()
 
 
 def remove_all_param_geovel_mlp():
     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_mlp()
 
@@ -514,6 +532,8 @@ def update_list_param_mlp(db=False):
         F, p = f_oneway(*groups)
         if np.isnan(F) or np.isnan(p):
             session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+            data_train.drop(param)
+            session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': data_train}, synchronize_session='fetch')
             session.commit()
             set_info(f'Параметр {param} удален', 'red')
             continue
@@ -522,6 +542,13 @@ def update_list_param_mlp(db=False):
             i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
             i_item.setBackground(QBrush(QColor('red')))
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
+    set_color_button_updata()
+
+
+def set_color_button_updata():
+    mlp = session.query(AnalysisMLP).filter(AnalysisMLP.id == get_MLP_id()).first()
+    btn_color = 'background-color: rgb(191, 255, 191);' if mlp.up_data else 'background-color: rgb(255, 185, 185);'
+    ui.pushButton_updata_mlp.setStyleSheet(btn_color)
 
 
 def draw_MLP():
@@ -1358,6 +1385,78 @@ def calc_obj_mlp():
     Classifier.exec_()
 
 
+def calc_corr_mlp():
+    if not session.query(AnalysisMLP).filter(AnalysisMLP.id == get_MLP_id()).first().up_data:
+        update_list_param_mlp()
+    data_train, list_param = build_table_train(True, 'mlp')
+    data_corr = data_train.iloc[:, 2:]
+
+    list_param = list(data_corr.columns)
+    corr_gist = []
+    for i in data_corr.corr():
+        corr_gist.append(np.abs(data_corr.corr()[i]).mean())
+
+    fig = plt.figure(figsize=(20, 12))
+    colors = ['#57e389', '#f66151'] * (len(list_param) // 2)
+    if len(list_param) > 60:
+        plt.bar(list_param, corr_gist, align='edge', width=1, color=colors)
+        plt.tick_params(rotation=90)
+        plt.grid()
+    else:
+        ax = plt.subplot2grid((1, 3), (0, 0), colspan=2)
+        sns.heatmap(data_corr.corr(), xticklabels=list_param, yticklabels=list_param, cmap='RdYlGn', annot=True)
+        ax = plt.subplot2grid((1, 3), (0, 2))
+        ax.barh(range(1, len(list_param) + 1), corr_gist, align='edge', tick_label=list_param, color=colors)
+        plt.xlim(np.min(corr_gist) - 0.05, np.max(corr_gist) + 0.05)
+        plt.ylim(1, len(list_param) + 1)
+        ax.invert_yaxis()
+        ax.grid()
+    fig.tight_layout()
+    fig.show()
+
+
+def anova_mlp():
+    Anova = QtWidgets.QDialog()
+    ui_anova = Ui_Anova()
+    ui_anova.setupUi(Anova)
+    Anova.show()
+    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
+
+    # ui_anova.graphicsView.setBackground('w')
+
+    data_plot, list_param = build_table_train(True, 'mlp')
+    markers = list(set(data_plot['mark']))
+    pallet = {i: session.query(MarkerMLP).filter(MarkerMLP.title == i, MarkerMLP.analysis_id == get_MLP_id()).first().color for i in markers}
+
+    figure = plt.figure()
+    canvas = FigureCanvas(figure)
+    ui_anova.horizontalLayout.addWidget(canvas)
+
+
+    for i in data_plot.columns.tolist()[2:]:
+        ui_anova.listWidget.addItem(i)
+
+    def draw_graph_anova():
+        figure.clear()
+        param = ui_anova.listWidget.currentItem().text()
+        if ui_anova.radioButton_box.isChecked():
+            sns.boxplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
+        if ui_anova.radioButton_violin.isChecked():
+            sns.violinplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
+        if ui_anova.radioButton_strip.isChecked():
+            sns.stripplot(data=data_plot, y=param, x='mark', hue='mark', orient='v', palette=pallet)
+        if ui_anova.radioButton_boxen.isChecked():
+            sns.boxenplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
+        figure.tight_layout()
+        canvas.draw()
+
+    ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
+    ui_anova.radioButton_boxen.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_strip.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_violin.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
+
+    Anova.exec_()
 
 
 

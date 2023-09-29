@@ -291,6 +291,7 @@ class AnalysisLDA(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     data = Column(Text)
+    up_data = Column(Boolean, default=False)
 
     parameters = relationship('ParameterLDA', back_populates='analysis')
     markers = relationship('MarkerLDA', back_populates='analysis')
@@ -350,6 +351,7 @@ class AnalysisMLP(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     data = Column(Text)
+    up_data = Column(Boolean, default=False)
 
     parameters = relationship('ParameterMLP', back_populates='analysis')
     markers = relationship('MarkerMLP', back_populates='analysis')
@@ -409,6 +411,7 @@ class AnalysisReg(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     data = Column(Text)
+    up_data = Column(Boolean, default=False)
 
     parameters = relationship('ParameterReg', back_populates='analysis')
     markups = relationship('MarkupReg', back_populates='analysis')
