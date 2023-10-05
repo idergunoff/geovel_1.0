@@ -454,6 +454,7 @@ class TrainedModelReg(Base):
     analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
     title = Column(String)
     path_model = Column(String)
+    path_scaler = Column(String)
     list_params = Column(Text)
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')

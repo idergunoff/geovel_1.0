@@ -1,3 +1,7 @@
+import time
+
+import matplotlib.pyplot as plt
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
@@ -477,12 +481,52 @@ def train_regression_model():
 
         y_pred = model_regression.predict(x_test)
 
-        accuracy = model_regression.score(x_test, y_test)
-        mse = mean_squared_error(y_test, y_pred)
+        accuracy = round(model_regression.score(x_test, y_test), 5)
+        mse = round(mean_squared_error(y_test, y_pred), 5)
+
         train_time = datetime.datetime.now() - start_time
         set_info(f'Модель {model}:\n точность: {accuracy} '
-                 f' Mean Squared Error\n top: {mse}, \n время обучения: {train_time}', 'blue')
+                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
+        y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
 
+
+        data_graph = pd.DataFrame({
+            'y_test': y_test,
+            'y_pred': y_pred,
+            'y_remain': y_remain
+        })
+        try:
+            ipm_name_params, imp_params = [], []
+            for n, i in enumerate(model_regression.feature_importances_):
+                if i >= np.mean(model_regression.feature_importances_):
+                    ipm_name_params.append(list_param[n])
+                    imp_params.append(i)
+
+            fig, axes = plt.subplots(nrows=2, ncols=2)
+            fig.set_size_inches(15, 10)
+            fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}')
+            sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            axes[0, 1].bar(ipm_name_params, imp_params)
+            axes[0, 1].set_xticklabels(ipm_name_params, rotation=90)
+            sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+            fig.tight_layout()
+            fig.show()
+        except AttributeError:
+            fig, axes = plt.subplots(nrows=2, ncols=2)
+            fig.set_size_inches(15, 10)
+            fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+                          f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}')
+            sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+            fig.tight_layout()
+            fig.show()
         result = QtWidgets.QMessageBox.question(
             MainWindow,
             'Сохранение модели',
@@ -491,15 +535,19 @@ def train_regression_model():
             QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
-            path_model = f'models/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            path_scaler = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}_scaler.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(model_regression, f)
+            with open(path_scaler, 'wb') as f:
+                pickle.dump(scaler_params, f)
 
             new_trained_model = TrainedModelReg(
                 analysis_id=get_regmod_id(),
                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_model=path_model,
-                list_params=json.dumps(list_param)
+                path_scaler=path_scaler,
+                list_params=json.dumps(list_param),
             )
             session.add(new_trained_model)
             session.commit()
@@ -527,6 +575,7 @@ def remove_trained_model_regmod():
     """ Удаление модели """
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
     os.remove(model.path_model)
+    os.remove(model.path_scaler)
     session.delete(model)
     session.commit()
     update_list_trained_models_regmod()
@@ -537,10 +586,18 @@ def calc_profile_model_regmod():
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
     with open(model.path_model, 'rb') as f:
         reg_model = pickle.load(f)
+    with open(model.path_scaler, 'rb') as f:
+        scaler_params = pickle.load(f)
+
+    # Создать экземпляр StandardScaler и установить параметры масштабирования
+    scaler = StandardScaler()
+    scaler.mean_ = scaler_params['mean']
+    scaler.scale_ = scaler_params['std']
 
     working_data, curr_form = build_table_test('regmod')
 
     working_sample = working_data[json.loads(model.list_params)].values.tolist()
+    working_sample = scaler.transform(working_sample)
     try:
         y_pred = reg_model.predict(working_sample)
     except ValueError:
@@ -611,8 +668,15 @@ def calc_object_model_regmod():
         model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         with open(model.path_model, 'rb') as f:
             reg_model = pickle.load(f)
+        with open(model.path_scaler, 'rb') as f:
+            scaler_params = pickle.load(f)
+
+        scaler = StandardScaler()
+        scaler.mean_ = scaler_params['mean']
+        scaler.scale_ = scaler_params['std']
 
         working_sample = working_data_result_copy[json.loads(model.list_params)].values.tolist()
+        working_sample = scaler.transform(working_sample)
 
         try:
             y_pred = reg_model.predict(working_sample)
@@ -760,7 +824,6 @@ def anova_regmod():
     # ui_anova.graphicsView.setBackground('w')
 
     data_plot, list_param = build_table_train(True, 'regmod')
-    print(data_plot)
 
     figure = plt.figure()
     canvas = FigureCanvas(figure)
@@ -775,6 +838,7 @@ def anova_regmod():
         param = ui_anova.listWidget.currentItem().text()
         sns.kdeplot(data=data_plot, x=param, y='target_value', fill=True)
         sns.scatterplot(data=data_plot, x=param, y='target_value')
+        sns.regplot(data=data_plot, x=param, y='target_value', line_kws={'color': 'red'})
 
         # x = data_plot[param]
         # y = data_plot['target_value']
@@ -787,6 +851,7 @@ def anova_regmod():
         # plt.plot(x, y_est, '-', 'k', linewidth=2)
         # plt.fill_between(x, y_est - y_err, y_est + y_err, alpha=0.75)
         plt.grid()
+        figure.suptitle(f'Коэффициент корреляции: {np.corrcoef(data_plot[param], data_plot["target_value"])[0, 1]}')
         figure.tight_layout()
         canvas.draw()
 
