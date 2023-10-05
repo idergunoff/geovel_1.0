@@ -27,6 +27,8 @@ from sklearn.preprocessing import normalize
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -39,6 +41,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import RFE, RFECV
 
 from sklearn.metrics import mean_squared_error
 from matplotlib.animation import FuncAnimation

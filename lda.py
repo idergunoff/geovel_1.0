@@ -516,6 +516,9 @@ def draw_LDA():
     markup = sum(data_train[['mark']].values.tolist(), [])
     clf = LinearDiscriminantAnalysis()
     try:
+        # selector = RFE(clf, n_features_to_select=0.5, step=1)
+        # selector = selector.fit(training_sample, markup)
+        # print(selector.support_)
         trans_coef = clf.fit(training_sample, markup).transform(training_sample)
     except ValueError:
         set_info('Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей '

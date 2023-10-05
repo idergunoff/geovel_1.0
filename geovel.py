@@ -216,6 +216,7 @@ ui.pushButton_add_all_mfcc_reg.clicked.connect(add_all_param_mfcc_reg)
 ui.pushButton_rem_trained_model_reg.clicked.connect(remove_trained_model_regmod)
 ui.pushButton_corr_regmod.clicked.connect(calc_corr_regmod)
 ui.pushButton_updata_regmod.clicked.connect(update_list_param_regmod)
+ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.currentItemChanged.connect(choose_markup_regmod)
 

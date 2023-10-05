@@ -1086,6 +1086,19 @@ def build_table_test(analisis='lda'):
     return test_data, curr_form
 
 
+def get_list_param_numerical(list_param):
+    new_list_param = []
+    for param in list_param:
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+            p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+            for num in range(n):
+                new_list_param.append(f'{p}_{atr}_{num + 1}')
+        else:
+            new_list_param.append(param)
+    return new_list_param
+
+
+
 def get_list_marker():
     markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()
     return [m.title for m in markers]
@@ -1369,5 +1382,10 @@ def calc_fft_attributes_profile(signals, top, bottom):
     return list_Sn, list_fcb, list_Q_f, list_Sn_fcb
 
 
-def calc_correlation_profile():
-    pass
+def signal_log_to_lin(signal):
+    """функция не используется, так как работает не совсем корректно"""
+    signal_linear = [(i - 128) * (np.log(n + 1)) + 128 for n, i in enumerate(signal)]
+    signal_linear = [255 if i > 255 else i for i in signal_linear]
+    signal_linear = [0 if i < 0 else i for i in signal_linear]
+    return signal_linear
+

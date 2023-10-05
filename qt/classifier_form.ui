@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>575</width>
-    <height>313</height>
+    <width>605</width>
+    <height>498</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,109 +26,10 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QGroupBox" name="groupBox_2">
-       <property name="title">
-        <string>KNN</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_39">
-          <property name="text">
-           <string>N neighbors:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_41">
-          <property name="text">
-           <string>weights distanse:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_36">
-          <property name="text">
-           <string>algorithm:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QSpinBox" name="spinBox_neighbors">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>1000</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QCheckBox" name="checkBox_knn_weights">
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QComboBox" name="comboBox_knn_algorithm">
-          <item>
-           <property name="text">
-            <string>auto</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>ball_tree</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>kd_tree</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>brute</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="pushButton_calc_knn">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>KNN</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0" colspan="2">
+     <item row="3" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
-        <string>MLP</string>
+        <string>MLPClassifier</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
@@ -274,8 +175,91 @@
        </layout>
       </widget>
      </item>
+     <item row="0" column="1">
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>KNeighborsClassifier</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_39">
+          <property name="text">
+           <string>N neighbors:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_41">
+          <property name="text">
+           <string>weights distanse:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_36">
+          <property name="text">
+           <string>algorithm:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QSpinBox" name="spinBox_neighbors">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="checkBox_knn_weights">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QComboBox" name="comboBox_knn_algorithm">
+          <item>
+           <property name="text">
+            <string>auto</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>ball_tree</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>kd_tree</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>brute</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item row="1" column="2">
-      <widget class="QPushButton" name="pushButton_calc_mlp">
+      <widget class="QPushButton" name="pushButton_calc_gbc">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -286,14 +270,78 @@
         <string notr="true">background-color: rgb(255, 204, 121);</string>
        </property>
        <property name="text">
-        <string>MLP</string>
+        <string>GBC</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0" colspan="2">
+     <item row="1" column="1">
+      <widget class="QGroupBox" name="groupBox_6">
+       <property name="title">
+        <string>GradientBoostingClassifier</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_6">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="toolTip">
+           <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+          </property>
+          <property name="text">
+           <string>learning_rate:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_6">
+          <property name="toolTip">
+           <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+          </property>
+          <property name="text">
+           <string>n_estimators:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate">
+          <property name="toolTip">
+           <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+          </property>
+          <property name="minimum">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.500000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="spinBox_n_estimators">
+          <property name="toolTip">
+           <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="singleStep">
+           <number>50</number>
+          </property>
+          <property name="value">
+           <number>200</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_3">
        <property name="title">
-        <string>GPC</string>
+        <string>GaussianProcessClassifier</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="0" column="0">
@@ -398,7 +446,23 @@
        </layout>
       </widget>
      </item>
-     <item row="2" column="2">
+     <item row="3" column="2">
+      <widget class="QPushButton" name="pushButton_calc_mlp">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>MLP</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
       <widget class="QPushButton" name="pushButton_calc_gpc">
        <property name="minimumSize">
         <size>
@@ -416,6 +480,102 @@
         <number>100</number>
        </property>
       </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="pushButton_calc_knn">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>KNN</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>DecisionTreeClassifier</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_7">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_splitter_rnd">
+          <property name="toolTip">
+           <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
+          </property>
+          <property name="text">
+           <string>splitter random</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QPushButton" name="pushButton_calc_dtc">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>DTC</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,2">
+       <item row="0" column="1">
+        <widget class="QCheckBox" name="checkBox_rfe">
+         <property name="text">
+          <string>RFE</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>n param</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QSpinBox" name="spinBox_rfe_n_param">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>step</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="spinBox_rfe_step">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

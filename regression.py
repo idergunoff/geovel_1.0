@@ -379,8 +379,18 @@ def set_color_button_updata_regmod():
 def train_regression_model():
     """ Расчет модели """
     data_train, list_param = build_table_train(True, 'regmod')
+    list_param = get_list_param_numerical(list_param)
     training_sample = data_train[list_param].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
+
+    scaler = StandardScaler()
+    training_sample = scaler.fit_transform(training_sample)
+
+    # Сохранить параметры масштабирования
+    scaler_params = {
+        'mean': scaler.mean_,
+        'std': scaler.scale_
+    }
 
     Form_Regmod = QtWidgets.QDialog()
     ui_frm = Ui_Form_formation_ai()
@@ -398,11 +408,18 @@ def train_regression_model():
         if model == 'LinearRegression':
             model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
             model_name = 'LR'
+            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
+            # selector = selector.fit(x_train, y_train)
+            # print(selector.support_)
+            # print(len(selector.ranking_))
 
         if model == 'DecisionTreeRegressor':
             spl = 'random' if ui_frm.checkBox_splitter_rnd.isChecked() else 'best'
             model_regression = DecisionTreeRegressor(splitter=spl)
             model_name = 'DTR'
+            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
+            # selector = selector.fit(training_sample, target)
+            # print(selector.support_)
 
         if model == 'KNeighborsRegressor':
             model_regression = KNeighborsRegressor(
@@ -434,6 +451,9 @@ def train_regression_model():
                 n_estimators=ui_frm.spinBox_n_estimators.value(),
                 learning_rate=ui_frm.doubleSpinBox_learning_rate.value(),
             )
+            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
+            # selector = selector.fit(training_sample, target)
+            # print(selector.support_)
             model_name = 'GBR'
 
         if model == 'ElasticNet':
@@ -442,10 +462,16 @@ def train_regression_model():
                 l1_ratio=ui_frm.doubleSpinBox_l1_ratio.value()
             )
             model_name = 'EN'
+            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
+            # selector = selector.fit(training_sample, target)
+            # print(selector.support_)
 
         if model == 'Lasso':
             model_regression = Lasso(alpha=ui_frm.doubleSpinBox_alpha.value())
             model_name = 'Lss'
+            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
+            # selector = selector.fit(training_sample, target)
+            # print(selector.support_)
 
         model_regression.fit(x_train, y_train)
 
@@ -722,3 +748,48 @@ def calc_corr_regmod():
         ax.grid()
     fig.tight_layout()
     fig.show()
+
+
+def anova_regmod():
+    Anova = QtWidgets.QDialog()
+    ui_anova = Ui_Anova()
+    ui_anova.setupUi(Anova)
+    Anova.show()
+    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
+
+    # ui_anova.graphicsView.setBackground('w')
+
+    data_plot, list_param = build_table_train(True, 'regmod')
+    print(data_plot)
+
+    figure = plt.figure()
+    canvas = FigureCanvas(figure)
+    ui_anova.horizontalLayout.addWidget(canvas)
+
+
+    for i in data_plot.columns.tolist()[2:]:
+        ui_anova.listWidget.addItem(i)
+
+    def draw_graph_anova():
+        figure.clear()
+        param = ui_anova.listWidget.currentItem().text()
+        sns.kdeplot(data=data_plot, x=param, y='target_value', fill=True)
+        sns.scatterplot(data=data_plot, x=param, y='target_value')
+
+        # x = data_plot[param]
+        # y = data_plot['target_value']
+        #
+        # a, b = np.polyfit(x, y, deg=1)
+        # y_est = a * x + b
+        # y_err = x.std() * np.sqrt(1 / len(x) +
+        #                           (x - x.mean()) ** 2 / np.sum((x - x.mean()) ** 2))
+        #
+        # plt.plot(x, y_est, '-', 'k', linewidth=2)
+        # plt.fill_between(x, y_est - y_err, y_est + y_err, alpha=0.75)
+        plt.grid()
+        figure.tight_layout()
+        canvas.draw()
+
+    ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
+
+    Anova.exec_()

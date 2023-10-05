@@ -94,6 +94,8 @@ def load_param():
         session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
         session.commit()
         set_info(f'Загружены координаты ({get_object_name()}, {get_profile_name()})', 'green')
+        check_coordinates_profile()
+        check_coordinates_research()
         layer_top = list(map(lambda x: int(x / 40), pd_int['T01'].values.tolist()))
         layer_bottom = list(map(lambda x: int(x / 40), pd_int['D02'].values.tolist()))
         if all(i == 0 for i in layer_top) or all(i == 0 for i in layer_bottom):
@@ -364,8 +366,6 @@ def load_param():
             session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
             session.commit()
             update_formation_combobox()
-            check_coordinates_profile()
-            check_coordinates_research()
 
             set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
         except ZeroDivisionError:
