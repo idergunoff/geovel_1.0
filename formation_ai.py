@@ -1,6 +1,7 @@
 import datetime
 import time
 
+from draw import draw_radarogram, draw_formation
 from func import *
 from qt.formation_ai_form import *
 
@@ -293,20 +294,40 @@ def remove_formation_ai():
 #     ui_fai.pushButton_calc_model.clicked.connect(calc_model_formation_ai)
 #     Form_AI.exec_()
 
+def choose_formation_ai():
+    formation_ai = session.query(FormationAI).filter_by(id=ui.listWidget_formation_ai.currentItem().data(Qt.UserRole)).first()
+    ui.comboBox_object.setCurrentText(f'{formation_ai.profile.research.object.title} id{formation_ai.profile.research.object_id}')
+    update_research_combobox()
+    ui.comboBox_research.setCurrentText(
+        f'{formation_ai.profile.research.date_research.strftime("%m.%Y")} id{formation_ai.profile.research_id}')
+    update_profile_combobox()
+    count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == formation_ai.profile_id).first()[0]))
+    ui.comboBox_profile.setCurrentText(f'{formation_ai.profile.title} ({count_measure} измерений) id{formation_ai.profile_id}')
+    draw_radarogram()
+    ui.comboBox_plast.setCurrentText(f'{formation_ai.formation.title} id{formation_ai.formation_id}')
+    draw_formation()
+
 
 def calc_model_ai():
     """ Расчет модели """
     list_input, list_target_top, list_target_bottom = [], [], []
+    ui.progressBar.setMaximum(ui.listWidget_formation_ai.count())
     for i in range(ui.listWidget_formation_ai.count()):
         item = ui.listWidget_formation_ai.item(i)
         formation_ai = session.query(FormationAI).filter_by(id=item.data(Qt.UserRole)).first()
         formation = session.query(Formation).filter_by(id=formation_ai.formation_id).first()
         signal = json.loads(formation.profile.signal)
         for s in signal:
-            list_input.append(s)
+            diff_s = calc_atrib_measure(s, 'diff')
+            At = calc_atrib_measure(s, 'At')
+            # Vt = calc_atrib_measure(s, 'Vt')
+            Pht = calc_atrib_measure(s, 'Pht')
+            Wt = calc_atrib_measure(s, 'Wt')
+            list_input.append(s + diff_s + At + Pht + Wt)
         line_top, line_bottom = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
         list_target_top += line_top
         list_target_bottom += line_bottom
+        ui.progressBar.setValue(i + 1)
     input_data, target_data_top, target_data_bottom = np.array(list_input), np.array(list_target_top), np.array(list_target_bottom)
 
     Form_AI = QtWidgets.QDialog()
@@ -328,11 +349,13 @@ def calc_model_ai():
         if model == 'LinearRegression':
             model_ai_top = LinearRegression(fit_intercept=ui_fai.checkBox_fit_intercept.isChecked())
             model_ai_bottom = LinearRegression(fit_intercept=ui_fai.checkBox_fit_intercept.isChecked())
+            model_name = 'LR'
 
         if model == 'DecisionTreeRegressor':
             spl = 'random' if ui_fai.checkBox_splitter_rnd.isChecked() else 'best'
             model_ai_top = DecisionTreeRegressor(splitter=spl)
             model_ai_bottom = DecisionTreeRegressor(splitter=spl)
+            model_name = 'DTR'
 
         if model == 'KNeighborsRegressor':
             model_ai_top = KNeighborsRegressor(
@@ -345,10 +368,12 @@ def calc_model_ai():
                 weights='distance' if ui_fai.checkBox_knn_weights.isChecked() else 'uniform',
                 algorithm=ui_fai.comboBox_knn_algorithm.currentText()
             )
+            model_name = 'KNNR'
 
         if model == 'SVR':
             model_ai_top = SVR(kernel=ui_fai.comboBox_svr_kernel.currentText(), C=ui_fai.doubleSpinBox_svr_c.value())
             model_ai_bottom = SVR(kernel=ui_fai.comboBox_svr_kernel.currentText(), C=ui_fai.doubleSpinBox_svr_c.value())
+            model_name = 'SVR'
 
 
         if model == 'MLPRegressor':
@@ -371,6 +396,7 @@ def calc_model_ai():
                 early_stopping=ui_fai.checkBox_e_stop_mlp.isChecked(),
                 validation_fraction=ui_fai.doubleSpinBox_valid_mlp.value()
             )
+            model_name = 'MLPR'
 
         if model == 'GradientBoostingRegressor':
             model_ai_top = GradientBoostingRegressor(
@@ -381,6 +407,7 @@ def calc_model_ai():
                 n_estimators=ui_fai.spinBox_n_estimators.value(),
                 learning_rate=ui_fai.doubleSpinBox_learning_rate.value(),
             )
+            model_name = 'GBR'
 
         if model == 'ElasticNet':
             model_ai_top = ElasticNet(
@@ -391,10 +418,12 @@ def calc_model_ai():
                 alpha=ui_fai.doubleSpinBox_alpha.value(),
                 l1_ratio=ui_fai.doubleSpinBox_l1_ratio.value()
             )
+            model_name = 'EN'
 
         if model == 'Lasso':
             model_ai_top = Lasso(alpha=ui_fai.doubleSpinBox_alpha.value())
             model_ai_bottom = Lasso(alpha=ui_fai.doubleSpinBox_alpha.value())
+            model_name = 'LASSO'
 
         model_ai_top.fit(x_train_top, y_train_top)
         model_ai_bottom.fit(x_train_bottom, y_train_bottom)
@@ -405,9 +434,46 @@ def calc_model_ai():
         mse_top = mean_squared_error(y_test_top, y_pred_top)
         mse_bottom = mean_squared_error(y_test_bottom, y_pred_bottom)
         train_time = datetime.datetime.now() - start_time
-        set_info(f'Модель {model}:\n точность для top: {model_ai_top.score(x_test_top, y_test_top)} '
-                 f'\n точность для bottom: {model_ai_bottom.score(x_test_bottom, y_test_bottom)}\n'
-                 f' Mean Squared Error\n top: {mse_top} \n bottom: {mse_bottom}, \n время обучения: {train_time}', 'blue')
+
+        accuracy_top = model_ai_top.score(x_test_top, y_test_top)
+        accuracy_bottom = model_ai_bottom.score(x_test_bottom, y_test_bottom)
+
+        set_info(f'Модель {model}:'
+                 f'\n точность для top: {accuracy_top} '
+                 f'\n точность для bottom: {accuracy_bottom}\n'
+                 f' Mean Squared Error\n top: {mse_top} \n bottom: {mse_bottom}, '
+                 f'\n время обучения: {train_time}', 'blue')
+
+        y_remain_top = [round(y_test_top[i] - y_pred_top[i], 5) for i in range(len(y_pred_top))]
+        y_remain_bottom = [round(y_test_bottom[i] - y_pred_bottom[i], 5) for i in range(len(y_pred_bottom))]
+
+        data_graph = pd.DataFrame({
+            'y_test_top': y_test_top,
+            'y_pred_top': y_pred_top,
+            'y_remain_top': y_remain_top,
+            'y_test_bottom': y_test_bottom,
+            'y_pred_bottom': y_pred_bottom,
+            'y_remain_bottom': y_remain_bottom
+        })
+
+        fig, axes = plt.subplots(nrows=2, ncols=3)
+        fig.set_size_inches(15, 10)
+        fig.suptitle(f'Модель {model}:\n точность top: {accuracy_top}, bottom: {accuracy_bottom} '
+                     f' Mean Squared Error:\n top: {mse_top}, bottom: {mse_bottom}, \n время обучения: {train_time}')
+        sns.scatterplot(data=data_graph, x='y_test_top', y='y_pred_top', ax=axes[0, 0])
+        sns.regplot(data=data_graph, x='y_test_top', y='y_pred_top', line_kws={'color': 'red'}, ax=axes[0, 0])
+        sns.scatterplot(data=data_graph, x='y_test_top', y='y_remain_top', ax=axes[0, 1])
+        sns.regplot(data=data_graph, x='y_test_top', y='y_remain_top', line_kws={'color': 'red'}, ax=axes[0, 1])
+        sns.histplot(data=data_graph, x='y_remain_top', kde=True, ax=axes[0, 2])
+        axes[0, 2].lines[0].set_color("red")
+        sns.scatterplot(data=data_graph, x='y_test_bottom', y='y_pred_bottom', ax=axes[1, 0])
+        sns.regplot(data=data_graph, x='y_test_bottom', y='y_pred_bottom', line_kws={'color': 'red'}, ax=axes[1, 0])
+        sns.scatterplot(data=data_graph, x='y_test_bottom', y='y_remain_bottom', ax=axes[1, 1])
+        sns.regplot(data=data_graph, x='y_test_bottom', y='y_remain_bottom', line_kws={'color': 'red'}, ax=axes[1, 1])
+        sns.histplot(data=data_graph, x='y_remain_bottom', kde=True, ax=axes[1, 2])
+        axes[1, 2].lines[0].set_color("red")
+        fig.tight_layout()
+        fig.show()
 
         result = QtWidgets.QMessageBox.question(
                     MainWindow,
@@ -417,14 +483,14 @@ def calc_model_ai():
                     QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
-            path_model_top = f'models/{model}_{ui.comboBox_model_ai.currentText()}_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}_top.pkl'
-            path_model_bottom = f'models/{model}_{ui.comboBox_model_ai.currentText()}_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}_bottom.pkl'
+            path_model_top = f'models/{model_name}_{round(accuracy_top, 3)}_{datetime.datetime.now().strftime("%d%m%y")}_top.pkl'
+            path_model_bottom = f'models/{model_name}_{round(accuracy_bottom, 3)}_{datetime.datetime.now().strftime("%d%m%y")}_bottom.pkl'
             with open(path_model_top, 'wb') as f:
                 pickle.dump(model_ai_top, f)
             with open(path_model_bottom, 'wb') as f:
                 pickle.dump(model_ai_bottom, f)
             new_trained_model = TrainedModel(
-                title=f'{model}_{ui.comboBox_model_ai.currentText()}_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}',
+                title=f'{model_name}_{round(accuracy_top, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_top=path_model_top,
                 path_bottom=path_model_bottom
             )
@@ -512,7 +578,17 @@ def calc_model_profile():
     with open(model.path_bottom, 'rb') as f:
         model_ai_bottom = pickle.load(f)
     prof = session.query(Profile).filter_by(id=get_profile_id()).first()
-    test_signal = np.array(json.loads(prof.signal))
+    list_test_signals = []
+    ui.progressBar.setMaximum(len(json.loads(prof.signal)))
+    for n, s in enumerate(json.loads(prof.signal)):
+        diff_s = calc_atrib_measure(s, 'diff')
+        At = calc_atrib_measure(s, 'At')
+        # Vt = calc_atrib_measure(s, 'Vt')
+        Pht = calc_atrib_measure(s, 'Pht')
+        Wt = calc_atrib_measure(s, 'Wt')
+        list_test_signals.append(s + diff_s + At + Pht + Wt)
+        ui.progressBar.setValue(n+1)
+    test_signal = np.array(list_test_signals)
     y_pred_signal_top = model_ai_top.predict(test_signal)
     y_pred_signal_bottom = model_ai_bottom.predict(test_signal)
     result_top = list(map(int, savgol_filter(y_pred_signal_top.tolist(), 31, 3)))

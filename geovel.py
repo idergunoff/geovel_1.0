@@ -315,6 +315,7 @@ roi.sigRegionChanged.connect(updatePlot)
 
 ui.pushButton_find_oil.clicked.connect(filter19)
 ui.pushButton_secret_filter.clicked.connect(secret_filter)
+ui.listWidget_formation_ai.currentItemChanged.connect(choose_formation_ai)
 
 
 update_object()
