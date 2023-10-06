@@ -295,17 +295,20 @@ def remove_formation_ai():
 #     Form_AI.exec_()
 
 def choose_formation_ai():
-    formation_ai = session.query(FormationAI).filter_by(id=ui.listWidget_formation_ai.currentItem().data(Qt.UserRole)).first()
-    ui.comboBox_object.setCurrentText(f'{formation_ai.profile.research.object.title} id{formation_ai.profile.research.object_id}')
-    update_research_combobox()
-    ui.comboBox_research.setCurrentText(
-        f'{formation_ai.profile.research.date_research.strftime("%m.%Y")} id{formation_ai.profile.research_id}')
-    update_profile_combobox()
-    count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == formation_ai.profile_id).first()[0]))
-    ui.comboBox_profile.setCurrentText(f'{formation_ai.profile.title} ({count_measure} измерений) id{formation_ai.profile_id}')
-    draw_radarogram()
-    ui.comboBox_plast.setCurrentText(f'{formation_ai.formation.title} id{formation_ai.formation_id}')
-    draw_formation()
+    try:
+        formation_ai = session.query(FormationAI).filter_by(id=ui.listWidget_formation_ai.currentItem().data(Qt.UserRole)).first()
+        ui.comboBox_object.setCurrentText(f'{formation_ai.formation.profile.research.object.title} id{formation_ai.formation.profile.research.object_id}')
+        update_research_combobox()
+        ui.comboBox_research.setCurrentText(
+            f'{formation_ai.formation.profile.research.date_research.strftime("%m.%Y")} id{formation_ai.formation.profile.research_id}')
+        update_profile_combobox()
+        count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == formation_ai.formation.profile_id).first()[0]))
+        ui.comboBox_profile.setCurrentText(f'{formation_ai.formation.profile.title} ({count_measure} измерений) id{formation_ai.formation.profile_id}')
+        draw_radarogram()
+        ui.comboBox_plast.setCurrentText(f'{formation_ai.formation.title} id{formation_ai.formation_id}')
+        draw_formation()
+    except AttributeError:
+        pass
 
 
 def calc_model_ai():
