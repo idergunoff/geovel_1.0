@@ -575,6 +575,7 @@ def draw_MLP():
         colors[m.title] = m.color
     training_sample = data_train[list_param_mlp].values.tolist()
     markup = sum(data_train[['mark']].values.tolist(), [])
+    list_marker = get_list_marker_mlp()
 
     # Нормализация данных
     scaler = StandardScaler()
@@ -631,14 +632,15 @@ def draw_MLP():
         train_tsne = tsne.fit_transform(preds_proba_train)
         data_tsne = pd.DataFrame(train_tsne)
         data_tsne['mark'] = preds_train
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
-        ax.grid()
-        ax.xaxis.grid(True, "minor", linewidth=.25)
-        ax.yaxis.grid(True, "minor", linewidth=.25)
-        title_graph = f'Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки' \
-                      f'\n{get_mlp_title().upper()}, параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
+
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        fig.set_size_inches(15, 10)
+
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
+        axes[0].grid()
+        axes[0].xaxis.grid(True, "minor", linewidth=.25)
+        axes[0].yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = f'MLP, модель "{get_mlp_title()}", параметров: {ui.listWidget_param_mlp.count()}, количество образцов: ' \
                       f'{str(len(data_tsne.index))}\n' \
                       f'hidden_layer_sizes: ({",".join(map(str, layers))}), ' \
                       f'\nalpha: {ui_cls.doubleSpinBox_alpha_mlp.value()}, ' \
@@ -646,10 +648,26 @@ def draw_MLP():
                       f'\nvalidation_fraction: {ui_cls.doubleSpinBox_valid_mlp.value()}\n' \
                       f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'\
                       f'точность на тестовой выборке: {round(test_accuracy, 7)}'
-        plt.title(title_graph, fontsize=16)
-        plt.tight_layout()
-        fig.show()
+        axes[0].set_title('Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки')
 
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = mlp.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            axes[1].set_xlim([0.0, 1.0])
+            axes[1].set_ylim([0.0, 1.05])
+            axes[1].set_xlabel('False Positive Rate')
+            axes[1].set_ylabel('True Positive Rate')
+            axes[1].set_title('ROC-кривая')
+            axes[1].legend(loc="lower right")
+        fig.suptitle(title_graph)
+        fig.tight_layout()
+        fig.show()
 
     def calc_knn_form():
         try:
@@ -679,21 +697,43 @@ def draw_MLP():
         train_tsne = tsne.fit_transform(preds_proba_train)
         data_tsne = pd.DataFrame(train_tsne)
         data_tsne['mark'] = preds_train
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
-        ax.grid()
-        ax.xaxis.grid(True, "minor", linewidth=.25)
-        ax.yaxis.grid(True, "minor", linewidth=.25)
-        title_graph = (f'Диаграмма рассеяния для канонических значений KNN\nдля обучающей выборки и тестовой выборки\n'
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        fig.set_size_inches(15, 10)
+
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
+        axes[0].grid()
+        axes[0].xaxis.grid(True, "minor", linewidth=.25)
+        axes[0].yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'KNN, модель "{get_mlp_title()}", параметров: {ui.listWidget_param_mlp.count()}, '
+                       f'количество образцов: {str(len(data_tsne.index))}\n'
                        f'n_neighbors: {n_knn}\n'
                        f'weights: {weights_knn}\n'
                        f'algorithm: {algorithm_knn}\n'
                        f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
                        f'точность на тестовой выборке: {round(test_accuracy, 7)}')
-        plt.title(title_graph, fontsize=16)
-        plt.tight_layout()
+        plt.title(f'Диаграмма рассеяния для канонических значений KNN\nдля обучающей выборки и тестовой выборки')
+
+
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = knn.predict_proba(training_sample_test)[:, 0]
+
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            axes[1].set_xlim([0.0, 1.0])
+            axes[1].set_ylim([0.0, 1.05])
+            axes[1].set_xlabel('False Positive Rate')
+            axes[1].set_ylabel('True Positive Rate')
+            axes[1].set_title('ROC-кривая\nмодель KNN')
+            axes[1].legend(loc="lower right")
+        fig.suptitle(title_graph)
+        fig.tight_layout()
         fig.show()
+
 
 
     def calc_gpc_form():
@@ -732,20 +772,42 @@ def draw_MLP():
         train_tsne = tsne.fit_transform(preds_proba_train)
         data_tsne = pd.DataFrame(train_tsne)
         data_tsne['mark'] = preds_train
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
-        ax.grid()
-        ax.xaxis.grid(True, "minor", linewidth=.25)
-        ax.yaxis.grid(True, "minor", linewidth=.25)
-        title_graph = (f'Диаграмма рассеяния для канонических значений GPC\nдля обучающей и тестовой выборки\n'
+
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        fig.set_size_inches(15, 10)
+
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
+        axes[0].grid()
+        axes[0].xaxis.grid(True, "minor", linewidth=.25)
+        axes[0].yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'GPC, модель "{get_mlp_title()}", параметров: {ui.listWidget_param_mlp.count()}, '
+                       f'количество образцов: {str(len(data_tsne.index))}\n'
                        f'scale kernal: {gpc_kernel_scale}\n'
                        f'n restart: {n_restart_optimization}\n'
                        f'multi_class: {multi_class}\n'
                        f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
                        f'точность на тестовой выборке: {round(test_accuracy, 7)}')
-        plt.title(title_graph, fontsize=16)
+        plt.title(f'Диаграмма рассеяния для канонических значений GPC\nдля обучающей выборки и тестовой выборки')
         plt.tight_layout()
+        fig.show()
+
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = gpc.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            axes[1].set_xlim([0.0, 1.0])
+            axes[1].set_ylim([0.0, 1.05])
+            axes[1].set_xlabel('False Positive Rate')
+            axes[1].set_ylabel('True Positive Rate')
+            axes[1].set_title('ROC-кривая\nмодель GPC')
+            axes[1].legend(loc="lower right")
+        fig.suptitle(title_graph)
+        fig.tight_layout()
         fig.show()
 
     def calc_dtc_form():
@@ -811,20 +873,52 @@ def draw_MLP():
         train_tsne = tsne.fit_transform(preds_proba_train)
         data_tsne = pd.DataFrame(train_tsne)
         data_tsne['mark'] = preds_train
-        print(data_tsne)
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
-        ax.grid()
-        ax.xaxis.grid(True, "minor", linewidth=.25)
-        ax.yaxis.grid(True, "minor", linewidth=.25)
-        title_graph = (f'Диаграмма рассеяния для канонических значений DTC\nдля обучающей и тестовой выборки\n'
+
+        fig, ax = plt.subplots(nrows=1, ncols=3)
+        fig.set_size_inches(25, 10)
+
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=ax[0])
+        ax[0].grid()
+        ax[0].xaxis.grid(True, "minor", linewidth=.25)
+        ax[0].yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'DTC, модель "{get_mlp_title()}", параметров: {ui.listWidget_param_mlp.count()}, '
+                       f'количество образцов: {str(len(data_tsne.index))}\n'
                        f'splitter: {spl}, '
                        f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
                        f'точность на тестовой выборке: {round(test_accuracy, 7)}')
-        plt.title(title_graph, fontsize=16)
-        plt.tight_layout()
+        plt.title('Диаграмма рассеяния для канонических значений DTC\nдля обучающей выборки и тестовой выборки')
+
+
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = dtc.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            ax[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            ax[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            ax[1].set_xlim([0.0, 1.0])
+            ax[1].set_ylim([0.0, 1.05])
+            ax[1].set_xlabel('False Positive Rate')
+            ax[1].set_ylabel('True Positive Rate')
+            ax[1].set_title('ROC-кривая\nмодель DTC')
+            ax[1].legend(loc="lower right")
+
+        ipm_name_params, imp_params = [], []
+        for n, i in enumerate(dtc.feature_importances_):
+            if i >= np.mean(dtc.feature_importances_):
+                ipm_name_params.append(list_param_mlp[n])
+                imp_params.append(i)
+        color_imp = ['blue', 'orange'] * (len(imp_params) // 2)
+        ax[2].bar(ipm_name_params, imp_params, color=color_imp)
+        ax[2].set_xticklabels(ipm_name_params, rotation=90)
+        ax[2].set_title('Важность признаков')
+
+        fig.suptitle(title_graph)
+        fig.tight_layout()
         fig.show()
+
 
     def calc_gbc_form():
         try:
@@ -891,19 +985,50 @@ def draw_MLP():
         train_tsne = tsne.fit_transform(preds_proba_train)
         data_tsne = pd.DataFrame(train_tsne)
         data_tsne['mark'] = preds_train
-        print(data_tsne)
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.subplot()
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors)
-        ax.grid()
-        ax.xaxis.grid(True, "minor", linewidth=.25)
-        ax.yaxis.grid(True, "minor", linewidth=.25)
-        title_graph = (f'Диаграмма рассеяния для канонических значений GBC\nдля обучающей и тестовой выборки\n'
+
+        fig, ax = plt.subplots(nrows=1, ncols=3)
+        fig.set_size_inches(25, 10)
+
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=ax[0])
+        ax[0].grid()
+        ax[0].xaxis.grid(True, "minor", linewidth=.25)
+        ax[0].yaxis.grid(True, "minor", linewidth=.25)
+        title_graph = (f'GBC, модель "{get_mlp_title()}", параметров: {ui.listWidget_param_mlp.count()}, '
+                       f'количество образцов: {str(len(data_tsne.index))}\n'
                        f'n estimators: {est}, \nlearning rate: {l_rate}, '
                        f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n'
                        f'точность на тестовой выборке: {round(test_accuracy, 7)}')
-        plt.title(title_graph, fontsize=16)
-        plt.tight_layout()
+        ax[0].set_title(f'Диаграмма рассеяния для канонических значений GBC\nдля обучающей и тестовой выборки')
+
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = gbc.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            ax[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            ax[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            ax[1].set_xlim([0.0, 1.0])
+            ax[1].set_ylim([0.0, 1.05])
+            ax[1].set_xlabel('False Positive Rate')
+            ax[1].set_ylabel('True Positive Rate')
+            ax[1].set_title('ROC-кривая\nмодель GBC')
+            ax[1].legend(loc="lower right")
+
+        ipm_name_params, imp_params = [], []
+        for n, i in enumerate(gbc.feature_importances_):
+            if i >= np.mean(gbc.feature_importances_):
+                ipm_name_params.append(list_param_mlp[n])
+                imp_params.append(i)
+
+        color_imp = ['blue', 'orange'] * (len(imp_params) // 2)
+        ax[2].bar(ipm_name_params, imp_params, color=color_imp)
+        ax[2].set_xticklabels(ipm_name_params, rotation=90)
+        ax[2].set_title('Важность признаков')
+
+        fig.suptitle(title_graph)
+        fig.tight_layout()
         fig.show()
 
     ui_cls.pushButton_calc_mlp.clicked.connect(calc_mlp_form)

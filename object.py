@@ -43,7 +43,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE, RFECV
 
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, roc_curve, auc
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap

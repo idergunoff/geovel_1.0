@@ -447,12 +447,15 @@ def remove_formation():
 
 
 def filter_layer():
-    l_id = get_layer_id()
-    layer = session.query(Layers).filter(Layers.id == l_id).first()
-    filter_layer = list(map(int, savgol_filter(json.loads(layer.layer_line), 31, 3)))
-    session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(filter_layer)}, synchronize_session="fetch")
-    session.commit()
-    draw_layer(l_id)
+    try:
+        l_id = get_layer_id()
+        layer = session.query(Layers).filter(Layers.id == l_id).first()
+        filter_layer = list(map(int, savgol_filter(json.loads(layer.layer_line), 31, 3)))
+        session.query(Layers).filter(Layers.id == l_id).update({'layer_line': json.dumps(filter_layer)}, synchronize_session="fetch")
+        session.commit()
+        draw_layer(l_id)
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите слой для фильтрации.')
 
 
 def remove_well():
