@@ -1,7 +1,10 @@
+import numpy as np
+
 from func import *
 from monitoring import update_list_h_well
 from qt.add_well_dialog import *
 from qt.add_boundary_dialog import *
+from qt.well_loader import *
 
 
 def add_well():
@@ -82,28 +85,140 @@ def edit_well():
 def add_wells():
     """Пакетное добавление новых скважин в БД из файла Excel"""
     try:
-        file_name = QFileDialog.getOpenFileName(caption='Выберите файл Excel', filter='*.xls *.xlsx')[0]
+        file_name = QFileDialog.getOpenFileName(caption='Выберите файл Excel или TXT (разделитель ";")', filter='*.xls *.xlsx *.txt')[0]
         set_info(file_name, 'blue')
-        pd_wells = pd.read_excel(file_name, header=0)
+        if file_name.lower().endswith('.txt'):
+            try:
+                pd_wells = pd.read_table(file_name, header=0, sep=';')
+            except UnicodeDecodeError:
+                pd_wells = pd.read_table(file_name, header=0, encoding='cp1251', sep=';')
+        else:
+            pd_wells = pd.read_excel(file_name, header=0)
     except FileNotFoundError:
         return
-    ui.progressBar.setMaximum(len(pd_wells.index))
 
-    for i in pd_wells.index:
-        if session.query(Well).filter(Well.name == str(pd_wells['name'][i]), Well.x_coord == float(process_string(pd_wells['x'][i])),
-                                      Well.y_coord == float(process_string(pd_wells['y'][i]))).count() > 0:
-            set_info(f'Скважина {pd_wells["name"][i]} уже есть в БД', 'red')
-        else:
-            new_well = Well(
-                name=str(pd_wells['name'][i]),
-                x_coord=float(process_string(pd_wells['x'][i])),
-                y_coord=float(process_string(pd_wells['y'][i])),
-                alt=float(process_string(pd_wells['alt'][i]))
-            )
-            session.add(new_well)
-        ui.progressBar.setValue(i + 1)
-    session.commit()
-    update_list_well()
+    pd_wells = clean_dataframe(pd_wells)
+
+    WellLoader = QtWidgets.QDialog()
+    ui_wl = Ui_WellLoader()
+    ui_wl.setupUi(WellLoader)
+    WellLoader.show()
+    WellLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    list_combobox = [ui_wl.comboBox_name, ui_wl.comboBox_x, ui_wl.comboBox_y, ui_wl.comboBox_alt,
+                     ui_wl.comboBox_layers, ui_wl.comboBox_opt]
+    for cmbx in list_combobox:
+        for i in pd_wells.columns:
+            cmbx.addItem(i)
+    ui_wl.lineEdit_empty.setText('-999')
+
+    def add_well_layer():
+        list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
+        if not ui_wl.comboBox_layers.currentText() in list_layers:
+            list_layers.append(str(ui_wl.comboBox_layers.currentText()))
+            ui_wl.lineEdit_layers.setText('/'.join(list_layers))
+
+    def add_well_option():
+        list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
+        if not ui_wl.comboBox_opt.currentText() in list_opt:
+            list_opt.append(str(ui_wl.comboBox_opt.currentText()))
+            ui_wl.lineEdit_opt.setText('/'.join(list_opt))
+
+    def load_wells():
+        ui.progressBar.setMaximum(len(pd_wells.index))
+        name_cell = ui_wl.comboBox_name.currentText()
+        x_cell = ui_wl.comboBox_x.currentText()
+        y_cell = ui_wl.comboBox_y.currentText()
+        alt_cell = ui_wl.comboBox_alt.currentText()
+        empty_value = '' if ui_wl.lineEdit_empty.text() == '' else int(ui_wl.lineEdit_empty.text())
+        list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
+        list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
+
+        for i in pd_wells.index:
+            curr_well = session.query(Well).filter(Well.name == str(pd_wells[name_cell][i]),
+                                          Well.x_coord == float(process_string(pd_wells[x_cell][i])),
+                                          Well.y_coord == float(process_string(pd_wells[y_cell][i]))).first()
+            if curr_well:
+                set_info(f'Скважина {curr_well.name} уже есть в БД', 'red')
+                alt = 0 if pd_wells[alt_cell][i] == '' else float(process_string(pd_wells[alt_cell][i]))
+                session.query(Well).filter_by(id=curr_well.id).update(
+                    {'alt': alt}, synchronize_session="fetch")
+                for lr in list_layers:
+                    try:
+                        if pd_wells[lr][i] != empty_value:
+                            bound = session.query(Boundary).filter(
+                                Boundary.well_id == curr_well.id,
+                                Boundary.depth == round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2),
+                                Boundary.title == str(lr)
+                            ).first()
+                            if not bound:
+                                session.add(Boundary(
+                                    well_id=curr_well.id,
+                                    depth=round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2),
+                                    title=str(lr)
+                                ))
+                    except ValueError:
+                        continue
+                for opt in list_opt:
+                    try:
+                        if pd_wells[opt][i] != empty_value:
+                            well_opt = session.query(WellOptionally).filter(
+                                WellOptionally.well_id == curr_well.id,
+                                WellOptionally.option == opt,
+                                WellOptionally.value == str(pd_wells[opt][i])
+                            ).first()
+                            if not well_opt:
+                                session.add(WellOptionally(
+                                    well_id=curr_well.id,
+                                    option=opt,
+                                    value=str(pd_wells[opt][i])
+                                ))
+                    except ValueError:
+                        continue
+            else:
+                new_well = Well(
+                    name=str(pd_wells[name_cell][i]),
+                    x_coord=float(process_string(pd_wells[x_cell][i])),
+                    y_coord=float(process_string(pd_wells[y_cell][i])),
+                    alt=round(float(process_string(pd_wells[alt_cell][i])), 2)
+                )
+                session.add(new_well)
+                session.commit()
+                for lr in list_layers:
+                    try:
+                        if pd_wells[lr][i] != empty_value:
+                            session.add(Boundary(
+                                well_id=new_well.id,
+                                depth=round(new_well.alt - float(process_string(pd_wells[lr][i])), 2),
+                                title=str(lr)
+                            ))
+                    except ValueError:
+                        continue
+                for opt in list_opt:
+                    try:
+                        if pd_wells[opt][i] != empty_value:
+                            session.add(WellOptionally(
+                                well_id=new_well.id,
+                                option=opt,
+                                value=str(pd_wells[opt][i])
+                            ))
+                    except ValueError:
+                        continue
+            session.commit()
+            ui.progressBar.setValue(i + 1)
+        session.commit()
+        update_list_well()
+
+
+    def cancel_load():
+        WellLoader.close()
+
+    ui_wl.pushButton_add_layer.clicked.connect(add_well_layer)
+    ui_wl.pushButton_add_opt.clicked.connect(add_well_option)
+    ui_wl.buttonBox.accepted.connect(load_wells)
+    ui_wl.buttonBox.rejected.connect(cancel_load)
+    WellLoader.exec_()
+
 
 
 def show_data_well():
@@ -150,6 +265,10 @@ def show_data_well():
                                 f'<p><b>X:</b> {well.x_coord}</p>'
                                 f'<p><b>Y:</b> {well.y_coord}</p>'
                                 f'<p><b>Альтитуда:</b> {well.alt} м.</p>')
+            for opt in session.query(WellOptionally).filter_by(well_id=well.id):
+                ui.textEdit_datawell.append(f'<p><b>{opt.option}:</b> {opt.value}</p>')
+
+
 
 
 def add_boundary():
@@ -189,10 +308,29 @@ def remove_boundary():
 
 def draw_bound_int():
     for key, value in globals().items():
-        if key.startswith('int_bound_'):
+        if key.startswith('int_bound_') or key.startswith('bound_'):
             radarogramma.removeItem(globals()[key])
+
     if ui.listWidget_bound.currentItem():
         bound = session.query(Boundary).filter(Boundary.id == get_boundary_id()).first()
+        x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+        y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+        index, dist = closest_point(bound.well.x_coord, bound.well.y_coord, x_prof, y_prof)
+        # Получение значения средней скорости в среде
+        Vmean = ui.doubleSpinBox_vsr.value()
+        # Расчёт значения глубины, которое будет использоваться для отображения точки и текста на графике
+        d = ((bound.depth * 100) / Vmean) / 8
+        # Создание графического объекта точки с переданными параметрами
+        scatter = pg.ScatterPlotItem(x=[index], y=[d], symbol='o', pen=pg.mkPen(None),
+                                     brush=pg.mkBrush(color='#FFF500'), size=10)
+        radarogramma.addItem(scatter)  # Добавление графического объекта точки на график
+        globals()[f'bound_scatter'] = scatter  # Сохранение ссылки на графический объект точки в globals()
+
+        # Создание графического объекта текста с переданными параметрами
+        text_item = pg.TextItem(text=f'{bound.title} ({bound.depth})', color='white')
+        text_item.setPos(index + 10, d)  # Установка позиции текста на графике
+        radarogramma.addItem(text_item)  # Добавление графического объекта текста на график
+        globals()[f'bound_text'] = text_item  # Сохранение ссылки на графический объект текста в globals()
         dmin = ((bound.depth * 100) / ui.doubleSpinBox_vmin.value()) / 8
         dmax = ((bound.depth * 100) / ui.doubleSpinBox_vmax.value()) / 8
         lmin = pg.InfiniteLine(pos=dmin, angle=0, pen=pg.mkPen(color='white', width=1, dash=[2, 2]))

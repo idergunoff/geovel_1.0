@@ -239,10 +239,12 @@ class Well(Base):
     alt = Column(Float)
 
     boundaries = relationship("Boundary", back_populates="well")
+    well_optionally = relationship("WellOptionally", back_populates="well")
     well_logs = relationship("WellLog", back_populates="well")
     markups_lda = relationship("MarkupLDA", back_populates="well")
     markups_mlp = relationship('MarkupMLP', back_populates='well')
     markups_reg = relationship('MarkupReg', back_populates='well')
+
 
 class Boundary(Base):
     __tablename__ = 'boundary'
@@ -267,6 +269,16 @@ class BoundaryToLayer(Base):
     boundary = relationship("Boundary", back_populates="boundary_to_layers")
     layer = relationship('Layers', back_populates="boundary_to_layers")
 
+
+class WellOptionally(Base):
+    __tablename__ = 'well_optionally'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well.id'))
+    option = Column(String)
+    value = Column(String)
+
+    well = relationship("Well", back_populates="well_optionally")
 
 class WellLog(Base):
     __tablename__ = 'well_log'

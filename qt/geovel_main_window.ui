@@ -997,18 +997,6 @@
                     <item row="1" column="0">
                      <widget class="QListWidget" name="listWidget_well"/>
                     </item>
-                    <item row="2" column="0">
-                     <widget class="QLabel" name="label_13">
-                      <property name="font">
-                       <font>
-                        <pointsize>12</pointsize>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Boundaries:</string>
-                      </property>
-                     </widget>
-                    </item>
                     <item row="3" column="0">
                      <layout class="QGridLayout" name="gridLayout_23">
                       <item row="0" column="0">
@@ -1046,10 +1034,10 @@
                            <double>0.100000000000000</double>
                           </property>
                           <property name="maximum">
-                           <double>15.000000000000000</double>
+                           <double>99.000000000000000</double>
                           </property>
                           <property name="singleStep">
-                           <double>0.500000000000000</double>
+                           <double>0.100000000000000</double>
                           </property>
                           <property name="value">
                            <double>3.500000000000000</double>
@@ -1065,10 +1053,10 @@
                            <double>0.100000000000000</double>
                           </property>
                           <property name="maximum">
-                           <double>15.000000000000000</double>
+                           <double>99.000000000000000</double>
                           </property>
                           <property name="singleStep">
-                           <double>0.500000000000000</double>
+                           <double>0.100000000000000</double>
                           </property>
                           <property name="value">
                            <double>5.000000000000000</double>
@@ -1084,10 +1072,10 @@
                            <double>0.100000000000000</double>
                           </property>
                           <property name="maximum">
-                           <double>15.000000000000000</double>
+                           <double>99.000000000000000</double>
                           </property>
                           <property name="singleStep">
-                           <double>0.500000000000000</double>
+                           <double>0.100000000000000</double>
                           </property>
                           <property name="value">
                            <double>7.500000000000000</double>
@@ -1119,6 +1107,29 @@
                         </property>
                         <property name="text">
                          <string>remove well</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="2" column="0">
+                     <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_13">
+                        <property name="font">
+                         <font>
+                          <pointsize>12</pointsize>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>Boundaries:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_show_bound">
+                        <property name="text">
+                         <string/>
                         </property>
                        </widget>
                       </item>

@@ -730,12 +730,13 @@ def draw_well(well_id):
     radarogramma.addItem(text_item)
     globals()[f'well_text_id{well_id}'] = text_item
 
-    boundaries = session.query(Boundary).filter(Boundary.well_id == well_id).all()
-    # for key, value in globals().items():
-    #     if key.startswith('bound_'):
-    #         radarogramma.removeItem(globals()[key])
-    for b in boundaries:
-        draw_boundary(b.id, index)
+    if ui.checkBox_show_bound.isChecked():
+        boundaries = session.query(Boundary).filter(Boundary.well_id == well_id).all()
+        # for key, value in globals().items():
+        #     if key.startswith('bound_'):
+        #         radarogramma.removeItem(globals()[key])
+        for b in boundaries:
+            draw_boundary(b.id, index)
 
 
 
@@ -781,7 +782,7 @@ def draw_boundary(bound_id, index):
     d = ((bound.depth * 100) / Vmean) / 8
     # Создание графического объекта точки с переданными параметрами
     scatter = pg.ScatterPlotItem(x=[index], y=[d], symbol='o', pen=pg.mkPen(None),
-                                 brush=pg.mkBrush(255, 255, 255, 120), size=10)
+                                 brush=pg.mkBrush(color='#FFF500'), size=10)
     radarogramma.addItem(scatter)  # Добавление графического объекта точки на график
     globals()[f'bound_scatter_id{bound_id}'] = scatter  # Сохранение ссылки на графический объект точки в globals()
 
@@ -1389,3 +1390,15 @@ def signal_log_to_lin(signal):
     signal_linear = [0 if i < 0 else i for i in signal_linear]
     return signal_linear
 
+
+def clean_dataframe(df):
+    def clean_value(value):
+        if pd.isna(value):
+            return ''
+        elif isinstance(value, str):
+            return value.replace(',', '.')
+        else:
+            return value
+
+    cleaned_df = df.applymap(clean_value)
+    return cleaned_df

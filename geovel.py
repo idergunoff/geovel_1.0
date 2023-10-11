@@ -243,6 +243,7 @@ ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
 ui.checkBox_all_formation.stateChanged.connect(draw_param)
 ui.checkBox_profile_well.stateChanged.connect(update_list_well)
+ui.checkBox_show_bound.stateChanged.connect(update_list_well)
 ui.checkBox_profile_intersec.stateChanged.connect(update_list_well)
 ui.checkBox_profile_intersec.stateChanged.connect(set_title_list_widget_wells)
 
@@ -254,7 +255,7 @@ ui.spinBox_rad_down.valueChanged.connect(draw_rad_line)
 ui.spinBox_well_distance.valueChanged.connect(update_list_well)
 ui.doubleSpinBox_vmin.valueChanged.connect(draw_bound_int)
 ui.doubleSpinBox_vmax.valueChanged.connect(draw_bound_int)
-ui.doubleSpinBox_vsr.valueChanged.connect(draw_wells)
+ui.doubleSpinBox_vsr.valueChanged.connect(draw_bound_int)
 
 
 ui.listWidget_well.currentItemChanged.connect(show_data_well)
