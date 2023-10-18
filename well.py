@@ -148,13 +148,16 @@ def add_wells():
                         if pd_wells[lr][i] != empty_value:
                             bound = session.query(Boundary).filter(
                                 Boundary.well_id == curr_well.id,
-                                Boundary.depth == round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2),
                                 Boundary.title == str(lr)
                             ).first()
                             if not bound:
+                                if ui_wl.checkBox_deep.isChecked():
+                                    depth = round(float(process_string(pd_wells[lr][i])), 2)
+                                else:
+                                    depth = round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2)
                                 session.add(Boundary(
                                     well_id=curr_well.id,
-                                    depth=round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2),
+                                    depth=depth,
                                     title=str(lr)
                                 ))
                     except ValueError:
@@ -187,9 +190,13 @@ def add_wells():
                 for lr in list_layers:
                     try:
                         if pd_wells[lr][i] != empty_value:
+                            if ui_wl.checkBox_deep.isChecked():
+                                depth = round(float(process_string(pd_wells[lr][i])), 2)
+                            else:
+                                depth = round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2)
                             session.add(Boundary(
                                 well_id=new_well.id,
-                                depth=round(new_well.alt - float(process_string(pd_wells[lr][i])), 2),
+                                depth=depth,
                                 title=str(lr)
                             ))
                     except ValueError:

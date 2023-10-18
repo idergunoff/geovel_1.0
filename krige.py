@@ -233,6 +233,16 @@ def show_profiles():
 
 
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
+    if ui.checkBox_profile_title.isChecked():
+        for profile in r.profiles:
+            try:
+                plt.text(json.loads(profile.x_pulc)[0] + 20, json.loads(profile.y_pulc)[0] + 20, profile.title, fontsize=10, color='green')
+                plt.scatter(json.loads(profile.x_pulc)[0], json.loads(profile.y_pulc)[0], marker='o', color='green', s=25)
+                plt.text(json.loads(profile.x_pulc)[-10] + 20, json.loads(profile.y_pulc)[-10] + 20, profile.title, fontsize=10, color='orange')
+                plt.scatter(json.loads(profile.x_pulc)[-1], json.loads(profile.y_pulc)[-1], marker='o', color='orange', s=25)
+            except TypeError:
+                pass
+
     if ui.checkBox_profile_well.isChecked():
         for profile in r.profiles:
             wells = get_list_nearest_well(profile.id)

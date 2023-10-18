@@ -72,6 +72,104 @@
               <string>Main</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
+              <item row="13" column="0">
+               <layout class="QGridLayout" name="gridLayout_88">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_map">
+                  <property name="text">
+                   <string>MAP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_get_attributes">
+                  <property name="text">
+                   <string>GET ATTRIBUTES</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="0">
+               <layout class="QGridLayout" name="gridLayout_10">
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_find_oil">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(148, 255, 232);</string>
+                  </property>
+                  <property name="text">
+                   <string>Найти нефть</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_fft">
+                  <property name="text">
+                   <string>FTT</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_reset">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>Сборс</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_add_fft">
+                  <property name="text">
+                   <string>+ FFT</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_ifft">
+                  <property name="text">
+                   <string>IFFT</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QSpinBox" name="spinBox_fft_down">
+                  <property name="maximum">
+                   <number>267</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QSpinBox" name="spinBox_ftt_up">
+                  <property name="maximum">
+                   <number>267</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_fft_2axes">
+                    <property name="text">
+                     <string>2 оси</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_fft_int">
+                    <property name="text">
+                     <string>int</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_7">
                 <property name="font">
@@ -91,37 +189,16 @@
                 </property>
                </widget>
               </item>
-              <item row="13" column="0">
-               <layout class="QGridLayout" name="gridLayout_88">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_map">
-                  <property name="text">
-                   <string>MAP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_get_attributes">
-                  <property name="text">
-                   <string>GET ATTRIBUTES</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="12" column="0">
-               <widget class="QLabel" name="label_26">
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_8">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
                   <italic>true</italic>
                  </font>
                 </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
                 <property name="text">
-                 <string>Карты</string>
+                 <string>Другие</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -158,42 +235,6 @@
                  </widget>
                 </item>
                </layout>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Другие</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="15" column="0">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="14" column="0">
-               <widget class="QPushButton" name="pushButton_profiles">
-                <property name="text">
-                 <string>PROFILES</string>
-                </property>
-               </widget>
               </item>
               <item row="5" column="0">
                <layout class="QGridLayout" name="gridLayout_11">
@@ -324,6 +365,90 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Кепструм</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <layout class="QGridLayout" name="gridLayout_9">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_rfft2">
+                  <property name="text">
+                   <string>RFFT2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_rang">
+                  <property name="text">
+                   <string>RANG</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_irfft2">
+                  <property name="text">
+                   <string>IRFFT2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_dct">
+                  <property name="text">
+                   <string>DCT</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_log">
+                  <property name="text">
+                   <string>LOG</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_idct">
+                  <property name="text">
+                   <string>IDCT</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="12" column="0">
+               <widget class="QLabel" name="label_26">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Карты</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
               </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_6">
@@ -586,85 +711,25 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
-               <layout class="QGridLayout" name="gridLayout_10">
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_find_oil">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(148, 255, 232);</string>
-                  </property>
-                  <property name="text">
-                   <string>Найти нефть</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_fft">
-                  <property name="text">
-                   <string>FTT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="pushButton_reset">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string>Сборс</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_add_fft">
-                  <property name="text">
-                   <string>+ FFT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_ifft">
-                  <property name="text">
-                   <string>IFFT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QSpinBox" name="spinBox_fft_down">
-                  <property name="maximum">
-                   <number>267</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QSpinBox" name="spinBox_ftt_up">
-                  <property name="maximum">
-                   <number>267</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <layout class="QHBoxLayout" name="horizontalLayout_2">
-                  <item>
-                   <widget class="QCheckBox" name="checkBox_fft_2axes">
-                    <property name="text">
-                     <string>2 оси</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QCheckBox" name="checkBox_fft_int">
-                    <property name="text">
-                     <string>int</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
+              <item row="10" column="0">
+               <widget class="QPushButton" name="pushButton_save_signal">
+                <property name="text">
+                 <string>Выгрузить</string>
+                </property>
+               </widget>
+              </item>
+              <item row="15" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_3">
@@ -687,77 +752,23 @@
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_9">
+              <item row="14" column="0">
+               <layout class="QGridLayout" name="gridLayout_94">
                 <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_rfft2">
+                 <widget class="QPushButton" name="pushButton_profiles">
                   <property name="text">
-                   <string>RFFT2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_rang">
-                  <property name="text">
-                   <string>RANG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_irfft2">
-                  <property name="text">
-                   <string>IRFFT2</string>
+                   <string>PROFILES</string>
                   </property>
                  </widget>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_dct">
+                 <widget class="QCheckBox" name="checkBox_profile_title">
                   <property name="text">
-                   <string>DCT</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_log">
-                  <property name="text">
-                   <string>LOG</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_idct">
-                  <property name="text">
-                   <string>IDCT</string>
+                   <string>profile title</string>
                   </property>
                  </widget>
                 </item>
                </layout>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Кепструм</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="10" column="0">
-               <widget class="QPushButton" name="pushButton_save_signal">
-                <property name="text">
-                 <string>Выгрузить</string>
-                </property>
-               </widget>
               </item>
              </layout>
             </widget>
