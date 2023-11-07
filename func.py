@@ -1402,3 +1402,11 @@ def clean_dataframe(df):
 
     cleaned_df = df.applymap(clean_value)
     return cleaned_df
+
+
+def clear_horizontalLayout(h_l_widget):
+    while h_l_widget.count():
+        item = h_l_widget.takeAt(0)
+        widget = item.widget()
+        if widget:
+            widget.deleteLater()

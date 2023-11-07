@@ -387,101 +387,67 @@ def train_regression_model():
     training_sample = data_train[list_param].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
 
-    scaler = StandardScaler()
-    training_sample = scaler.fit_transform(training_sample)
-
-    # Сохранить параметры масштабирования
-    scaler_params = {
-        'mean': scaler.mean_,
-        'std': scaler.scale_
-    }
-
     Form_Regmod = QtWidgets.QDialog()
     ui_frm = Ui_Form_formation_ai()
     ui_frm.setupUi(Form_Regmod)
     Form_Regmod.show()
     Form_Regmod.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
     def calc_regression_model():
         start_time = datetime.datetime.now()
         model = ui_frm.comboBox_model_ai.currentText()
+
+        pipe_steps = []
+        scaler = StandardScaler()
+        pipe_steps.append(('scaler', scaler))
 
         x_train, x_test, y_train, y_test = train_test_split(
             training_sample, target, test_size=0.2, random_state=42
         )
 
-        if model == 'LinearRegression':
-            model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
-            model_name = 'LR'
-            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
-            # selector = selector.fit(x_train, y_train)
-            # print(selector.support_)
-            # print(len(selector.ranking_))
+        model_name, model_regression = choose_regression_model(model)
 
-        if model == 'DecisionTreeRegressor':
-            spl = 'random' if ui_frm.checkBox_splitter_rnd.isChecked() else 'best'
-            model_regression = DecisionTreeRegressor(splitter=spl)
-            model_name = 'DTR'
-            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
-            # selector = selector.fit(training_sample, target)
-            # print(selector.support_)
+        pipe_steps.append(('model', model_regression))
+        pipe = Pipeline(pipe_steps)
 
-        if model == 'KNeighborsRegressor':
-            model_regression = KNeighborsRegressor(
-                n_neighbors=ui_frm.spinBox_neighbors.value(),
-                weights='distance' if ui_frm.checkBox_knn_weights.isChecked() else 'uniform',
-                algorithm=ui_frm.comboBox_knn_algorithm.currentText()
-            )
-            model_name = 'KNNR'
+        if ui_frm.checkBox_cross_val.isChecked():
+            data_train_cross = data_train.copy()
+            kf = KFold(n_splits=ui_frm.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+            list_train, list_test, n_cross = [], [], 1
+            for train_index, test_index in kf.split(training_sample):
+                list_train.append(train_index.tolist())
+                list_test.append(test_index.tolist())
+                list_test_to_table = ['x' if i in test_index.tolist() else 'o' for i in range(len(data_train.index))]
+                data_train_cross[f'sample {n_cross}'] = list_test_to_table
+                n_cross += 1
+            scores_cv = cross_val_score(pipe, training_sample, target, cv=kf)
+            n_max = np.argmax(scores_cv)
+            train_index, test_index = list_train[n_max], list_test[n_max]
 
-        if model == 'SVR':
-            model_regression = SVR(kernel=ui_frm.comboBox_svr_kernel.currentText(), C=ui_frm.doubleSpinBox_svr_c.value())
-            model_name = 'SVR'
+            x_train = [training_sample[i] for i in train_index]
+            x_test = [training_sample[i] for i in test_index]
 
-        if model == 'MLPRegressor':
-            layers = tuple(map(int, ui_frm.lineEdit_layer_mlp.text().split()))
-            model_regression = MLPRegressor(
-                hidden_layer_sizes=layers,
-                activation=ui_frm.comboBox_activation_mlp.currentText(),
-                solver=ui_frm.comboBox_solvar_mlp.currentText(),
-                alpha=ui_frm.doubleSpinBox_alpha_mlp.value(),
-                max_iter=5000,
-                early_stopping=ui_frm.checkBox_e_stop_mlp.isChecked(),
-                validation_fraction=ui_frm.doubleSpinBox_valid_mlp.value()
-            )
-            model_name = 'MLPR'
+            y_train = [target[i] for i in train_index]
+            y_test = [target[i] for i in test_index]
+            if ui_frm.checkBox_cross_val_save.isChecked():
+                fn = QFileDialog.getSaveFileName(caption="Сохранить выборку в таблицу",
+                                                 directory='table_cross_val.xlsx',
+                                                 filter="Excel Files (*.xlsx)")
+                data_train_cross.to_excel(fn[0])
 
-        if model == 'GradientBoostingRegressor':
-            model_regression = GradientBoostingRegressor(
-                n_estimators=ui_frm.spinBox_n_estimators.value(),
-                learning_rate=ui_frm.doubleSpinBox_learning_rate.value(),
-            )
-            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
-            # selector = selector.fit(training_sample, target)
-            # print(selector.support_)
-            model_name = 'GBR'
+            # print("Оценки на каждом разбиении:", scores_cv)
+            # print("Средняя оценка:", scores_cv.mean())
+            # print("Стандартное отклонение оценок:", scores_cv.std())
 
-        if model == 'ElasticNet':
-            model_regression = ElasticNet(
-                alpha=ui_frm.doubleSpinBox_alpha.value(),
-                l1_ratio=ui_frm.doubleSpinBox_l1_ratio.value()
-            )
-            model_name = 'EN'
-            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
-            # selector = selector.fit(training_sample, target)
-            # print(selector.support_)
+        cv_text = (
+            f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
+            f'\nСредн.: {round(scores_cv.mean(), 2)} '
+            f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_frm.checkBox_cross_val.isChecked() else ''
 
-        if model == 'Lasso':
-            model_regression = Lasso(alpha=ui_frm.doubleSpinBox_alpha.value())
-            model_name = 'Lss'
-            # selector = RFE(model_regression, n_features_to_select=0.5, step=1)
-            # selector = selector.fit(training_sample, target)
-            # print(selector.support_)
+        pipe.fit(x_train, y_train)
+        y_pred = pipe.predict(x_test)
 
-        model_regression.fit(x_train, y_train)
-
-        y_pred = model_regression.predict(x_test)
-
-        accuracy = round(model_regression.score(x_test, y_test), 5)
+        accuracy = round(pipe.score(x_test, y_test), 5)
         mse = round(mean_squared_error(y_test, y_pred), 5)
 
         train_time = datetime.datetime.now() - start_time
@@ -497,21 +463,25 @@ def train_regression_model():
         })
         try:
             ipm_name_params, imp_params = [], []
-            for n, i in enumerate(model_regression.feature_importances_):
-                if i >= np.mean(model_regression.feature_importances_):
+            for n, i in enumerate(pipe.feature_importances_):
+                if i >= np.mean(pipe.feature_importances_):
                     ipm_name_params.append(list_param[n])
                     imp_params.append(i)
 
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
             fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
-                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}')
+                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-            axes[0, 1].bar(ipm_name_params, imp_params)
-            axes[0, 1].set_xticklabels(ipm_name_params, rotation=90)
+            if ui_frm.checkBox_cross_val.isChecked():
+                axes[0, 1].bar(range(len(scores_cv)), scores_cv)
+                axes[0, 1].set_title('Кросс-валидация')
+            else:
+                axes[0, 1].bar(ipm_name_params, imp_params)
+                axes[0, 1].set_xticklabels(ipm_name_params, rotation=90)
             sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
             fig.tight_layout()
             fig.show()
@@ -519,14 +489,19 @@ def train_regression_model():
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
             fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
-                          f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}')
+                          f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            if ui_frm.checkBox_cross_val.isChecked():
+                axes[0, 1].bar(range(len(scores_cv)), scores_cv)
+                axes[0, 1].set_title('Кросс-валидация')
             sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
             fig.tight_layout()
             fig.show()
+        if not ui_frm.checkBox_save.isChecked():
+            return
         result = QtWidgets.QMessageBox.question(
             MainWindow,
             'Сохранение модели',
@@ -536,17 +511,13 @@ def train_regression_model():
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
             path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
-            path_scaler = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}_scaler.pkl'
             with open(path_model, 'wb') as f:
-                pickle.dump(model_regression, f)
-            with open(path_scaler, 'wb') as f:
-                pickle.dump(scaler_params, f)
+                pickle.dump(pipe, f)
 
             new_trained_model = TrainedModelReg(
                 analysis_id=get_regmod_id(),
                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_model=path_model,
-                path_scaler=path_scaler,
                 list_params=json.dumps(list_param),
             )
             session.add(new_trained_model)
@@ -554,6 +525,69 @@ def train_regression_model():
             update_list_trained_models_regmod()
         else:
             pass
+
+    def choose_regression_model(model):
+        if model == 'LinearRegression':
+            model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
+            model_name = 'LR'
+
+        elif model == 'DecisionTreeRegressor':
+            spl = 'random' if ui_frm.checkBox_splitter_rnd.isChecked() else 'best'
+            model_regression = DecisionTreeRegressor(splitter=spl, random_state=0)
+            model_name = 'DTR'
+
+        elif model == 'KNeighborsRegressor':
+            model_regression = KNeighborsRegressor(
+                n_neighbors=ui_frm.spinBox_neighbors.value(),
+                weights='distance' if ui_frm.checkBox_knn_weights.isChecked() else 'uniform',
+                algorithm=ui_frm.comboBox_knn_algorithm.currentText()
+            )
+            model_name = 'KNNR'
+
+        elif model == 'SVR':
+            model_regression = SVR(kernel=ui_frm.comboBox_svr_kernel.currentText(),
+                                   C=ui_frm.doubleSpinBox_svr_c.value())
+            model_name = 'SVR'
+
+        elif model == 'MLPRegressor':
+            layers = tuple(map(int, ui_frm.lineEdit_layer_mlp.text().split()))
+            model_regression = MLPRegressor(
+                hidden_layer_sizes=layers,
+                activation=ui_frm.comboBox_activation_mlp.currentText(),
+                solver=ui_frm.comboBox_solvar_mlp.currentText(),
+                alpha=ui_frm.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_frm.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_frm.doubleSpinBox_valid_mlp.value(),
+                random_state=0
+            )
+            model_name = 'MLPR'
+
+        elif model == 'GradientBoostingRegressor':
+            model_regression = GradientBoostingRegressor(
+                n_estimators=ui_frm.spinBox_n_estimators.value(),
+                learning_rate=ui_frm.doubleSpinBox_learning_rate.value(),
+                random_state=0
+            )
+            model_name = 'GBR'
+
+        elif model == 'ElasticNet':
+            model_regression = ElasticNet(
+                alpha=ui_frm.doubleSpinBox_alpha.value(),
+                l1_ratio=ui_frm.doubleSpinBox_l1_ratio.value(),
+                random_state=0
+            )
+            model_name = 'EN'
+
+        elif model == 'Lasso':
+            model_regression = Lasso(alpha=ui_frm.doubleSpinBox_alpha.value(), random_state=0)
+            model_name = 'Lss'
+
+        else:
+            model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
+            model_name = 'LR'
+
+        return model_name, model_regression
 
     ui_frm.pushButton_calc_model.clicked.connect(calc_regression_model)
     Form_Regmod.exec_()

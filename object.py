@@ -9,6 +9,7 @@ from PyQt5.QtGui import QBrush, QColor
 from qt.geovel_main_window import *
 from qt.classifier_form import *
 from qt.test import *
+from qt.lof_form import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
@@ -30,20 +31,24 @@ from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.manifold import TSNE
 from sklearn.linear_model import LinearRegression, ElasticNet, Lasso
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsRegressor, LocalOutlierFactor
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE, RFECV
-
+from sklearn.pipeline import Pipeline
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, CategoricalNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import mean_squared_error, roc_curve, auc
+
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap

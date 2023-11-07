@@ -6,30 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>605</width>
-    <height>498</height>
+    <width>800</width>
+    <height>482</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Classifier</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_5">
+  <layout class="QGridLayout" name="gridLayout_20">
    <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout_4">
-     <item row="0" column="0">
-      <widget class="QCheckBox" name="checkBox_color_marker">
-       <property name="text">
-        <string>color_marker</string>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0" colspan="2">
+    <layout class="QGridLayout" name="gridLayout_19">
+     <item row="0" column="0" colspan="5">
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
-        <string>MLPClassifier</string>
+        <string>Multi-layer Perceptron Classifier</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
@@ -175,7 +165,7 @@
        </layout>
       </widget>
      </item>
-     <item row="0" column="1">
+     <item row="1" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_2">
        <property name="title">
         <string>KNeighborsClassifier</string>
@@ -191,7 +181,7 @@
         <item row="0" column="1">
          <widget class="QLabel" name="label_41">
           <property name="text">
-           <string>weights distanse:</string>
+           <string>weight:</string>
           </property>
          </widget>
         </item>
@@ -259,22 +249,75 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QPushButton" name="pushButton_calc_gbc">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>DecisionTree</string>
        </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>GBC</string>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_7">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_splitter_rnd">
+          <property name="toolTip">
+           <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
+          </property>
+          <property name="text">
+           <string>random</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item row="1" column="3" colspan="2">
+      <widget class="QGroupBox" name="groupBox_10">
+       <property name="title">
+        <string>RandomForest</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_16">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_15">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>N:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_rfc_n">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="singleStep">
+             <number>10</number>
+            </property>
+            <property name="value">
+             <number>100</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_rfc_ada">
+            <property name="text">
+             <string>AdaBoost</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_rfc_extra">
+            <property name="text">
+             <string>ExtraTrees</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="0">
       <widget class="QGroupBox" name="groupBox_6">
        <property name="title">
         <string>GradientBoostingClassifier</string>
@@ -338,7 +381,82 @@
        </layout>
       </widget>
      </item>
-     <item row="4" column="0" colspan="2">
+     <item row="2" column="1" colspan="3">
+      <widget class="QGroupBox" name="groupBox_8">
+       <property name="title">
+        <string>GaussianNB</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_14">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_13">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="toolTip">
+             <string>Доля наибольшей дисперсии всех признаков, которая добавляется к дисперсиям для стабильности вычислений</string>
+            </property>
+            <property name="text">
+             <string>var smooth: 1e-</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_gnb_var_smooth">
+            <property name="toolTip">
+             <string>Доля наибольшей дисперсии всех признаков, которая добавляется к дисперсиям для стабильности вычислений</string>
+            </property>
+            <property name="minimum">
+             <number>5</number>
+            </property>
+            <property name="maximum">
+             <number>12</number>
+            </property>
+            <property name="value">
+             <number>9</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="4">
+      <widget class="QGroupBox" name="groupBox_7">
+       <property name="title">
+        <string>QuadDiscrAn</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_12">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="toolTip">
+             <string>Регуляризационный параметр, добавляемый к диагонали матрицы дисперсии в каждом классе. Использование регуляризации может быть полезно в случаях, когда количество признаков больше количества образцов.</string>
+            </property>
+            <property name="text">
+             <string>reg param:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_qda_reg_param">
+            <property name="toolTip">
+             <string>Регуляризационный параметр, добавляемый к диагонали матрицы дисперсии в каждом классе. Использование регуляризации может быть полезно в случаях, когда количество признаков больше количества образцов.</string>
+            </property>
+            <property name="maximum">
+             <double>1.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.010000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0" colspan="5">
       <widget class="QGroupBox" name="groupBox_3">
        <property name="title">
         <string>GaussianProcessClassifier</string>
@@ -357,7 +475,7 @@
            <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
           </property>
           <property name="text">
-           <string>n_restarts_optimizer:</string>
+           <string>n_restart_optim:</string>
           </property>
          </widget>
         </item>
@@ -446,136 +564,246 @@
        </layout>
       </widget>
      </item>
-     <item row="3" column="2">
-      <widget class="QPushButton" name="pushButton_calc_mlp">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>MLP</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <widget class="QPushButton" name="pushButton_calc_gpc">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>GPC</string>
-       </property>
-       <property name="autoRepeatInterval">
-        <number>100</number>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="pushButton_calc_knn">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>KNN</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QGroupBox" name="groupBox_4">
+    </layout>
+   </item>
+   <item row="0" column="1">
+    <layout class="QGridLayout" name="gridLayout_18">
+     <item row="0" column="0">
+      <widget class="QGroupBox" name="groupBox_12">
        <property name="title">
-        <string>DecisionTreeClassifier</string>
+        <string>Выбросы</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_7">
+       <layout class="QGridLayout" name="gridLayout_17">
         <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_splitter_rnd">
-          <property name="toolTip">
-           <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
+         <widget class="QSpinBox" name="spinBox_lof_neighbor">
+          <property name="minimum">
+           <number>1</number>
           </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>20</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="pushButton_lof">
           <property name="text">
-           <string>splitter random</string>
+           <string>LOF</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
      </item>
-     <item row="2" column="2">
-      <widget class="QPushButton" name="pushButton_calc_dtc">
+     <item row="1" column="0">
+      <widget class="QGroupBox" name="groupBox_5">
+       <property name="title">
+        <string>Classifier Model</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_10">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QRadioButton" name="radioButton_mlp">
+            <property name="toolTip">
+             <string>Multi-layer Perceptron classifier</string>
+            </property>
+            <property name="text">
+             <string>MLPC</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QRadioButton" name="radioButton_dtc">
+            <property name="toolTip">
+             <string>Decision Tree classifier</string>
+            </property>
+            <property name="text">
+             <string>DTC</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="radioButton_knn">
+            <property name="toolTip">
+             <string>K-Nearest Neighbors classifier</string>
+            </property>
+            <property name="text">
+             <string>KNNC</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="radioButton_rfc">
+            <property name="toolTip">
+             <string>Random Forest classifier</string>
+            </property>
+            <property name="text">
+             <string>RFC</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QRadioButton" name="radioButton_gbc">
+            <property name="toolTip">
+             <string>Gradient Boosting for classification</string>
+            </property>
+            <property name="text">
+             <string>GBC</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QRadioButton" name="radioButton_gpc">
+            <property name="toolTip">
+             <string>Gaussian Process classification</string>
+            </property>
+            <property name="text">
+             <string>GPC</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QRadioButton" name="radioButton_gnb">
+            <property name="toolTip">
+             <string>Gaussian Naive Bayes</string>
+            </property>
+            <property name="text">
+             <string>G-NB</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QRadioButton" name="radioButton_qda">
+            <property name="toolTip">
+             <string>Quadratic Discriminant Analysis</string>
+            </property>
+            <property name="text">
+             <string>QDA</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="groupBox_9">
+       <property name="title">
+        <string>Cross Validate</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_cross_val">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_n_cross_val">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="title">
+        <string>PCA</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_pca">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_pca">
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QCheckBox" name="checkBox_pca_mle">
+          <property name="text">
+           <string>mle</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QCheckBox" name="checkBox_color_marker">
+       <property name="text">
+        <string>color_marker</string>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QPushButton" name="pushButton_calc">
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>80</height>
+         <height>0</height>
         </size>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(255, 204, 121);</string>
        </property>
        <property name="text">
-        <string>DTC</string>
+        <string>CALC</string>
+       </property>
+       <property name="autoRepeatInterval">
+        <number>100</number>
        </property>
       </widget>
-     </item>
-     <item row="1" column="0">
-      <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,2">
-       <item row="0" column="1">
-        <widget class="QCheckBox" name="checkBox_rfe">
-         <property name="text">
-          <string>RFE</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>n param</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QSpinBox" name="spinBox_rfe_n_param">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>1000</number>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>step</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QSpinBox" name="spinBox_rfe_step">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>100</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>
@@ -583,4 +811,7 @@
  </widget>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

@@ -2502,6 +2502,248 @@ Therm</string>
               <string>Classificat</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_29">
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_28" columnstretch="3,0,0">
+                <item row="3" column="1">
+                 <widget class="QPushButton" name="pushButton_add_mark_mlp">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add marker</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="2">
+                 <widget class="QPushButton" name="pushButton_rem_mark_mlp">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove marker</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QComboBox" name="comboBox_mark_mlp"/>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_copy_mlp">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>copy MLP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QComboBox" name="comboBox_mlp_analysis"/>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_copy_regmod">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>copy RegMod</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_rem_mlp">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove MLP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_copy_to_lda">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>copy to LDA</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_add_mlp">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add MLP</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <layout class="QGridLayout" name="gridLayout_43">
+                <item row="1" column="0">
+                 <widget class="QListWidget" name="listWidget_well_mlp"/>
+                </item>
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_95">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_count_markup_mlp">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>count markup mlp</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <spacer name="horizontalSpacer_6">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton_clear_fake">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>clear fake</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="3" column="0">
+                 <layout class="QGridLayout" name="gridLayout_30">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_60">
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_draw_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>Train</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_calc_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 204, 121);</string>
+                      </property>
+                      <property name="text">
+                       <string>Calc Profile</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QCheckBox" name="checkBox_save_prof_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>save profile</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="3">
+                     <widget class="QPushButton" name="pushButton_calc_obj_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>Calc Object</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="2" column="0">
+                 <layout class="QGridLayout" name="gridLayout_44">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_45">
+                    <item row="0" column="0">
+                     <widget class="QSpinBox" name="spinBox_well_dist_mlp">
+                      <property name="minimum">
+                       <number>1</number>
+                      </property>
+                      <property name="maximum">
+                       <number>1000</number>
+                      </property>
+                      <property name="singleStep">
+                       <number>5</number>
+                      </property>
+                      <property name="value">
+                       <number>15</number>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="3">
+                     <widget class="QPushButton" name="pushButton_rem_well_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>remove well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_update_well_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>update well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_add_well_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add_well</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="Line" name="line_7">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="Line" name="line_9">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
               <item row="5" column="0">
                <layout class="QGridLayout" name="gridLayout_47">
                 <item row="1" column="0">
@@ -2814,221 +3056,6 @@ Therm</string>
                      <string>ANOVA</string>
                     </property>
                    </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <widget class="Line" name="line_7">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_28" columnstretch="3,0,0">
-                <item row="3" column="1">
-                 <widget class="QPushButton" name="pushButton_add_mark_mlp">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_add_mlp">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add MLP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_mlp">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove MLP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_mlp_analysis"/>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_mark_mlp">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove marker</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QComboBox" name="comboBox_mark_mlp"/>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_copy_mlp">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>copy MLP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_copy_to_lda">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>copy to LDA</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_copy_regmod">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>copy RegMod</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="Line" name="line_9">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <layout class="QGridLayout" name="gridLayout_43">
-                <item row="1" column="0">
-                 <widget class="QListWidget" name="listWidget_well_mlp"/>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_count_markup_mlp">
-                  <property name="font">
-                   <font>
-                    <pointsize>9</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>count markup mlp</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_30">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_60">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_draw_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>Train</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_calc_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>Calc Profile</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QCheckBox" name="checkBox_save_prof_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>save profile</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_calc_obj_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>Calc Object</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_44">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_45">
-                    <item row="0" column="0">
-                     <widget class="QSpinBox" name="spinBox_well_dist_mlp">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>1000</number>
-                      </property>
-                      <property name="singleStep">
-                       <number>5</number>
-                      </property>
-                      <property name="value">
-                       <number>15</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_rem_well_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_update_well_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>update well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_add_well_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add_well</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
                   </item>
                  </layout>
                 </item>

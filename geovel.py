@@ -191,6 +191,7 @@ ui.pushButton_updata_mlp.clicked.connect(update_list_param_mlp)
 ui.pushButton_anova_mlp.clicked.connect(anova_mlp)
 ui.comboBox_mlp_analysis.activated.connect(update_list_marker_mlp_db)
 ui.listWidget_well_mlp.currentItemChanged.connect(choose_marker_mlp)
+ui.pushButton_clear_fake.clicked.connect(clear_fake_mlp)
 
 
 #   regression
