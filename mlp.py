@@ -718,6 +718,13 @@ def draw_MLP():
             kf = KFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             scores_cv = cross_val_score(pipe, training_sample_norm, markup, cv=kf)
 
+        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
+            imp_name_params, imp_params = [], []
+            for n, i in enumerate(model_class.feature_importances_):
+                if i >= np.mean(model_class.feature_importances_):
+                    imp_name_params.append(list_param_mlp[n])
+                    imp_params.append(i)
+
 
         fig, axes = plt.subplots(nrows=1, ncols=3)
         fig.set_size_inches(25, 10)
@@ -748,6 +755,12 @@ def draw_MLP():
             axes[1].set_ylabel('True Positive Rate')
             axes[1].set_title('ROC-кривая')
             axes[1].legend(loc="lower right")
+
+        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
+            axes[2].bar(imp_name_params, imp_params)
+            axes[2].set_xticklabels(imp_name_params, rotation=90)
+            axes[2].set_title('Важность признаков')
+
         if ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(range(len(scores_cv)), scores_cv)
             axes[2].set_title('Кросс-валидация')
