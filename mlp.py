@@ -1,5 +1,3 @@
-from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier
-
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 from krige import draw_map
@@ -573,7 +571,6 @@ def prep_data_train(data):
 def draw_MLP():
     """ Построить диаграмму рассеяния для модели анализа MLP """
     data_train, list_param = build_table_train(True, 'mlp')
-    print(data_train)
     list_param_mlp = data_train.columns.tolist()[2:]
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
@@ -624,9 +621,8 @@ def draw_MLP():
         elif model == 'KNNC':
             n_knn = ui_cls.spinBox_neighbors.value()
             weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
-            algorithm_knn = ui_cls.comboBox_knn_algorithm.currentText()
-            model_class = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm=algorithm_knn)
-            text_model = f'**KNN**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, \nalgorithm: {algorithm_knn}, '
+            model_class = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm='auto')
+            text_model = f'**KNN**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, '
         elif model == 'GBC':
             est = ui_cls.spinBox_n_estimators.value()
             l_rate = ui_cls.doubleSpinBox_learning_rate.value()
@@ -669,9 +665,108 @@ def draw_MLP():
         elif model == 'QDA':
             model_class = QuadraticDiscriminantAnalysis(reg_param=ui_cls.doubleSpinBox_qda_reg_param.value())
             text_model = f'**QDA**: \nreg_param: {ui_cls.doubleSpinBox_qda_reg_param.value()}, '
+        elif model == 'SVC':
+            model_class = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(), probability=True,
+                              C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0)
+            text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
+                          f'\nC: {ui_cls.doubleSpinBox_svr_c.value()}, ')
         else:
             model_class = QuadraticDiscriminantAnalysis()
             text_model = ''
+        return model_class, text_model
+
+
+    def build_stacking_voting_model():
+        """ Построить модель стекинга """
+        estimators, list_model = [], []
+
+        if ui_cls.checkBox_stv_mlpc.isChecked():
+            mlpc = MLPClassifier(
+                hidden_layer_sizes=tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split())),
+                activation=ui_cls.comboBox_activation_mlp.currentText(),
+                solver=ui_cls.comboBox_solvar_mlp.currentText(),
+                alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
+                random_state=0
+            )
+            estimators.append(('mlpc', mlpc))
+            list_model.append('mlpc')
+
+        if ui_cls.checkBox_stv_knnc.isChecked():
+            n_knn = ui_cls.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
+            knnc = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm='auto')
+            estimators.append(('knnc', knnc))
+            list_model.append('knnc')
+
+        if ui_cls.checkBox_stv_gbc.isChecked():
+            est = ui_cls.spinBox_n_estimators.value()
+            l_rate = ui_cls.doubleSpinBox_learning_rate.value()
+            gbc = GradientBoostingClassifier(n_estimators=est, learning_rate=l_rate, random_state=0)
+            estimators.append(('gbc', gbc))
+            list_model.append('gbc')
+
+        if ui_cls.checkBox_stv_gnb.isChecked():
+            gnb = GaussianNB(var_smoothing=10 ** (-ui_cls.spinBox_gnb_var_smooth.value()))
+            estimators.append(('gnb', gnb))
+            list_model.append('gnb')
+
+        if ui_cls.checkBox_stv_dtc.isChecked():
+            spl = 'random' if ui_cls.checkBox_splitter_rnd.isChecked() else 'best'
+            dtc = DecisionTreeClassifier(splitter=spl, random_state=0)
+            estimators.append(('dtc', dtc))
+            list_model.append('dtc')
+
+        if ui_cls.checkBox_stv_rfc.isChecked():
+            if ui_cls.checkBox_rfc_ada.isChecked():
+                abc = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+                estimators.append(('abc', abc))
+                list_model.append('abc')
+            elif ui_cls.checkBox_rfc_extra.isChecked():
+                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                estimators.append(('etc', etc))
+                list_model.append('etc')
+            else:
+                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0)
+                estimators.append(('rfc', rfc))
+                list_model.append('rfc')
+
+        if ui_cls.checkBox_stv_gpc.isChecked():
+            gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_cls.spinBox_gpc_n_restart.value()
+            multi_class = ui_cls.comboBox_gpc_multi.currentText()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            gpc = GaussianProcessClassifier(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state=0,
+                multi_class=multi_class,
+                n_jobs=-1
+            )
+            estimators.append(('gpc', gpc))
+            list_model.append('gpc')
+
+        if ui_cls.checkBox_stv_qda.isChecked():
+            qda = QuadraticDiscriminantAnalysis(reg_param=ui_cls.doubleSpinBox_qda_reg_param.value())
+            estimators.append(('qda', qda))
+            list_model.append('qda')
+        if ui_cls.checkBox_stv_svc.isChecked():
+            svc = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(),
+                      probability=True, C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0)
+            estimators.append(('svc', svc))
+            list_model.append('svc')
+        final_model, _ = choice_model_classifier(ui_cls.buttonGroup.checkedButton().text())
+        list_model_text = ', '.join(list_model)
+        if ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
+            hard_voting = 'hard' if ui_cls.checkBox_voting_hard.isChecked() else 'soft'
+            model_class = VotingClassifier(estimators=estimators, voting=hard_voting)
+            text_model = f'**Voting**: -{hard_voting}-\n({list_model_text})'
+        else:
+            model_class = StackingClassifier(estimators=estimators, final_estimator=final_model)
+            text_model = f'**Stacking**:\nFinal estimator: {final_model}\n({list_model_text})'
         return model_class, text_model
 
 
@@ -694,8 +789,12 @@ def draw_MLP():
             pca = PCA(n_components=n_comp)
             pipe_steps.append(('pca', pca))
 
-        model_name = ui_cls.buttonGroup.checkedButton().text()
-        model_class, text_model = choice_model_classifier(model_name)
+        if ui_cls.checkBox_stack_vote.isChecked():
+            model_class, text_model = build_stacking_voting_model()
+            model_name = 'STC'
+        else:
+            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_classifier(model_name)
 
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
@@ -705,14 +804,20 @@ def draw_MLP():
         test_accuracy = pipe.score(training_sample_test, markup_test)
         set_info(text_model + f'\nточность на всей обучающей выборке: {train_accuracy}, '
                  f'точность на тестовой выборке: {test_accuracy}', 'blue')
-        preds_proba_train = pipe.predict_proba(training_sample_norm)
         preds_train = pipe.predict(training_sample_norm)
 
-        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
+                and ui_cls.checkBox_voting_hard.isChecked()):
+            hard_flag = True
+        else:
+            hard_flag = False
+        if not hard_flag:
+            preds_proba_train = pipe.predict_proba(training_sample_norm)
 
-        train_tsne = tsne.fit_transform(preds_proba_train)
-        data_tsne = pd.DataFrame(train_tsne)
-        data_tsne['mark'] = preds_train
+            tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+            train_tsne = tsne.fit_transform(preds_proba_train)
+            data_tsne = pd.DataFrame(train_tsne)
+            data_tsne['mark'] = preds_train
 
         if ui_cls.checkBox_cross_val.isChecked():
             kf = KFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
@@ -729,32 +834,35 @@ def draw_MLP():
         fig, axes = plt.subplots(nrows=1, ncols=3)
         fig.set_size_inches(25, 10)
 
-        sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
-        axes[0].grid()
-        axes[0].xaxis.grid(True, "minor", linewidth=.25)
-        axes[0].yaxis.grid(True, "minor", linewidth=.25)
+        if not hard_flag:
+            sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
+            axes[0].grid()
+            axes[0].xaxis.grid(True, "minor", linewidth=.25)
+            axes[0].yaxis.grid(True, "minor", linewidth=.25)
+            axes[0].set_title('Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки')
+            if len(list_marker) == 2:
+                # Вычисляем ROC-кривую и AUC
+                preds_test = pipe.predict_proba(training_sample_test)[:, 0]
+                fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+                roc_auc = auc(fpr, tpr)
+
+                # Строим ROC-кривую
+                axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+                axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+                axes[1].set_xlim([0.0, 1.0])
+                axes[1].set_ylim([0.0, 1.05])
+                axes[1].set_xlabel('False Positive Rate')
+                axes[1].set_ylabel('True Positive Rate')
+                axes[1].set_title('ROC-кривая')
+                axes[1].legend(loc="lower right")
+
         title_graph = text_model +  f'точность на всей обучающей выборке: {round(train_accuracy, 7)}\n' \
                       f'точность на тестовой выборке: {round(test_accuracy, 7)}'
         if model_name == 'RFC':
             if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
                 title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
-        axes[0].set_title('Диаграмма рассеяния для канонических значений MLP\nдля обучающей выборки и тестовой выборки')
 
-        if len(list_marker) == 2:
-            # Вычисляем ROC-кривую и AUC
-            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
-            roc_auc = auc(fpr, tpr)
 
-            # Строим ROC-кривую
-            axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-            axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-            axes[1].set_xlim([0.0, 1.0])
-            axes[1].set_ylim([0.0, 1.05])
-            axes[1].set_xlabel('False Positive Rate')
-            axes[1].set_ylabel('True Positive Rate')
-            axes[1].set_title('ROC-кривая')
-            axes[1].legend(loc="lower right")
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(imp_name_params, imp_params)
@@ -1546,7 +1654,6 @@ def calc_obj_mlp():
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
             marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
-            print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
             z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
@@ -1627,7 +1734,6 @@ def calc_obj_mlp():
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
             marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
-            print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
             z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
@@ -1715,7 +1821,6 @@ def calc_obj_mlp():
         y = list(working_data_result['y_pulc'])
         if len(set(new_mark)) == 2 and not ui_cls.checkBox_color_marker.isChecked():
             marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
-            print(marker_mlp.title)
             z = list(working_data_result[marker_mlp.title])
             color_marker = False
             z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
