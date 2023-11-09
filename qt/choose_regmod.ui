@@ -19,7 +19,14 @@
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="0">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Выберите модель и нажмите ОК</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
       <widget class="QPushButton" name="pushButton_calc_model">
        <property name="styleSheet">
         <string notr="true">background-color: rgb(191, 255, 191);</string>
@@ -29,20 +36,13 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="checkBox_color_marker">
        <property name="text">
-        <string>Выберите модель и нажмите ОК</string>
+        <string>color_marker</string>
        </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QPushButton" name="pushButton_corr">
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>Correlation</string>
+       <property name="checked">
+        <bool>false</bool>
        </property>
       </widget>
      </item>

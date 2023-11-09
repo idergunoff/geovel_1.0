@@ -368,6 +368,7 @@ class AnalysisMLP(Base):
     parameters = relationship('ParameterMLP', back_populates='analysis')
     markers = relationship('MarkerMLP', back_populates='analysis')
     markups = relationship('MarkupMLP', back_populates='analysis')
+    trained_models = relationship('TrainedModelClass', back_populates='analysis')
 
 
 class ParameterMLP(Base):
@@ -411,6 +412,18 @@ class MarkupMLP(Base):
     formation = relationship("Formation", back_populates="markups_mlp")
     marker = relationship("MarkerMLP", back_populates="markups")
 
+
+class TrainedModelClass(Base):
+    __tablename__ = 'trained_model_class'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    title = Column(String)
+    path_model = Column(String)
+    list_params = Column(Text)
+    comment = Column(Text)
+
+    analysis = relationship('AnalysisMLP', back_populates='trained_models')
 
 #####################################################
 ################## Regression #######################

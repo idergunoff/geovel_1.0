@@ -1036,7 +1036,8 @@ def build_table_test(analisis='lda'):
     if analisis == 'lda':
         list_param, analisis_title = get_list_param_lda(), ui.comboBox_lda_analysis.currentText()
     elif analisis == 'mlp':
-        list_param, analisis_title = get_list_param_mlp(), ui.comboBox_mlp_analysis.currentText()
+        model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+        list_param, analisis_title = json.loads(model.list_params), model.title
     elif analisis == 'regmod':
         model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         list_param, analisis_title = json.loads(model.list_params), model.title

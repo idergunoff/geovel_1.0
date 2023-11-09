@@ -10,6 +10,10 @@ from qt.geovel_main_window import *
 from qt.classifier_form import *
 from qt.test import *
 from qt.lof_form import *
+from qt.formation_ai_form import *
+from qt.choose_formation_lda import *
+from qt.choose_regmod import *
+from qt.comment_form import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
@@ -30,7 +34,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier, AdaBoostClassifier,
-                              ExtraTreesClassifier, StackingClassifier, VotingClassifier)
+                              ExtraTreesClassifier, StackingClassifier, VotingClassifier, GradientBoostingRegressor)
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.preprocessing import StandardScaler

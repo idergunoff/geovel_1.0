@@ -5,9 +5,7 @@ import matplotlib.pyplot as plt
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
-from qt.formation_ai_form import *
-from qt.choose_formation_lda import *
-from qt.choose_regmod import *
+
 
 
 def add_regression_model():
