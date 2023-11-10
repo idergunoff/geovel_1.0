@@ -222,6 +222,8 @@ ui.pushButton_updata_regmod.clicked.connect(update_list_param_regmod)
 ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.currentItemChanged.connect(choose_markup_regmod)
+ui.pushButton_reg_clear_fake.clicked.connect(clear_fake_reg)
+ui.pushButton_reg_comment.clicked.connect(update_trained_model_reg_comment)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)

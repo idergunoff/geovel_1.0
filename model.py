@@ -481,6 +481,7 @@ class TrainedModelReg(Base):
     path_model = Column(String)
     path_scaler = Column(String)
     list_params = Column(Text)
+    comment = Column(Text)
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')
 

@@ -98,7 +98,7 @@ def add_well_markup_reg():
 def update_list_well_markup_reg():
     """Обновить список обучающих скважин"""
     ui.listWidget_well_regmod.clear()
-    count_markup, count_measure = 0, 0
+    count_markup, count_measure, count_fake = 0, 0, 0
     for i in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
         try:
             fake = len(json.loads(i.list_fake)) if i.list_fake else 0
@@ -113,11 +113,13 @@ def update_list_well_markup_reg():
             ui.listWidget_well_regmod.addItem(item)
             count_markup += 1
             count_measure += measure - fake
+            count_fake += fake
         except AttributeError:
             set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
             session.delete(i)
             session.commit()
-    ui.label_count_markup_reg.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> измерений')
+    ui.label_count_markup_reg.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> '
+                                      f'измерений; <i><u>{count_fake}</u></i> выбросов')
     update_list_param_regmod(db=True)
 
 
@@ -379,44 +381,263 @@ def set_color_button_updata_regmod():
 
 
 def train_regression_model():
-    """ Расчет модели """
-    data_train, list_param = build_table_train(True, 'regmod')
-    list_param = get_list_param_numerical(list_param)
-    training_sample = data_train[list_param].values.tolist()
+    """ Расчет регрессионной модели """
+    data_train, list_param_name = build_table_train(True, 'regmod')
+    list_param_reg = get_list_param_numerical(list_param_name)
+    training_sample = data_train[list_param_reg].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
 
-    Form_Regmod = QtWidgets.QDialog()
-    ui_frm = Ui_Form_formation_ai()
-    ui_frm.setupUi(Form_Regmod)
-    Form_Regmod.show()
-    Form_Regmod.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    Regressor = QtWidgets.QDialog()
+    ui_r = Ui_RegressorForm()
+    ui_r.setupUi(Regressor)
+    Regressor.show()
+    Regressor.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    def calc_regression_model():
+    ui_r.spinBox_pca.setMaximum(len(list_param_reg))
+    ui_r.spinBox_pca.setValue(len(list_param_reg) // 2)
+
+    def push_checkbutton_extra():
+        if ui_r.checkBox_rfr_ada.isChecked():
+            ui_r.checkBox_rfr_ada.setChecked(False)
+
+    def push_checkbutton_ada():
+        if ui_r.checkBox_rfr_extra.isChecked():
+            ui_r.checkBox_rfr_extra.setChecked(False)
+
+
+    def choice_model_regressor(model):
+        """ Выбор модели регрессии """
+        if model == 'MLPR':
+            model_reg = MLPRegressor(
+                hidden_layer_sizes=tuple(map(int, ui_r.lineEdit_layer_mlp.text().split())),
+                activation=ui_r.comboBox_activation_mlp.currentText(),
+                solver=ui_r.comboBox_solvar_mlp.currentText(),
+                alpha=ui_r.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_r.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_r.doubleSpinBox_valid_mlp.value(),
+                random_state=0
+            )
+            text_model = (f'**MLPR**: \nhidden_layer_sizes: '
+                          f'({",".join(map(str, tuple(map(int, ui_r.lineEdit_layer_mlp.text().split()))))}), '
+                          f'\nactivation: {ui_r.comboBox_activation_mlp.currentText()}, '
+                          f'\nsolver: {ui_r.comboBox_solvar_mlp.currentText()}, '
+                          f'\nalpha: {round(ui_r.doubleSpinBox_alpha_mlp.value(), 2)}, '
+                          f'\n{"early stopping, " if ui_r.checkBox_e_stop_mlp.isChecked() else ""}'
+                          f'\nvalidation_fraction: {round(ui_r.doubleSpinBox_valid_mlp.value(), 2)}, ')
+
+        elif model == 'KNNR':
+            n_knn = ui_r.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_r.checkBox_knn_weights.isChecked() else 'uniform'
+            model_reg = KNeighborsRegressor(n_neighbors=n_knn, weights=weights_knn, algorithm='auto')
+            text_model = f'**KNNR**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, '
+
+        elif model == 'GBR':
+            est = ui_r.spinBox_n_estimators.value()
+            l_rate = ui_r.doubleSpinBox_learning_rate.value()
+            model_reg = GradientBoostingRegressor(n_estimators=est, learning_rate=l_rate, random_state=0)
+            text_model = f'**GBR**: \nn estimators: {round(est, 2)}, \nlearning rate: {round(l_rate, 2)}, '
+
+        elif model == 'LR':
+            model_reg = LinearRegression(fit_intercept=ui_r.checkBox_fit_intercept.isChecked())
+            text_model = f'**LR**: \nfit_intercept: {"on" if ui_r.checkBox_fit_intercept.isChecked() else "off"}, '
+
+        elif model == 'DTR':
+            spl = 'random' if ui_r.checkBox_splitter_rnd.isChecked() else 'best'
+            model_reg = DecisionTreeRegressor(splitter=spl, random_state=0)
+            text_model = f'**DTR**: \nsplitter: {spl}, '
+
+        elif model == 'RFR':
+            if ui_r.checkBox_rfr_ada.isChecked():
+                model_reg = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
+                text_model = f'**ABR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+            elif ui_r.checkBox_rfr_extra.isChecked():
+                model_reg = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+            else:
+                model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+
+        elif model == 'GPR':
+            gpc_kernel_width = ui_r.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_r.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_r.spinBox_gpc_n_restart.value()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            model_reg = GaussianProcessRegressor(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state=0
+                )
+            text_model = (f'**GPR**: \nwidth kernal: {round(gpc_kernel_width, 2)}, \nscale kernal: {round(gpc_kernel_scale, 2)}, '
+                          f'\nn restart: {n_restart_optimization} ,')
+
+        elif model == 'SVR':
+            model_reg = SVR(kernel=ui_r.comboBox_svr_kernel.currentText(), C=ui_r.doubleSpinBox_svr_c.value())
+            text_model = (f'**SVR**: \nkernel: {ui_r.comboBox_svr_kernel.currentText()}, '
+                          f'\nC: {round(ui_r.doubleSpinBox_svr_c.value(), 2)}, ')
+
+        elif model == 'EN':
+            model_reg = ElasticNet(
+                alpha=ui_r.doubleSpinBox_alpha.value(),
+                l1_ratio=ui_r.doubleSpinBox_l1_ratio.value(),
+                random_state=0
+            )
+            text_model = (f'**EN**: \nalpha: {round(ui_r.doubleSpinBox_alpha.value(), 2)}, '
+                          f'\nl1_ratio: {round(ui_r.doubleSpinBox_l1_ratio.value(), 2)}, ')
+
+        elif model == 'LSS':
+            model_reg = Lasso(alpha=ui_r.doubleSpinBox_alpha.value(), random_state=0)
+            text_model = f'**LSS**: \nalpha: {round(ui_r.doubleSpinBox_alpha.value(), 2)}, '
+
+        else:
+            model_reg = QuadraticDiscriminantAnalysis()
+            text_model = ''
+        return model_reg, text_model
+
+
+    def build_stacking_voting_model():
+        """ Построить модель стекинга """
+        estimators, list_model = [], []
+
+        if ui_r.checkBox_stv_mlpr.isChecked():
+            mlpr = MLPRegressor(
+                hidden_layer_sizes=tuple(map(int, ui_r.lineEdit_layer_mlp.text().split())),
+                activation=ui_r.comboBox_activation_mlp.currentText(),
+                solver=ui_r.comboBox_solvar_mlp.currentText(),
+                alpha=ui_r.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_r.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_r.doubleSpinBox_valid_mlp.value(),
+                random_state=0
+            )
+            estimators.append(('mlpr', mlpr))
+            list_model.append('mlpr')
+
+        if ui_r.checkBox_stv_knnr.isChecked():
+            n_knn = ui_r.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_r.checkBox_knn_weights.isChecked() else 'uniform'
+            knnr = KNeighborsRegressor(n_neighbors=n_knn, weights=weights_knn, algorithm='auto')
+            estimators.append(('knnr', knnr))
+            list_model.append('knnr')
+
+        if ui_r.checkBox_stv_gbr.isChecked():
+            est = ui_r.spinBox_n_estimators.value()
+            l_rate = ui_r.doubleSpinBox_learning_rate.value()
+            gbr = GradientBoostingRegressor(n_estimators=est, learning_rate=l_rate, random_state=0)
+            estimators.append(('gbr', gbr))
+            list_model.append('gbr')
+
+        if ui_r.checkBox_stv_dtr.isChecked():
+            spl = 'random' if ui_r.checkBox_splitter_rnd.isChecked() else 'best'
+            dtr = DecisionTreeRegressor(splitter=spl, random_state=0)
+            estimators.append(('dtr', dtr))
+            list_model.append('dtr')
+
+        if ui_r.checkBox_stv_rfr.isChecked():
+            if ui_r.checkBox_rfr_ada.isChecked():
+                abr = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
+                estimators.append(('abr', abr))
+                list_model.append('abr')
+            elif ui_r.checkBox_rfr_extra.isChecked():
+                etr = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                estimators.append(('etr', etr))
+                list_model.append('etr')
+            else:
+                rfr = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                estimators.append(('rfr', rfr))
+                list_model.append('rfr')
+
+        if ui_r.checkBox_stv_gpr.isChecked():
+            gpc_kernel_width = ui_r.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_r.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_r.spinBox_gpc_n_restart.value()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            gpr = GaussianProcessRegressor(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state=0
+            )
+            estimators.append(('gpr', gpr))
+            list_model.append('gpr')
+
+        if ui_r.checkBox_stv_svr.isChecked():
+            svr = SVR(kernel=ui_r.comboBox_svr_kernel.currentText(),
+                      C=ui_r.doubleSpinBox_svr_c.value())
+            estimators.append(('svr', svr))
+            list_model.append('svr')
+
+        if ui_r.checkBox_stv_lr.isChecked():
+            lr = LinearRegression(fit_intercept=ui_r.checkBox_fit_intercept.isChecked())
+            estimators.append(('lr', lr))
+            list_model.append('lr')
+
+        if ui_r.checkBox_stv_en.isChecked():
+            en = ElasticNet(
+                alpha=ui_r.doubleSpinBox_alpha.value(),
+                l1_ratio=ui_r.doubleSpinBox_l1_ratio.value(),
+                random_state=0
+            )
+            estimators.append(('en', en))
+            list_model.append('en')
+
+        if ui_r.checkBox_stv_lasso.isChecked():
+            lss = Lasso(alpha=ui_r.doubleSpinBox_alpha.value(), random_state=0)
+            estimators.append(('lss', lss))
+            list_model.append('lss')
+
+        final_model, final_text_model = choice_model_regressor(ui_r.buttonGroup.checkedButton().text())
+        list_model_text = ', '.join(list_model)
+
+        if ui_r.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
+            model_class = VotingRegressor(estimators=estimators)
+            text_model = f'**Voting**: \n({list_model_text})\n'
+            model_name = 'VOT'
+        else:
+            model_class = StackingRegressor(estimators=estimators, final_estimator=final_model)
+            text_model = f'**Stacking**:\nFinal estimator: {final_text_model}\n({list_model_text})\n'
+            model_name = 'STACK'
+        return model_class, text_model, model_name
+
+
+    def calc_model_reg():
+        """ Создание и тренировка модели """
+
         start_time = datetime.datetime.now()
-        model = ui_frm.comboBox_model_ai.currentText()
+        # Нормализация данных
+        scaler = StandardScaler()
 
         pipe_steps = []
-        scaler = StandardScaler()
         pipe_steps.append(('scaler', scaler))
 
+        # Разделение данных на обучающую и тестовую выборки
         x_train, x_test, y_train, y_test = train_test_split(
             training_sample, target, test_size=0.2, random_state=42
         )
 
-        model_name, model_regression = choose_regression_model(model)
 
-        pipe_steps.append(('model', model_regression))
+        if ui_r.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0)
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+        if ui_r.checkBox_stack_vote.isChecked():
+            model_class, text_model, model_name = build_stacking_voting_model()
+        else:
+            model_name = ui_r.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_regressor(model_name)
+
+        text_model += text_pca
+
+        pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
 
-        if ui_frm.checkBox_cross_val.isChecked():
-            data_train_cross = data_train.copy()
-            kf = KFold(n_splits=ui_frm.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+        if ui_r.checkBox_cross_val.isChecked():
+            kf = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             list_train, list_test, n_cross = [], [], 1
             for train_index, test_index in kf.split(training_sample):
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
-                list_test_to_table = ['x' if i in test_index.tolist() else 'o' for i in range(len(data_train.index))]
-                data_train_cross[f'sample {n_cross}'] = list_test_to_table
                 n_cross += 1
             scores_cv = cross_val_score(pipe, training_sample, target, cv=kf)
             n_max = np.argmax(scores_cv)
@@ -427,20 +648,11 @@ def train_regression_model():
 
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
-            if ui_frm.checkBox_cross_val_save.isChecked():
-                fn = QFileDialog.getSaveFileName(caption="Сохранить выборку в таблицу",
-                                                 directory='table_cross_val.xlsx',
-                                                 filter="Excel Files (*.xlsx)")
-                data_train_cross.to_excel(fn[0])
-
-            # print("Оценки на каждом разбиении:", scores_cv)
-            # print("Средняя оценка:", scores_cv.mean())
-            # print("Стандартное отклонение оценок:", scores_cv.std())
 
         cv_text = (
             f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
             f'\nСредн.: {round(scores_cv.mean(), 2)} '
-            f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_frm.checkBox_cross_val.isChecked() else ''
+            f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_r.checkBox_cross_val.isChecked() else ''
 
         pipe.fit(x_train, y_train)
         y_pred = pipe.predict(x_test)
@@ -449,7 +661,8 @@ def train_regression_model():
         mse = round(mean_squared_error(y_test, y_pred), 5)
 
         train_time = datetime.datetime.now() - start_time
-        set_info(f'Модель {model}:\n точность: {accuracy} '
+
+        set_info(f'Модель {model_name}:\n точность: {accuracy} '
                  f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
         y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
 
@@ -459,22 +672,24 @@ def train_regression_model():
             'y_pred': y_pred,
             'y_remain': y_remain
         })
+
         try:
             ipm_name_params, imp_params = [], []
-            for n, i in enumerate(pipe.feature_importances_):
-                if i >= np.mean(pipe.feature_importances_):
-                    ipm_name_params.append(list_param[n])
+            for n, i in enumerate(pipe['model'].feature_importances_):
+                if i >= np.mean(pipe['model'].feature_importances_):
+                    ipm_name_params.append(list_param_reg[n])
                     imp_params.append(i)
+            print(imp_params)
 
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
-            fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+            fig.suptitle(f'Модель {model_name}:\n точность: {accuracy} '
                  f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-            if ui_frm.checkBox_cross_val.isChecked():
+            if ui_r.checkBox_cross_val.isChecked():
                 axes[0, 1].bar(range(len(scores_cv)), scores_cv)
                 axes[0, 1].set_title('Кросс-валидация')
             else:
@@ -486,24 +701,24 @@ def train_regression_model():
         except AttributeError:
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
-            fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+            fig.suptitle(f'Модель {model_name}:\n точность: {accuracy} '
                           f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-            if ui_frm.checkBox_cross_val.isChecked():
+            if ui_r.checkBox_cross_val.isChecked():
                 axes[0, 1].bar(range(len(scores_cv)), scores_cv)
                 axes[0, 1].set_title('Кросс-валидация')
             sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
             fig.tight_layout()
             fig.show()
-        if not ui_frm.checkBox_save.isChecked():
+        if not ui_r.checkBox_save_model.isChecked():
             return
         result = QtWidgets.QMessageBox.question(
             MainWindow,
             'Сохранение модели',
-            f'Сохранить модель {model}?',
+            f'Сохранить модель {model_name}?',
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
@@ -516,7 +731,8 @@ def train_regression_model():
                 analysis_id=get_regmod_id(),
                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_model=path_model,
-                list_params=json.dumps(list_param),
+                list_params=json.dumps(list_param_name),
+                comment = text_model
             )
             session.add(new_trained_model)
             session.commit()
@@ -524,71 +740,427 @@ def train_regression_model():
         else:
             pass
 
-    def choose_regression_model(model):
-        if model == 'LinearRegression':
-            model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
-            model_name = 'LR'
 
-        elif model == 'DecisionTreeRegressor':
-            spl = 'random' if ui_frm.checkBox_splitter_rnd.isChecked() else 'best'
-            model_regression = DecisionTreeRegressor(splitter=spl, random_state=0)
-            model_name = 'DTR'
+    def calc_lof():
+        """ Расчет выбросов методом LOF """
+        global data_pca, data_tsne, colors, factor_lof
 
-        elif model == 'KNeighborsRegressor':
-            model_regression = KNeighborsRegressor(
-                n_neighbors=ui_frm.spinBox_neighbors.value(),
-                weights='distance' if ui_frm.checkBox_knn_weights.isChecked() else 'uniform',
-                algorithm=ui_frm.comboBox_knn_algorithm.currentText()
-            )
-            model_name = 'KNNR'
+        data_lof = data_train.copy()
+        data_lof.drop(['prof_well_index', 'target_value'], axis=1, inplace=True)
 
-        elif model == 'SVR':
-            model_regression = SVR(kernel=ui_frm.comboBox_svr_kernel.currentText(),
-                                   C=ui_frm.doubleSpinBox_svr_c.value())
-            model_name = 'SVR'
+        scaler = StandardScaler()
+        training_sample_lof = scaler.fit_transform(data_lof)
+        n_LOF = ui_r.spinBox_lof_neighbor.value()
 
-        elif model == 'MLPRegressor':
-            layers = tuple(map(int, ui_frm.lineEdit_layer_mlp.text().split()))
-            model_regression = MLPRegressor(
-                hidden_layer_sizes=layers,
-                activation=ui_frm.comboBox_activation_mlp.currentText(),
-                solver=ui_frm.comboBox_solvar_mlp.currentText(),
-                alpha=ui_frm.doubleSpinBox_alpha_mlp.value(),
-                max_iter=5000,
-                early_stopping=ui_frm.checkBox_e_stop_mlp.isChecked(),
-                validation_fraction=ui_frm.doubleSpinBox_valid_mlp.value(),
-                random_state=0
-            )
-            model_name = 'MLPR'
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        data_tsne = tsne.fit_transform(training_sample_lof)
 
-        elif model == 'GradientBoostingRegressor':
-            model_regression = GradientBoostingRegressor(
-                n_estimators=ui_frm.spinBox_n_estimators.value(),
-                learning_rate=ui_frm.doubleSpinBox_learning_rate.value(),
-                random_state=0
-            )
-            model_name = 'GBR'
+        pca = PCA(n_components=2)
+        data_pca = pca.fit_transform(training_sample_lof)
 
-        elif model == 'ElasticNet':
-            model_regression = ElasticNet(
-                alpha=ui_frm.doubleSpinBox_alpha.value(),
-                l1_ratio=ui_frm.doubleSpinBox_l1_ratio.value(),
-                random_state=0
-            )
-            model_name = 'EN'
+        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
 
-        elif model == 'Lasso':
-            model_regression = Lasso(alpha=ui_frm.doubleSpinBox_alpha.value(), random_state=0)
-            model_name = 'Lss'
+        Form_LOF = QtWidgets.QDialog()
+        ui_lof = Ui_LOF_form()
+        ui_lof.setupUi(Form_LOF)
+        Form_LOF.show()
+        Form_LOF.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        else:
-            model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
-            model_name = 'LR'
 
-        return model_name, model_regression
+        def set_title_lof_form(label_lof):
+            ui_lof.label_title_window.setText('Расчет выбросов. Метод LOF (Locally Outlier Factor)\n'
+                                              f'Выбросов: {label_lof.tolist().count(-1)} из {len(label_lof)}')
 
-    ui_frm.pushButton_calc_model.clicked.connect(calc_regression_model)
-    Form_Regmod.exec_()
+        set_title_lof_form(label_lof)
+        ui_lof.spinBox_lof_n.setValue(n_LOF)
+
+        # Визуализация
+        draw_lof_tsne(data_tsne, ui_lof)
+        draw_lof_pca(data_pca, ui_lof)
+        draw_lof_bar(colors, factor_lof, label_lof, ui_lof)
+        insert_list_samples(data_train, ui_lof.listWidget_samples, label_lof)
+        insert_list_features(data_train, ui_lof.listWidget_features)
+
+
+        def calc_lof_in_window():
+            global data_pca, data_tsne, colors, factor_lof
+            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            ui_lof.checkBox_samples.setChecked(False)
+            draw_lof_tsne(data_tsne, ui_lof)
+            draw_lof_pca(data_pca, ui_lof)
+            draw_lof_bar(colors, factor_lof, label_lof, ui_lof)
+
+            set_title_lof_form(label_lof)
+            insert_list_samples(data_train, ui_lof.listWidget_samples, label_lof)
+            insert_list_features(data_train, ui_lof.listWidget_features)
+
+
+        def calc_clean_model():
+            _, _, _, _, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            lof_index = [i for i, x in enumerate(label_lof) if x == -1]
+            for ix in lof_index:
+                prof_well = data_train['prof_well_index'][ix]
+                prof_id, well_id, fake_id = int(prof_well.split('_')[0]), int(prof_well.split('_')[1]), int(prof_well.split('_')[2])
+                old_list_fake = session.query(MarkupReg.list_fake).filter(
+                    MarkupReg.analysis_id == get_regmod_id(),
+                    MarkupReg.profile_id == prof_id,
+                    MarkupReg.well_id == well_id
+                ).first()[0]
+                if old_list_fake:
+                    new_list_fake = json.loads(old_list_fake)
+                    new_list_fake.append(fake_id)
+                else:
+                    new_list_fake = [fake_id]
+                session.query(MarkupReg).filter(
+                    MarkupReg.analysis_id == get_regmod_id(),
+                    MarkupReg.profile_id == prof_id,
+                    MarkupReg.well_id == well_id
+                ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
+                session.commit()
+
+            Regressor.close()
+            Form_LOF.close()
+            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+            session.commit()
+            build_table_train(False, 'regmod')
+            update_list_well_markup_reg()
+            # show_regression_form(data_train_clean, list_param)
+
+
+        def draw_checkbox_samples():
+            global data_pca, data_tsne, colors, factor_lof
+            if ui_lof.checkBox_samples.isChecked():
+                col = ui_lof.listWidget_features.currentItem().text()
+                draw_hist_sample_feature(data_train, col, data_train[col][int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0])], ui_lof)
+                draw_lof_bar(colors, factor_lof, label_lof, ui_lof)
+                draw_lof_pca(data_pca, ui_lof)
+            else:
+                draw_lof_tsne(data_tsne, ui_lof)
+                draw_lof_bar(colors, factor_lof, label_lof, ui_lof)
+                draw_lof_pca(data_pca, ui_lof)
+
+
+        # ui_lof.spinBox_lof_n.valueChanged.connect(calc_lof_in_window)
+        ui_lof.pushButton_clean_lof.clicked.connect(calc_clean_model)
+        ui_lof.checkBox_samples.clicked.connect(draw_checkbox_samples)
+        ui_lof.listWidget_samples.currentItemChanged.connect(draw_checkbox_samples)
+
+        ui_lof.listWidget_features.currentItemChanged.connect(draw_checkbox_samples)
+        ui_lof.pushButton_lof.clicked.connect(calc_lof_in_window)
+
+        Form_LOF.exec_()
+
+
+    def insert_list_samples(data, list_widget, label_lof):
+        list_widget.clear()
+        for i in data.index:
+            list_widget.addItem(f'{i}) {data["prof_well_index"][i]}')
+            if label_lof[int(i)] == -1:
+                list_widget.item(int(i)).setBackground(QBrush(QColor('red')))
+        list_widget.setCurrentRow(0)
+
+
+    def insert_list_features(data, list_widget):
+        list_widget.clear()
+        for col in data.columns:
+            if col != 'prof_well_index' and col != 'mark':
+                list_widget.addItem(col)
+        list_widget.setCurrentRow(0)
+
+
+    def draw_hist_sample_feature(data, feature, value_sample, ui_widget):
+        clear_horizontalLayout(ui_widget.horizontalLayout_tsne)
+        figure_tsne = plt.figure()
+        canvas_tsne = FigureCanvas(figure_tsne)
+        figure_tsne.clear()
+        ui_widget.horizontalLayout_tsne.addWidget(canvas_tsne)
+        sns.histplot(data, x=feature, bins=50)
+        plt.axvline(value_sample, color='r', linestyle='dashed', linewidth=2)
+        plt.grid()
+        figure_tsne.suptitle(f't-SNE')
+        figure_tsne.tight_layout()
+        canvas_tsne.draw()
+
+
+    def draw_lof_bar(colors, factor_lof, label_lof, ui_lof):
+        clear_horizontalLayout(ui_lof.horizontalLayout_bar)
+        figure_bar = plt.figure()
+        canvas_bar = FigureCanvas(figure_bar)
+        ui_lof.horizontalLayout_bar.addWidget(canvas_bar)
+        plt.bar(range(len(label_lof)), factor_lof, color=colors)
+        if ui_lof.checkBox_samples.isChecked():
+            plt.axvline(int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0]), color='green', linestyle='dashed', linewidth=2)
+        figure_bar.suptitle(f'коэффициенты LOF')
+        figure_bar.tight_layout()
+        canvas_bar.show()
+
+
+    def draw_lof_pca(data_pca, ui_lof):
+        clear_horizontalLayout(ui_lof.horizontalLayout_pca)
+        figure_pca = plt.figure()
+        canvas_pca = FigureCanvas(figure_pca)
+        figure_pca.clear()
+        ui_lof.horizontalLayout_pca.addWidget(canvas_pca)
+        sns.scatterplot(data=data_pca, x=0, y=1, hue='lof', s=100, palette={-1: 'red', 1: 'blue'})
+        if ui_lof.checkBox_samples.isChecked():
+            index_sample = int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0])
+            plt.axvline(data_pca[0][index_sample], color='green', linestyle='dashed', linewidth=2)
+            plt.axhline(data_pca[1][index_sample], color='green', linestyle='dashed', linewidth=2)
+        plt.grid()
+        figure_pca.suptitle(f'PCA')
+        figure_pca.tight_layout()
+        canvas_pca.draw()
+
+
+    def draw_lof_tsne(data_tsne, ui_lof):
+        clear_horizontalLayout(ui_lof.horizontalLayout_tsne)
+        figure_tsne = plt.figure()
+        canvas_tsne = FigureCanvas(figure_tsne)
+        figure_tsne.clear()
+        ui_lof.horizontalLayout_tsne.addWidget(canvas_tsne)
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue='lof', s=100, palette={-1: 'red', 1: 'blue'})
+        plt.grid()
+        figure_tsne.suptitle(f't-SNE')
+        figure_tsne.tight_layout()
+        canvas_tsne.draw()
+
+
+    def calc_lof_model(n_LOF, training_sample):
+        global data_pca, data_tsne
+        lof = LocalOutlierFactor(n_neighbors=n_LOF)
+        label_lof = lof.fit_predict(training_sample)
+        factor_lof = -lof.negative_outlier_factor_
+
+        data_tsne_pd = pd.DataFrame(data_tsne)
+        data_tsne_pd['lof'] = label_lof
+
+        data_pca_pd = pd.DataFrame(data_pca)
+        data_pca_pd['lof'] = label_lof
+
+        colors = ['red' if label == -1 else 'blue' for label in label_lof]
+
+        return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
+
+    ui_r.pushButton_lof.clicked.connect(calc_lof)
+    ui_r.checkBox_rfr_extra.clicked.connect(push_checkbutton_extra)
+    ui_r.checkBox_rfr_ada.clicked.connect(push_checkbutton_ada)
+    ui_r.pushButton_calc.clicked.connect(calc_model_reg)
+    Regressor.exec_()
+
+
+
+
+# def train_regression_model_old():
+#     """ Расчет модели """
+#     data_train, list_param = build_table_train(True, 'regmod')
+#     list_param = get_list_param_numerical(list_param)
+#     training_sample = data_train[list_param].values.tolist()
+#     target = sum(data_train[['target_value']].values.tolist(), [])
+#
+#     Form_Regmod = QtWidgets.QDialog()
+#     ui_frm = Ui_Form_formation_ai()
+#     ui_frm.setupUi(Form_Regmod)
+#     Form_Regmod.show()
+#     Form_Regmod.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+#
+#     def calc_regression_model():
+#         start_time = datetime.datetime.now()
+#         model = ui_frm.comboBox_model_ai.currentText()
+#
+#         pipe_steps = []
+#         scaler = StandardScaler()
+#         pipe_steps.append(('scaler', scaler))
+#
+#         x_train, x_test, y_train, y_test = train_test_split(
+#             training_sample, target, test_size=0.2, random_state=42
+#         )
+#
+#         model_name, model_regression = choose_regression_model(model)
+#
+#         pipe_steps.append(('model', model_regression))
+#         pipe = Pipeline(pipe_steps)
+#
+#         if ui_frm.checkBox_cross_val.isChecked():
+#             data_train_cross = data_train.copy()
+#             kf = KFold(n_splits=ui_frm.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+#             list_train, list_test, n_cross = [], [], 1
+#             for train_index, test_index in kf.split(training_sample):
+#                 list_train.append(train_index.tolist())
+#                 list_test.append(test_index.tolist())
+#                 list_test_to_table = ['x' if i in test_index.tolist() else 'o' for i in range(len(data_train.index))]
+#                 data_train_cross[f'sample {n_cross}'] = list_test_to_table
+#                 n_cross += 1
+#             scores_cv = cross_val_score(pipe, training_sample, target, cv=kf)
+#             n_max = np.argmax(scores_cv)
+#             train_index, test_index = list_train[n_max], list_test[n_max]
+#
+#             x_train = [training_sample[i] for i in train_index]
+#             x_test = [training_sample[i] for i in test_index]
+#
+#             y_train = [target[i] for i in train_index]
+#             y_test = [target[i] for i in test_index]
+#             if ui_frm.checkBox_cross_val_save.isChecked():
+#                 fn = QFileDialog.getSaveFileName(caption="Сохранить выборку в таблицу",
+#                                                  directory='table_cross_val.xlsx',
+#                                                  filter="Excel Files (*.xlsx)")
+#                 data_train_cross.to_excel(fn[0])
+#
+#             # print("Оценки на каждом разбиении:", scores_cv)
+#             # print("Средняя оценка:", scores_cv.mean())
+#             # print("Стандартное отклонение оценок:", scores_cv.std())
+#
+#         cv_text = (
+#             f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
+#             f'\nСредн.: {round(scores_cv.mean(), 2)} '
+#             f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_frm.checkBox_cross_val.isChecked() else ''
+#
+#         pipe.fit(x_train, y_train)
+#         y_pred = pipe.predict(x_test)
+#
+#         accuracy = round(pipe.score(x_test, y_test), 5)
+#         mse = round(mean_squared_error(y_test, y_pred), 5)
+#
+#         train_time = datetime.datetime.now() - start_time
+#         set_info(f'Модель {model}:\n точность: {accuracy} '
+#                  f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
+#         y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
+#
+#
+#         data_graph = pd.DataFrame({
+#             'y_test': y_test,
+#             'y_pred': y_pred,
+#             'y_remain': y_remain
+#         })
+#         try:
+#             ipm_name_params, imp_params = [], []
+#             for n, i in enumerate(pipe.feature_importances_):
+#                 if i >= np.mean(pipe.feature_importances_):
+#                     ipm_name_params.append(list_param[n])
+#                     imp_params.append(i)
+#
+#             fig, axes = plt.subplots(nrows=2, ncols=2)
+#             fig.set_size_inches(15, 10)
+#             fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+#                  f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
+#             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#             if ui_frm.checkBox_cross_val.isChecked():
+#                 axes[0, 1].bar(range(len(scores_cv)), scores_cv)
+#                 axes[0, 1].set_title('Кросс-валидация')
+#             else:
+#                 axes[0, 1].bar(ipm_name_params, imp_params)
+#                 axes[0, 1].set_xticklabels(ipm_name_params, rotation=90)
+#             sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+#             fig.tight_layout()
+#             fig.show()
+#         except AttributeError:
+#             fig, axes = plt.subplots(nrows=2, ncols=2)
+#             fig.set_size_inches(15, 10)
+#             fig.suptitle(f'Модель {model}:\n точность: {accuracy} '
+#                           f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
+#             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#             sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#             if ui_frm.checkBox_cross_val.isChecked():
+#                 axes[0, 1].bar(range(len(scores_cv)), scores_cv)
+#                 axes[0, 1].set_title('Кросс-валидация')
+#             sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+#             fig.tight_layout()
+#             fig.show()
+#         if not ui_frm.checkBox_save.isChecked():
+#             return
+#         result = QtWidgets.QMessageBox.question(
+#             MainWindow,
+#             'Сохранение модели',
+#             f'Сохранить модель {model}?',
+#             QtWidgets.QMessageBox.Yes,
+#             QtWidgets.QMessageBox.No)
+#         if result == QtWidgets.QMessageBox.Yes:
+#             # Сохранение модели в файл с помощью pickle
+#             path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+#             with open(path_model, 'wb') as f:
+#                 pickle.dump(pipe, f)
+#
+#             new_trained_model = TrainedModelReg(
+#                 analysis_id=get_regmod_id(),
+#                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
+#                 path_model=path_model,
+#                 list_params=json.dumps(list_param),
+#             )
+#             session.add(new_trained_model)
+#             session.commit()
+#             update_list_trained_models_regmod()
+#         else:
+#             pass
+#
+#     def choose_regression_model(model):
+#         if model == 'LinearRegression':
+#             model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
+#             model_name = 'LR'
+#
+#         elif model == 'DecisionTreeRegressor':
+#             spl = 'random' if ui_frm.checkBox_splitter_rnd.isChecked() else 'best'
+#             model_regression = DecisionTreeRegressor(splitter=spl, random_state=0)
+#             model_name = 'DTR'
+#
+#         elif model == 'KNeighborsRegressor':
+#             model_regression = KNeighborsRegressor(
+#                 n_neighbors=ui_frm.spinBox_neighbors.value(),
+#                 weights='distance' if ui_frm.checkBox_knn_weights.isChecked() else 'uniform',
+#                 algorithm=ui_frm.comboBox_knn_algorithm.currentText()
+#             )
+#             model_name = 'KNNR'
+#
+#         elif model == 'SVR':
+#             model_regression = SVR(kernel=ui_frm.comboBox_svr_kernel.currentText(),
+#                                    C=ui_frm.doubleSpinBox_svr_c.value())
+#             model_name = 'SVR'
+#
+#         elif model == 'MLPRegressor':
+#             layers = tuple(map(int, ui_frm.lineEdit_layer_mlp.text().split()))
+#             model_regression = MLPRegressor(
+#                 hidden_layer_sizes=layers,
+#                 activation=ui_frm.comboBox_activation_mlp.currentText(),
+#                 solver=ui_frm.comboBox_solvar_mlp.currentText(),
+#                 alpha=ui_frm.doubleSpinBox_alpha_mlp.value(),
+#                 max_iter=5000,
+#                 early_stopping=ui_frm.checkBox_e_stop_mlp.isChecked(),
+#                 validation_fraction=ui_frm.doubleSpinBox_valid_mlp.value(),
+#                 random_state=0
+#             )
+#             model_name = 'MLPR'
+#
+#         elif model == 'GradientBoostingRegressor':
+#             model_regression = GradientBoostingRegressor(
+#                 n_estimators=ui_frm.spinBox_n_estimators.value(),
+#                 learning_rate=ui_frm.doubleSpinBox_learning_rate.value(),
+#                 random_state=0
+#             )
+#             model_name = 'GBR'
+#
+#         elif model == 'ElasticNet':
+#             model_regression = ElasticNet(
+#                 alpha=ui_frm.doubleSpinBox_alpha.value(),
+#                 l1_ratio=ui_frm.doubleSpinBox_l1_ratio.value(),
+#                 random_state=0
+#             )
+#             model_name = 'EN'
+#
+#         elif model == 'Lasso':
+#             model_regression = Lasso(alpha=ui_frm.doubleSpinBox_alpha.value(), random_state=0)
+#             model_name = 'Lss'
+#
+#         else:
+#             model_regression = LinearRegression(fit_intercept=ui_frm.checkBox_fit_intercept.isChecked())
+#             model_name = 'LR'
+#
+#         return model_name, model_regression
+#
+#     ui_frm.pushButton_calc_model.clicked.connect(calc_regression_model)
+#     Form_Regmod.exec_()
 
 
 def update_list_trained_models_regmod():
@@ -599,6 +1171,7 @@ def update_list_trained_models_regmod():
         item_text = model.title
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, model.id)
+        item.setToolTip(model.comment)
         ui.listWidget_trained_model_reg.addItem(item)
     ui.listWidget_trained_model_reg.setCurrentRow(0)
 
@@ -607,7 +1180,6 @@ def remove_trained_model_regmod():
     """ Удаление модели """
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
     os.remove(model.path_model)
-    os.remove(model.path_scaler)
     session.delete(model)
     session.commit()
     update_list_trained_models_regmod()
@@ -615,43 +1187,47 @@ def remove_trained_model_regmod():
 
 
 def calc_profile_model_regmod():
-    model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
-    with open(model.path_model, 'rb') as f:
-        reg_model = pickle.load(f)
-    with open(model.path_scaler, 'rb') as f:
-        scaler_params = pickle.load(f)
-
-    # Создать экземпляр StandardScaler и установить параметры масштабирования
-    scaler = StandardScaler()
-    scaler.mean_ = scaler_params['mean']
-    scaler.scale_ = scaler_params['std']
-
     working_data, curr_form = build_table_test('regmod')
 
-    working_sample = working_data[json.loads(model.list_params)].values.tolist()
-    working_sample = scaler.transform(working_sample)
-    try:
-        y_pred = reg_model.predict(working_sample)
-    except ValueError:
-        data = imputer.fit_transform(working_sample)
-        y_pred = reg_model.predict(data)
+    Choose_RegModel = QtWidgets.QDialog()
+    ui_rm = Ui_FormRegMod()
+    ui_rm.setupUi(Choose_RegModel)
+    Choose_RegModel.show()
+    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-        for i in working_data.index:
-            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
-                     np.isnan(v)]
-            if len(p_nan) > 0:
-                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-                         f' этого измерения может быть не корректен', 'red')
+    def calc_class_model():
+        model = session.query(TrainedModelReg).filter_by(
+        id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        working_sample = working_data[list_param_num].values.tolist()
 
-    ui.graph.clear()
-    number = list(range(1, len(y_pred) + 1))
-    # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-    curve = pg.PlotCurveItem(x=number, y=y_pred)
-    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(y_pred, 31, 3),
-                                    pen=pg.mkPen(color='red', width=2.4))
-    # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-    ui.graph.addItem(curve)
-    ui.graph.addItem(curve_filter)
+        with open(model.path_model, 'rb') as f:
+            reg_model = pickle.load(f)
+
+        try:
+            y_pred = reg_model.predict(working_sample)
+        except ValueError:
+            data = imputer.fit_transform(working_sample)
+            y_pred = reg_model.predict(data)
+
+            for i in working_data.index:
+                p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                             f' этого измерения может быть не корректен', 'red')
+        ui.graph.clear()
+        number = list(range(1, len(y_pred) + 1))
+        # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
+        curve = pg.PlotCurveItem(x=number, y=y_pred)
+        curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(y_pred, 31, 3),
+                                        pen=pg.mkPen(color='red', width=2.4))
+        # Добавляем кривую и отфильтрованную кривую на график для всех пластов
+        ui.graph.addItem(curve)
+        ui.graph.addItem(curve_filter)
+
+    ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
+    Choose_RegModel.exec_()
 
 
 def calc_object_model_regmod():
@@ -689,7 +1265,9 @@ def calc_object_model_regmod():
         ui.comboBox_plast.setCurrentText(list_formation[n])
         working_data, curr_form = build_table_test('regmod')
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
+
     working_data_result_copy = working_data_result.copy()
+
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
@@ -700,15 +1278,9 @@ def calc_object_model_regmod():
         model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         with open(model.path_model, 'rb') as f:
             reg_model = pickle.load(f)
-        with open(model.path_scaler, 'rb') as f:
-            scaler_params = pickle.load(f)
 
-        scaler = StandardScaler()
-        scaler.mean_ = scaler_params['mean']
-        scaler.scale_ = scaler_params['std']
-
-        working_sample = working_data_result_copy[json.loads(model.list_params)].values.tolist()
-        working_sample = scaler.transform(working_sample)
+        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        working_sample = working_data_result_copy[list_param_num].values.tolist()
 
         try:
             y_pred = reg_model.predict(working_sample)
@@ -753,42 +1325,7 @@ def calc_object_model_regmod():
         else:
             pass
 
-    def calc_correlation():
-        model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
-        with open(model.path_model, 'rb') as f:
-            reg_model = pickle.load(f)
-
-        working_sample = working_data_result_copy[json.loads(model.list_params)].values.tolist()
-
-        try:
-            y_pred = reg_model.predict(working_sample)
-        except ValueError:
-            data = imputer.fit_transform(working_sample)
-            y_pred = reg_model.predict(data)
-
-            for i in working_data_result_copy.index:
-                p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in enumerate(working_data_result_copy.iloc[i, 3:].tolist()) if
-                         np.isnan(v)]
-                if len(p_nan) > 0:
-                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-                             f' этого измерения может быть не корректен', 'red')
-
-
-        working_data_result_copy['value'] = y_pred
-        data_corr = working_data_result_copy.iloc[:, 3:]
-        list_param = list(data_corr.columns)
-        fig = plt.figure(figsize=(14, 12), dpi=70)
-        ax = plt.subplot()
-        sns.heatmap(data_corr.corr(), xticklabels=list_param, yticklabels=list_param, cmap='seismic', annot=True, linewidths=0.25, center=0)
-        plt.title(f'Корреляция параметров по {len(data_corr.index)} измерениям', fontsize=22)
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-        fig.tight_layout()
-        fig.show()
-
-
     ui_rm.pushButton_calc_model.clicked.connect(calc_regmod)
-    ui_rm.pushButton_corr.clicked.connect(calc_correlation)
     Choose_RegModel.exec_()
 
 
@@ -890,3 +1427,42 @@ def anova_regmod():
     ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
 
     Anova.exec_()
+
+
+def clear_fake_reg():
+    session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).update({'list_fake': None},
+                                                                                  synchronize_session='fetch')
+    session.commit()
+    set_info(f'Выбросы для анализа "{ui.comboBox_regmod.currentText()}" очищены.', 'green')
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    build_table_train(False, 'regmod')
+    update_list_well_markup_reg()
+
+
+def update_trained_model_reg_comment():
+    """ Изменить комментарий обученной модели """
+    try:
+        an = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    FormComment = QtWidgets.QDialog()
+    ui_cmt = Ui_Form_comment()
+    ui_cmt.setupUi(FormComment)
+    FormComment.show()
+    FormComment.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    ui_cmt.textEdit.setText(an.comment)
+
+    def update_comment():
+        session.query(TrainedModelReg).filter_by(id=an.id).update({'comment': ui_cmt.textEdit.toPlainText()}, synchronize_session='fetch')
+        session.commit()
+        update_list_trained_models_regmod()
+        FormComment.close()
+
+    ui_cmt.buttonBox.accepted.connect(update_comment)
+
+    FormComment.exec_()

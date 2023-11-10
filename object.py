@@ -8,6 +8,7 @@ from PyQt5.QtGui import QBrush, QColor
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *
+from qt.regressor_form import *
 from qt.test import *
 from qt.lof_form import *
 from qt.formation_ai_form import *
@@ -31,10 +32,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import normalize
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier, AdaBoostClassifier,
-                              ExtraTreesClassifier, StackingClassifier, VotingClassifier, GradientBoostingRegressor)
+                              ExtraTreesClassifier, StackingClassifier, VotingClassifier, GradientBoostingRegressor,
+                              AdaBoostRegressor, RandomForestRegressor, ExtraTreesRegressor, StackingRegressor,
+                              VotingRegressor)
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.preprocessing import StandardScaler

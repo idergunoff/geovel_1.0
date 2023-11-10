@@ -3075,6 +3075,54 @@ Therm</string>
                   <item row="1" column="0">
                    <widget class="QListWidget" name="listWidget_well_regmod"/>
                   </item>
+                  <item row="3" column="0">
+                   <layout class="QGridLayout" name="gridLayout_75">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_76">
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_train_regmod">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                        </property>
+                        <property name="text">
+                         <string>Train</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_calc_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QCheckBox" name="checkBox_save_prof_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>save profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_calc_obj_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Object</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
                   <item row="2" column="0">
                    <layout class="QGridLayout" name="gridLayout_73">
                     <item row="0" column="0">
@@ -3129,65 +3177,44 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
-                  <item row="3" column="0">
-                   <layout class="QGridLayout" name="gridLayout_75">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_99">
                     <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_76">
-                      <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_train_regmod">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 204, 121);</string>
-                        </property>
-                        <property name="text">
-                         <string>Train</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_calc_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 204, 121);</string>
-                        </property>
-                        <property name="text">
-                         <string>Calc Profile</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QCheckBox" name="checkBox_save_prof_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>save profile</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_calc_obj_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>Calc Object</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
+                     <widget class="QLabel" name="label_count_markup_reg">
+                      <property name="font">
+                       <font>
+                        <pointsize>9</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>count markup RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <spacer name="horizontalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_reg_clear_fake">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>clear fake</string>
+                      </property>
+                     </widget>
                     </item>
                    </layout>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_count_markup_reg">
-                    <property name="font">
-                     <font>
-                      <pointsize>9</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>count markup RegMod</string>
-                    </property>
-                   </widget>
                   </item>
                  </layout>
                 </item>
@@ -3431,14 +3458,28 @@ Therm</string>
                        <widget class="QListWidget" name="listWidget_trained_model_reg"/>
                       </item>
                       <item row="1" column="0">
-                       <widget class="QPushButton" name="pushButton_rem_trained_model_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 153, 153);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove trained model</string>
-                        </property>
-                       </widget>
+                       <layout class="QGridLayout" name="gridLayout_100">
+                        <item row="0" column="0">
+                         <widget class="QPushButton" name="pushButton_reg_comment">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>comment</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_rem_trained_model_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 153, 153);</string>
+                          </property>
+                          <property name="text">
+                           <string>remove</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
                     </item>
