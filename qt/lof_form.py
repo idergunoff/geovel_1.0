@@ -54,7 +54,7 @@ class Ui_LOF_form(object):
         self.gridLayout_3.addWidget(self.pushButton_6, 5, 0, 1, 1)
         self.spinBox_lof_n = QtWidgets.QSpinBox(LOF_form)
         self.spinBox_lof_n.setMinimum(1)
-        self.spinBox_lof_n.setMaximum(999)
+        self.spinBox_lof_n.setMaximum(10000)
         self.spinBox_lof_n.setObjectName("spinBox_lof_n")
         self.gridLayout_3.addWidget(self.spinBox_lof_n, 0, 0, 1, 1)
         self.checkBox_samples = QtWidgets.QCheckBox(LOF_form)

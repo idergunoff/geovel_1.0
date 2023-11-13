@@ -366,7 +366,7 @@ class Ui_RegressorForm(object):
         self.gridLayout_17.setObjectName("gridLayout_17")
         self.spinBox_lof_neighbor = QtWidgets.QSpinBox(self.groupBox_12)
         self.spinBox_lof_neighbor.setMinimum(1)
-        self.spinBox_lof_neighbor.setMaximum(1000)
+        self.spinBox_lof_neighbor.setMaximum(100000)
         self.spinBox_lof_neighbor.setProperty("value", 20)
         self.spinBox_lof_neighbor.setObjectName("spinBox_lof_neighbor")
         self.gridLayout_17.addWidget(self.spinBox_lof_neighbor, 0, 0, 1, 1)
