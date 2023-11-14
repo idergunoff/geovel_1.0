@@ -935,8 +935,8 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>334</width>
-                         <height>172</height>
+                         <width>58</width>
+                         <height>38</height>
                         </rect>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3440,23 +3440,62 @@ Therm</string>
                     <item row="1" column="0">
                      <layout class="QGridLayout" name="gridLayout_82">
                       <item row="0" column="0">
-                       <widget class="QLabel" name="label_27">
-                        <property name="font">
-                         <font>
-                          <pointsize>10</pointsize>
-                          <weight>50</weight>
-                          <italic>true</italic>
-                          <bold>false</bold>
-                          <underline>true</underline>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Мгновенные атрибуты</string>
-                        </property>
-                        <property name="alignment">
-                         <set>Qt::AlignCenter</set>
-                        </property>
-                       </widget>
+                       <layout class="QGridLayout" name="gridLayout_107" columnstretch="2,0,0">
+                        <item row="0" column="0">
+                         <widget class="QComboBox" name="comboBox_signal_reg">
+                          <item>
+                           <property name="text">
+                            <string>Signal_Abase</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Signal_diff</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Signal_At</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Signal_Vt</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Signal_Pht</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Signal_Wt</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_add_signal_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>add</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QPushButton" name="pushButton_add_all_signal_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(148, 255, 232);</string>
+                          </property>
+                          <property name="text">
+                           <string>add all</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
                       <item row="1" column="0">
                        <layout class="QGridLayout" name="gridLayout_83" columnstretch="3,1,1">

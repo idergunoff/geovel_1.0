@@ -53,11 +53,11 @@ def load_profile():
     try:
         ui.progressBar.setMaximum(int(len(pd_radar.index)/512))
         signal = []
-        for i in range(int(len(pd_radar.index)/512)):
-            list_signal = list(pd_radar['ALn'].loc[i * 512:(i + 1) * 512])
+        for i in range(pd_radar['X'].max() + 1):
+            if len(set(pd_radar[pd_radar['X'] == i]['ALn'])) > 1:
+                signal.append(pd_radar[pd_radar['X'] == i]['ALn'].tolist())
             ui.progressBar.setValue(i+1)
-            if np.sum(list_signal) > 0:
-                signal.append(list_signal)
+
         new_profile = Profile(research_id=get_research_id(), title=file_name.split('/')[-1].split('.')[0], signal=json.dumps(signal))
         session.add(new_profile)
         session.commit()

@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>928</width>
-    <height>551</height>
+    <width>891</width>
+    <height>555</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Classifier</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_5">
+  <layout class="QGridLayout" name="gridLayout_18">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout_30">
      <item row="0" column="0">
@@ -800,45 +800,7 @@
     </layout>
    </item>
    <item row="0" column="1">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="2" column="0">
-      <widget class="QGroupBox" name="groupBox_9">
-       <property name="title">
-        <string>Cross Validate</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_9">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_cross_val">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="spinBox_n_cross_val">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QSplitter" name="splitter">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <widget class="QCheckBox" name="checkBox_save_model">
-        <property name="text">
-         <string>save</string>
-        </property>
-       </widget>
-      </widget>
-     </item>
+    <layout class="QGridLayout" name="gridLayout_5">
      <item row="0" column="0">
       <widget class="QGroupBox" name="groupBox_12">
        <property name="title">
@@ -1035,6 +997,32 @@
        </layout>
       </widget>
      </item>
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="groupBox_9">
+       <property name="title">
+        <string>Cross Validate</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_cross_val">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_n_cross_val">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item row="3" column="0">
       <widget class="QGroupBox" name="groupBox_11">
        <property name="title">
@@ -1064,6 +1052,30 @@
         </item>
        </layout>
       </widget>
+     </item>
+     <item row="4" column="0">
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="checkBox_save_model">
+         <property name="text">
+          <string>save</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="pushButton_random_search">
+         <property name="toolTip">
+          <string>Подбор гиперпараметров</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(220, 138, 221);</string>
+         </property>
+         <property name="text">
+          <string>RndSrcCV</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="5" column="0">
       <widget class="QPushButton" name="pushButton_calc">

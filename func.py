@@ -1108,7 +1108,7 @@ def get_list_param_numerical(list_param):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
         elif param.startswith('Signal'):
             p, atr = param.split('_')[0], param.split('_')[1]
-            n_i = 512 if atr == 'diff' or atr == 'Wt' else 513
+            n_i = 511 if atr == 'diff' or atr == 'Wt' else 512
             for i_sig in range(n_i):
                 new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         else:

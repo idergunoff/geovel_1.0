@@ -646,7 +646,6 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
             input_data, target_data_bottom, test_size=0.2, random_state=0
         )
 
-
         if ui_r.checkBox_pca.isChecked():
             n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
             pca_top = PCA(n_components=n_comp, random_state=0)
@@ -660,6 +659,11 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         else:
             model_name = ui_r.buttonGroup.checkedButton().text()
             model_reg_top, model_reg_bottom, text_model = choice_model_regressor(model_name)
+            if model_name == 'RFR':
+                if ui_r.checkBox_rfr_ada.isChecked():
+                    model_name = 'ABR'
+                if ui_r.checkBox_rfr_extra.isChecked():
+                    model_name = 'ETR'
 
         text_model += text_pca
 

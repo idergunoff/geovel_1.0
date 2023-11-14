@@ -206,6 +206,34 @@ def update_well_markup_reg():
     update_list_well_markup_reg()
 
 
+def add_param_signal_reg():
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    param = ui.comboBox_signal_reg.currentText()
+    if session.query(ParameterReg).filter_by(
+            analysis_id=get_regmod_id(),
+            parameter=param
+    ).count() == 0:
+        add_param_regmod(param)
+        update_list_param_regmod()
+    else:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+
+
+def add_all_param_signal_reg():
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
+    for param in list_param_signal:
+        if session.query(ParameterReg).filter_by(
+                analysis_id=get_regmod_id(),
+                parameter=param
+        ).count() == 0:
+            add_param_regmod(param)
+        else:
+            set_info(f'Параметр {param} уже добавлен', 'red')
+    update_list_param_regmod()
+
 
 def add_param_geovel_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
