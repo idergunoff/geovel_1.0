@@ -963,7 +963,7 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         # Загрузка сигналов из профилей, необходимых для параметров 'distr', 'sep' и 'mfcc'
         for param in list_param:
             # Если параметр является расчётным
-            if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+            if param.startswith('Signal') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 # Проверка, есть ли уже загруженный сигнал в локальных переменных
                 if not str(markup.profile.id) + '_signal' in locals():
                     # Загрузка сигнала из профиля
@@ -991,8 +991,13 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
 
             # Обработка каждого параметра в списке параметров
             for param in list_param:
-
-                if param.startswith('distr'):
+                if param.startswith('Signal'):
+                    # Обработка параметра 'Signal'
+                    p, atr = param.split('_')[0], param.split('_')[1]
+                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                    for i_sig in range(len(sig_measure)):
+                        dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+                elif param.startswith('distr'):
                     # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                     sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
@@ -1048,7 +1053,7 @@ def build_table_test(analisis='lda'):
     x_pulc = json.loads(curr_form.profile.x_pulc)
     y_pulc = json.loads(curr_form.profile.y_pulc)
     for param in list_param:
-        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or param.startswith('Signal'):
             if not str(curr_form.profile.id) + '_signal' in locals():
                 locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
@@ -1060,7 +1065,13 @@ def build_table_test(analisis='lda'):
     for i in range(len(list_up)):
         dict_value = {}
         for param in list_param:
-            if param.startswith('distr'):
+            if param.startswith('Signal'):
+                # Обработка параметра 'Signal'
+                p, atr = param.split('_')[0], param.split('_')[1]
+                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
+                for i_sig in range(len(sig_measure)):
+                    dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+            elif param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 distr = get_distribution(sig_measure[list_up[i]: list_down[i]], n)
@@ -1095,6 +1106,11 @@ def get_list_param_numerical(list_param):
             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
             for num in range(n):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
+        elif param.startswith('Signal'):
+            p, atr = param.split('_')[0], param.split('_')[1]
+            n_i = 512 if atr == 'diff' or atr == 'Wt' else 513
+            for i_sig in range(n_i):
+                new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         else:
             new_list_param.append(param)
     return new_list_param

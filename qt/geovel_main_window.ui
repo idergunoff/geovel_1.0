@@ -2857,29 +2857,17 @@ Therm</string>
                   </item>
                   <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_49">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_22">
-                      <property name="font">
-                       <font>
-                        <pointsize>10</pointsize>
-                        <weight>50</weight>
-                        <italic>true</italic>
-                        <bold>false</bold>
-                        <underline>true</underline>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Мгновенные атрибуты</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
                     <item row="1" column="0">
-                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,1,1">
-                      <item row="0" column="0">
-                       <widget class="QComboBox" name="comboBox_geovel_param_mlp"/>
+                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,0,0">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_all_geovel_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
+                        </property>
+                        <property name="text">
+                         <string>add all</string>
+                        </property>
+                       </widget>
                       </item>
                       <item row="0" column="1">
                        <widget class="QPushButton" name="pushButton_add_geovel_mlp">
@@ -2891,8 +2879,59 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
+                      <item row="0" column="0">
+                       <widget class="QComboBox" name="comboBox_geovel_param_mlp"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_106" columnstretch="2,0,0">
+                      <item row="0" column="0">
+                       <widget class="QComboBox" name="comboBox_signal_mlp">
+                        <item>
+                         <property name="text">
+                          <string>Signal_Abase</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Signal_diff</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Signal_At</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Signal_Vt</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Signal_Pht</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Signal_Wt</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_signal_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_all_geovel_mlp">
+                       <widget class="QPushButton" name="pushButton_add_all_signal_mlp">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(148, 255, 232);</string>
                         </property>

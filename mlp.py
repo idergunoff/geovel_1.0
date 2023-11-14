@@ -370,6 +370,35 @@ def choose_marker_mlp():
     draw_fake(list_fake, list_up, list_down)
 
 
+def add_param_signal_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    param = ui.comboBox_signal_mlp.currentText()
+    if session.query(ParameterMLP).filter_by(
+            analysis_id=get_MLP_id(),
+            parameter=param
+    ).count() == 0:
+        add_param_mlp(param)
+        update_list_param_mlp()
+    else:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+
+
+def add_all_param_signal_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
+    for param in list_param_signal:
+        if session.query(ParameterMLP).filter_by(
+                analysis_id=get_MLP_id(),
+                parameter=param
+        ).count() == 0:
+            add_param_mlp(param)
+        else:
+            set_info(f'Параметр {param} уже добавлен', 'red')
+    update_list_param_mlp()
+
+
 def add_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -501,7 +530,7 @@ def add_all_param_mfcc_mlp():
 def remove_param_geovel_mlp():
     param = ui.listWidget_param_mlp.currentItem().text().split(' ')[0]
     if param:
-        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or param.startswith('Signal'):
             for p in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
                 if p.parameter.startswith('_'.join(param.split('_')[:-1])):
                     session.query(ParameterMLP).filter_by(id=p.id).delete()
@@ -532,7 +561,7 @@ def update_list_param_mlp(db=False):
         for mark in list_marker:
             groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
         F, p = f_oneway(*groups)
-        if np.isnan(F) or np.isnan(p):
+        if np.isnan(F).any() or np.isnan(p).any():
             session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
             data_train.drop(param, axis=1, inplace=True)
             session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
@@ -777,6 +806,7 @@ def draw_MLP():
     def calc_model_class():
         """ Создание и тренировка модели """
 
+        start_time = datetime.datetime.now()
         # Нормализация данных
         scaler = StandardScaler()
 
@@ -807,7 +837,10 @@ def draw_MLP():
         pipe.fit(training_sample_train, markup_train)# Оценка точности на всей обучающей выборке
         train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
-        text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)}'
+
+        train_time = datetime.datetime.now() - start_time
+
+        text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)}, \nвремя обучения: {train_time}'
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
 
