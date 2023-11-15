@@ -2,6 +2,7 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fil
 from func import *
 from krige import draw_map
 from qt.choose_formation_lda import *
+from random_search import push_random_search
 from regression import update_list_reg
 
 
@@ -1142,6 +1143,11 @@ def draw_MLP():
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
 
+    def class_exit():
+        Classifier.close()
+
+    ui_cls.pushButton_random_search.clicked.connect(class_exit)
+    ui_cls.pushButton_random_search.clicked.connect(push_random_search)
     ui_cls.pushButton_lof.clicked.connect(calc_lof)
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
     ui_cls.checkBox_rfc_extra.clicked.connect(push_checkbutton_extra)
