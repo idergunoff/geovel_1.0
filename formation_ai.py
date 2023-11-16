@@ -675,7 +675,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
             kf_top = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             kf_bottom = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             list_train, list_test, n_cross = [], [], 1
-            for train_index, test_index in kf.split(input_data):
+            for train_index, test_index in kf_top.split(input_data):
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
                 n_cross += 1

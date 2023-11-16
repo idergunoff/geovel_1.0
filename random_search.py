@@ -690,6 +690,7 @@ def push_random_search():
 
         # Выполнение поиска
         random_search.fit(training_sample, markup)
+
         time_search = datetime.datetime.now() - start_time
 
         # Лучшие найденные параметры и оценка
@@ -708,41 +709,23 @@ def push_random_search():
         df_graph = pd.DataFrame()
         df_graph['mean_test_score'] = df_results['mean_test_score']
         df_graph['mean_fit_time'] = df_results['mean_fit_time']
-        for col in df_results.columns:
-            if not col.startswith('param_'):
-                continue
-            # Конвертируем значения в числовой формат, игнорируя ошибки
-            numeric_values = pd.to_numeric(df_results[col], errors='coerce')
-            if not numeric_values.isnull().any():
-                df_graph[col] = numeric_values
-        #         # Построение кривых обучения и валидации
-        #         plt.figure(figsize=(10, 6))
-        #         sns.scatterplot(df_graph, x=col, y='mean_test_score', size='mean_fit_time', color='blue')
-        #         sns.regplot(df_graph, x=col, y='mean_test_score', color='red', scatter=False)
-        #         plt.xlabel(col)
-        #         plt.ylabel('Mean Test Score (Accuracy)')
-        #         plt.title('RandomizedSearchCV Results')
-        #         plt.grid(True)
-        #         plt.show()
-        #
-        # plt.figure(figsize=(10, 6))
-        # sns.histplot(df_graph, x='mean_test_score', kde=True)
-        # plt.xlabel('Mean Test Score (Accuracy)')
-        # plt.ylabel('Count')
-        # plt.title('RandomizedSearchCV Results')
-        # plt.grid(True)
-        # plt.show()
-        # if len(df_graph.columns) > 3:
-        #     col_1 = df_graph.columns[2]
-        #     col_2 = df_graph.columns[3]
-        #     plt.figure(figsize=(10, 6))
-        #     df_graph = df_graph.drop_duplicates(subset=[col_1, col_2])
-        #     heatmap_data = df_graph.pivot(index=col_1, columns=col_2, values='mean_test_score').round(2)
-        #     sns.heatmap(heatmap_data, cmap='jet', linewidths=0.5, linecolor='k')
-        #     plt.title('RandomizedSearchCV Results')
-        #     plt.xlabel(col_1)
-        #     plt.ylabel(col_2)
-        #     plt.show()
+        if ui_rs.checkBox_random_hidden_layer.isChecked() and ui_rs.radioButton_mlp.isChecked():
+            list_layers, list_percep = [], []
+            for i in df_results['param_mlp__hidden_layer_sizes']:
+                list_layers.append(len(i))
+                list_percep.append(i[0])
+            df_graph['n_layers'] = list_layers
+            df_graph['n_perceptron'] = list_percep
+        else:
+            for col in df_results.columns:
+                if not col.startswith('param_'):
+                    continue
+                # Конвертируем значения в числовой формат, игнорируя ошибки
+                numeric_values = pd.to_numeric(df_results[col], errors='coerce')
+                if not numeric_values.isnull().any():
+                    df_graph[col] = numeric_values
+
+
 
         if len(df_graph.columns) > 3:
             col_1, col_2 = df_graph.columns[2], df_graph.columns[3]
@@ -770,8 +753,8 @@ def push_random_search():
             df_graph = df_graph.drop_duplicates(subset=[col_1, col_2])
             heatmap_data = df_graph.pivot(index=col_1, columns=col_2, values='mean_test_score').round(2)
             sns.heatmap(heatmap_data, cmap='jet', ax=axes[1, 1])
-            axes[1, 1].set_xlabel(col_1)
-            axes[1, 1].set_ylabel(col_2)
+            axes[1, 1].set_ylabel(col_1)
+            axes[1, 1].set_xlabel(col_2)
             axes[1, 1].grid(True)
         else:
             col = df_graph.columns[2]
