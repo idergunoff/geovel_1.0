@@ -40,7 +40,7 @@ from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier
                               AdaBoostRegressor, RandomForestRegressor, ExtraTreesRegressor, StackingRegressor,
                               VotingRegressor)
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.model_selection import train_test_split, KFold, cross_val_score, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.manifold import TSNE

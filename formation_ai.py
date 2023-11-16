@@ -416,12 +416,12 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
                 model_reg_bottom = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
                 text_model = f'**ABR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
             elif ui_r.checkBox_rfr_extra.isChecked():
-                model_reg_top = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
-                model_reg_bottom = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                model_reg_top = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+                model_reg_bottom = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
             else:
-                model_reg_top = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
-                model_reg_bottom = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                model_reg_top = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+                model_reg_bottom = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
 
         elif model == 'GPR':
@@ -540,14 +540,14 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
                 estimators_bottom.append(('abr', abr_bottom))
                 list_model.append('abr')
             elif ui_r.checkBox_rfr_extra.isChecked():
-                etr_top = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
-                etr_bottom = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                etr_top = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+                etr_bottom = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 estimators_top.append(('etr', etr_top))
                 estimators_bottom.append(('etr', etr_bottom))
                 list_model.append('etr')
             else:
-                rfr_top = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
-                rfr_bottom = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                rfr_top = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+                rfr_bottom = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 estimators_top.append(('rfr', rfr_top))
                 estimators_bottom.append(('rfr', rfr_bottom))
                 list_model.append('rfr')
@@ -613,13 +613,13 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         list_model_text = ', '.join(list_model)
 
         if ui_r.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
-            model_class_top = VotingRegressor(estimators=estimators_top)
-            model_class_bottom = VotingRegressor(estimators=estimators_bottom)
+            model_class_top = VotingRegressor(estimators=estimators_top, n_jobs=-1)
+            model_class_bottom = VotingRegressor(estimators=estimators_bottom, n_jobs=-1)
             text_model = f'**Voting**: \n({list_model_text})\n'
             model_name = 'VOT'
         else:
-            model_class_top = StackingRegressor(estimators=estimators_top, final_estimator=final_model_top)
-            model_class_bottom = StackingRegressor(estimators=estimators_bottom, final_estimator=final_model_bottom)
+            model_class_top = StackingRegressor(estimators=estimators_top, final_estimator=final_model_top, n_jobs=-1)
+            model_class_bottom = StackingRegressor(estimators=estimators_bottom, final_estimator=final_model_bottom, n_jobs=-1)
             text_model = f'**Stacking**:\nFinal estimator: {final_text_model}\n({list_model_text})\n'
             model_name = 'STACK'
         return model_class_top, model_class_bottom, text_model, model_name
@@ -672,14 +672,15 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         pipe_top, pipe_bottom = Pipeline(pipe_steps_top), Pipeline(pipe_steps_bottom)
 
         if ui_r.checkBox_cross_val.isChecked():
-            kf = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+            kf_top = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+            kf_bottom = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             list_train, list_test, n_cross = [], [], 1
             for train_index, test_index in kf.split(input_data):
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
                 n_cross += 1
-            scores_cv_top = cross_val_score(pipe_top, input_data, target_data_top, cv=kf)
-            scores_cv_bottom = cross_val_score(pipe_bottom, input_data, target_data_bottom, cv=kf)
+            scores_cv_top = cross_val_score(pipe_top, input_data, target_data_top, cv=kf_top, n_jobs=-1)
+            scores_cv_bottom = cross_val_score(pipe_bottom, input_data, target_data_bottom, cv=kf_bottom, n_jobs=-1)
             n_max = np.argmax(scores_cv_top)
             train_index, test_index = list_train[n_max], list_test[n_max]
 
@@ -795,7 +796,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         training_sample_lof = scaler.fit_transform(data_lof)
         n_LOF = ui_r.spinBox_lof_neighbor.value()
 
-        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42, n_jobs=-1)
         data_tsne = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)

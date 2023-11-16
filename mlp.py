@@ -674,10 +674,10 @@ def draw_MLP():
                 model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
                 text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
             elif ui_cls.checkBox_rfc_extra.isChecked():
-                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
             else:
-                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0)
+                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
         elif model == 'GPC':
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
@@ -757,11 +757,11 @@ def draw_MLP():
                 estimators.append(('abc', abc))
                 list_model.append('abc')
             elif ui_cls.checkBox_rfc_extra.isChecked():
-                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('etc', etc))
                 list_model.append('etc')
             else:
-                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0)
+                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('rfc', rfc))
                 list_model.append('rfc')
 
@@ -794,11 +794,11 @@ def draw_MLP():
         list_model_text = ', '.join(list_model)
         if ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
             hard_voting = 'hard' if ui_cls.checkBox_voting_hard.isChecked() else 'soft'
-            model_class = VotingClassifier(estimators=estimators, voting=hard_voting)
+            model_class = VotingClassifier(estimators=estimators, voting=hard_voting, n_jobs=-1)
             text_model = f'**Voting**: -{hard_voting}-\n({list_model_text})\n'
             model_name = 'VOT'
         else:
-            model_class = StackingClassifier(estimators=estimators, final_estimator=final_model)
+            model_class = StackingClassifier(estimators=estimators, final_estimator=final_model, n_jobs=-1)
             text_model = f'**Stacking**:\nFinal estimator: {final_text_model}\n({list_model_text})\n'
             model_name = 'STACK'
         return model_class, text_model, model_name
@@ -860,7 +860,7 @@ def draw_MLP():
 
         if ui_cls.checkBox_cross_val.isChecked():
             kf = KFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
-            scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf)
+            scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
             imp_name_params, imp_params = [], []

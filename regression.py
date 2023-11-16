@@ -480,10 +480,10 @@ def train_regression_model():
                 model_reg = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
                 text_model = f'**ABR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
             elif ui_r.checkBox_rfr_extra.isChecked():
-                model_reg = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                model_reg = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
             else:
-                model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
 
         elif model == 'GPR':
@@ -567,11 +567,11 @@ def train_regression_model():
                 estimators.append(('abr', abr))
                 list_model.append('abr')
             elif ui_r.checkBox_rfr_extra.isChecked():
-                etr = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0)
+                etr = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('etr', etr))
                 list_model.append('etr')
             else:
-                rfr = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0)
+                rfr = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('rfr', rfr))
                 list_model.append('rfr')
 
@@ -617,11 +617,11 @@ def train_regression_model():
         list_model_text = ', '.join(list_model)
 
         if ui_r.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
-            model_class = VotingRegressor(estimators=estimators)
+            model_class = VotingRegressor(estimators=estimators, n_jobs=-1)
             text_model = f'**Voting**: \n({list_model_text})\n'
             model_name = 'VOT'
         else:
-            model_class = StackingRegressor(estimators=estimators, final_estimator=final_model)
+            model_class = StackingRegressor(estimators=estimators, final_estimator=final_model, n_jobs=-1)
             text_model = f'**Stacking**:\nFinal estimator: {final_text_model}\n({list_model_text})\n'
             model_name = 'STACK'
         return model_class, text_model, model_name
@@ -667,7 +667,7 @@ def train_regression_model():
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
                 n_cross += 1
-            scores_cv = cross_val_score(pipe, training_sample, target, cv=kf)
+            scores_cv = cross_val_score(pipe, training_sample, target, cv=kf, n_jobs=-1)
             n_max = np.argmax(scores_cv)
             train_index, test_index = list_train[n_max], list_test[n_max]
 
