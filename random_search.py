@@ -735,13 +735,13 @@ def push_random_search():
                          f'Лучшие параметры: {random_search.best_params_}\n'
                          f'Лучшая оценка: {random_search.best_score_}\n'
                          f'Время поиска: {time_search}')
-            sns.scatterplot(df_graph, x=col_1, y='mean_test_score', size='mean_fit_time', color='blue', ax=axes[0, 0])
+            sns.scatterplot(df_graph, x=col_1, y='mean_test_score', hue='mean_fit_time', size='mean_fit_time', sizes=(5, 250), palette='brg', ax=axes[0, 0])
             sns.regplot(df_graph, x=col_1, y='mean_test_score', color='red', scatter=False, ax=axes[0, 0])
             axes[0, 0].set_xlabel(col_1)
             axes[0, 0].set_ylabel('Mean Test Score (Accuracy)')
             axes[0, 0].grid(True)
             plt.grid(True)
-            sns.scatterplot(df_graph, x=col_2, y='mean_test_score', size='mean_fit_time', color='blue', ax=axes[1, 0])
+            sns.scatterplot(df_graph, x=col_2, y='mean_test_score', hue='mean_fit_time', size='mean_fit_time', sizes=(5, 250), palette='brg', ax=axes[1, 0])
             sns.regplot(df_graph, x=col_2, y='mean_test_score', color='red', scatter=False, ax=axes[1, 0])
             axes[1, 0].set_xlabel(col_2)
             axes[1, 0].set_ylabel('Mean Test Score (Accuracy)')
@@ -750,9 +750,12 @@ def push_random_search():
             axes[0, 1].set_xlabel('Mean Test Score (Accuracy)')
             axes[0, 1].set_ylabel('Count')
             axes[0, 1].grid(True)
-            df_graph = df_graph.drop_duplicates(subset=[col_1, col_2])
-            heatmap_data = df_graph.pivot(index=col_1, columns=col_2, values='mean_test_score').round(2)
-            sns.heatmap(heatmap_data, cmap='jet', ax=axes[1, 1])
+
+            sns.scatterplot(df_graph, x=col_1, y=col_2, hue='mean_test_score', size='mean_test_score', sizes=(5, 250), palette='brg', ax=axes[1, 1])
+
+            # df_graph = df_graph.drop_duplicates(subset=[col_1, col_2])
+            # heatmap_data = df_graph.pivot(index=col_1, columns=col_2, values='mean_test_score').round(2)
+            # sns.heatmap(heatmap_data, cmap='jet', ax=axes[1, 1])
             axes[1, 1].set_ylabel(col_1)
             axes[1, 1].set_xlabel(col_2)
             axes[1, 1].grid(True)
@@ -764,7 +767,7 @@ def push_random_search():
                          f'Лучшие параметры: {random_search.best_params_}\n'
                          f'Лучшая оценка: {random_search.best_score_}\n'
                          f'Время поиска: {time_search}')
-            sns.scatterplot(df_graph, x=col, y='mean_test_score', size='mean_fit_time', color='blue', ax=axes[0])
+            sns.scatterplot(df_graph, x=col, y='mean_test_score', hue='mean_fit_time', size='mean_fit_time', sizes=(5, 250), palette='brg', ax=axes[0])
             sns.regplot(df_graph, x=col, y='mean_test_score', color='red', scatter=False, ax=axes[0])
             axes[0].set_xlabel(col)
             axes[0].set_ylabel('Mean Test Score (Accuracy)')
