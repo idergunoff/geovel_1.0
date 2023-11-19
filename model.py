@@ -23,6 +23,7 @@ class GeoradarObject(Base):
     researches = relationship('Research', back_populates='object')
     grid = relationship('Grid', back_populates='object')
     h_wells = relationship('HorizontalWell', back_populates='object')
+    explorations = relationship('Exploration', back_populates='object')
 
 
 class Research(Base):
@@ -579,6 +580,71 @@ class TrainedModel(Base):
     title = Column(String)
     path_top = Column(String)
     path_bottom = Column(String)
+
+
+####################################################
+###################  EXPLORATION  ##################
+####################################################
+
+
+class Exploration(Base):
+    __tablename__ = 'exploration'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    date_explore = Column(Date)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+
+    object = relationship("GeoradarObject", back_populates="explorations")
+    parameters = relationship('ParameterExploration', back_populates='exploration')
+    points = relationship('PointExploration', back_populates='exploration')
+
+
+class ParameterExploration(Base):
+    __tablename__ = 'parameter_exploration'
+
+    id = Column(Integer, primary_key=True)
+    exploration_id = Column(Integer, ForeignKey('exploration.id'))
+    parameter = Column(String)
+
+    exploration = relationship("Exploration", back_populates="parameters")
+    grids = relationship('GridExploration', back_populates='param')
+    points = relationship('ParameterPoint', back_populates='param')
+
+
+class PointExploration(Base):
+    __tablename__ = 'point_exploration'
+
+    id = Column(Integer, primary_key=True)
+    exploration_id = Column(Integer, ForeignKey('exploration.id'))
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    title = Column(String)
+
+    exploration = relationship("Exploration", back_populates="points")
+    parameters = relationship('ParameterPoint', back_populates='point')
+
+
+class ParameterPoint(Base):
+    __tablename__ = 'parameter_point'
+    id = Column(Integer, primary_key=True)
+    point_id = Column(Integer, ForeignKey('point_exploration.id'))
+    param_id = Column(Integer, ForeignKey('parameter_exploration.id'))
+    value = Column(Float)
+
+    point = relationship("PointExploration", back_populates="parameters")
+    param = relationship("ParameterExploration", back_populates="points")
+
+
+class GridExploration(Base):
+    __tablename__ = 'grid_exploration'
+
+    id = Column(Integer, primary_key=True)
+    param_id = Column(Integer, ForeignKey('parameter_exploration.id'))
+    grid = Column(Text)
+    title = Column(String)
+
+    param = relationship("ParameterExploration", back_populates="grids")
 
 
 Base.metadata.create_all(engine)
