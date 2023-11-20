@@ -597,7 +597,7 @@ class Exploration(Base):
 
     object = relationship("GeoradarObject", back_populates="explorations")
     parameters = relationship('ParameterExploration', back_populates='exploration')
-    points = relationship('PointExploration', back_populates='exploration')
+    points = relationship('SetPoints', back_populates='exploration')
 
 
 class ParameterExploration(Base):
@@ -612,16 +612,27 @@ class ParameterExploration(Base):
     points = relationship('ParameterPoint', back_populates='param')
 
 
+class SetPoints(Base):
+    __tablename__ = 'set_points'
+
+    id = Column(Integer, primary_key=True)
+    exploration_id = Column(Integer, ForeignKey('exploration.id'))
+    title = Column(String)
+
+    exploration = relationship("Exploration", back_populates="points")
+    points = relationship('PointExploration', back_populates='set_point')
+
+
 class PointExploration(Base):
     __tablename__ = 'point_exploration'
 
     id = Column(Integer, primary_key=True)
-    exploration_id = Column(Integer, ForeignKey('exploration.id'))
+    set_points_id = Column(Integer, ForeignKey('set_points.id'))
     x_coord = Column(Float)
     y_coord = Column(Float)
     title = Column(String)
 
-    exploration = relationship("Exploration", back_populates="points")
+    set_point = relationship("SetPoints", back_populates="points")
     parameters = relationship('ParameterPoint', back_populates='point')
 
 
