@@ -145,6 +145,8 @@ def add_formation():
     ui_f.setupUi(Add_Form)
     Add_Form.show()
     Add_Form.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    last_form = session.query(Formation).order_by(Formation.id.desc()).first()
+    ui_f.lineEdit.setText(last_form.title)
 
     def formation_to_db():
         title_form = ui_f.lineEdit.text()

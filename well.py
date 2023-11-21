@@ -195,7 +195,7 @@ def add_wells():
                             if ui_wl.checkBox_deep.isChecked():
                                 depth = round(float(process_string(pd_wells[lr][i])), 2)
                             else:
-                                depth = round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2)
+                                depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
                             session.add(Boundary(
                                 well_id=new_well.id,
                                 depth=depth,
@@ -228,6 +228,20 @@ def add_wells():
     ui_wl.buttonBox.accepted.connect(load_wells)
     ui_wl.buttonBox.rejected.connect(cancel_load)
     WellLoader.exec_()
+
+
+def add_data_well():
+    """ Добавить данные по скважинам """
+    category, value = ui.lineEdit_string.text().split('; ')[0], ui.lineEdit_string.text().split('; ')[1]
+    new_data_well = WellOptionally(
+        well_id = get_well_id(),
+        option = category,
+        value = value
+    )
+    session.add(new_data_well)
+    session.commit()
+    show_data_well()
+
 
 
 
@@ -288,6 +302,10 @@ def add_boundary():
     ui_b.setupUi(Add_Boundary)
     Add_Boundary.show()
     Add_Boundary.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    last_boundary = session.query(Boundary).order_by(Boundary.id.desc()).first()
+    ui_b.lineEdit_title.setText(last_boundary.title)
+    ui_b.lineEdit_depth.setText(str(last_boundary.depth))
 
     def boundary_to_db():
         title_boundary = ui_b.lineEdit_title.text()
@@ -358,4 +376,6 @@ def draw_bound_int():
         text_max.setPos(0, dmax - 30)
         radarogramma.addItem(text_max)
         globals()[f'int_bound_text_max'] = text_max
+
+        ui.doubleSpinBox_target_val.setValue(bound.depth)
 
