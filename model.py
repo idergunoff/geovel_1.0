@@ -582,9 +582,9 @@ class TrainedModel(Base):
     path_bottom = Column(String)
 
 
-####################################################
+
 ###################  EXPLORATION  ##################
-####################################################
+
 
 
 class Exploration(Base):
@@ -645,6 +645,9 @@ class ParameterPoint(Base):
 
     point = relationship("PointExploration", back_populates="parameters")
     param = relationship("ParameterExploration", back_populates="points")
+
+
+
 
 
 class GridExploration(Base):
