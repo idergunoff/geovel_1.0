@@ -16,6 +16,7 @@ from qt.choose_formation_lda import *
 from qt.choose_regmod import *
 from qt.random_search_form import *
 from qt.comment_form import *
+from qt.load_points import *
 from model import *
 import numpy as np
 import pyqtgraph as pg

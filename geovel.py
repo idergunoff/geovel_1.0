@@ -95,8 +95,6 @@ def change_color():
 img.scene().sigMouseClicked.connect(mouseClicked)
 img.scene().sigMouseMoved.connect(mouseLine)
 
-
-
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
 ui.pushButton_draw_cur.clicked.connect(draw_current_radarogram)
@@ -337,6 +335,8 @@ ui.pushButton_del_expl.clicked.connect(remove_exploration)
 ui.pushButton_add_set_point.clicked.connect(add_set_point)
 ui.pushButton_del_set_point.clicked.connect(remove_set_point)
 ui.pushButton_load_point.clicked.connect(load_point_exploration)
+ui.comboBox_expl.activated.connect(update_list_param_exploration)
+ui.comboBox_set_point.activated.connect(update_list_point_exploration)
 
 
 update_object()
