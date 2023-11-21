@@ -315,6 +315,7 @@ ui.pushButton_add_model.clicked.connect(add_model_ai)
 ui.pushButton_rem_model.clicked.connect(remove_model_ai)
 ui.comboBox_model_ai.activated.connect(update_list_formation_ai)
 ui.pushButton_model_calc_profile.clicked.connect(calc_model_profile)
+ui.pushButton_model_calc_object.clicked.connect(calc_model_object)
 ui.pushButton_rem_trained_model.clicked.connect(remove_trained_model)
 
 ui.pushButton_map.clicked.connect(show_map)

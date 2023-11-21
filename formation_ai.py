@@ -2,6 +2,7 @@ import datetime
 import time
 
 from draw import draw_radarogram, draw_formation
+from layer import add_param_in_new_formation
 from func import *
 from qt.formation_ai_form import *
 
@@ -952,8 +953,8 @@ def calc_model_profile():
     test_signal = np.array(list_test_signals)
     y_pred_signal_top = model_ai_top.predict(test_signal)
     y_pred_signal_bottom = model_ai_bottom.predict(test_signal)
-    result_top = list(map(int, savgol_filter(y_pred_signal_top.tolist(), 31, 3)))
-    result_bottom = list(map(int, savgol_filter(y_pred_signal_bottom.tolist(), 31, 3)))
+    result_top = list(map(int, savgol_filter(savgol_filter(savgol_filter(y_pred_signal_top.tolist(), 31, 3), 31, 3), 31, 3)))
+    result_bottom = list(map(int, savgol_filter(savgol_filter(savgol_filter(y_pred_signal_bottom.tolist(), 31, 3), 31, 3), 31, 3)))
     new_top = Layers(
         profile_id=get_profile_id(),
         layer_line=json.dumps(result_top),
@@ -968,6 +969,19 @@ def calc_model_profile():
     session.add(new_bottom)
     session.commit()
     update_layers()
+    new_formation = Formation(title=model.title, profile_id=get_profile_id(), up=new_top.id, down=new_bottom.id)
+    session.add(new_formation)
+    session.commit()
+    add_param_in_new_formation(new_formation.id)
+    update_formation_combobox()
+
+
+def calc_model_object():
+    for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
+        count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
+        ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
+        set_info(f'Профиль {prof.title} ({count_measure} измерений)', 'blue')
+        calc_model_profile()
 
 
 def remove_trained_model():
