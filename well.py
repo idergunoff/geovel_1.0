@@ -133,12 +133,13 @@ def add_wells():
         empty_value = '' if ui_wl.lineEdit_empty.text() == '' else int(ui_wl.lineEdit_empty.text())
         list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
         list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
-
+        n_new, n_update = 0, 0
         for i in pd_wells.index:
             curr_well = session.query(Well).filter(Well.name == str(pd_wells[name_cell][i]),
                                           Well.x_coord == float(process_string(pd_wells[x_cell][i])),
                                           Well.y_coord == float(process_string(pd_wells[y_cell][i]))).first()
             if curr_well:
+                n_update += 1
                 set_info(f'Скважина {curr_well.name} уже есть в БД', 'red')
                 alt = 0 if pd_wells[alt_cell][i] == '' else float(process_string(pd_wells[alt_cell][i]))
                 session.query(Well).filter_by(id=curr_well.id).update(
@@ -179,6 +180,7 @@ def add_wells():
                     except ValueError:
                         continue
             else:
+                n_new += 1
                 new_well = Well(
                     name=str(pd_wells[name_cell][i]),
                     x_coord=float(process_string(pd_wells[x_cell][i])),
@@ -215,6 +217,7 @@ def add_wells():
             ui.progressBar.setValue(i + 1)
         session.commit()
         update_list_well()
+        set_info(f'Добавлено {n_new} скважин, обновлено {n_update} скважин', 'green')
 
 
     def cancel_load():

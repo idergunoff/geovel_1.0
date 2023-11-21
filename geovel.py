@@ -14,6 +14,7 @@ from monitoring import *
 from krige import *
 from formation_ai import *
 from regression import *
+from exploration import *
 
 MainWindow.show()
 
@@ -327,6 +328,16 @@ ui.pushButton_find_oil.clicked.connect(filter19)
 ui.pushButton_secret_filter.clicked.connect(secret_filter)
 ui.listWidget_formation_ai.currentItemChanged.connect(choose_formation_ai)
 
+#################################################################
+###################### Exploration ##############################
+#################################################################
+
+ui.pushButton_add_expl.clicked.connect(add_exploration)
+ui.pushButton_del_expl.clicked.connect(remove_exploration)
+ui.pushButton_add_set_point.clicked.connect(add_set_point)
+ui.pushButton_del_set_point.clicked.connect(remove_set_point)
+ui.pushButton_load_point.clicked.connect(load_point_exploration)
+
 
 update_object()
 update_list_object_monitor()
@@ -350,6 +361,7 @@ update_list_trained_models_regmod()
 update_list_trained_models_class()
 check_coordinates_profile()
 check_coordinates_research()
+update_list_exploration()
 
 
 # update_list_param_lda()
