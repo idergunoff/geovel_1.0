@@ -13,6 +13,7 @@ list_param_geovel = [
     'A_Sn_wmf', 'Vt_Sn_wmf', 'At_Sn_wmf', 'Pht_Sn_wmf', 'Wt_Sn_wmf', 'k_r'
     ]
 
+
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
     ui.info.append(f'{datetime.datetime.now().strftime("%H:%M:%S")}:\t<span style ="color:{color};" >{text}</span>')
@@ -204,6 +205,7 @@ def update_object():
     check_coordinates_profile()
 
 
+
 def update_research_combobox():
     ui.comboBox_research.clear()
     for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
@@ -211,6 +213,7 @@ def update_research_combobox():
     update_profile_combobox()
     check_coordinates_profile()
     check_coordinates_research()
+    update_list_exploration()
 
 
 def update_param_combobox():
@@ -1427,3 +1430,61 @@ def clear_horizontalLayout(h_l_widget):
         widget = item.widget()
         if widget:
             widget.deleteLater()
+
+
+def update_list_exploration():
+    """ Обновляем список исследований """
+    ui.comboBox_expl.clear()
+    for i in session.query(Exploration).filter_by(object_id=get_object_id()).order_by(Exploration.title).all():
+        ui.comboBox_expl.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_expl.setItemData(ui.comboBox_expl.count() - 1, {'id': i.id})
+    update_list_param_exploration()
+
+
+def get_exploration_id():
+    if ui.comboBox_expl.count() > 0:
+        return ui.comboBox_expl.currentData()['id']
+
+
+def update_list_param_exploration():
+    """ Обновляем список параметров исследования """
+    ui.listWidget_param_expl.clear()
+    for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
+        try:
+            item_text = (f'{i.parameter} {i.exploration_id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_param_expl.addItem(item)
+        except AttributeError:
+            session.query(ParameterExploration).filter_by(id=i.id).delete()
+            session.commit()
+    update_list_set_point()
+
+
+def update_list_set_point():
+    """ Обновляем наборы точек исследования """
+    ui.comboBox_set_point.clear()
+    for i in session.query(SetPoints).filter(SetPoints.exploration_id == get_exploration_id()).order_by(SetPoints.title).all():
+        ui.comboBox_set_point.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_set_point.setItemData(ui.comboBox_set_point.count() - 1, {'id': i.id})
+    update_list_point_exploration()
+
+
+def get_set_point_id():
+    if ui.comboBox_set_point.count() > 0:
+        return ui.comboBox_set_point.currentData()['id']
+
+
+def update_list_point_exploration():
+    """ Обновляем список точек исследования """
+    ui.listWidget_point_expl.clear()
+    for i in session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_point_expl.addItem(item)
+        except AttributeError:
+            session.query(PointExploration).filter_by(id=i.id).delete()
+            session.commit()
+
