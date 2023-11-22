@@ -65,7 +65,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>4</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -935,7 +935,7 @@
                         <rect>
                          <x>0</x>
                          <y>0</y>
-                         <width>277</width>
+                         <width>344</width>
                          <height>174</height>
                         </rect>
                        </property>
@@ -975,8 +975,54 @@
                  <layout class="QGridLayout" name="gridLayout_15">
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_16">
-                    <item row="1" column="1">
-                     <widget class="QTextEdit" name="textEdit_datawell"/>
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_62">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_11">
+                        <property name="font">
+                         <font>
+                          <pointsize>12</pointsize>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>Wells:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_rem_well">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 153, 153);</string>
+                        </property>
+                        <property name="text">
+                         <string>remove well</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="3" column="0">
+                     <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_13">
+                        <property name="font">
+                         <font>
+                          <pointsize>12</pointsize>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>Boundaries:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_show_bound">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </item>
                     <item row="0" column="1">
                      <widget class="QLabel" name="label_12">
@@ -990,7 +1036,7 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="2" column="1">
+                    <item row="3" column="1">
                      <widget class="QLabel" name="label_14">
                       <property name="font">
                        <font>
@@ -1002,13 +1048,16 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="3" column="1">
+                    <item row="2" column="1">
+                     <widget class="QTextEdit" name="textEdit_datawell"/>
+                    </item>
+                    <item row="4" column="1">
                      <widget class="QListWidget" name="listWidget_well_log"/>
                     </item>
-                    <item row="1" column="0">
+                    <item row="2" column="0">
                      <widget class="QListWidget" name="listWidget_well"/>
                     </item>
-                    <item row="3" column="0">
+                    <item row="4" column="0">
                      <layout class="QGridLayout" name="gridLayout_23">
                       <item row="0" column="0">
                        <widget class="QListWidget" name="listWidget_bound"/>
@@ -1097,54 +1146,12 @@
                       </item>
                      </layout>
                     </item>
-                    <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_62">
-                      <item row="0" column="0">
-                       <widget class="QLabel" name="label_11">
-                        <property name="font">
-                         <font>
-                          <pointsize>12</pointsize>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Wells:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_rem_well">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 153, 153);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove well</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="2" column="0">
-                     <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
-                      <item row="0" column="0">
-                       <widget class="QLabel" name="label_13">
-                        <property name="font">
-                         <font>
-                          <pointsize>12</pointsize>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Boundaries:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QCheckBox" name="checkBox_show_bound">
-                        <property name="text">
-                         <string/>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
+                    <item row="1" column="1">
+                     <widget class="QPushButton" name="pushButton_add_data_well">
+                      <property name="text">
+                       <string>PushButton</string>
+                      </property>
+                     </widget>
                     </item>
                    </layout>
                   </item>
@@ -1979,7 +1986,7 @@ Therm</string>
                 </item>
                 <item row="6" column="0">
                  <layout class="QGridLayout" name="gridLayout_110">
-                  <item row="0" column="0">
+                  <item row="1" column="0">
                    <widget class="QPushButton" name="pushButton_load_point">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
@@ -1989,13 +1996,20 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
+                  <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_del_point">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
                     <property name="text">
                      <string>delete</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="pushButton_interp">
+                    <property name="text">
+                     <string>Interpolation</string>
                     </property>
                    </widget>
                   </item>
@@ -3977,7 +3991,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>

@@ -132,5 +132,21 @@ def load_point_exploration():
 
 
 
+def draw_interpolation():
+    points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+    value_points = []
+    for i in points:
+        value = session.query(ParameterPoint.value).filter_by(
+            param_id=get_parameter_exploration_id(),
+            point_id=i.id
+        ).first()[0]
+        value_points.append(value)
+    x_list = [p.x_coord for p in points]
+    y_list = [p.y_coord for p in points]
+
+    print(value_points)
+    print(x_list)
+    print(y_list)
+
 
 

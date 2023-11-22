@@ -1451,7 +1451,7 @@ def update_list_param_exploration():
     ui.listWidget_param_expl.clear()
     for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
         try:
-            item_text = (f'{i.parameter} {i.exploration_id}')
+            item_text = (f'{i.parameter} id{i.id}')
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, i.id)
             ui.listWidget_param_expl.addItem(item)
@@ -1487,4 +1487,8 @@ def update_list_point_exploration():
         except AttributeError:
             session.query(PointExploration).filter_by(id=i.id).delete()
             session.commit()
+
+
+def get_parameter_exploration_id():
+    return ui.listWidget_param_expl.currentItem().text().split(' id')[-1]
 
