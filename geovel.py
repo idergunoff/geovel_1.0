@@ -22,7 +22,11 @@ MainWindow.show()
 # def show_globals():
 #     print(globals().keys())
 
-
+# for i in range(14917, 14986):
+#     session.query(WellOptionally).filter_by(well_id=i).delete()
+#     session.query(Boundary).filter_by(well_id=i).delete()
+#     session.query(Well).filter_by(id=i).delete()
+# session.commit()
 
 def mouse_moved_to_signal(evt):
     """ Отслеживаем координаты курсора и отображение на графике сигнала """

@@ -412,6 +412,17 @@ def train_regression_model():
     """ Расчет регрессионной модели """
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical(list_param_name)
+    list_nan_param, count_nan = [], 0
+    for i in data_train.index:
+        for param in list_param_reg:
+            if pd.isna(data_train[param][i]):
+                count_nan += 1
+                list_nan_param.append(param)
+    if count_nan > 0:
+        list_col = data_train.columns.tolist()
+        data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
+        set_info(f'Заполнены пропуски в {count_nan} параметрах {", ".join(list_nan_param)}', 'red')
+
     training_sample = data_train[list_param_reg].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
 

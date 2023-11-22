@@ -161,6 +161,9 @@ def add_wells():
                                     depth=depth,
                                     title=str(lr)
                                 ))
+                                session.commit()
+                            else:
+                                print(bound.title, bound.depth)
                     except ValueError:
                         continue
                 for opt in list_opt:
@@ -177,6 +180,7 @@ def add_wells():
                                     option=opt,
                                     value=str(pd_wells[opt][i])
                                 ))
+                                session.commit()
                     except ValueError:
                         continue
             else:
