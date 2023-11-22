@@ -1,3 +1,5 @@
+from scipy.interpolate import griddata
+
 from func import *
 
 
@@ -144,9 +146,33 @@ def draw_interpolation():
     x_list = [p.x_coord for p in points]
     y_list = [p.y_coord for p in points]
 
-    print(value_points)
-    print(x_list)
-    print(y_list)
+    # print(value_points)
+    # print(x_list)
+    # print(y_list)
+
+    x_array = np.array(x_list)
+    y_array = np.array(y_list)
+
+    npts = 88
+    x = np.linspace(np.min(x_array), np.max(x_array), npts)
+    y = np.linspace(np.min(y_array), np.max(y_array), npts)
+    X, Y = np.meshgrid(x, y)
+
+    fig, ax = plt.subplots(nrows=2, ncols=2)
+    ax[0, 0].scatter(x_array, y_array, c=value_points, marker='o', cmap='jet', label='Original Data')
+    ax[0, 0].set_title('Sample points on f(X,Y)')
+
+
+    # Интерполяция тремя способами
+    for i, method in enumerate(('nearest', 'linear', 'cubic')):
+        Z = griddata((x_array, y_array), value_points, (X, Y), method=method)
+        r, c = (i + 1) // 2, (i + 1) % 2
+        ax[r, c].contourf(X, Y, Z, cmap='jet', alpha=0.5, levels=20)
+        ax[r, c].scatter(x_array, y_array, c=value_points, marker='.', cmap='jet', label='Original Data')
+        ax[r, c].set_title("method = '{}'".format(method))
+
+    plt.tight_layout()
+    plt.show()
 
 
 
