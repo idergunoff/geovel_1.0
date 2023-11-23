@@ -349,6 +349,7 @@ ui.pushButton_add_set_point.clicked.connect(add_set_point)
 ui.pushButton_del_set_point.clicked.connect(remove_set_point)
 ui.pushButton_load_point.clicked.connect(load_point_exploration)
 ui.pushButton_interp.clicked.connect(draw_interpolation)
+ui.pushButton_load_train_point.clicked.connect(load_train_data)
 ui.comboBox_expl.activated.connect(update_list_param_exploration)
 ui.comboBox_set_point.activated.connect(update_list_point_exploration)
 
