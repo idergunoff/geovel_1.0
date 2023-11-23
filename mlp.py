@@ -163,7 +163,7 @@ def add_marker_mlp():
     if ui.lineEdit_string.text() == '':
         set_info('Введите название маркера', 'red')
         return
-    if session.query(MarkerMLP).filter_by(title=ui.lineEdit_string.text(), analysis_id=get_MLP_id()).count() > 0:
+    if session.query(MarkerMLP).filter_by(title=ui.lineEdit_string.text(), analysis_id=get_MLP_id()).count () > 0:
         session.query(MarkerMLP).filter_by(title=ui.lineEdit_string.text(), analysis_id=get_MLP_id()).update(
             {'color': ui.pushButton_color.text()}, synchronize_session='fetch')
         set_info(f'Изменен цвет маркера MLP - "{ui.lineEdit_string.text()}"', 'green')

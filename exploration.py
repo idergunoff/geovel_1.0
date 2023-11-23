@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.interpolate import griddata
 
 from func import *
@@ -98,6 +99,9 @@ def load_point_exploration():
         set_id = get_set_point_id()
         exp_id = get_exploration_id()
 
+        for v in [name_cell, x_cell, y_cell]:
+            list_cols.remove(v)
+
         for index_i, i in enumerate(pd_points.index):
             ui.progressBar.setValue(index_i + 1)
             p = PointExploration(set_points_id=set_id, x_coord=pd_points.loc[i, x_cell],
@@ -105,9 +109,8 @@ def load_point_exploration():
                                  title=str(pd_points.loc[i, name_cell]))
             session.add(p)
             session.commit()
+
             for j, el in enumerate(list_cols):
-                if el == name_cell or el == x_cell or el == y_cell:
-                    continue
                 old_param = session.query(ParameterExploration).filter(
                     ParameterExploration.parameter == el,
                     ParameterExploration.exploration_id == exp_id
@@ -152,27 +155,48 @@ def draw_interpolation():
 
     x_array = np.array(x_list)
     y_array = np.array(y_list)
+    coord = np.column_stack((x_array, y_array))
+
 
     npts = 88
     x = np.linspace(np.min(x_array), np.max(x_array), npts)
     y = np.linspace(np.min(y_array), np.max(y_array), npts)
     X, Y = np.meshgrid(x, y)
 
-    fig, ax = plt.subplots(nrows=2, ncols=2)
-    ax[0, 0].scatter(x_array, y_array, c=value_points, marker='o', cmap='jet', label='Original Data')
-    ax[0, 0].set_title('Sample points on f(X,Y)')
+    xx, yy = np.mgrid[min(x_array) - 200: max(x_array) + 200: 75, min(y_array) - 200: max(y_array) + 200: 75]
+
+    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
 
 
-    # Интерполяция тремя способами
-    for i, method in enumerate(('nearest', 'linear', 'cubic')):
-        Z = griddata((x_array, y_array), value_points, (X, Y), method=method)
-        r, c = (i + 1) // 2, (i + 1) % 2
-        ax[r, c].contourf(X, Y, Z, cmap='jet', alpha=0.5, levels=20)
-        ax[r, c].scatter(x_array, y_array, c=value_points, marker='.', cmap='jet', label='Original Data')
-        ax[r, c].set_title("method = '{}'".format(method))
+    kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+    field = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+    s2 = kriging.sigma.reshape(xx.shape)
+
+    plt.figure(figsize=(12, 9))
+    plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
+    plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
+    plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    plt.colorbar(label='param')
+    plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
 
     plt.tight_layout()
     plt.show()
+    #
+    # fig, ax = plt.subplots(nrows=2, ncols=2)
+    # ax[0, 0].scatter(x_array, y_array, c=value_points, marker='o', cmap='jet', label='Original Data')
+    # ax[0, 0].set_title('Sample points on f(X,Y)')
+    #
+    #
+    # # Интерполяция тремя способами
+    # for i, method in enumerate(('nearest', 'linear', 'cubic')):
+    #     Z = griddata((x_array, y_array), value_points, (X, Y), method=method)
+    #     r, c = (i + 1) // 2, (i + 1) % 2
+    #     ax[r, c].contourf(X, Y, Z, cmap='jet', alpha=0.5, levels=20)
+    #     ax[r, c].scatter(x_array, y_array, c=value_points, marker='.', cmap='jet', label='Original Data')
+    #     ax[r, c].set_title("method = '{}'".format(method))
+    #
+    # plt.tight_layout()
+    # plt.show()
 
 
 
