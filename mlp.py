@@ -1551,3 +1551,63 @@ def update_trained_model_comment():
     ui_cmt.buttonBox.accepted.connect(update_comment)
 
     FormComment.exec_()
+
+
+def export_model_class():
+    """ Экспорт модели """
+    model = session.query(TrainedModelClass).filter_by(
+        id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+
+    model_parameters = {
+        'title': model.title,
+        'list_params': model.list_params,
+        'comment': model.comment
+    }
+
+    # Сохранение словаря с параметрами в файл *.pkl
+    with open('model_parameters.pkl', 'wb') as parameters_file:
+        pickle.dump(model_parameters, parameters_file)
+
+    filename = \
+        QFileDialog.getSaveFileName(caption='Экспорт модели классификации', directory=f'{model.title}.zip', filter="*.zip")[
+            0]
+    with zipfile.ZipFile(filename, 'w') as zip:
+        zip.write('model_parameters.pkl', 'model_parameters.pkl')
+        zip.write(model.path_model, 'model.pkl')
+
+    set_info(f'Модель {model.title} экспортирована в файл {filename}', 'blue')
+
+
+def import_model_class():
+    """ Импорт модели """
+    filename = QFileDialog.getOpenFileName(caption='Импорт модели классификации', filter="*.zip")[0]
+
+    with zipfile.ZipFile(filename, 'r') as zip:
+        zip.extractall('extracted_data')
+
+        with open('extracted_data/model_parameters.pkl', 'rb') as parameters_file:
+            loaded_parameters = pickle.load(parameters_file)
+
+        # Загрузка модели из файла *.pkl
+        with open('extracted_data/model.pkl', 'rb') as model_file:
+            loaded_model = pickle.load(model_file)
+
+    model_name = loaded_parameters['title']
+    list_params = loaded_parameters['list_params']
+    comment = loaded_parameters['comment']
+
+    path_model = f'models/classifier/{model_name}.pkl'
+
+    with open(path_model, 'wb') as f:
+        pickle.dump(loaded_model, f)
+
+    new_trained_model = TrainedModelClass(
+        title=model_name,
+        path_model=path_model,
+        list_params=list_params,
+        comment=comment
+    )
+    session.add(new_trained_model)
+    session.commit()
+
+    update_list_trained_models_class()

@@ -995,5 +995,59 @@ def remove_trained_model():
     set_info(f'Модель {model.title} удалена', 'blue')
 
 
+def export_model_formation_ai():
+    """ Экспорт модели """
+    model = session.query(TrainedModel).filter_by(id=ui.listWidget_trained_model.currentItem().data(Qt.UserRole)).first()
+
+    model_parameters = {
+        'title': model.title
+    }
+    # Сохранение словаря с параметрами в файл *.pkl
+    with open('model_parameters.pkl', 'wb') as parameters_file:
+        pickle.dump(model_parameters, parameters_file)
+
+    filename = QFileDialog.getSaveFileName(caption='Экспорт модели', directory=f'{model.title}.zip', filter="*.zip")[0]
+    with zipfile.ZipFile(filename, 'w') as zip:
+        zip.write('model_parameters.pkl', 'model_parameters.pkl')
+        zip.write(model.path_top, 'model_top.pkl')
+        zip.write(model.path_bottom, 'model_bottom.pkl')
+
+    set_info(f'Модель {model.title} экспортирована в файл {filename}', 'blue')
 
 
+def import_model_formation_ai():
+    """ Импорт модели """
+    filename = QFileDialog.getOpenFileName(caption='Импорт модели', filter="*.zip")[0]
+
+    with zipfile.ZipFile(filename, 'r') as zip:
+        zip.extractall('extracted_data')
+
+        with open('extracted_data/model_parameters.pkl', 'rb') as parameters_file:
+            loaded_parameters = pickle.load(parameters_file)
+
+        # Загрузка модели кровли из файла *.pkl
+        with open('extracted_data/model_top.pkl', 'rb') as model_top_file:
+            loaded_model_top = pickle.load(model_top_file)
+
+        # Загрузка модели подошвы из файла *.pkl
+        with open('extracted_data/model_bottom.pkl', 'rb') as model_bottom_file:
+            loaded_model_bottom = pickle.load(model_bottom_file)
+
+    model_name = loaded_parameters['title']
+
+    path_model_top = f'models/reg_form/{model_name}.pkl'
+    path_model_bottom = f'models/reg_form/{model_name}.pkl'
+
+    with open(path_model_top, 'wb') as f:
+        pickle.dump(loaded_model_top, f)
+    with open(path_model_bottom, 'wb') as f:
+        pickle.dump(loaded_model_bottom, f)
+
+    new_trained_model = TrainedModel(
+        title=model_name,
+        path_top=path_model_top,
+        path_bottom=path_model_bottom
+    )
+    session.add(new_trained_model)
+    session.commit()
+    update_list_trained_models()

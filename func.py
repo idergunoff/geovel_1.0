@@ -1492,3 +1492,21 @@ def update_list_point_exploration():
 def get_parameter_exploration_id():
     return ui.listWidget_param_expl.currentItem().text().split(' id')[-1]
 
+
+def check_trained_model():
+    """ Проверка наличия обученных моделей """
+    for model in session.query(TrainedModel).all():
+        if not os.path.exists(model.path_top) or not os.path.exists(model.path_bottom):
+            session.query(TrainedModel).filter_by(id=model.id).delete()
+
+    for model in session.query(TrainedModelReg).all():
+        if not os.path.exists(model.path_model):
+            session.query(TrainedModelReg).filter_by(id=model.id).delete()
+
+    for model in session.query(TrainedModelClass).all():
+        if not os.path.exists(model.path_model):
+            session.query(TrainedModelClass).filter_by(id=model.id).delete()
+
+    session.commit()
+
+
