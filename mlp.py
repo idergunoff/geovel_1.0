@@ -1610,6 +1610,7 @@ def import_model_class():
         session.add(new_analisys)
         session.commit()
         analysis = new_analisys
+        update_list_mlp(True)
 
     new_trained_model = TrainedModelClass(
         analysis_id = analysis.id,

@@ -1568,6 +1568,7 @@ def import_model_reg():
         session.add(new_analisys)
         session.commit()
         analysis = new_analisys
+        update_list_reg()
 
     new_trained_model = TrainedModelReg(
         analysis_id=analysis.id,
