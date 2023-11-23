@@ -1622,3 +1622,4 @@ def import_model_class():
     session.commit()
 
     update_list_trained_models_class()
+    set_info(f'Модель {model_name} импортирована', 'blue')

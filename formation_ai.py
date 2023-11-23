@@ -1035,8 +1035,8 @@ def import_model_formation_ai():
 
     model_name = loaded_parameters['title']
 
-    path_model_top = f'models/reg_form/{model_name}.pkl'
-    path_model_bottom = f'models/reg_form/{model_name}.pkl'
+    path_model_top = f'models/reg_form/{model_name}_TOP.pkl'
+    path_model_bottom = f'models/reg_form/{model_name}_BOTTOM.pkl'
 
     with open(path_model_top, 'wb') as f:
         pickle.dump(loaded_model_top, f)
@@ -1051,3 +1051,4 @@ def import_model_formation_ai():
     session.add(new_trained_model)
     session.commit()
     update_list_trained_models()
+    set_info(f'Модель добавлена {model_name}', 'blue')

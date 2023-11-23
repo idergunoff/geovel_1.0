@@ -1580,3 +1580,4 @@ def import_model_reg():
     session.commit()
 
     update_list_trained_models_regmod()
+    set_info(f'Модель {model_name} добавлена', 'blue')
