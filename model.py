@@ -598,6 +598,7 @@ class Exploration(Base):
     object = relationship("GeoradarObject", back_populates="explorations")
     parameters = relationship('ParameterExploration', back_populates='exploration')
     points = relationship('SetPoints', back_populates='exploration')
+    analysis = relationship('AnalysisExploration', back_populates='exploration')
 
 
 class ParameterExploration(Base):
@@ -606,10 +607,12 @@ class ParameterExploration(Base):
     id = Column(Integer, primary_key=True)
     exploration_id = Column(Integer, ForeignKey('exploration.id'))
     parameter = Column(String)
+    train = Column(Boolean, default=False)
 
     exploration = relationship("Exploration", back_populates="parameters")
     grids = relationship('GridExploration', back_populates='param')
     points = relationship('ParameterPoint', back_populates='param')
+    analysis = relationship('ParameterAnalysisExploration', back_populates='param')
 
 
 class SetPoints(Base):
@@ -621,6 +624,7 @@ class SetPoints(Base):
 
     exploration = relationship("Exploration", back_populates="points")
     points = relationship('PointExploration', back_populates='set_point')
+    analysis = relationship('AnalysisExploration', back_populates='set_point')
 
 
 class PointExploration(Base):
@@ -631,6 +635,7 @@ class PointExploration(Base):
     x_coord = Column(Float)
     y_coord = Column(Float)
     title = Column(String)
+    train = Column(Boolean, default=False)
 
     set_point = relationship("SetPoints", back_populates="points")
     parameters = relationship('ParameterPoint', back_populates='point')
@@ -659,6 +664,36 @@ class GridExploration(Base):
     title = Column(String)
 
     param = relationship("ParameterExploration", back_populates="grids")
+
+
+class AnalysisExploration(Base):
+    __tablename__ = 'analysis_exploration'
+
+    id = Column(Integer, primary_key=True)
+    exploration_id = Column(Integer, ForeignKey('exploration.id'))
+    set_points_id = Column(Integer, ForeignKey('set_points.id'))
+    title = Column(String)
+    type_analysis = Column(String)
+    data = Column(Text)
+    up_data = Column(Boolean, default=False)
+
+    exploration = relationship("Exploration", back_populates="analysis")
+    parameters = relationship('ParameterAnalysisExploration', back_populates='analysis')
+    set_point = relationship("SetPoints", back_populates="analysis")
+
+
+class ParameterAnalysisExploration(Base):
+    __tablename__ = 'parameter_analysis_exploration'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_exploration.id'))
+    parameter_id = Column(Integer, ForeignKey('parameter_exploration.id'))
+
+    analysis = relationship("AnalysisExploration", back_populates="parameters")
+    param = relationship("ParameterExploration", back_populates="analysis")
+
+
+
 
 
 Base.metadata.create_all(engine)
