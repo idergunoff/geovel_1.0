@@ -353,6 +353,7 @@ ui.comboBox_expl.activated.connect(update_list_param_exploration)
 ui.comboBox_set_point.activated.connect(update_list_point_exploration)
 
 
+check_trained_model()
 update_object()
 update_list_object_monitor()
 clear_current_profile()
@@ -376,7 +377,6 @@ update_list_trained_models_class()
 check_coordinates_profile()
 check_coordinates_research()
 update_list_exploration()
-check_trained_model()
 
 
 # update_list_param_lda()
