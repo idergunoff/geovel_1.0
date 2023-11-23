@@ -135,6 +135,89 @@ def load_point_exploration():
 
     PointsLoader.exec()
 
+def update_train_list_exploration():
+    """ Обновляем список параметров исследования """
+    ui.listWidget_param_analysis_expl.clear()
+    for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
+        try:
+            item_text = (f'{i.parameter} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_param_expl.addItem(item)
+        except AttributeError:
+            session.query(ParameterExploration).filter_by(id=i.id).delete()
+            session.commit()
+    update_list_set_point()
+
+def load_train_data():
+    """ Загрузить обучающие данные Excel"""
+    try:
+        file_name = QFileDialog.getOpenFileName(caption='Выберите файл Excel (разделитель ";")', filter='*.xls *.xlsx')[0]
+        set_info(file_name, 'blue')
+        pd_points = pd.read_excel(file_name, header=0)
+        list_cols = list(pd_points.columns)
+    except FileNotFoundError:
+        return
+
+    pd_points = clean_dataframe(pd_points)
+    PointsLoader = QtWidgets.QDialog()
+    ui_pt = Ui_Form_load_points()
+    ui_pt.setupUi(PointsLoader)
+    PointsLoader.show()
+    PointsLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    list_combobox = [ui_pt.comboBox_N, ui_pt.comboBox_x, ui_pt.comboBox_y]
+    for cmbx in list_combobox:
+        for i in list_cols:
+            cmbx.addItem(i)
+
+    def load_train_points():
+        ui.progressBar.setMaximum(len(pd_points.index))
+        name_cell = ui_pt.comboBox_N.currentText()
+        x_cell = ui_pt.comboBox_x.currentText()
+        y_cell = ui_pt.comboBox_y.currentText()
+
+        set_id = get_set_point_id()
+        exp_id = get_exploration_id()
+
+        for v in [name_cell, x_cell, y_cell]:
+            list_cols.remove(v)
+
+        for index, i_item in enumerate(pd_points.index):
+            ui.progressBar.setValue(index + 1)
+            p = PointExploration(set_points_id=set_id, x_coord=pd_points.loc[i_item, x_cell],
+                                 y_coord=pd_points.loc[i_item, y_cell],
+                                 train=True,
+                                 title=str(pd_points.loc[i_item, name_cell]))
+            session.add(p)
+            session.commit()
+
+            for j, el in enumerate(list_cols):
+                old_param = session.query(ParameterExploration).filter(
+                    ParameterExploration.parameter == el,
+                    ParameterExploration.exploration_id == exp_id).first()
+                if not old_param:
+                    old_param = ParameterExploration(exploration_id=exp_id, parameter=el, train=True)
+                    session.add(old_param)
+                    session.commit()
+                par_point = ParameterPoint(point_id=p.id, param_id=old_param.id, value=pd_points.loc[i_item, list_cols[j]])
+                session.add(par_point)
+            session.commit()
+            update_train_list_exploration()
+        set_info(f'Добавлены тренировочные данные из файла', 'green')
+    def cancel_points():
+        PointsLoader.close()
+
+    ui_pt.buttonBox.accepted.connect(load_train_points)
+    ui_pt.buttonBox.rejected.connect(cancel_points)
+
+    PointsLoader.exec()
+
+
+
+
+
+
 
 
 def draw_interpolation():
