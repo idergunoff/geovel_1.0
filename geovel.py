@@ -200,6 +200,8 @@ ui.listWidget_well_mlp.currentItemChanged.connect(choose_marker_mlp)
 ui.pushButton_clear_fake.clicked.connect(clear_fake_mlp)
 ui.pushButton_rem_trained_model_class.clicked.connect(remove_trained_model_class)
 ui.pushButton_comment.clicked.connect(update_trained_model_comment)
+ui.pushButton_export_model_class.clicked.connect(export_model_class)
+ui.pushButton_import_model_class.clicked.connect(import_model_class)
 
 
 #   regression
@@ -232,6 +234,8 @@ ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.currentItemChanged.connect(choose_markup_regmod)
 ui.pushButton_reg_clear_fake.clicked.connect(clear_fake_reg)
 ui.pushButton_reg_comment.clicked.connect(update_trained_model_reg_comment)
+ui.pushButton_export_model_reg.clicked.connect(export_model_reg)
+ui.pushButton_import_model_reg.clicked.connect(import_model_reg)
 
 
 ui.toolButton_add_obj.clicked.connect(add_object)
@@ -321,6 +325,9 @@ ui.comboBox_model_ai.activated.connect(update_list_formation_ai)
 ui.pushButton_model_calc_profile.clicked.connect(calc_model_profile)
 ui.pushButton_model_calc_object.clicked.connect(calc_model_object)
 ui.pushButton_rem_trained_model.clicked.connect(remove_trained_model)
+ui.pushButton_export_model_f_ai.clicked.connect(export_model_formation_ai)
+ui.pushButton_import_model_f_ai.clicked.connect(import_model_formation_ai)
+
 
 ui.pushButton_map.clicked.connect(show_map)
 ui.pushButton_profiles.clicked.connect(show_profiles)
@@ -369,6 +376,7 @@ update_list_trained_models_class()
 check_coordinates_profile()
 check_coordinates_research()
 update_list_exploration()
+check_trained_model()
 
 
 # update_list_param_lda()

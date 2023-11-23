@@ -776,530 +776,525 @@
              <attribute name="title">
               <string>Layer, Well</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_12">
-              <item row="0" column="1">
-               <layout class="QGridLayout" name="gridLayout_13" rowstretch="1,0,3">
-                <item row="0" column="0">
-                 <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,4">
-                  <item>
-                   <layout class="QGridLayout" name="gridLayout_14">
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_add_formation">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 204, 121);</string>
-                      </property>
-                      <property name="text">
-                       <string>+ formation</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_10">
-                      <property name="font">
-                       <font>
-                        <pointsize>11</pointsize>
-                        <italic>true</italic>
-                        <underline>true</underline>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Слои:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <spacer name="horizontalSpacer_2">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
-                      </property>
-                     </spacer>
-                    </item>
-                    <item row="0" column="4">
-                     <widget class="QCheckBox" name="checkBox_draw_layer">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QCheckBox" name="checkBox_draw_line">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(175, 255, 243);</string>
-                      </property>
-                      <property name="text">
-                       <string>draw line</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
+             <layout class="QGridLayout" name="gridLayout_13">
+              <item row="0" column="0" colspan="2">
+               <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,4">
+                <item>
+                 <layout class="QGridLayout" name="gridLayout_14">
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton_add_formation">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>+ formation</string>
+                    </property>
+                   </widget>
                   </item>
-                  <item>
-                   <layout class="QGridLayout" name="gridLayout_17" columnstretch="3,0">
-                    <item row="0" column="1">
-                     <layout class="QGridLayout" name="gridLayout_layer_5" columnstretch="0">
-                      <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_add_layer">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(170, 255, 127);</string>
-                        </property>
-                        <property name="text">
-                         <string>add</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="1" column="0">
-                       <widget class="QPushButton" name="pushButton_remove_layer">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 153, 153);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="4" column="0">
-                       <layout class="QGridLayout" name="gridLayout_19">
-                        <item row="0" column="0">
-                         <widget class="QToolButton" name="toolButton_crop_up">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(175, 255, 243);</string>
-                          </property>
-                          <property name="text">
-                           <string>up</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="1">
-                         <widget class="QToolButton" name="toolButton_crop_down">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(175, 255, 243);</string>
-                          </property>
-                          <property name="text">
-                           <string>down</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item row="2" column="0">
-                       <widget class="QPushButton" name="pushButton_edges_layer">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 204, 121);</string>
-                        </property>
-                        <property name="text">
-                         <string>save</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="3" column="0">
-                       <widget class="QPushButton" name="pushButton_layer_filt">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>filter</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="5" column="0">
-                       <spacer name="verticalSpacer_5">
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>20</width>
-                          <height>40</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QScrollArea" name="scrollArea_2">
-                      <property name="widgetResizable">
-                       <bool>true</bool>
-                      </property>
-                      <widget class="QWidget" name="scrollAreaWidgetContents_2">
-                       <property name="geometry">
-                        <rect>
-                         <x>0</x>
-                         <y>0</y>
-                         <width>344</width>
-                         <height>174</height>
-                        </rect>
-                       </property>
-                       <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
-                        <item row="0" column="0">
-                         <widget class="QWidget" name="widget_layer" native="true">
-                          <layout class="QGridLayout" name="gridLayout_25">
-                           <item row="0" column="0">
-                            <layout class="QVBoxLayout" name="verticalLayout_layer">
-                             <item>
-                              <spacer name="verticalSpacer_11">
-                               <property name="orientation">
-                                <enum>Qt::Vertical</enum>
-                               </property>
-                               <property name="sizeHint" stdset="0">
-                                <size>
-                                 <width>20</width>
-                                 <height>40</height>
-                                </size>
-                               </property>
-                              </spacer>
-                             </item>
-                            </layout>
-                           </item>
-                          </layout>
-                         </widget>
-                        </item>
-                       </layout>
-                      </widget>
-                     </widget>
-                    </item>
-                   </layout>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_10">
+                    <property name="font">
+                     <font>
+                      <pointsize>11</pointsize>
+                      <italic>true</italic>
+                      <underline>true</underline>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Слои:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <spacer name="horizontalSpacer_2">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QCheckBox" name="checkBox_draw_layer">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(175, 255, 243);</string>
+                    </property>
+                    <property name="text">
+                     <string>draw</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QCheckBox" name="checkBox_draw_line">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(175, 255, 243);</string>
+                    </property>
+                    <property name="text">
+                     <string>draw line</string>
+                    </property>
+                   </widget>
                   </item>
                  </layout>
                 </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_15">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_16">
+                <item>
+                 <layout class="QGridLayout" name="gridLayout_17" columnstretch="3,0">
+                  <item row="0" column="1">
+                   <layout class="QGridLayout" name="gridLayout_layer_5" columnstretch="0">
                     <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_62">
-                      <item row="0" column="0">
-                       <widget class="QLabel" name="label_11">
-                        <property name="font">
-                         <font>
-                          <pointsize>12</pointsize>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Wells:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_rem_well">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 153, 153);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove well</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="3" column="0">
-                     <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
-                      <item row="0" column="0">
-                       <widget class="QLabel" name="label_13">
-                        <property name="font">
-                         <font>
-                          <pointsize>12</pointsize>
-                         </font>
-                        </property>
-                        <property name="text">
-                         <string>Boundaries:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QCheckBox" name="checkBox_show_bound">
-                        <property name="text">
-                         <string/>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QLabel" name="label_12">
-                      <property name="font">
-                       <font>
-                        <pointsize>12</pointsize>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Data of Well:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="3" column="1">
-                     <widget class="QLabel" name="label_14">
-                      <property name="font">
-                       <font>
-                        <pointsize>12</pointsize>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>Well Logs:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="2" column="1">
-                     <widget class="QTextEdit" name="textEdit_datawell"/>
-                    </item>
-                    <item row="4" column="1">
-                     <widget class="QListWidget" name="listWidget_well_log"/>
-                    </item>
-                    <item row="2" column="0">
-                     <widget class="QListWidget" name="listWidget_well"/>
-                    </item>
-                    <item row="4" column="0">
-                     <layout class="QGridLayout" name="gridLayout_23">
-                      <item row="0" column="0">
-                       <widget class="QListWidget" name="listWidget_bound"/>
-                      </item>
-                      <item row="1" column="0">
-                       <layout class="QGridLayout" name="gridLayout_24">
-                        <item row="0" column="0">
-                         <widget class="QLabel" name="label_16">
-                          <property name="text">
-                           <string>Vmin</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="1">
-                         <widget class="QLabel" name="label_17">
-                          <property name="text">
-                           <string>Vср</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="2">
-                         <widget class="QLabel" name="label_18">
-                          <property name="text">
-                           <string>Vmax</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="1" column="0">
-                         <widget class="QDoubleSpinBox" name="doubleSpinBox_vmin">
-                          <property name="decimals">
-                           <number>1</number>
-                          </property>
-                          <property name="minimum">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="maximum">
-                           <double>99.000000000000000</double>
-                          </property>
-                          <property name="singleStep">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="value">
-                           <double>3.500000000000000</double>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="1" column="1">
-                         <widget class="QDoubleSpinBox" name="doubleSpinBox_vsr">
-                          <property name="decimals">
-                           <number>1</number>
-                          </property>
-                          <property name="minimum">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="maximum">
-                           <double>99.000000000000000</double>
-                          </property>
-                          <property name="singleStep">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="value">
-                           <double>5.000000000000000</double>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="1" column="2">
-                         <widget class="QDoubleSpinBox" name="doubleSpinBox_vmax">
-                          <property name="decimals">
-                           <number>1</number>
-                          </property>
-                          <property name="minimum">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="maximum">
-                           <double>99.000000000000000</double>
-                          </property>
-                          <property name="singleStep">
-                           <double>0.100000000000000</double>
-                          </property>
-                          <property name="value">
-                           <double>7.500000000000000</double>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_add_data_well">
-                      <property name="text">
-                       <string>PushButton</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_20">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_add_well">
+                     <widget class="QPushButton" name="pushButton_add_layer">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                       <string notr="true">background-color: rgb(170, 255, 127);</string>
                       </property>
                       <property name="text">
-                       <string>add well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_add_bound">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add boundary</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_add_well_log">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add well log</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_add_wells">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(148, 255, 232);</string>
-                      </property>
-                      <property name="text">
-                       <string>add wells</string>
+                       <string>add</string>
                       </property>
                      </widget>
                     </item>
                     <item row="1" column="0">
-                     <widget class="QPushButton" name="pushButton_edit_well">
+                     <widget class="QPushButton" name="pushButton_remove_layer">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 255, 191);</string>
+                       <string notr="true">background-color: rgb(255, 153, 153);</string>
                       </property>
                       <property name="text">
-                       <string>edit well</string>
+                       <string>remove</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_rem_bound">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove boundary</string>
-                      </property>
-                     </widget>
+                    <item row="4" column="0">
+                     <layout class="QGridLayout" name="gridLayout_19">
+                      <item row="0" column="0">
+                       <widget class="QToolButton" name="toolButton_crop_up">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>up</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QToolButton" name="toolButton_crop_down">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>down</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </item>
-                    <item row="1" column="2">
-                     <widget class="QPushButton" name="pushButton_rem_well_log">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>remove well log</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="3">
-                     <widget class="QPushButton" name="pushButton_attach_layer">
+                    <item row="2" column="0">
+                     <widget class="QPushButton" name="pushButton_edges_layer">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 204, 121);</string>
                       </property>
                       <property name="text">
-                       <string>Attach Layer</string>
+                       <string>save</string>
                       </property>
                      </widget>
                     </item>
+                    <item row="3" column="0">
+                     <widget class="QPushButton" name="pushButton_layer_filt">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(175, 255, 243);</string>
+                      </property>
+                      <property name="text">
+                       <string>filter</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="5" column="0">
+                     <spacer name="verticalSpacer_5">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
                    </layout>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QScrollArea" name="scrollArea_2">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="scrollAreaWidgetContents_2">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>332</width>
+                       <height>222</height>
+                      </rect>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
+                      <item row="0" column="0">
+                       <widget class="QWidget" name="widget_layer" native="true">
+                        <layout class="QGridLayout" name="gridLayout_25">
+                         <item row="0" column="0">
+                          <layout class="QVBoxLayout" name="verticalLayout_layer">
+                           <item>
+                            <spacer name="verticalSpacer_11">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                          </layout>
+                         </item>
+                        </layout>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
                   </item>
                  </layout>
                 </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_21">
-                  <item row="0" column="0">
-                   <widget class="QCheckBox" name="checkBox_profile_well">
+               </layout>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <layout class="QGridLayout" name="gridLayout_21">
+                <item row="0" column="0">
+                 <widget class="QCheckBox" name="checkBox_profile_well">
+                  <property name="font">
+                   <font>
+                    <pointsize>10</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>profile wells</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0">
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QLabel" name="label_15">
                     <property name="font">
                      <font>
                       <pointsize>10</pointsize>
                      </font>
                     </property>
                     <property name="text">
-                     <string>profile wells</string>
+                     <string>max distance, m:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QSpinBox" name="spinBox_well_distance">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>100000</number>
+                    </property>
+                    <property name="singleStep">
+                     <number>10</number>
+                    </property>
+                    <property name="value">
+                     <number>50</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QCheckBox" name="checkBox_profile_intersec">
+                    <property name="font">
+                     <font>
+                      <pointsize>10</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>intersection</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <layout class="QGridLayout" name="gridLayout_62">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_11">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>Wells:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_rem_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 153, 153);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove well</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="1">
+               <layout class="QGridLayout" name="gridLayout_12">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_12">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>Data of Well:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_add_data_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(202, 251, 171);</string>
+                  </property>
+                  <property name="text">
+                   <string>add data well</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="0">
+               <widget class="QListWidget" name="listWidget_well"/>
+              </item>
+              <item row="3" column="1">
+               <widget class="QTextEdit" name="textEdit_datawell"/>
+              </item>
+              <item row="4" column="0">
+               <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_13">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>Boundaries:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QCheckBox" name="checkBox_show_bound">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="4" column="1">
+               <widget class="QLabel" name="label_14">
+                <property name="font">
+                 <font>
+                  <pointsize>12</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Well Logs:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <layout class="QGridLayout" name="gridLayout_23">
+                <item row="0" column="0">
+                 <widget class="QListWidget" name="listWidget_bound"/>
+                </item>
+                <item row="1" column="0">
+                 <layout class="QGridLayout" name="gridLayout_24">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_16">
+                    <property name="text">
+                     <string>Vmin</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0">
-                    <item row="0" column="1" colspan="2">
-                     <widget class="QLabel" name="label_15">
-                      <property name="font">
-                       <font>
-                        <pointsize>10</pointsize>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>max distance, m:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QSpinBox" name="spinBox_well_distance">
-                      <property name="minimum">
-                       <number>1</number>
-                      </property>
-                      <property name="maximum">
-                       <number>100000</number>
-                      </property>
-                      <property name="singleStep">
-                       <number>10</number>
-                      </property>
-                      <property name="value">
-                       <number>50</number>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QCheckBox" name="checkBox_profile_intersec">
-                      <property name="font">
-                       <font>
-                        <pointsize>10</pointsize>
-                       </font>
-                      </property>
-                      <property name="text">
-                       <string>intersection</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
+                   <widget class="QLabel" name="label_17">
+                    <property name="text">
+                     <string>Vср</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_18">
+                    <property name="text">
+                     <string>Vmax</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vmin">
+                    <property name="decimals">
+                     <number>1</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>99.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>3.500000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vsr">
+                    <property name="decimals">
+                     <number>1</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>99.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>5.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vmax">
+                    <property name="decimals">
+                     <number>1</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>99.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>0.100000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>7.500000000000000</double>
+                    </property>
+                   </widget>
                   </item>
                  </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="5" column="1">
+               <widget class="QListWidget" name="listWidget_well_log"/>
+              </item>
+              <item row="6" column="0" colspan="2">
+               <layout class="QGridLayout" name="gridLayout_20">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_add_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_add_bound">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add boundary</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_add_well_log">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add well log</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_add_wells">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(148, 255, 232);</string>
+                  </property>
+                  <property name="text">
+                   <string>add wells</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_edit_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>edit well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_rem_bound">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove boundary</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_rem_well_log">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove well log</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QPushButton" name="pushButton_attach_layer">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 204, 121);</string>
+                  </property>
+                  <property name="text">
+                   <string>Attach Layer</string>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
@@ -1325,6 +1320,23 @@
               </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_90">
+                <item row="2" column="0">
+                 <layout class="QGridLayout" name="gridLayout_103">
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton_model_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>learn model</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QComboBox" name="comboBox_comb_data"/>
+                  </item>
+                 </layout>
+                </item>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_102">
                   <item row="1" column="1">
@@ -1382,42 +1394,15 @@
                   </item>
                  </layout>
                 </item>
-                <item row="1" column="0">
-                 <widget class="QListWidget" name="listWidget_formation_ai"/>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_103">
-                  <item row="0" column="2">
-                   <widget class="QPushButton" name="pushButton_model_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>learn model</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QComboBox" name="comboBox_comb_data"/>
-                  </item>
-                 </layout>
-                </item>
                 <item row="3" column="0">
                  <widget class="QListWidget" name="listWidget_trained_model"/>
                 </item>
-                <item row="4" column="0">
+                <item row="1" column="0">
+                 <widget class="QListWidget" name="listWidget_formation_ai"/>
+                </item>
+                <item row="5" column="0">
                  <layout class="QGridLayout" name="gridLayout_105">
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="pushButton_model_calc_profile">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>calc profile</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
+                  <item row="1" column="2">
                    <widget class="QPushButton" name="pushButton_rem_trained_model">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 153, 153);</string>
@@ -1427,13 +1412,43 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_model_calc_profile">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>calc profile</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_model_calc_object">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(175, 255, 243);</string>
                     </property>
                     <property name="text">
                      <string>calc object</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="pushButton_import_model_f_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(207, 252, 162);</string>
+                    </property>
+                    <property name="text">
+                     <string>Import</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_export_model_f_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(206, 186, 249);</string>
+                    </property>
+                    <property name="text">
+                     <string>Export</string>
                     </property>
                    </widget>
                   </item>
@@ -2949,7 +2964,17 @@ Therm</string>
                     </item>
                     <item row="1" column="0">
                      <layout class="QGridLayout" name="gridLayout_98">
-                      <item row="0" column="0">
+                      <item row="1" column="1">
+                       <widget class="QPushButton" name="pushButton_rem_trained_model_class">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 153, 153);</string>
+                        </property>
+                        <property name="text">
+                         <string>remove</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_comment">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 255, 191);</string>
@@ -2959,13 +2984,23 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_rem_trained_model_class">
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_import_model_class">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 153, 153);</string>
+                         <string notr="true">background-color: rgb(207, 252, 162);</string>
                         </property>
                         <property name="text">
-                         <string>remove</string>
+                         <string>Import</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_export_model_class">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(206, 186, 249);</string>
+                        </property>
+                        <property name="text">
+                         <string>Export</string>
                         </property>
                        </widget>
                       </item>
@@ -3683,7 +3718,7 @@ Therm</string>
                       </item>
                       <item row="1" column="0">
                        <layout class="QGridLayout" name="gridLayout_100">
-                        <item row="0" column="0">
+                        <item row="1" column="0">
                          <widget class="QPushButton" name="pushButton_reg_comment">
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(255, 255, 191);</string>
@@ -3693,13 +3728,33 @@ Therm</string>
                           </property>
                          </widget>
                         </item>
-                        <item row="0" column="1">
+                        <item row="1" column="1">
                          <widget class="QPushButton" name="pushButton_rem_trained_model_reg">
                           <property name="styleSheet">
                            <string notr="true">background-color: rgb(255, 153, 153);</string>
                           </property>
                           <property name="text">
                            <string>remove</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QPushButton" name="pushButton_import_model_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(207, 252, 162);</string>
+                          </property>
+                          <property name="text">
+                           <string>Import</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_export_model_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(206, 186, 249);</string>
+                          </property>
+                          <property name="text">
+                           <string>Export</string>
                           </property>
                          </widget>
                         </item>
@@ -3991,7 +4046,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
