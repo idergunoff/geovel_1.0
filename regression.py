@@ -1517,8 +1517,10 @@ def export_model_reg():
     """ Экспорт модели """
     model = session.query(TrainedModelReg).filter_by(
         id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+    analysis = session.query(AnalysisReg).filter_by(id=model.analysis_id).first()
 
     model_parameters = {
+        'analysis_title': analysis.title,
         'title': model.title,
         'list_params': model.list_params,
         'comment': model.comment
@@ -1550,7 +1552,7 @@ def import_model_reg():
         with open('extracted_data/model.pkl', 'rb') as model_file:
             loaded_model = pickle.load(model_file)
 
-
+    analysis_title = loaded_parameters['analysis_title']
     model_name = loaded_parameters['title']
     list_params = loaded_parameters['list_params']
     comment = loaded_parameters['comment']
@@ -1560,8 +1562,15 @@ def import_model_reg():
     with open(path_model, 'wb') as f:
         pickle.dump(loaded_model, f)
 
+    analysis = session.query(AnalysisReg).filter_by(title=analysis_title).first()
+    if not analysis:
+        new_analisys = AnalysisReg(title=analysis_title)
+        session.add(new_analisys)
+        session.commit()
+        analysis = new_analisys
 
     new_trained_model = TrainedModelReg(
+        analysis_id=analysis.id,
         title=model_name,
         path_model=path_model,
         list_params=list_params,
