@@ -4,9 +4,6 @@ from scipy.interpolate import griddata
 from func import *
 
 
-
-
-
 def add_exploration():
     """ Добавить новое исследование """
     new_expl = Exploration(title=ui.lineEdit_string.text(), object_id=get_object_id())
@@ -67,6 +64,95 @@ def remove_set_point():
     else:
         pass
 
+# def get_analysis_id():
+#     if ui.comboBox_analysis_expl.count() > 0:
+#         return ui.comboBox_analysis_expl.currentData()['id']
+
+# def update_list_analysis():
+#     ui.listWidget_param_analysis_expl.clear()
+#     for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+#         try:
+#             item_text = (f'{i.title} id{i.id}')
+#             item = QListWidgetItem(item_text)
+#             item.setData(Qt.UserRole, i.id)
+#             ui.listWidget_param_analysis_expl.addItem(item)
+#         except AttributeError:
+#             session.query(ParameterAnalysisExploration).filter_by(id=i.id).delete()
+#             session.commit()
+#
+#
+# def update_combobox_analysis():
+#     ui.comboBox_analysis_expl.clear()
+#     for i in session.query(AnalysisExploration).filter_by(set_points_id=get_set_point_id()).all():
+#         ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
+#         ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
+#     update_list_analysis()
+
+
+def add_analysis():
+    """Добавить новый параметрический анализ"""
+    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), set_points_id=get_set_point_id())
+    session.add(new_analysis)
+    session.commit()
+    update_analysis_combobox()
+    update_analysis_list()
+    set_info(f'Параметрический анализ {new_analysis.title} добавлен', 'green')
+    pass
+
+def remove_analysis():
+    """ Удалить анализ """
+    analysis_title = ui.comboBox_analysis_expl.currentText()
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление параметрического анализа',
+        f'Вы уверены, что хотите удалить параметрический анализ {analysis_title}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(AnalysisExploration).filter_by(id=get_analysis_id()).delete()
+        session.commit()
+        set_info(f'Параметрический анализ "{analysis_title}" удален', 'green')
+        update_analysis_combobox()
+        update_analysis_list()
+    else:
+        pass
+
+def add_all_analysis_parameter_tolist():
+    """ Добавляет все параметры из списка в анализ """
+    for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
+        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.parameter)
+        session.add(param)
+        session.commit()
+
+    update_analysis_list()
+
+def add_analysis_parameter_tolist():
+    """ Добавляет выбранный параметр в анализ """
+    # ui.listWidget_param_analysis_expl.clear()
+    item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
+    param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.parameter)
+    session.add(param)
+    session.commit()
+
+    update_analysis_list()
+
+def clear_all_analysis_parameters():
+    """ Удаляет все параметры из анализа """
+    for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.title)
+        session.delete(i)
+        session.commit()
+
+def del_analysis_parameter():
+    """ Удаляет выбранный параметр из анализа """
+    item = session.query(ParameterAnalysisExploration).filter_by(
+        id=ui.listWidget_param_analysis_expl.currentItem().text().split(' id')[-1]).first()
+    param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.title)
+    session.delete(item)
+    session.commit()
+
+
 def load_point_exploration():
     """ Загрузить набор точек исследования из файла Excel"""
     try:
@@ -84,6 +170,8 @@ def load_point_exploration():
     ui_pt.setupUi(PointsLoader)
     PointsLoader.show()
     PointsLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    def cancel_points():
+        PointsLoader.close()
 
     list_combobox = [ui_pt.comboBox_N, ui_pt.comboBox_x, ui_pt.comboBox_y]
     for cmbx in list_combobox:
@@ -99,8 +187,12 @@ def load_point_exploration():
         set_id = get_set_point_id()
         exp_id = get_exploration_id()
 
-        for v in [name_cell, x_cell, y_cell]:
-            list_cols.remove(v)
+        if list_cols is not None:
+            for v in [name_cell, x_cell, y_cell]:
+                if v not in list_cols:
+                    cancel_points()
+                else:
+                    list_cols.remove(v)
 
         for index_i, i in enumerate(pd_points.index):
             ui.progressBar.setValue(index_i + 1)
@@ -127,12 +219,8 @@ def load_point_exploration():
             update_list_set_point()
         set_info(f'Добавлены данные исследований из файла', 'green')
 
-    def cancel_points():
-        PointsLoader.close()
-
     ui_pt.buttonBox.accepted.connect(load_points)
-    ui_pt.buttonBox.rejected.connect(cancel_points)
-
+    # ui_pt.buttonBox.rejected.connect(PointsLoader.close())
     PointsLoader.exec()
 
 def update_train_list_exploration():
@@ -181,7 +269,10 @@ def load_train_data():
         exp_id = get_exploration_id()
 
         for v in [name_cell, x_cell, y_cell]:
-            list_cols.remove(v)
+            if v not in list_cols:
+                cancel_points()
+            else:
+                list_cols.remove(v)
 
         for index, i_item in enumerate(pd_points.index):
             ui.progressBar.setValue(index + 1)
@@ -209,8 +300,7 @@ def load_train_data():
         PointsLoader.close()
 
     ui_pt.buttonBox.accepted.connect(load_train_points)
-    ui_pt.buttonBox.rejected.connect(cancel_points)
-
+    # ui_pt.buttonBox.rejected.connect(PointsLoader.close())
     PointsLoader.exec()
 
 
@@ -231,10 +321,6 @@ def draw_interpolation():
         value_points.append(value)
     x_list = [p.x_coord for p in points]
     y_list = [p.y_coord for p in points]
-
-    # print(value_points)
-    # print(x_list)
-    # print(y_list)
 
     x_array = np.array(x_list)
     y_array = np.array(y_list)

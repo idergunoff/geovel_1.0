@@ -670,7 +670,6 @@ class AnalysisExploration(Base):
     __tablename__ = 'analysis_exploration'
 
     id = Column(Integer, primary_key=True)
-    # exploration_id = Column(Integer, ForeignKey('exploration.id'))
     set_points_id = Column(Integer, ForeignKey('set_points.id'))
     title = Column(String)
     type_analysis = Column(String)
@@ -686,6 +685,7 @@ class ParameterAnalysisExploration(Base):
     __tablename__ = 'parameter_analysis_exploration'
 
     id = Column(Integer, primary_key=True)
+    title = Column(String)
     analysis_id = Column(Integer, ForeignKey('analysis_exploration.id'))
     parameter_id = Column(Integer, ForeignKey('parameter_exploration.id'))
 

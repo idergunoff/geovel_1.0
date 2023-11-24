@@ -1489,8 +1489,36 @@ def update_list_point_exploration():
             session.commit()
 
 
+def get_analysis_id():
+    if ui.comboBox_analysis_expl.count() > 0:
+        return ui.comboBox_analysis_expl.currentData()['id']
+
+
 def get_parameter_exploration_id():
     return ui.listWidget_param_expl.currentItem().text().split(' id')[-1]
+
+
+def update_analysis_list():
+    """ Обновление списка параметров Анализа """
+    ui.listWidget_param_analysis_expl.clear()
+    for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_param_analysis_expl.addItem(item)
+        except AttributeError:
+            session.query(ParameterAnalysisExploration).filter_by(id=i.id).delete()
+            session.commit()
+
+
+def update_analysis_combobox():
+    """ Обновление комбобокса Анализа """
+    ui.comboBox_analysis_expl.clear()
+    for i in session.query(AnalysisExploration).filter_by(set_points_id=get_set_point_id()).all():
+        ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
+    update_analysis_list()
 
 
 def check_trained_model():
@@ -1506,7 +1534,6 @@ def check_trained_model():
     for model in session.query(TrainedModelClass).all():
         if not os.path.exists(model.path_model):
             session.query(TrainedModelClass).filter_by(id=model.id).delete()
-
     session.commit()
 
 

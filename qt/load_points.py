@@ -59,6 +59,8 @@ class Ui_Form_load_points(object):
         self.label_3.setText(_translate("Form_load_points", "Y"))
 
 
+
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
