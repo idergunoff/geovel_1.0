@@ -1555,8 +1555,11 @@ def update_trained_model_comment():
 
 def export_model_class():
     """ Экспорт модели """
-    model = session.query(TrainedModelClass).filter_by(
+    try:
+        model = session.query(TrainedModelClass).filter_by(
         id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    except FileNotFoundError:
+        return set_info('Не выбрана модель', 'red')
     analysis = session.query(AnalysisMLP).filter_by(id=model.analysis_id).first()
 
     model_parameters = {
@@ -1570,29 +1573,37 @@ def export_model_class():
     with open('model_parameters.pkl', 'wb') as parameters_file:
         pickle.dump(model_parameters, parameters_file)
 
-    filename = \
-        QFileDialog.getSaveFileName(caption='Экспорт модели классификации', directory=f'{model.title}.zip', filter="*.zip")[
-            0]
-    with zipfile.ZipFile(filename, 'w') as zip:
-        zip.write('model_parameters.pkl', 'model_parameters.pkl')
-        zip.write(model.path_model, 'model.pkl')
+    try:
+        filename = \
+            QFileDialog.getSaveFileName(caption='Экспорт модели классификации', directory=f'{model.title}.zip', filter="*.zip")[
+                0]
+        with zipfile.ZipFile(filename, 'w') as zip:
+            zip.write('model_parameters.pkl', 'model_parameters.pkl')
+            zip.write(model.path_model, 'model.pkl')
 
-    set_info(f'Модель {model.title} экспортирована в файл {filename}', 'blue')
+        set_info(f'Модель {model.title} экспортирована в файл {filename}', 'blue')
+    except FileNotFoundError:
+        pass
 
 
 def import_model_class():
     """ Импорт модели """
-    filename = QFileDialog.getOpenFileName(caption='Импорт модели классификации', filter="*.zip")[0]
+    try:
+        filename = QFileDialog.getOpenFileName(caption='Импорт модели классификации', filter="*.zip")[0]
 
-    with zipfile.ZipFile(filename, 'r') as zip:
-        zip.extractall('extracted_data')
+        with zipfile.ZipFile(filename, 'r') as zip:
+            zip.extractall('extracted_data')
 
-        with open('extracted_data/model_parameters.pkl', 'rb') as parameters_file:
-            loaded_parameters = pickle.load(parameters_file)
 
-        # Загрузка модели из файла *.pkl
-        with open('extracted_data/model.pkl', 'rb') as model_file:
-            loaded_model = pickle.load(model_file)
+            with open('extracted_data/model_parameters.pkl', 'rb') as parameters_file:
+                loaded_parameters = pickle.load(parameters_file)
+
+            # Загрузка модели из файла *.pkl
+            with open('extracted_data/model.pkl', 'rb') as model_file:
+                loaded_model = pickle.load(model_file)
+
+    except FileNotFoundError:
+        return
 
     analysis_title = loaded_parameters['analysis_title']
     model_name = loaded_parameters['title']
