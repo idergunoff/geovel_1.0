@@ -1622,5 +1622,8 @@ def import_model_class():
     session.add(new_trained_model)
     session.commit()
 
+    shutil.rmtree('extracted_data')
+    os.remove('model_parameters.pkl')
+
     update_list_trained_models_class()
     set_info(f'Модель {model_name} импортирована', 'blue')
