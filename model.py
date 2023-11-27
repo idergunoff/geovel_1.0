@@ -24,6 +24,7 @@ class GeoradarObject(Base):
     grid = relationship('Grid', back_populates='object')
     h_wells = relationship('HorizontalWell', back_populates='object')
     explorations = relationship('Exploration', back_populates='object')
+    set_points = relationship('SetPointsTrain', back_populates='object')
 
 
 class Research(Base):
@@ -607,7 +608,6 @@ class ParameterExploration(Base):
     id = Column(Integer, primary_key=True)
     exploration_id = Column(Integer, ForeignKey('exploration.id'))
     parameter = Column(String)
-    train = Column(Boolean, default=False)
 
     exploration = relationship("Exploration", back_populates="parameters")
     grids = relationship('GridExploration', back_populates='param')
@@ -635,10 +635,33 @@ class PointExploration(Base):
     x_coord = Column(Float)
     y_coord = Column(Float)
     title = Column(String)
-    train = Column(Boolean, default=False)
 
     set_point = relationship("SetPoints", back_populates="points")
     parameters = relationship('ParameterPoint', back_populates='point')
+
+
+class SetPointsTrain(Base):
+    __tablename__ = 'set_points_train'
+
+    id = Column(Integer, primary_key=True)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    title = Column(String)
+
+    object = relationship("GeoradarObject", back_populates="set_points")
+    points = relationship('PointTrain', back_populates='set_points_train')
+
+
+class PointTrain(Base):
+    __tablename__ = 'point_train'
+
+    id = Column(Integer, primary_key=True)
+    set_points_train_id = Column(Integer, ForeignKey('set_points_train.id'))
+    title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    target = Column(Float)
+
+    set_points_train = relationship("SetPointsTrain", back_populates="points")
 
 
 class ParameterPoint(Base):
@@ -650,9 +673,6 @@ class ParameterPoint(Base):
 
     point = relationship("PointExploration", back_populates="parameters")
     param = relationship("ParameterExploration", back_populates="points")
-
-
-
 
 
 class GridExploration(Base):
