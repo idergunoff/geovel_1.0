@@ -1964,7 +1964,7 @@ Therm</string>
               <string>Explor-n</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_111">
-              <item row="5" column="0">
+              <item row="6" column="0">
                <spacer name="verticalSpacer_6">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -2004,6 +2004,9 @@ Therm</string>
                 </item>
                </layout>
               </item>
+              <item row="3" column="0">
+               <widget class="QListWidget" name="listWidget_param_analysis_expl"/>
+              </item>
               <item row="4" column="0">
                <layout class="QGridLayout" name="gridLayout_16">
                 <item row="0" column="0">
@@ -2022,23 +2025,17 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
-               <widget class="QListWidget" name="listWidget_param_analysis_expl"/>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_22">
+                <property name="text">
+                 <string>Analysis</string>
+                </property>
+               </widget>
               </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_101">
-                <item row="7" column="0">
+                <item row="6" column="0">
                  <layout class="QGridLayout" name="gridLayout_110">
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="pushButton_load_point">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>LOAD</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_del_point">
                     <property name="styleSheet">
@@ -2050,13 +2047,6 @@ Therm</string>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_interp">
-                    <property name="text">
-                     <string>Interpolation</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
                    <widget class="QPushButton" name="pushButton_load_train_point">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
@@ -2066,52 +2056,32 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                 </layout>
-                </item>
-                <item row="5" column="0">
-                 <layout class="QGridLayout" name="gridLayout_109" columnstretch="3,1,1">
                   <item row="0" column="0">
-                   <widget class="QComboBox" name="comboBox_set_point"/>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_add_set_point">
+                   <widget class="QPushButton" name="pushButton_load_point">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>add</string>
+                     <string>LOAD</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="2">
-                   <widget class="QPushButton" name="pushButton_del_set_point">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
-                    </property>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_interp">
                     <property name="text">
-                     <string>delete</string>
+                     <string>Interpolation</string>
                     </property>
                    </widget>
                   </item>
                  </layout>
                 </item>
-                <item row="6" column="0">
-                 <widget class="QListWidget" name="listWidget_point_expl"/>
+                <item row="2" column="0">
+                 <widget class="QListWidget" name="listWidget_param_expl"/>
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_param_expl">
                   <property name="text">
                    <string>Parameters:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QListWidget" name="listWidget_param_expl"/>
-                </item>
-                <item row="4" column="0">
-                 <widget class="QLabel" name="label_point_expl">
-                  <property name="text">
-                   <string>Points:</string>
                   </property>
                  </widget>
                 </item>
@@ -2160,12 +2130,94 @@ Therm</string>
                   </item>
                  </layout>
                 </item>
+                <item row="5" column="0">
+                 <layout class="QGridLayout" name="gridLayout_114">
+                  <item row="1" column="0">
+                   <widget class="QComboBox" name="comboBox_set_point"/>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QComboBox" name="comboBox_train_point"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QListWidget" name="listWidget_point_expl"/>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QListWidget" name="listWidget_train_point"/>
+                  </item>
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_109">
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_add_set_point">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_del_set_point">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>delete</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="0" column="1">
+                   <layout class="QGridLayout" name="gridLayout_113">
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_add_train_point">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="pushButton_del_train_point">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>delete</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item row="4" column="0">
+                 <layout class="QGridLayout" name="gridLayout_115">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_point_expl">
+                    <property name="text">
+                     <string>Points:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="label_point_expl_2">
+                    <property name="text">
+                     <string>Train points:</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
                </layout>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_22">
+              <item row="5" column="0">
+               <widget class="QPushButton" name="pushButton">
                 <property name="text">
-                 <string>Analysis</string>
+                 <string>PushButton</string>
                 </property>
                </widget>
               </item>

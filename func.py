@@ -203,6 +203,7 @@ def update_object():
     update_research_combobox()
     check_coordinates_research()
     check_coordinates_profile()
+    update_train_combobox()
 
 
 
@@ -1472,6 +1473,9 @@ def update_list_set_point():
     update_analysis_list()
 
 
+
+
+
 def get_set_point_id():
     if ui.comboBox_set_point.count() > 0:
         return ui.comboBox_set_point.currentData()['id']
@@ -1491,13 +1495,45 @@ def update_list_point_exploration():
             session.commit()
 
 
+def get_train_set_point_id():
+    if ui.comboBox_train_point.count() > 0:
+        return ui.comboBox_train_point.currentData()['id']
+
+
+def update_train_combobox():
+    """ Обновляем наборы тренировочных точек """
+    ui.comboBox_train_point.clear()
+    for i in session.query(SetPointsTrain).filter(SetPointsTrain.object_id == get_object_id()).order_by(SetPointsTrain.title).all():
+        ui.comboBox_train_point.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_train_point.setItemData(ui.comboBox_train_point.count() - 1, {'id': i.id})
+    update_train_list()
+    update_analysis_combobox()
+
+
+def update_train_list():
+    """ Обновляем список тренировочных точек"""
+    ui.listWidget_train_point.clear()
+    for i in session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_train_point.addItem(item)
+        except AttributeError:
+            session.query(PointTrain).filter_by(id=i.id).delete()
+            session.commit()
+
+
 def get_analysis_id():
     if ui.comboBox_analysis_expl.count() > 0:
         return ui.comboBox_analysis_expl.currentData()['id']
 
 
 def get_parameter_exploration_id():
-    return ui.listWidget_param_expl.currentItem().text().split(' id')[-1]
+    try:
+        return ui.listWidget_param_expl.currentItem().data(Qt.UserRole)
+    except AttributeError:
+        return None
 
 
 def update_analysis_list():
@@ -1517,7 +1553,7 @@ def update_analysis_list():
 def update_analysis_combobox():
     """ Обновление комбобокса Анализа """
     ui.comboBox_analysis_expl.clear()
-    for i in session.query(AnalysisExploration).filter_by(set_points_id=get_set_point_id()).all():
+    for i in session.query(AnalysisExploration).filter_by(train_points_id=get_train_set_point_id()).all():
         ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
         ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
     update_analysis_list()

@@ -64,6 +64,37 @@ def remove_set_point():
     else:
         pass
 
+
+
+def add_train_set_point():
+    new_set_point = SetPointsTrain(title=ui.lineEdit_string.text(), object_id=get_object_id())
+    session.add(new_set_point)
+    session.commit()
+    update_train_list()
+    update_train_combobox()
+    set_info(f'Набор тренировочных точек {new_set_point.title} добавлен', 'green')
+    pass
+
+
+def remove_train_set_point():
+    train_set_point_title = ui.comboBox_train_point.currentText()
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление набора тренировочных точек',
+        f'Вы уверены, что хотите удалить набор тренировочных точек {train_set_point_title}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).delete()
+        session.query(SetPointsTrain).filter_by(id=get_train_set_point_id()).delete()
+        session.commit()
+        set_info(f'Набор тренировочных точек "{train_set_point_title}" удален', 'green')
+        update_train_list()
+        update_train_combobox()
+    else:
+        pass
+
+
 # def get_analysis_id():
 #     if ui.comboBox_analysis_expl.count() > 0:
 #         return ui.comboBox_analysis_expl.currentData()['id']
@@ -91,7 +122,7 @@ def remove_set_point():
 
 def add_analysis():
     """Добавить новый параметрический анализ"""
-    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), set_points_id=get_set_point_id())
+    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), train_points_id=get_train_set_point_id())
     session.add(new_analysis)
     session.commit()
     update_analysis_combobox()
@@ -121,8 +152,12 @@ def remove_analysis():
 def add_all_analysis_parameter_tolist():
     """ Добавляет все параметры из списка в анализ """
     for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
-        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.parameter)
-        session.add(param)
+        check = get_analysis_id()
+        if check is not None:
+            param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.parameter)
+            session.add(param)
+        else:
+            set_info(f'Для добавления параметра создайте анализ', 'red')
         session.commit()
 
     update_analysis_list()
@@ -131,20 +166,30 @@ def add_analysis_parameter_tolist():
     """ Добавляет выбранный параметр в анализ """
     # ui.listWidget_param_analysis_expl.clear()
     item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
-    param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.parameter)
-    session.add(param)
+    check = get_analysis_id()
+    if check is not None:
+        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.parameter)
+        session.add(param)
+    else:
+        set_info(f'Для добавления параметра создайте анализ', 'red')
     session.commit()
 
     update_analysis_list()
 
 def clear_all_analysis_parameters():
     """ Удаляет все параметры из анализа """
+    ch = get_analysis_id()
+    if ch is None:
+        return
     session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
     session.commit()
     update_analysis_list()
 
 def del_analysis_parameter():
     """ Удаляет выбранный параметр из анализа """
+    ch = get_analysis_id()
+    if ch is None:
+        return
     item = session.query(ParameterAnalysisExploration).filter_by(
         id=ui.listWidget_param_analysis_expl.currentItem().text().split(' id')[-1]).first()
     # param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.title)
@@ -223,6 +268,7 @@ def load_point_exploration():
     # ui_pt.buttonBox.rejected.connect(PointsLoader.close())
     PointsLoader.exec()
 
+
 def update_train_list_exploration():
     """ Обновляем список параметров исследования """
     ui.listWidget_param_analysis_expl.clear()
@@ -239,6 +285,11 @@ def update_train_list_exploration():
 
 def load_train_data():
     """ Загрузить обучающие данные Excel"""
+    ch1 = get_train_set_point_id()
+    if ch1 is None:
+        set_info(f'Для добавления точек задайте все данные', 'red')
+        return
+
     try:
         file_name = QFileDialog.getOpenFileName(caption='Выберите файл Excel (разделитель ";")', filter='*.xls *.xlsx')[0]
         set_info(file_name, 'blue')
@@ -254,7 +305,7 @@ def load_train_data():
     PointsLoader.show()
     PointsLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    list_combobox = [ui_pt.comboBox_N, ui_pt.comboBox_x, ui_pt.comboBox_y]
+    list_combobox = [ui_pt.comboBox_N, ui_pt.comboBox_x, ui_pt.comboBox_y, ui_pt.comboBox_t]
     for cmbx in list_combobox:
         for i in list_cols:
             cmbx.addItem(i)
@@ -264,11 +315,12 @@ def load_train_data():
         name_cell = ui_pt.comboBox_N.currentText()
         x_cell = ui_pt.comboBox_x.currentText()
         y_cell = ui_pt.comboBox_y.currentText()
+        t_cell = ui_pt.comboBox_t.currentText()
 
         set_id = get_set_point_id()
         exp_id = get_exploration_id()
 
-        for v in [name_cell, x_cell, y_cell]:
+        for v in [name_cell, x_cell, y_cell, t_cell]:
             if v not in list_cols:
                 cancel_points()
             else:
@@ -276,25 +328,27 @@ def load_train_data():
 
         for index, i_item in enumerate(pd_points.index):
             ui.progressBar.setValue(index + 1)
-            p = PointExploration(set_points_id=set_id, x_coord=pd_points.loc[i_item, x_cell],
+            p = PointTrain(set_points_train_id=set_id, x_coord=pd_points.loc[i_item, x_cell],
                                  y_coord=pd_points.loc[i_item, y_cell],
-                                 train=True,
+                                 target=pd_points.loc[i_item, t_cell],
                                  title=str(pd_points.loc[i_item, name_cell]))
             session.add(p)
             session.commit()
 
-            for j, el in enumerate(list_cols):
-                old_param = session.query(ParameterExploration).filter(
-                    ParameterExploration.parameter == el,
-                    ParameterExploration.exploration_id == exp_id).first()
-                if not old_param:
-                    old_param = ParameterExploration(exploration_id=exp_id, parameter=el, train=True)
-                    session.add(old_param)
-                    session.commit()
-                par_point = ParameterPoint(point_id=p.id, param_id=old_param.id, value=pd_points.loc[i_item, list_cols[j]])
-                session.add(par_point)
-            session.commit()
+            # for j, el in enumerate(list_cols):
+            #     old_param = session.query(ParameterExploration).filter(
+            #         ParameterExploration.parameter == el,
+            #         ParameterExploration.exploration_id == exp_id).first()
+            #     if not old_param:
+            #         old_param = ParameterExploration(exploration_id=exp_id, parameter=el, train=True)
+            #         session.add(old_param)
+            #         session.commit()
+            #     par_point = ParameterPoint(point_id=p.id, param_id=old_param.id, value=pd_points.loc[i_item, list_cols[j]])
+            #     session.add(par_point)
+            # session.commit()
             update_train_list_exploration()
+            update_train_list()
+            update_train_combobox()
         set_info(f'Добавлены тренировочные данные из файла', 'green')
     def cancel_points():
         PointsLoader.close()
@@ -312,8 +366,13 @@ def load_train_data():
 
 def draw_interpolation():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+    if not points:
+        return
     value_points = []
     for i in points:
+        ch = get_parameter_exploration_id()
+        if ch is None:
+            return
         value = session.query(ParameterPoint.value).filter_by(
             param_id=get_parameter_exploration_id(),
             point_id=i.id

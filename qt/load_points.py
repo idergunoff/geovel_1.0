@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\load_points.ui'
+# Form implementation generated from reading ui file 'C:\Users\User\PycharmProjects\geo\geovel_1.0\qt\load_points.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.10
 #
@@ -14,39 +14,45 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form_load_points(object):
     def setupUi(self, Form_load_points):
         Form_load_points.setObjectName("Form_load_points")
-        Form_load_points.resize(264, 207)
-        self.gridLayout_3 = QtWidgets.QGridLayout(Form_load_points)
-        self.gridLayout_3.setObjectName("gridLayout_3")
-        self.gridLayout_2 = QtWidgets.QGridLayout()
-        self.gridLayout_2.setObjectName("gridLayout_2")
-        self.gridLayout = QtWidgets.QGridLayout()
-        self.gridLayout.setObjectName("gridLayout")
-        self.label = QtWidgets.QLabel(Form_load_points)
+        Form_load_points.resize(305, 260)
+        self.widget = QtWidgets.QWidget(Form_load_points)
+        self.widget.setGeometry(QtCore.QRect(40, 30, 221, 201))
+        self.widget.setObjectName("widget")
+        self.formLayout = QtWidgets.QFormLayout(self.widget)
+        self.formLayout.setContentsMargins(0, 0, 0, 0)
+        self.formLayout.setObjectName("formLayout")
+        self.label = QtWidgets.QLabel(self.widget)
         self.label.setObjectName("label")
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-        self.comboBox_N = QtWidgets.QComboBox(Form_load_points)
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
+        self.comboBox_N = QtWidgets.QComboBox(self.widget)
         self.comboBox_N.setObjectName("comboBox_N")
-        self.gridLayout.addWidget(self.comboBox_N, 0, 1, 1, 1)
-        self.label_2 = QtWidgets.QLabel(Form_load_points)
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.comboBox_N)
+        self.label_2 = QtWidgets.QLabel(self.widget)
         self.label_2.setObjectName("label_2")
-        self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
-        self.comboBox_x = QtWidgets.QComboBox(Form_load_points)
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
+        self.comboBox_x = QtWidgets.QComboBox(self.widget)
         self.comboBox_x.setObjectName("comboBox_x")
-        self.gridLayout.addWidget(self.comboBox_x, 1, 1, 1, 1)
-        self.label_3 = QtWidgets.QLabel(Form_load_points)
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.comboBox_x)
+        self.label_3 = QtWidgets.QLabel(self.widget)
         self.label_3.setObjectName("label_3")
-        self.gridLayout.addWidget(self.label_3, 2, 0, 1, 1)
-        self.comboBox_y = QtWidgets.QComboBox(Form_load_points)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_3)
+        self.comboBox_y = QtWidgets.QComboBox(self.widget)
         self.comboBox_y.setObjectName("comboBox_y")
-        self.gridLayout.addWidget(self.comboBox_y, 2, 1, 1, 1)
-        self.gridLayout.setColumnStretch(0, 1)
-        self.gridLayout.setColumnStretch(1, 2)
-        self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
-        self.buttonBox = QtWidgets.QDialogButtonBox(Form_load_points)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.comboBox_y)
+        self.label_5 = QtWidgets.QLabel(self.widget)
+        self.label_5.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
+        self.label_5.setObjectName("label_5")
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.label_5)
+        self.label_4 = QtWidgets.QLabel(self.widget)
+        self.label_4.setObjectName("label_4")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.label_4)
+        self.comboBox_t = QtWidgets.QComboBox(self.widget)
+        self.comboBox_t.setObjectName("comboBox_t")
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.comboBox_t)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self.widget)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
-        self.gridLayout_2.addWidget(self.buttonBox, 1, 0, 1, 1)
-        self.gridLayout_3.addLayout(self.gridLayout_2, 0, 0, 1, 1)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.buttonBox)
 
         self.retranslateUi(Form_load_points)
         QtCore.QMetaObject.connectSlotsByName(Form_load_points)
@@ -57,8 +63,8 @@ class Ui_Form_load_points(object):
         self.label.setText(_translate("Form_load_points", "N"))
         self.label_2.setText(_translate("Form_load_points", "X"))
         self.label_3.setText(_translate("Form_load_points", "Y"))
-
-
+        self.label_5.setText(_translate("Form_load_points", "Target for train data"))
+        self.label_4.setText(_translate("Form_load_points", "T"))
 
 
 if __name__ == "__main__":
