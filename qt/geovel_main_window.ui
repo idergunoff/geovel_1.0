@@ -933,8 +933,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>345</width>
-                       <height>214</height>
+                       <width>279</width>
+                       <height>230</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2136,13 +2136,13 @@ Therm</string>
                    <widget class="QComboBox" name="comboBox_set_point"/>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QComboBox" name="comboBox_set_point_2"/>
+                   <widget class="QComboBox" name="comboBox_train_point"/>
                   </item>
                   <item row="2" column="0">
                    <widget class="QListWidget" name="listWidget_point_expl"/>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QListWidget" name="listWidget_point_expl_3"/>
+                   <widget class="QListWidget" name="listWidget_train_point"/>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_109">
@@ -2171,7 +2171,7 @@ Therm</string>
                   <item row="0" column="1">
                    <layout class="QGridLayout" name="gridLayout_113">
                     <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_add_set_point_2">
+                     <widget class="QPushButton" name="pushButton_add_train_point">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>
@@ -2181,7 +2181,7 @@ Therm</string>
                      </widget>
                     </item>
                     <item row="0" column="1">
-                     <widget class="QPushButton" name="pushButton_del_set_point_2">
+                     <widget class="QPushButton" name="pushButton_del_train_point">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
@@ -4181,7 +4181,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

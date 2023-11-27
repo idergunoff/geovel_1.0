@@ -70,8 +70,8 @@ def add_train_set_point():
     new_set_point = SetPointsTrain(title=ui.lineEdit_string.text(), object_id=get_object_id())
     session.add(new_set_point)
     session.commit()
-    update_train_list_set_point()
-    update_train_list_point()
+    update_train_list()
+    update_train_combobox()
     set_info(f'Набор тренировочных точек {new_set_point.title} добавлен', 'green')
     pass
 
@@ -89,8 +89,8 @@ def remove_train_set_point():
         session.query(SetPointsTrain).filter_by(id=get_train_set_point_id()).delete()
         session.commit()
         set_info(f'Набор тренировочных точек "{train_set_point_title}" удален', 'green')
-        update_train_list_set_point()
-        update_train_list_point()
+        update_train_list()
+        update_train_combobox()
     else:
         pass
 
@@ -268,6 +268,10 @@ def load_point_exploration():
     # ui_pt.buttonBox.rejected.connect(PointsLoader.close())
     PointsLoader.exec()
 
+
+
+
+# ???????????????????????????????????????????????????????????????????????????????
 def update_train_list_exploration():
     """ Обновляем список параметров исследования """
     ui.listWidget_param_analysis_expl.clear()
@@ -346,7 +350,9 @@ def load_train_data():
             #     par_point = ParameterPoint(point_id=p.id, param_id=old_param.id, value=pd_points.loc[i_item, list_cols[j]])
             #     session.add(par_point)
             # session.commit()
-            update_train_list_point()
+            update_train_list_exploration()
+            update_train_list()
+            update_train_combobox()
         set_info(f'Добавлены тренировочные данные из файла', 'green')
     def cancel_points():
         PointsLoader.close()
