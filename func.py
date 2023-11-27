@@ -1468,6 +1468,8 @@ def update_list_set_point():
         ui.comboBox_set_point.addItem(f'{i.title} id{i.id}')
         ui.comboBox_set_point.setItemData(ui.comboBox_set_point.count() - 1, {'id': i.id})
     update_list_point_exploration()
+    update_analysis_combobox()
+    update_analysis_list()
 
 
 def get_set_point_id():

@@ -139,18 +139,18 @@ def add_analysis_parameter_tolist():
 
 def clear_all_analysis_parameters():
     """ Удаляет все параметры из анализа """
-    for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
-        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.title)
-        session.delete(i)
-        session.commit()
+    session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
+    session.commit()
+    update_analysis_list()
 
 def del_analysis_parameter():
     """ Удаляет выбранный параметр из анализа """
     item = session.query(ParameterAnalysisExploration).filter_by(
         id=ui.listWidget_param_analysis_expl.currentItem().text().split(' id')[-1]).first()
-    param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.title)
+    # param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.title)
     session.delete(item)
     session.commit()
+    update_analysis_list()
 
 
 def load_point_exploration():
