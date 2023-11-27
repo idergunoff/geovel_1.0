@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\USER\PycharmProjects\geovel_1.0\qt\geovel_main_window.ui'
+# Form implementation generated from reading ui file 'C:\Users\User\PycharmProjects\geo\geovel_1.0\qt\geovel_main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.10
 #
@@ -480,7 +480,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 279, 230))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 345, 214))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_18.setObjectName("gridLayout_18")
@@ -1074,14 +1074,14 @@ class Ui_MainWindow(object):
         self.gridLayout_114.addLayout(self.gridLayout_109, 0, 0, 1, 1)
         self.gridLayout_113 = QtWidgets.QGridLayout()
         self.gridLayout_113.setObjectName("gridLayout_113")
-        self.pushButton_add_set_point2 = QtWidgets.QPushButton(self.tab_8)
-        self.pushButton_add_set_point2.setStyleSheet("background-color: rgb(191, 255, 191);")
-        self.pushButton_add_set_point2.setObjectName("pushButton_add_set_point2")
-        self.gridLayout_113.addWidget(self.pushButton_add_set_point2, 0, 0, 1, 1)
-        self.pushButton_del_set_point2 = QtWidgets.QPushButton(self.tab_8)
-        self.pushButton_del_set_point2.setStyleSheet("background-color: rgb(255, 185, 185);")
-        self.pushButton_del_set_point2.setObjectName("pushButton_del_set_point2")
-        self.gridLayout_113.addWidget(self.pushButton_del_set_point2, 0, 1, 1, 1)
+        self.pushButton_add_set_point_2 = QtWidgets.QPushButton(self.tab_8)
+        self.pushButton_add_set_point_2.setStyleSheet("background-color: rgb(191, 255, 191);")
+        self.pushButton_add_set_point_2.setObjectName("pushButton_add_set_point_2")
+        self.gridLayout_113.addWidget(self.pushButton_add_set_point_2, 0, 0, 1, 1)
+        self.pushButton_del_set_point_2 = QtWidgets.QPushButton(self.tab_8)
+        self.pushButton_del_set_point_2.setStyleSheet("background-color: rgb(255, 185, 185);")
+        self.pushButton_del_set_point_2.setObjectName("pushButton_del_set_point_2")
+        self.gridLayout_113.addWidget(self.pushButton_del_set_point_2, 0, 1, 1, 1)
         self.gridLayout_114.addLayout(self.gridLayout_113, 0, 1, 1, 1)
         self.gridLayout_101.addLayout(self.gridLayout_114, 5, 0, 1, 1)
         self.gridLayout_115 = QtWidgets.QGridLayout()
@@ -2013,7 +2013,7 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.progressBar, 0, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1600, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1600, 26))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -2192,8 +2192,8 @@ class Ui_MainWindow(object):
         self.pushButton_add_all_train_param.setText(_translate("MainWindow", "add all parameters"))
         self.pushButton_add_set_point.setText(_translate("MainWindow", "add"))
         self.pushButton_del_set_point.setText(_translate("MainWindow", "delete"))
-        self.pushButton_add_set_point2.setText(_translate("MainWindow", "add"))
-        self.pushButton_del_set_point2.setText(_translate("MainWindow", "delete"))
+        self.pushButton_add_set_point_2.setText(_translate("MainWindow", "add"))
+        self.pushButton_del_set_point_2.setText(_translate("MainWindow", "delete"))
         self.label_point_expl.setText(_translate("MainWindow", "Points:"))
         self.label_point_expl_2.setText(_translate("MainWindow", "Train points:"))
         self.pushButton.setText(_translate("MainWindow", "PushButton"))
