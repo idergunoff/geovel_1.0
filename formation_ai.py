@@ -1050,5 +1050,11 @@ def import_model_formation_ai():
     )
     session.add(new_trained_model)
     session.commit()
+    try:
+        shutil.rmtree('extracted_data')
+        os.remove('model_parameters.pkl')
+    except FileNotFoundError:
+        pass
+
     update_list_trained_models()
     set_info(f'Модель добавлена {model_name}', 'blue')

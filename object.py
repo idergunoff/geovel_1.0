@@ -24,6 +24,7 @@ import pyqtgraph as pg
 import pandas as pd
 import json
 import zipfile
+import shutil
 
 from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr
 
