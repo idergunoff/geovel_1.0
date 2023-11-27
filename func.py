@@ -1553,7 +1553,7 @@ def update_analysis_list():
 def update_analysis_combobox():
     """ Обновление комбобокса Анализа """
     ui.comboBox_analysis_expl.clear()
-    for i in session.query(AnalysisExploration).filter_by(set_points_id=get_set_point_id()).all():
+    for i in session.query(AnalysisExploration).filter_by(train_points_id=get_train_set_point_id()).all():
         ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
         ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
     update_analysis_list()

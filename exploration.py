@@ -77,7 +77,7 @@ def add_train_set_point():
 
 
 def remove_train_set_point():
-    train_set_point_title = ui.comboBox_set_point_2.currentText()
+    train_set_point_title = ui.comboBox_train_point.currentText()
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Удаление набора тренировочных точек',
@@ -122,7 +122,7 @@ def remove_train_set_point():
 
 def add_analysis():
     """Добавить новый параметрический анализ"""
-    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), set_points_id=get_set_point_id())
+    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), train_points_id=get_train_set_point_id())
     session.add(new_analysis)
     session.commit()
     update_analysis_combobox()
@@ -269,9 +269,6 @@ def load_point_exploration():
     PointsLoader.exec()
 
 
-
-
-# ???????????????????????????????????????????????????????????????????????????????
 def update_train_list_exploration():
     """ Обновляем список параметров исследования """
     ui.listWidget_param_analysis_expl.clear()
@@ -288,10 +285,9 @@ def update_train_list_exploration():
 
 def load_train_data():
     """ Загрузить обучающие данные Excel"""
-    ch1 = get_exploration_id()
-    ch2 = get_set_point_id()
-    if ch1 is None or ch2 is None:
-        set_info(f'Для добавления данных задайте точки исследования', 'red')
+    ch1 = get_train_set_point_id()
+    if ch1 is None:
+        set_info(f'Для добавления точек задайте все данные', 'red')
         return
 
     try:
