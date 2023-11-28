@@ -317,7 +317,7 @@ def load_train_data():
         y_cell = ui_pt.comboBox_y.currentText()
         t_cell = ui_pt.comboBox_t.currentText()
 
-        set_id = get_set_point_id()
+        set_id = get_train_set_point_id()
         exp_id = get_exploration_id()
 
         for v in [name_cell, x_cell, y_cell, t_cell]:

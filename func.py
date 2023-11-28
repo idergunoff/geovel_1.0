@@ -1500,6 +1500,11 @@ def get_train_set_point_id():
         return ui.comboBox_train_point.currentData()['id']
 
 
+def empty_func():
+    pass
+
+
+
 def update_train_combobox():
     """ Обновляем наборы тренировочных точек """
     ui.comboBox_train_point.clear()

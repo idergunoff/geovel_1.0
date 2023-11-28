@@ -367,6 +367,8 @@ ui.comboBox_train_point.activated.connect(update_analysis_combobox)
 ui.comboBox_object.activated.connect(update_train_combobox)
 
 
+
+
 check_trained_model()
 update_object()
 update_list_object_monitor()
