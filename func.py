@@ -1540,6 +1540,12 @@ def get_parameter_exploration_id():
     except AttributeError:
         return None
 
+def get_train_param_id():
+    try:
+        return (ui.listWidget_param_analysis_expl
+                .currentItem().data(Qt.UserRole))
+    except AttributeError:
+        return None
 
 def update_analysis_list():
     """ Обновление списка параметров Анализа """
