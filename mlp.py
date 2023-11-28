@@ -674,10 +674,10 @@ def draw_MLP():
                 model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
                 text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
             elif ui_cls.checkBox_rfc_extra.isChecked():
-                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
             else:
-                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
         elif model == 'GPC':
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
@@ -699,7 +699,7 @@ def draw_MLP():
             text_model = f'**QDA**: \nreg_param: {round(ui_cls.doubleSpinBox_qda_reg_param.value(), 2)}, '
         elif model == 'SVC':
             model_class = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(), probability=True,
-                              C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0)
+                              C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
         else:
@@ -757,11 +757,11 @@ def draw_MLP():
                 estimators.append(('abc', abc))
                 list_model.append('abc')
             elif ui_cls.checkBox_rfc_extra.isChecked():
-                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('etc', etc))
                 list_model.append('etc')
             else:
-                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
                 estimators.append(('rfc', rfc))
                 list_model.append('rfc')
 
@@ -787,7 +787,7 @@ def draw_MLP():
             list_model.append('qda')
         if ui_cls.checkBox_stv_svc.isChecked():
             svc = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(),
-                      probability=True, C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0)
+                      probability=True, C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             estimators.append(('svc', svc))
             list_model.append('svc')
         final_model, final_text_model = choice_model_classifier(ui_cls.buttonGroup.checkedButton().text())
