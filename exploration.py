@@ -164,10 +164,13 @@ def add_all_analysis_parameter_tolist():
 
 def add_analysis_parameter_tolist():
     """ Добавляет выбранный параметр в анализ """
-    # ui.listWidget_param_analysis_expl.clear()
     item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
     check = get_analysis_id()
     if check is not None:
+        analysis = session.query(ParameterAnalysisExploration).all()
+        for a in analysis:
+            if a.parameter_id == item.id:
+                return
         param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.parameter)
         session.add(param)
     else:
@@ -360,10 +363,6 @@ def load_train_data():
 
 
 
-
-
-
-
 def draw_interpolation():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
@@ -394,7 +393,7 @@ def draw_interpolation():
     xx, yy = np.mgrid[min(x_array) - 200: max(x_array) + 200: 75, min(y_array) - 200: max(y_array) + 200: 75]
 
     variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
-
+    variogram.plot()
 
     kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
     field = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
@@ -409,22 +408,107 @@ def draw_interpolation():
 
     plt.tight_layout()
     plt.show()
-    #
-    # fig, ax = plt.subplots(nrows=2, ncols=2)
-    # ax[0, 0].scatter(x_array, y_array, c=value_points, marker='o', cmap='jet', label='Original Data')
-    # ax[0, 0].set_title('Sample points on f(X,Y)')
-    #
-    #
-    # # Интерполяция тремя способами
-    # for i, method in enumerate(('nearest', 'linear', 'cubic')):
-    #     Z = griddata((x_array, y_array), value_points, (X, Y), method=method)
-    #     r, c = (i + 1) // 2, (i + 1) % 2
-    #     ax[r, c].contourf(X, Y, Z, cmap='jet', alpha=0.5, levels=20)
-    #     ax[r, c].scatter(x_array, y_array, c=value_points, marker='.', cmap='jet', label='Original Data')
-    #     ax[r, c].set_title("method = '{}'".format(method))
+
+def train_interpolation():
+    points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+    if not points:
+        return
+    value_points = []
+    for i in points:
+        ch = get_train_param_id()
+        if ch is None:
+            return
+        p = session.query(ParameterAnalysisExploration).filter_by(id=get_train_param_id()).first()
+        value = session.query(ParameterPoint.value).filter_by(
+            param_id=p.param.id,
+            point_id=i.id
+        ).first()[0]
+        value_points.append(value)
+    x_list = [p.x_coord for p in points]
+    y_list = [p.y_coord for p in points]
+
+    x_array = np.array(x_list)
+    y_array = np.array(y_list)
+    coord = np.column_stack((x_array, y_array))
+
+    t_points = session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all()
+    if not t_points:
+        return
+    x_train = [p.x_coord for p in t_points]
+    y_train = [p.y_coord for p in t_points]
+
+    xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 75, min(y_train) - 200: max(y_train) + 200: 75]
+
+    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
+    # variogram.plot()
+
+    kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+    field = kriging.transform(np.array(x_train), np.array(y_train))
+    print(field)
+    # plt.figure(figsize=(12, 9))
+    # # plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
+    # # plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
+    # plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    # plt.colorbar(label='param')
+    # plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
     #
     # plt.tight_layout()
     # plt.show()
+
+
+def get_interpolation_field():
+    start_time = datetime.datetime.now()
+    print("Начало работы: ")
+    df = pd.DataFrame(columns=['x_coord', 'y_coord', 'target', 'title'])
+
+    """ Транировочные точки """
+    t_points = session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all()
+    if not t_points:
+        return
+    x_train = [p.x_coord for p in t_points]
+    y_train = [p.y_coord for p in t_points]
+    title_train = [p.title for p in t_points]
+    target_train = [p.target for p in t_points]
+    df['title'] = title_train
+    df['x_coord'] = x_train
+    df['y_coord'] = y_train
+    df['target'] = target_train
+
+    """ Точки для Вариограмы """
+    points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+    if not points:
+        return
+    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
+    for el in params:
+        value_points = []
+        for i in points:
+            p = session.query(ParameterAnalysisExploration).filter_by(id=el.id).first()
+            value = session.query(ParameterPoint.value).filter_by(
+                param_id=p.param.id,
+                point_id=i.id
+            ).first()[0]
+            value_points.append(value)
+
+        x_list = [p.x_coord for p in points]
+        y_list = [p.y_coord for p in points]
+
+        x_array = np.array(x_list)
+        y_array = np.array(y_list)
+        coord = np.column_stack((x_array, y_array))
+
+
+        """ Вариограма и Кригинг """
+        variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
+        kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+        field = kriging.transform(np.array(x_train), np.array(y_train))
+        df[el.title] = field
+
+    train_time = datetime.datetime.now() - start_time
+    print(df)
+    print(train_time)
+
+
+
 
 
 
