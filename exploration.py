@@ -185,6 +185,7 @@ def clear_all_analysis_parameters():
     if ch is None:
         return
     session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
+    session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
     session.commit()
     update_analysis_list()
 
@@ -193,11 +194,48 @@ def del_analysis_parameter():
     ch = get_analysis_id()
     if ch is None:
         return
+
     item = session.query(ParameterAnalysisExploration).filter_by(
         id=ui.listWidget_param_analysis_expl.currentItem().text().split(' id')[-1]).first()
     # param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.title)
-    session.delete(item)
+    if item is not None:
+        session.delete(item)
+        session.commit()
+
+    item_2 = session.query(GeoParameterAnalysisExploration).filter_by(
+        id=ui.listWidget_param_analysis_expl.currentItem().text().split(' id')[-1]).first()
+    if item_2 is not None:
+        session.delete(item_2)
+        session.commit()
+
+    update_analysis_list()
+
+
+
+def add_geo_analysis_param():
+    param = ui.comboBox_geovel_param_expl.currentText()
+    geo = session.query(GeoParameterAnalysisExploration).filter_by(param=param, analysis_id=get_analysis_id()).first()
+    if geo is not None:
+        return set_info(f'{param} уже добавлен', 'red')
+    geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_id())
+    session.add(geo_param)
     session.commit()
+
+    update_analysis_list()
+
+
+def add_all_geo_analysis_param():
+    for i in range(ui.comboBox_geovel_param_expl.count()):
+        param = ui.comboBox_geovel_param_expl.itemText(i)
+        geo = session.query(GeoParameterAnalysisExploration).filter_by(param=param,
+                                                                       analysis_id=get_analysis_id()).first()
+        if geo is None:
+            geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_id())
+            session.add(geo_param)
+            session.commit()
+        else:
+            set_info(f'{param} уже добавлен', 'red')
+
     update_analysis_list()
 
 
@@ -361,8 +399,6 @@ def load_train_data():
     PointsLoader.exec()
 
 
-
-
 def draw_interpolation():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
@@ -408,6 +444,7 @@ def draw_interpolation():
 
     plt.tight_layout()
     plt.show()
+
 
 def train_interpolation():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
@@ -458,6 +495,8 @@ def train_interpolation():
 
 def get_interpolation_field():
     start_time = datetime.datetime.now()
+
+    global form_prof
     print("Начало работы: ")
     df = pd.DataFrame(columns=['x_coord', 'y_coord', 'target', 'title'])
 
@@ -496,12 +535,53 @@ def get_interpolation_field():
         y_array = np.array(y_list)
         coord = np.column_stack((x_array, y_array))
 
-
         """ Вариограма и Кригинг """
         variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
         kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
         field = kriging.transform(np.array(x_train), np.array(y_train))
         df[el.title] = field
+
+    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
+    if len(geo_param) > 0:
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        x_prof, y_prof, form_prof = [], [], []
+
+        for profile in profiles:
+            x_prof += json.loads(profile.x_pulc)
+            y_prof += json.loads(profile.y_pulc)
+            if len(profile.formations) == 1:
+                form_prof.append(profile.formations[0])
+            else:
+                Choose_Formation = QtWidgets.QDialog()
+                ui_cf = Ui_FormationMAP()
+                ui_cf.setupUi(Choose_Formation)
+                Choose_Formation.show()
+                Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                for f in profile.formations:
+                    ui_cf.listWidget_form_map.addItem(f'{f.title} id{f.id}')
+                ui_cf.listWidget_form_map.setCurrentRow(0)
+
+                def form_lda_ok():
+                    global form_prof
+                    f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
+                    form = session.query(Formation).filter(Formation.id == f_id).first()
+                    form_prof.append(form)
+                    Choose_Formation.close()
+
+                ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
+                Choose_Formation.exec_()
+
+        coord_geo = np.column_stack((np.array(x_prof), np.array(y_prof)))
+        for g in geo_param:
+            list_value = []
+            for f in form_prof:
+                list_value += json.loads(getattr(f, g.param))
+
+            variogram = Variogram(coordinates=coord_geo, values=np.array(list_value), model="spherical", fit_method="lm")
+            kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+            field = kriging.transform(np.array(x_train), np.array(y_train))
+            df[g.param] = field
+
 
     train_time = datetime.datetime.now() - start_time
     print(df)

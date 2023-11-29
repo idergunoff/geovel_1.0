@@ -1478,9 +1478,6 @@ def update_list_set_point():
     update_analysis_list()
 
 
-
-
-
 def get_set_point_id():
     if ui.comboBox_set_point.count() > 0:
         return ui.comboBox_set_point.currentData()['id']
@@ -1503,11 +1500,6 @@ def update_list_point_exploration():
 def get_train_set_point_id():
     if ui.comboBox_train_point.count() > 0:
         return ui.comboBox_train_point.currentData()['id']
-
-
-def empty_func():
-    pass
-
 
 
 def update_train_combobox():
@@ -1564,6 +1556,17 @@ def update_analysis_list():
         except AttributeError:
             session.query(ParameterAnalysisExploration).filter_by(id=i.id).delete()
             session.commit()
+
+    for i in session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+        try:
+            item_text = (f'GEO_{i.param} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_param_analysis_expl.addItem(item)
+        except AttributeError:
+            session.query(GeoParameterAnalysisExploration).filter_by(id=i.id).delete()
+            session.commit()
+
 
 
 def update_analysis_combobox():
