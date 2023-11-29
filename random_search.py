@@ -677,7 +677,7 @@ def push_random_search():
         pipe = Pipeline(pipe_steps)
 
         # Создание экземпляра RandomizedSearchCV
-        kf = KFold(n_splits=ui_rs.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+        kf = StratifiedKFold(n_splits=ui_rs.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
         random_search = RandomizedSearchCV(
             pipe,
             param_distributions=dict_param_distr,

@@ -699,6 +699,7 @@ class AnalysisExploration(Base):
     # exploration = relationship("Exploration", back_populates="analysis")
     parameters = relationship('ParameterAnalysisExploration', back_populates='analysis')
     set_point = relationship("SetPoints", back_populates="analysis")
+    geo_parameters = relationship('GeoParameterAnalysisExploration', back_populates='analysis')
 
 
 class ParameterAnalysisExploration(Base):
@@ -712,5 +713,14 @@ class ParameterAnalysisExploration(Base):
     analysis = relationship("AnalysisExploration", back_populates="parameters")
     param = relationship("ParameterExploration", back_populates="analysis")
 
+
+class GeoParameterAnalysisExploration(Base):
+    __tablename__ = 'geo_parameter_analysis_exploration'
+
+    id = Column(Integer, primary_key=True)
+    param = Column(String)
+    analysis_id = Column(Integer, ForeignKey('analysis_exploration.id'))
+
+    analysis = relationship("AnalysisExploration", back_populates="geo_parameters")
 
 Base.metadata.create_all(engine)

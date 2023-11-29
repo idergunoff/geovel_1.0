@@ -859,7 +859,7 @@ def draw_MLP():
             data_tsne['mark'] = preds_train
 
         if ui_cls.checkBox_cross_val.isChecked():
-            kf = KFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
