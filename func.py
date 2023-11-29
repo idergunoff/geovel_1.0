@@ -872,6 +872,11 @@ def set_param_regmod_to_combobox():
         ui.comboBox_geovel_param_reg.addItem(param)
 
 
+def set_param_expl_to_combobox():
+    for param in list_param_geovel:
+        ui.comboBox_geovel_param_expl.addItem(param)
+
+
 def add_param_lda(param):
     if param.startswith('distr') or param.startswith('sep'):
         atr, count = ui.comboBox_atrib_distr_lda.currentText(), ui.spinBox_count_distr_lda.value()
