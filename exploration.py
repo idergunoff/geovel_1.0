@@ -537,9 +537,12 @@ def get_interpolation_field():
 
         """ Вариограма и Кригинг """
         variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
-        kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
-        field = kriging.transform(np.array(x_train), np.array(y_train))
-        df[el.title] = field
+        try:
+            kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+            field = kriging.transform(np.array(x_train), np.array(y_train))
+            df[el.title] = field
+        except LinAlgError:
+            set_info(f'LinAlgError - {el.title}', 'red')
 
     geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
     if len(geo_param) > 0:
@@ -557,6 +560,7 @@ def get_interpolation_field():
                 ui_cf.setupUi(Choose_Formation)
                 Choose_Formation.show()
                 Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                set_info(f'Выберите пласт для "{profile.title}"', 'blue')
                 for f in profile.formations:
                     ui_cf.listWidget_form_map.addItem(f'{f.title} id{f.id}')
                 ui_cf.listWidget_form_map.setCurrentRow(0)
@@ -571,16 +575,21 @@ def get_interpolation_field():
                 ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
                 Choose_Formation.exec_()
 
-        coord_geo = np.column_stack((np.array(x_prof), np.array(y_prof)))
+        coord_geo = np.column_stack((np.array(x_prof[::5]), np.array(y_prof[::5])))
         for g in geo_param:
             list_value = []
             for f in form_prof:
                 list_value += json.loads(getattr(f, g.param))
 
-            variogram = Variogram(coordinates=coord_geo, values=np.array(list_value), model="spherical", fit_method="lm")
-            kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
-            field = kriging.transform(np.array(x_train), np.array(y_train))
-            df[g.param] = field
+            variogram = Variogram(coordinates=coord_geo, values=np.array(list_value[::5]), model='spherical', fit_method="lm")
+            try:
+                kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+                field = kriging.transform(np.array(x_train), np.array(y_train))
+                df[g.param] = field
+            except LinAlgError:
+                set_info(f"LinAlgError - {g.param}", 'red')
+
+
 
 
     train_time = datetime.datetime.now() - start_time

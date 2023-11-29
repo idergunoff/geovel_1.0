@@ -74,6 +74,7 @@ import lasio as ls
 from skgstat import Variogram, OrdinaryKriging
 
 
+from numpy.linalg import LinAlgError
 import pickle
 
 app = QtWidgets.QApplication(sys.argv)

@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from numpy.linalg import LinAlgError
 from sqlalchemy.exc import OperationalError
 
 from func import *
