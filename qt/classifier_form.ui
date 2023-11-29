@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>891</width>
-    <height>555</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -801,29 +801,56 @@
    </item>
    <item row="0" column="1">
     <layout class="QGridLayout" name="gridLayout_5">
-     <item row="0" column="0">
-      <widget class="QGroupBox" name="groupBox_12">
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="groupBox_9">
        <property name="title">
-        <string>Выбросы</string>
+        <string>Cross Validate</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_17">
+       <layout class="QGridLayout" name="gridLayout_9">
         <item row="0" column="0">
-         <widget class="QSpinBox" name="spinBox_lof_neighbor">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>1000</number>
-          </property>
-          <property name="value">
-           <number>20</number>
+         <widget class="QCheckBox" name="checkBox_cross_val">
+          <property name="text">
+           <string/>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QPushButton" name="pushButton_lof">
+         <widget class="QSpinBox" name="spinBox_n_cross_val">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="title">
+        <string>PCA</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_pca">
           <property name="text">
-           <string>LOF</string>
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_pca">
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QCheckBox" name="checkBox_pca_mle">
+          <property name="text">
+           <string>mle</string>
           </property>
          </widget>
         </item>
@@ -997,63 +1024,55 @@
        </layout>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QGroupBox" name="groupBox_9">
-       <property name="title">
-        <string>Cross Validate</string>
+     <item row="6" column="0">
+      <widget class="QPushButton" name="pushButton_calc">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
        </property>
-       <layout class="QGridLayout" name="gridLayout_9">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_cross_val">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="spinBox_n_cross_val">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 204, 121);</string>
+       </property>
+       <property name="text">
+        <string>CALC</string>
+       </property>
+       <property name="autoRepeatInterval">
+        <number>100</number>
+       </property>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QGroupBox" name="groupBox_11">
+     <item row="0" column="0">
+      <widget class="QGroupBox" name="groupBox_12">
        <property name="title">
-        <string>PCA</string>
+        <string>Выбросы</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_8">
+       <layout class="QGridLayout" name="gridLayout_17">
         <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_pca">
-          <property name="text">
-           <string/>
+         <widget class="QSpinBox" name="spinBox_lof_neighbor">
+          <property name="minimum">
+           <number>1</number>
           </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="spinBox_pca">
           <property name="maximum">
            <number>1000</number>
           </property>
+          <property name="value">
+           <number>20</number>
+          </property>
          </widget>
         </item>
-        <item row="0" column="2">
-         <widget class="QCheckBox" name="checkBox_pca_mle">
+        <item row="0" column="1">
+         <widget class="QPushButton" name="pushButton_lof">
           <property name="text">
-           <string>mle</string>
+           <string>LOF</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item row="5" column="0">
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
         <widget class="QCheckBox" name="checkBox_save_model">
@@ -1077,23 +1096,31 @@
        </item>
       </layout>
      </item>
-     <item row="5" column="0">
-      <widget class="QPushButton" name="pushButton_calc">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
+     <item row="4" column="0">
+      <widget class="QGroupBox" name="groupBox_14">
+       <property name="title">
+        <string>Over Sampling</string>
        </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>CALC</string>
-       </property>
-       <property name="autoRepeatInterval">
-        <number>100</number>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_32">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_31">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_smote">
+            <property name="text">
+             <string>SMOTE</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_adasyn">
+            <property name="text">
+             <string>ADASYN</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </widget>
      </item>
     </layout>

@@ -628,6 +628,14 @@ def draw_MLP():
         if ui_cls.checkBox_rfc_extra.isChecked():
             ui_cls.checkBox_rfc_extra.setChecked(False)
 
+    def push_checkbutton_smote():
+        if ui_cls.checkBox_adasyn.isChecked():
+            ui_cls.checkBox_adasyn.setChecked(False)
+
+    def push_checkbutton_adasyn():
+        if ui_cls.checkBox_smote.isChecked():
+            ui_cls.checkBox_smote.setChecked(False)
+
 
     def choice_model_classifier(model):
         """ Выбор модели классификатора """
@@ -806,6 +814,7 @@ def draw_MLP():
 
     def calc_model_class():
         """ Создание и тренировка модели """
+        # global training_sample, markup
 
         start_time = datetime.datetime.now()
         # Нормализация данных
@@ -816,7 +825,19 @@ def draw_MLP():
 
         # Разделение данных на обучающую и тестовую выборки
         training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-            training_sample, markup, test_size=0.20, random_state=1)
+            training_sample, markup, test_size=0.20, random_state=1, stratify=markup)
+
+        text_over_sample = ''
+
+        if ui_cls.checkBox_smote.isChecked():
+            smote = SMOTE(random_state=0)
+            training_sample_train, markup_train = smote.fit_resample(training_sample_train, markup_train)
+            text_over_sample = '\nSMOTE'
+
+        if ui_cls.checkBox_adasyn.isChecked():
+            adasyn = ADASYN(random_state=0)
+            training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
+            text_over_sample = '\nADASYN'
 
         if ui_cls.checkBox_pca.isChecked():
             n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
@@ -831,6 +852,7 @@ def draw_MLP():
             model_class, text_model = choice_model_classifier(model_name)
 
         text_model += text_pca
+        text_model += text_over_sample
 
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
@@ -860,6 +882,15 @@ def draw_MLP():
 
         if ui_cls.checkBox_cross_val.isChecked():
             kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+
+            # if ui_cls.checkBox_smote.isChecked():
+            #     smote = SMOTE(random_state=0)
+            #     training_sample, markup = smote.fit_resample(training_sample, markup)
+            #
+            # if ui_cls.checkBox_adasyn.isChecked():
+            #     adasyn = ADASYN(random_state=0)
+            #     training_sample, markup = adasyn.fit_resample(training_sample, markup)
+
             scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
@@ -1152,6 +1183,8 @@ def draw_MLP():
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
     ui_cls.checkBox_rfc_extra.clicked.connect(push_checkbutton_extra)
     ui_cls.checkBox_rfc_ada.clicked.connect(push_checkbutton_ada)
+    ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
+    ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     Classifier.exec_()
 
 
