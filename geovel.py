@@ -358,7 +358,8 @@ ui.pushButton_add_all_train_param.clicked.connect(add_all_analysis_parameter_tol
 ui.pushButton_load_point.clicked.connect(load_point_exploration)
 ui.pushButton_interp.clicked.connect(draw_interpolation)
 ui.pushButton_train_interp.clicked.connect(train_interpolation)
-ui.pushButton_field.clicked.connect(get_interpolation_field)
+ui.pushButton_field.clicked.connect(exploration_MLP)
+
 ui.pushButton_load_train_point.clicked.connect(load_train_data)
 ui.pushButton_add_geovel_expl.clicked.connect(add_geo_analysis_param)
 ui.pushButton_add_all_geovel_expl.clicked.connect(add_all_geo_analysis_param)
