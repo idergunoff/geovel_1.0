@@ -873,7 +873,10 @@ def set_param_regmod_to_combobox():
 
 
 def set_param_expl_to_combobox():
-    for param in list_param_geovel:
+    new_list_param_geovel = list_param_geovel.copy()
+    for i in ['top', 'land', 'width', 'speed', 'speed_cover']:
+        new_list_param_geovel.remove(i)
+    for param in new_list_param_geovel:
         ui.comboBox_geovel_param_expl.addItem(param)
 
 
