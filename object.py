@@ -60,6 +60,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, CategoricalNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import mean_squared_error, roc_curve, auc
+from sklearn.calibration import CalibratedClassifierCV
 from imblearn.over_sampling import SMOTE, ADASYN
 
 from matplotlib.animation import FuncAnimation

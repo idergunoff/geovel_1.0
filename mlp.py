@@ -607,8 +607,8 @@ def draw_MLP():
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
-    training_sample = data_train[list_param_mlp].values.tolist()
-    markup = sum(data_train[['mark']].values.tolist(), [])
+    training_sample = np.array(data_train[list_param_mlp].values.tolist())
+    markup = np.array(sum(data_train[['mark']].values.tolist(), []))
     list_marker = get_list_marker_mlp()
 
     Classifier = QtWidgets.QDialog()
@@ -857,7 +857,19 @@ def draw_MLP():
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
 
-        pipe.fit(training_sample_train, markup_train)# Оценка точности на всей обучающей выборке
+        if ui_cls.checkBox_calibr.isChecked():
+            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+
+            pipe = CalibratedClassifierCV(
+                estimator=pipe,
+                cv=kf,
+                method=ui_cls.comboBox_calibr_method.currentText(),
+                n_jobs=-1
+            )
+            text_model += f'\nCalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
+
+        pipe.fit(training_sample_train, markup_train)
+        # Оценка точности на всей обучающей выборке
         train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
 
@@ -895,10 +907,11 @@ def draw_MLP():
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
             imp_name_params, imp_params = [], []
-            for n, i in enumerate(model_class.feature_importances_):
-                if i >= np.mean(model_class.feature_importances_):
-                    imp_name_params.append(list_param_mlp[n])
-                    imp_params.append(i)
+            if not ui_cls.checkBox_calibr.isChecked():
+                for n, i in enumerate(model_class.feature_importances_):
+                    if i >= np.mean(model_class.feature_importances_):
+                        imp_name_params.append(list_param_mlp[n])
+                        imp_params.append(i)
 
 
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
@@ -929,12 +942,14 @@ def draw_MLP():
         title_graph = text_model
         if model_name == 'RFC':
             if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
-                title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
+                if not ui_cls.checkBox_calibr.isChecked():
+                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
-            axes[2].bar(imp_name_params, imp_params)
-            axes[2].set_xticklabels(imp_name_params, rotation=90)
-            axes[2].set_title('Важность признаков')
+            if not ui_cls.checkBox_calibr.isChecked():
+                axes[2].bar(imp_name_params, imp_params)
+                axes[2].set_xticklabels(imp_name_params, rotation=90)
+                axes[2].set_title('Важность признаков')
 
         if ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(range(len(scores_cv)), scores_cv)
