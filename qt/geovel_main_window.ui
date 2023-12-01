@@ -933,7 +933,7 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>332</width>
+                       <width>336</width>
                        <height>222</height>
                       </rect>
                      </property>
@@ -1785,7 +1785,7 @@ Therm</string>
               <item row="4" column="0">
                <layout class="QGridLayout" name="gridLayout_65">
                 <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_66">
+                 <layout class="QGridLayout" name="gridLayout_66" columnstretch="1,0,1,1,1,0">
                   <item row="0" column="0">
                    <widget class="QPushButton" name="pushButton_therm_h_well">
                     <property name="toolTip">
@@ -1799,7 +1799,7 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
+                  <item row="0" column="2">
                    <widget class="QDoubleSpinBox" name="doubleSpinBox_corr_therm">
                     <property name="toolTip">
                      <string>значение корреляции термограммы для редактирования нескольких термограмм </string>
@@ -1818,7 +1818,33 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="2">
+                  <item row="0" column="4">
+                   <widget class="QPushButton" name="pushButto_remove_therm">
+                    <property name="toolTip">
+                     <string>Удалить схожие термограммы</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>Rmv</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QCheckBox" name="checkBox_check_name">
+                    <property name="toolTip">
+                     <string>проверка совпадения названия скважин</string>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
                    <widget class="QPushButton" name="pushButton_show_corr_therm">
                     <property name="toolTip">
                      <string>Отобразить схожие термограммы</string>
@@ -1831,16 +1857,13 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="3">
-                   <widget class="QPushButton" name="pushButto_remove_therm">
-                    <property name="toolTip">
-                     <string>Удалить схожие термограммы</string>
-                    </property>
+                  <item row="0" column="5">
+                   <widget class="QPushButton" name="pushButton_remove_therm_date">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
                     <property name="text">
-                     <string>Remove</string>
+                     <string>Rmv by date</string>
                     </property>
                    </widget>
                   </item>

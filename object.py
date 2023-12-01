@@ -19,6 +19,7 @@ from qt.random_search_form import *
 from qt.comment_form import *
 from qt.choose_formation_map import *
 from qt.load_points import *
+from qt.form_delete_therm import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
@@ -60,6 +61,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, CategoricalNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import mean_squared_error, roc_curve, auc
+from sklearn.calibration import CalibratedClassifierCV
 from imblearn.over_sampling import SMOTE, ADASYN
 
 from matplotlib.animation import FuncAnimation
