@@ -483,6 +483,7 @@ def build_interp_table():
     print("Начало работы: ")
     df = pd.DataFrame(columns=['x_coord', 'y_coord', 'target', 'title'])
 
+
     """ Транировочные точки """
     t_points = session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all()
     if not t_points:
@@ -497,12 +498,19 @@ def build_interp_table():
     df['target'] = target_train
 
     """ Точки для Вариограмы """
+
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
     params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
     ui.progressBar.setMaximum(len(params))
+
     for index, el in enumerate(params):
+        expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
+        ui.comboBox_expl.setCurrentText(f'{expl.title} id{expl.id}')
+        update_list_set_point()
+        points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+
         value_points = []
         for i in points:
             p = session.query(ParameterAnalysisExploration).filter_by(id=el.id).first()
@@ -523,6 +531,7 @@ def build_interp_table():
 
         """ Вариограма и Кригинг """
         variogram = Variogram(coordinates=coord, values=np.array(value_points), model="spherical", fit_method="lm")
+
         try:
             kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
             field = kriging.transform(np.array(x_train), np.array(y_train))
@@ -596,7 +605,7 @@ def exploration_MLP():
     # colors = {}
     # for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
     #     colors[m.title] = m.color
-    # tod проверить imputer
+
     training_sample = imputer.fit_transform(np.array(data_train[list_param_mlp].values.tolist()))
     markup = np.array(sum(data_train[['target']].values.tolist(), []))
 
@@ -610,7 +619,6 @@ def exploration_MLP():
 
     ui_cls.spinBox_pca.setMaximum(len(list_param))
     ui_cls.spinBox_pca.setValue(len(list_param) // 2)
-
     def push_checkbutton_extra():
         if ui_cls.checkBox_rfc_ada.isChecked():
             ui_cls.checkBox_rfc_ada.setChecked(False)
