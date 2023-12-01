@@ -621,7 +621,13 @@ def remove_therm_by_date():
     def remove_therm_by_start_stop():
         start = ui_fdt.dateEdit_start.date().toPyDate()
         stop = ui_fdt.dateEdit_stop.date().toPyDate()
-        session.query(Thermogram).filter(Thermogram.date_time.between(start, stop)).delete()
+        if ui_fdt.checkBox_all_hwell.isChecked():
+            h_well_curr = session.query(HorizontalWell).filter_by(id=h_well_id).first()
+            for h_well in session.query(HorizontalWell).filter_by(object_id=h_well_curr.object_id).all():
+                session.query(Thermogram).filter(Thermogram.date_time.between(start, stop), Thermogram.h_well_id == h_well.id).delete()
+            session.query(Thermogram).filter(Thermogram.date_time.between(start, stop)).delete()
+        else:
+            session.query(Thermogram).filter(Thermogram.date_time.between(start, stop), Thermogram.h_well_id == h_well_id).delete()
         session.commit()
         update_list_h_well()
         for i in range(ui.listWidget_h_well.count()):
