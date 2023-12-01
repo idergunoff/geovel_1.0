@@ -1467,6 +1467,8 @@ def update_list_param_exploration():
         except AttributeError:
             session.query(ParameterExploration).filter_by(id=i.id).delete()
             session.commit()
+
+    ui.label_param_expl.setText(f'Parameters: {ui.listWidget_param_expl.count()}')
     update_list_set_point()
 
 
@@ -1498,6 +1500,7 @@ def update_list_point_exploration():
         except AttributeError:
             session.query(PointExploration).filter_by(id=i.id).delete()
             session.commit()
+    ui.label_point_expl.setText(f'Points: {ui.listWidget_point_expl.count()}')
 
 
 def get_train_set_point_id():
@@ -1518,15 +1521,18 @@ def update_train_combobox():
 def update_train_list():
     """ Обновляем список тренировочных точек"""
     ui.listWidget_train_point.clear()
+    count = 0
     for i in session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all():
         try:
             item_text = (f'{i.title} id{i.id}')
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, i.id)
             ui.listWidget_train_point.addItem(item)
+            count += 1
         except AttributeError:
             session.query(PointTrain).filter_by(id=i.id).delete()
             session.commit()
+    ui.label_point_expl_2.setText(f'Train points: {ui.listWidget_train_point.count()}')
 
 
 def get_analysis_id():
@@ -1559,6 +1565,7 @@ def update_analysis_list():
         except AttributeError:
             session.query(ParameterAnalysisExploration).filter_by(id=i.id).delete()
             session.commit()
+    ui.label_analysis_count.setText(f'Analysis parameters: {ui.listWidget_param_analysis_expl.count()}')
 
     for i in session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
         try:
@@ -1569,6 +1576,9 @@ def update_analysis_list():
         except AttributeError:
             session.query(GeoParameterAnalysisExploration).filter_by(id=i.id).delete()
             session.commit()
+
+    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'up_data': False},
+                                                                              synchronize_session='fetch')
 
 
 

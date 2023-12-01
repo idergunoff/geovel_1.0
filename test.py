@@ -19,3 +19,13 @@ list_x, list_y = [25], [125]
 x_new, y_new = create_grid_points(list_x, list_y)
 print(len(x_new))
 print(len(y_new))
+
+
+target_train = [1, 2, 3]
+
+target_train_new = [[i] * 5 for i in target_train]
+target_train = []
+for i in target_train_new:
+    target_train.extend(i)
+
+print(target_train)

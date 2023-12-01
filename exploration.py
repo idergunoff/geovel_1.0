@@ -149,7 +149,10 @@ def add_all_analysis_parameter_tolist():
 
 def add_analysis_parameter_tolist():
     """ Добавляет выбранный параметр в анализ """
-    item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
+    try:
+        item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
+    except:
+        return
     check = get_analysis_id()
     if check is not None:
         analysis = session.query(ParameterAnalysisExploration).all()
@@ -473,6 +476,22 @@ def train_interpolation():
     # plt.tight_layout()
     # plt.show()
 
+def create_grid_points(x, y):
+    x_new = []
+    y_new = []
+
+    for i in range(len(x)):
+        x_point = x[i]
+        y_point = y[i]
+
+        # Создаем новые точки сетки вокруг заданных координат
+        for x_grid in range(int(x_point) - 25, int(x_point) + 26, 5):
+            for y_grid in range(int(y_point) - 25, int(y_point) + 26, 5):
+                x_new.append(x_grid)
+                y_new.append(y_grid)
+
+    return x_new, y_new
+
 
 def build_interp_table():
     """ Интерполяция по нескольким параметрам,
@@ -490,8 +509,20 @@ def build_interp_table():
         return
     x_train = [p.x_coord for p in t_points]
     y_train = [p.y_coord for p in t_points]
+
+    # x_train, y_train = create_grid_points(x_train, y_train)
     title_train = [p.title for p in t_points]
     target_train = [p.target for p in t_points]
+
+    # target_train_new = [[i] * 121 for i in target_train]
+    # title_train_new = [[i] * 121 for i in title_train]
+    # target_train, title_train = [], []
+    # for i in target_train_new:
+    #     target_train.extend(i)
+    #
+    # for i in title_train_new:
+    #     title_train.extend(i)
+
     df['title'] = title_train
     df['x_coord'] = x_train
     df['y_coord'] = y_train
@@ -594,12 +625,29 @@ def build_interp_table():
     print(df)
     print(train_time)
 
-    # df = df.dropna()
+
+    df.to_excel('data_train.xlsx')
+
+    data_train = json.dumps(df.to_dict())
+    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'data': data_train, 'up_data': True},
+                                                                              synchronize_session='fetch')
+    session.commit()
+
     return df, list_param
+
+def save_datatable(data):
+    data_train = json.dumps(data.to_dict())
+    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'data': data_train, 'up_data': True}, synchronize_session='fetch')
+    session.commit()
+
 
 def exploration_MLP():
     """ Тренировка моделей классификаторов """
-    data_train, list_param = build_interp_table()
+    data = session.query(AnalysisExploration).filter_by(id=get_analysis_id(), up_data=True).first()
+    if data is None:
+        data_train, list_param = build_interp_table()
+    else:
+        data_train = pd.DataFrame(json.loads(data.data))
 
     list_param_mlp = data_train.columns.tolist()[4:]
     # colors = {}
@@ -617,8 +665,8 @@ def exploration_MLP():
     Classifier.show()
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-    ui_cls.spinBox_pca.setMaximum(len(list_param))
-    ui_cls.spinBox_pca.setValue(len(list_param) // 2)
+    ui_cls.spinBox_pca.setMaximum(len(list_param_mlp))
+    ui_cls.spinBox_pca.setValue(len(list_param_mlp) // 2)
     def push_checkbutton_extra():
         if ui_cls.checkBox_rfc_ada.isChecked():
             ui_cls.checkBox_rfc_ada.setChecked(False)
@@ -965,7 +1013,7 @@ def exploration_MLP():
             )
             session.add(new_trained_model)
             session.commit()
-            update_list_trained_models_class()
+            # update_list_trained_models_class()
         else:
             pass
 
@@ -977,7 +1025,7 @@ def exploration_MLP():
         global data_pca, data_tsne, colors, factor_lof
 
         data_lof = data_train.copy()
-        data_lof.drop(['prof_well_index', 'mark'], axis=1, inplace=True)
+        data_lof.drop(['x_coord', 'y_coord', 'title', 'target'], axis=1, inplace=True)
 
         scaler = StandardScaler()
         training_sample_lof = scaler.fit_transform(data_lof)
@@ -1054,7 +1102,7 @@ def exploration_MLP():
             session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
             session.commit()
             build_table_train(False, 'mlp')
-            update_list_well_markup_mlp()
+            # update_list_well_markup_mlp()
             # show_regression_form(data_train_clean, list_param)
 
 
