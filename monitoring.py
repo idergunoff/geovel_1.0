@@ -330,7 +330,8 @@ def load_thermogram_h_well():
             except KeyError:
                 set_info(f'Ошибка при чтении файла {file}', 'red')
                 continue
-            if str(las.well['WELL'].value) != ui.listWidget_h_well.currentItem().text():
+            # todo проверка совпадения названия
+            if str(las.well['WELL'].value) != ui.listWidget_h_well.currentItem().text() and ui.checkBox_check_name.isChecked():
                 set_info(f'Выбраная скважина ({ui.listWidget_h_well.currentItem().text()}) не совпадает с указанной '
                          f'в las-файле - {las.well["WELL"].value}', 'red')
                 continue
@@ -600,6 +601,40 @@ def remove_thermogram():
             break
     update_list_thermogram()
     ui.listWidget_thermogram.setCurrentRow(i_therm)
+
+
+def remove_therm_by_date():
+    """Удалить термограммы за выбранный период"""
+    h_well_id = get_h_well_id()
+
+    FormDelTherm = QtWidgets.QDialog()
+    ui_fdt = Ui_Form_delete_therm_by_date()
+    ui_fdt.setupUi(FormDelTherm)
+    FormDelTherm.show()
+    FormDelTherm.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    date_start = session.query(Thermogram).filter_by(h_well_id=h_well_id).order_by(Thermogram.date_time).first().date_time
+    date_stop = session.query(Thermogram).filter_by(h_well_id=h_well_id).order_by(Thermogram.date_time.desc()).first().date_time
+    ui_fdt.dateEdit_start.setDate(date_start)
+    ui_fdt.dateEdit_stop.setDate(date_stop)
+
+    def remove_therm_by_start_stop():
+        start = ui_fdt.dateEdit_start.date().toPyDate()
+        stop = ui_fdt.dateEdit_stop.date().toPyDate()
+        session.query(Thermogram).filter(Thermogram.date_time.between(start, stop)).delete()
+        session.commit()
+        update_list_h_well()
+        for i in range(ui.listWidget_h_well.count()):
+            if ui.listWidget_h_well.item(i).data(Qt.UserRole) == h_well_id:
+                ui.listWidget_h_well.setCurrentRow(i)
+                break
+        update_list_thermogram()
+        FormDelTherm.close()
+
+    ui_fdt.buttonBox.accepted.connect(remove_therm_by_start_stop)
+    ui_fdt.buttonBox.rejected.connect(FormDelTherm.close)
+    FormDelTherm.exec_()
+
 
 
 def draw_param_h_well():

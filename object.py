@@ -19,6 +19,7 @@ from qt.random_search_form import *
 from qt.comment_form import *
 from qt.choose_formation_map import *
 from qt.load_points import *
+from qt.form_delete_therm import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
