@@ -281,8 +281,9 @@ def update_well_markup_mlp():
         start = index - well_dist if index - well_dist > 0 else 0
         stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
         list_measure = list(range(start, stop))
+    form_id = get_formation_id()
     session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).update(
-        {'marker_id': get_marker_mlp_id(), 'list_measure': json.dumps(list_measure)})
+        {'marker_id': get_marker_mlp_id(), 'list_measure': json.dumps(list_measure), 'formation_id': form_id})
     session.commit()
     set_info(f'Изменена обучающая скважина для MLP - "{well.name} {get_marker_mlp_title()}"', 'green')
     update_list_well_markup_mlp()
@@ -562,13 +563,15 @@ def update_list_param_mlp(db=False):
         for mark in list_marker:
             groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
         F, p = f_oneway(*groups)
-        if np.isnan(F).any() or np.isnan(p).any():
-            session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
-            data_train.drop(param, axis=1, inplace=True)
-            session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
-            session.commit()
-            set_info(f'Параметр {param} удален', 'red')
-            continue
+        if np.isnan(F) or np.isnan(p):
+            if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
+                    not param.startswith('Signal')):
+                session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+                data_train.drop(param, axis=1, inplace=True)
+                session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
+                session.commit()
+                set_info(f'Параметр {param} удален', 'red')
+                continue
         ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
         if F < 1 or p > 0.05:
             i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
@@ -951,12 +954,27 @@ def draw_MLP():
                 axes[2].set_xticklabels(imp_name_params, rotation=90)
                 axes[2].set_title('Важность признаков')
 
+
+
         if ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(range(len(scores_cv)), scores_cv)
             axes[2].set_title('Кросс-валидация')
+
+        elif ui_cls.checkBox_calibr.isChecked():
+            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
+            true_probs, pred_probs = calibration_curve(markup_test, preds_test, n_bins=5, pos_label=list_marker[0])
+
+            # Построение кривой надежности
+            axes[2].plot(pred_probs, true_probs, marker='o')
+            axes[2].plot([0, 1], [0, 1], linestyle='--')
+            axes[2].set_xlabel('Predicted probabilities')
+            axes[2].set_ylabel('True probabilities')
+            axes[2].set_title('Reliability curve')
         fig_train.suptitle(title_graph)
         fig_train.tight_layout()
         fig_train.show()
+
+
 
         if not ui_cls.checkBox_save_model.isChecked():
             return

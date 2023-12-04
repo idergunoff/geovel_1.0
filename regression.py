@@ -189,6 +189,7 @@ def update_well_markup_reg():
     x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
     target_value = ui.doubleSpinBox_target_val.value()
     well_dist = ui.spinBox_well_dist_reg.value()
+    form_id = get_formation_id()
     if markup.type_markup == 'intersection':
         well = session.query(Intersection).filter(Intersection.id == markup.well_id).first()
         start = well.i_profile - well_dist if well.i_profile - well_dist > 0 else 0
@@ -201,7 +202,8 @@ def update_well_markup_reg():
         stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
     list_measure = list(range(start, stop))
     session.query(MarkupReg).filter(MarkupReg.id == get_markup_regmod_id()).update(
-        {'target_value': target_value, 'list_measure': json.dumps(list_measure)})
+        {'target_value': target_value, 'list_measure': json.dumps(list_measure), 'formation_id': form_id},
+        synchronize_session='fetch')
     session.commit()
     set_info(f'Изменена обучающая скважина для регрессионной модели - "{well.name}"', 'green')
     update_list_well_markup_reg()
