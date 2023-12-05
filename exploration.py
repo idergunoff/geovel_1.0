@@ -1,4 +1,8 @@
+import json
+from sqlite3 import OperationalError
+
 import numpy as np
+import pandas as pd
 from scipy.interpolate import griddata
 
 from func import *
@@ -127,7 +131,7 @@ def remove_analysis():
         QtWidgets.QMessageBox.No
     )
     if result == QtWidgets.QMessageBox.Yes:
-        session.query(AnalysisExploration).filter_by(id=get_analysis_id()).delete()
+        session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).delete()
         session.commit()
         set_info(f'Параметрический анализ "{analysis_title}" удален', 'green')
         update_analysis_combobox()
@@ -138,13 +142,15 @@ def remove_analysis():
 def add_all_analysis_parameter_tolist():
     """ Добавляет все параметры из списка в анализ """
     for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
-        check = get_analysis_id()
+        check = get_analysis_expl_id()
         if check is not None:
-            param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=i.id, title=i.parameter)
+            param = ParameterAnalysisExploration(analysis_id=get_analysis_expl_id(), parameter_id=i.id, title=i.parameter)
             session.add(param)
         else:
             set_info(f'Для добавления параметра создайте анализ', 'red')
-        session.commit()
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'up_data': False},
+                                                                              synchronize_session='fetch')
+    session.commit()
 
     update_analysis_list()
 
@@ -154,33 +160,35 @@ def add_analysis_parameter_tolist():
         item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
     except:
         return
-    check = get_analysis_id()
+    check = get_analysis_expl_id()
     if check is not None:
         analysis = session.query(ParameterAnalysisExploration).all()
         for a in analysis:
             if a.parameter_id == item.id:
                 return
-        param = ParameterAnalysisExploration(analysis_id=get_analysis_id(), parameter_id=item.id, title=item.parameter)
+        param = ParameterAnalysisExploration(analysis_id=get_analysis_expl_id(), parameter_id=item.id, title=item.parameter)
         session.add(param)
     else:
         set_info(f'Для добавления параметра создайте анализ', 'red')
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'up_data': False},
+                                                                              synchronize_session='fetch')
     session.commit()
 
     update_analysis_list()
 
 def clear_all_analysis_parameters():
     """ Удаляет все параметры из анализа """
-    ch = get_analysis_id()
+    ch = get_analysis_expl_id()
     if ch is None:
         return
-    session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
-    session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).delete()
+    session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).delete()
+    session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).delete()
     session.commit()
     update_analysis_list()
 
 def del_analysis_parameter():
     """ Удаляет выбранный параметр из анализа """
-    ch = get_analysis_id()
+    ch = get_analysis_expl_id()
     if ch is None:
         return
 
@@ -204,11 +212,14 @@ def del_analysis_parameter():
 def add_geo_analysis_param():
     """ Добавляет выбранный параметр с георадара в анализ """
     param = ui.comboBox_geovel_param_expl.currentText()
-    geo = session.query(GeoParameterAnalysisExploration).filter_by(param=param, analysis_id=get_analysis_id()).first()
+    geo = session.query(GeoParameterAnalysisExploration).filter_by(param=param, analysis_id=get_analysis_expl_id()).first()
     if geo is not None:
         return set_info(f'{param} уже добавлен', 'red')
-    geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_id())
+    geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_expl_id())
     session.add(geo_param)
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'up_data': False},
+                                                                              synchronize_session='fetch')
+
     session.commit()
 
     update_analysis_list()
@@ -219,14 +230,16 @@ def add_all_geo_analysis_param():
     for i in range(ui.comboBox_geovel_param_expl.count()):
         param = ui.comboBox_geovel_param_expl.itemText(i)
         geo = session.query(GeoParameterAnalysisExploration).filter_by(param=param,
-                                                                       analysis_id=get_analysis_id()).first()
+                                                                       analysis_id=get_analysis_expl_id()).first()
         if geo is None:
-            geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_id())
+            geo_param = GeoParameterAnalysisExploration(param=param, analysis_id=get_analysis_expl_id())
             session.add(geo_param)
             session.commit()
         else:
             set_info(f'{param} уже добавлен', 'red')
-
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'up_data': False},
+                                                                              synchronize_session='fetch')
+    session.commit()
     update_analysis_list()
 
 
@@ -407,29 +420,29 @@ def draw_interpolation():
     param_name = session.query(ParameterExploration.parameter).filter_by(id=get_parameter_exploration_id()).first()[0]
     draw_map(x_list, y_list, value_points, param_name, False)
 
-    npts = 88
-    x = np.linspace(np.min(x_array), np.max(x_array), npts)
-    y = np.linspace(np.min(y_array), np.max(y_array), npts)
-    X, Y = np.meshgrid(x, y)
-
-    xx, yy = np.mgrid[min(x_array) - 200: max(x_array) + 200: 75, min(y_array) - 200: max(y_array) + 200: 75]
-
-    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
-    variogram.plot()
-
-    kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
-    field = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
-    s2 = kriging.sigma.reshape(xx.shape)
-
-    plt.figure(figsize=(12, 9))
-    plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
-    plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
-    plt.scatter(x_array, y_array, c=value_points, cmap='jet')
-    plt.colorbar(label='param')
-    plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
-
-    plt.tight_layout()
-    plt.show()
+    # npts = 88
+    # x = np.linspace(np.min(x_array), np.max(x_array), npts)
+    # y = np.linspace(np.min(y_array), np.max(y_array), npts)
+    # X, Y = np.meshgrid(x, y)
+    #
+    # xx, yy = np.mgrid[min(x_array) - 200: max(x_array) + 200: 75, min(y_array) - 200: max(y_array) + 200: 75]
+    #
+    # variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
+    # variogram.plot()
+    #
+    # kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+    # field = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+    # s2 = kriging.sigma.reshape(xx.shape)
+    #
+    # plt.figure(figsize=(12, 9))
+    # plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
+    # plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
+    # plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    # plt.colorbar(label='param')
+    # plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
+    #
+    # plt.tight_layout()
+    # plt.show()
 
 
 def train_interpolation():
@@ -464,10 +477,10 @@ def train_interpolation():
 
     xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 75, min(y_train) - 200: max(y_train) + 200: 75]
 
-    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm")
+    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm", estimator='matheron', bin_func='even')
     # variogram.plot()
 
-    kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+    kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
     field = kriging.transform(np.array(x_train), np.array(y_train))
     print(field)
     # plt.figure(figsize=(12, 9))
@@ -507,25 +520,27 @@ def build_interp_table():
     df = pd.DataFrame(columns=['x_coord', 'y_coord', 'target', 'title'])
 
 
-    """ Транировочные точки """
+    """ Тренировочные точки """
     t_points = session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all()
     if not t_points:
         return
     x_train = [p.x_coord for p in t_points]
     y_train = [p.y_coord for p in t_points]
 
-    # x_train, y_train = create_grid_points(x_train, y_train)
+    xx, yy = np.mgrid[min(x_train): max(x_train):,
+             min(y_train): max(y_train)]
+    x_train, y_train = create_grid_points(x_train, y_train)
     title_train = [p.title for p in t_points]
     target_train = [p.target for p in t_points]
 
-    # target_train_new = [[i] * 121 for i in target_train]
-    # title_train_new = [[i] * 121 for i in title_train]
-    # target_train, title_train = [], []
-    # for i in target_train_new:
-    #     target_train.extend(i)
-    #
-    # for i in title_train_new:
-    #     title_train.extend(i)
+    target_train_new = [[i] * 121 for i in target_train]
+    title_train_new = [[i] * 121 for i in title_train]
+    target_train, title_train = [], []
+    for i in target_train_new:
+        target_train.extend(i)
+
+    for i in title_train_new:
+        title_train.extend(i)
 
     df['title'] = title_train
     df['x_coord'] = x_train
@@ -537,7 +552,7 @@ def build_interp_table():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
-    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
+    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(params))
 
     for index, el in enumerate(params):
@@ -565,10 +580,11 @@ def build_interp_table():
         coord = np.column_stack((x_array, y_array))
 
         """ Вариограма и Кригинг """
-        variogram = Variogram(coordinates=coord, values=np.array(value_points), model="spherical", fit_method="lm")
+        # variogram = Variogram(coordinates=coord, values=np.array(value_points), model="spherical", fit_method="lm", fit_sigma='exp')
+        variogram = Variogram(coordinates=coord, values=np.array(value_points), estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
 
         try:
-            kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
             field = kriging.transform(np.array(x_train), np.array(y_train))
             df[el.title] = field
         except LinAlgError:
@@ -576,7 +592,7 @@ def build_interp_table():
         ui.progressBar.setValue(index + 1)
 
     """ Вариограма и нтерполяция для параметров с георадара """
-    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all()
+    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(geo_param))
     if len(geo_param) > 0:
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
@@ -611,13 +627,14 @@ def build_interp_table():
         coord_geo = np.column_stack((np.array(x_prof[::5]), np.array(y_prof[::5])))
         for index, g in enumerate(geo_param):
             set_info(f'Обработка параметра {g.param}', 'blue')
+            print(f'Обработка параметра {g.param}')
             list_value = []
             for f in form_prof:
                 list_value += json.loads(getattr(f, g.param))
 
-            variogram = Variogram(coordinates=coord_geo, values=list_value[::5], model='spherical', fit_method="lm")
+            variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
             try:
-                kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
+                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
                 field = kriging.transform(np.array(x_train), np.array(y_train))
                 df[g.param] = field
             except LinAlgError:
@@ -626,14 +643,14 @@ def build_interp_table():
 
     train_time = datetime.datetime.now() - start_time
     list_param = params + geo_param
-    print(df)
+    # print(df['Benzene, (1-methylethyl)-'])
     print(train_time)
 
 
-    df.to_excel('data_train.xlsx')
+    df.to_excel('data_train1.xlsx')
 
     data_train = json.dumps(df.to_dict())
-    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'data': data_train, 'up_data': True},
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True},
                                                                               synchronize_session='fetch')
     session.commit()
 
@@ -641,13 +658,15 @@ def build_interp_table():
 
 def save_datatable(data):
     data_train = json.dumps(data.to_dict())
-    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'data': data_train, 'up_data': True}, synchronize_session='fetch')
+    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True}, synchronize_session='fetch')
     session.commit()
+
 
 
 def exploration_MLP():
     """ Тренировка моделей классификаторов """
-    data = session.query(AnalysisExploration).filter_by(id=get_analysis_id(), up_data=True).first()
+    data = session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id(), up_data=True).first()
+    print(data, get_analysis_expl_id())
     if data is None:
         data_train, list_param = build_interp_table()
     else:
@@ -1137,7 +1156,7 @@ def exploration_MLP():
     def insert_list_samples(data, list_widget, label_lof):
         list_widget.clear()
         for i in data.index:
-            list_widget.addItem(f'{i}) {data["prof_well_index"][i]}')
+            list_widget.addItem(f'{i}) {data["title"][i]}')
             if label_lof[int(i)] == -1:
                 list_widget.item(int(i)).setBackground(QBrush(QColor('red')))
         list_widget.setCurrentRow(0)
@@ -1146,7 +1165,7 @@ def exploration_MLP():
     def insert_list_features(data, list_widget):
         list_widget.clear()
         for col in data.columns:
-            if col != 'prof_well_index' and col != 'mark':
+            if col != 'title' and col != 'target' and col != 'x_coord' and col != 'y_coord':
                 list_widget.addItem(col)
         list_widget.setCurrentRow(0)
 
@@ -1238,6 +1257,18 @@ def exploration_MLP():
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     Classifier.exec_()
 
+
+def show_interp_map():
+    data = session.query(AnalysisExploration).filter(
+        AnalysisExploration.id == get_analysis_expl_id()
+    ).first()
+    print(data.up_data, get_analysis_expl_id())
+    df = pd.DataFrame(json.loads(data.data))
+    print(df)
+
+def draw_interp_map():
+
+    pass
 
 
 

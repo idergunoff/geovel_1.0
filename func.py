@@ -163,7 +163,9 @@ def updatePlot():
 
 def update_profile_combobox():
     """ Обновление списка профилей в выпадающем списке """
+
     ui.label_4.setText(f'Объект ({calc_object_measures()} изм)')
+
     # Очистка выпадающего списка
     ui.comboBox_profile.clear()
     try:
@@ -1535,7 +1537,7 @@ def update_train_list():
     ui.label_point_expl_2.setText(f'Train points: {ui.listWidget_train_point.count()}')
 
 
-def get_analysis_id():
+def get_analysis_expl_id():
     if ui.comboBox_analysis_expl.count() > 0:
         return ui.comboBox_analysis_expl.currentData()['id']
 
@@ -1556,7 +1558,7 @@ def get_train_param_id():
 def update_analysis_list():
     """ Обновление списка параметров Анализа """
     ui.listWidget_param_analysis_expl.clear()
-    for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+    for i in session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all():
         try:
             item_text = (f'{i.title} id{i.id}')
             item = QListWidgetItem(item_text)
@@ -1567,7 +1569,7 @@ def update_analysis_list():
             session.commit()
     ui.label_analysis_count.setText(f'Analysis parameters: {ui.listWidget_param_analysis_expl.count()}')
 
-    for i in session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_id()).all():
+    for i in session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all():
         try:
             item_text = (f'GEO_{i.param} id{i.id}')
             item = QListWidgetItem(item_text)
@@ -1577,8 +1579,7 @@ def update_analysis_list():
             session.query(GeoParameterAnalysisExploration).filter_by(id=i.id).delete()
             session.commit()
 
-    session.query(AnalysisExploration).filter_by(id=get_analysis_id()).update({'up_data': False},
-                                                                              synchronize_session='fetch')
+
 
 
 

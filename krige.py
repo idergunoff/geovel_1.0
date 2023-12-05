@@ -131,7 +131,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
         # Интерполяция значений на сетке scikit-gstat
         try:
-            variogram = Variogram(coordinates=coord, values=z, estimator=estimator, dist_func=dist_func, bin_func=bin_func)
+            variogram = Variogram(coordinates=coord, values=z, estimator=estimator, dist_func=dist_func, bin_func=bin_func, fit_sigma='exp')
         except MemoryError:
             set_info('MemoryError', 'red')
             return
@@ -187,7 +187,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
         plt.title(f'{get_object_name()} {get_research_name()} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
-                  f'\nКоличество ячеек усреднения вариограммы: {nlags}'
+                  # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
                   f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
