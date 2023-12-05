@@ -2,6 +2,7 @@ import numpy as np
 from scipy.interpolate import griddata
 
 from func import *
+from krige import draw_map
 from random_search import *
 
 
@@ -403,6 +404,8 @@ def draw_interpolation():
     y_array = np.array(y_list)
     coord = np.column_stack((x_array, y_array))
 
+    param_name = session.query(ParameterExploration.parameter).filter_by(id=get_parameter_exploration_id()).first()[0]
+    draw_map(x_list, y_list, value_points, param_name, False)
 
     npts = 88
     x = np.linspace(np.min(x_array), np.max(x_array), npts)
@@ -457,6 +460,7 @@ def train_interpolation():
         return
     x_train = [p.x_coord for p in t_points]
     y_train = [p.y_coord for p in t_points]
+
 
     xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 75, min(y_train) - 200: max(y_train) + 200: 75]
 
