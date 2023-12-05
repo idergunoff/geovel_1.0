@@ -65,7 +65,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>4</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -933,8 +933,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>376</width>
-                       <height>214</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2014,6 +2014,23 @@ Therm</string>
                 </item>
                </layout>
               </item>
+              <item row="7" column="0">
+               <widget class="QPushButton" name="pushButton_train_interp">
+                <property name="text">
+                 <string>Train Interpolation</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QListWidget" name="listWidget_param_analysis_expl"/>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_analysis_count">
+                <property name="text">
+                 <string>Analysis</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_101">
                 <item row="6" column="0">
@@ -2196,14 +2213,7 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="7" column="0">
-               <widget class="QPushButton" name="pushButton_train_interp">
-                <property name="text">
-                 <string>Train Interpolation</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
+              <item row="10" column="0">
                <spacer name="verticalSpacer_6">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -2234,13 +2244,6 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="8" column="0">
-               <widget class="QPushButton" name="pushButton_field">
-                <property name="text">
-                 <string>Interpolation Field</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0">
                <layout class="QGridLayout" name="gridLayout_112" columnstretch="3,1,1">
                 <item row="0" column="0">
@@ -2268,20 +2271,24 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_analysis_count">
+              <item row="8" column="0">
+               <widget class="QPushButton" name="pushButton_field">
                 <property name="text">
-                 <string>Analysis</string>
+                 <string>Interpolation Field</string>
                 </property>
                </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QListWidget" name="listWidget_param_analysis_expl"/>
               </item>
               <item row="5" column="0">
                <widget class="QLabel" name="label_georadar">
                 <property name="text">
                  <string>Georadar parameters:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QPushButton" name="pushButton">
+                <property name="text">
+                 <string>PushButton</string>
                 </property>
                </widget>
               </item>
@@ -4245,7 +4252,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
