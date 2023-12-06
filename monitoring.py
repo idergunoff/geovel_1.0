@@ -336,6 +336,12 @@ def load_thermogram_h_well():
                          f'в las-файле - {las.well["WELL"].value}', 'red')
                 continue
             date_time = datetime.datetime.strptime(las.well['DATE'].value, '%d.%m.%Y %H-%M-%S')
+            date_notime = date_time.date()
+            if session.query(Thermogram).filter(
+                    Thermogram.h_well_id == h_well_id,
+                    func.DATE(Thermogram.date_time) == date_notime).first():
+                set_info(f'Термограмма {file} уже существует', 'red')
+                continue
             add_update_therm_to_db(h_well_id, date_time, list(las['DEPTH']), list(las['TEMP']))
             n_load += 1
         elif file.endswith('.xls') or file.endswith('.xlsx'):
@@ -624,8 +630,10 @@ def remove_therm_by_date():
         if ui_fdt.checkBox_all_hwell.isChecked():
             h_well_curr = session.query(HorizontalWell).filter_by(id=h_well_id).first()
             for h_well in session.query(HorizontalWell).filter_by(object_id=h_well_curr.object_id).all():
-                session.query(Thermogram).filter(Thermogram.date_time.between(start, stop), Thermogram.h_well_id == h_well.id).delete()
-            session.query(Thermogram).filter(Thermogram.date_time.between(start, stop)).delete()
+                session.query(Thermogram).filter(
+                    Thermogram.date_time >= start,
+                    Thermogram.date_time <= stop,
+                    Thermogram.h_well_id == h_well.id).delete()
         else:
             session.query(Thermogram).filter(Thermogram.date_time.between(start, stop), Thermogram.h_well_id == h_well_id).delete()
         session.commit()
@@ -914,7 +922,8 @@ def coordinate_binding_thermogram():
     """ Координатная привязка термограммы """
     incl_param = session.query(ParameterHWell).filter_by(parameter='Инклинометрия', h_well_id=get_h_well_id()).first()
     if not incl_param:
-        set_info(f'Нет инклинометрии для скважины {incl_param.h_well.title}', 'red')
+        hwell = session.query(HorizontalWell).filter_by(id=get_h_well_id()).first()
+        set_info(f'Нет инклинометрии для скважины {hwell.title}', 'red')
         return
     data_incl = json.loads(incl_param.data)
     length_incl = [i[3] for i in data_incl]
