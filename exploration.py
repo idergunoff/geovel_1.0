@@ -680,7 +680,7 @@ def exploration_MLP():
     training_sample = imputer.fit_transform(np.array(data_train[list_param_mlp].values.tolist()))
     markup = np.array(sum(data_train[['target']].values.tolist(), []))
 
-    list_marker = get_list_marker_mlp()
+    list_marker = [0, 1]
 
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
