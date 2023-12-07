@@ -337,6 +337,7 @@ def load_thermogram_h_well():
                 continue
             date_time = datetime.datetime.strptime(las.well['DATE'].value, '%d.%m.%Y %H-%M-%S')
             date_notime = date_time.date()
+            # todo проверка совпадения дат - в данном решении загружается только первая за день
             if session.query(Thermogram).filter(
                     Thermogram.h_well_id == h_well_id,
                     func.DATE(Thermogram.date_time) == date_notime).first():
@@ -844,6 +845,7 @@ def show_inclinometry():
         for int_db in intersections:
             if ui.checkBox_2d.isChecked():
                 ax.scatter(int_db.x_coord, int_db.y_coord, marker='o', color='#2C145E', s=150)
+                plt.text(int_db.x_coord - 35, int_db.y_coord - 35, f'{int_db.profile.title}- {int_db.thermogram.h_well.title}', color='darkblue', fontsize=10)
             else:
                 ax.plot([int_db.x_coord, int_db.x_coord], [int_db.y_coord, int_db.y_coord], [-1000, 1000], color='#ff7800', linewidth=2)
                 ax.scatter(int_db.x_coord, int_db.y_coord, 1000, 'o', s=100, color='#ff7800')
@@ -881,13 +883,19 @@ def show_inclinometry():
 
     if ui.checkBox_incl_therm.isChecked():
         for int_db in intersections:
-            xs_tm = [i[2] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
-            ys_tm = [i[3] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
-            zs_tm = [i[4] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
-            if ui.checkBox_2d.isChecked():
-                ax.plot(xs_tm, ys_tm, '.', color='darkred')
-            else:
-                ax.plot(xs_tm, ys_tm, zs_tm, '.', color='darkred')
+            try:
+                xs_tm = [i[2] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+                ys_tm = [i[3] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+                zs_tm = [i[4] for i in json.loads(int_db.thermogram.therm_data) if len(i)>2]
+                if ui.checkBox_2d.isChecked():
+                    ax.plot(xs_tm, ys_tm, '.', color='darkred')
+                else:
+                    ax.plot(xs_tm, ys_tm, zs_tm, '.', color='darkred')
+            except AttributeError:
+                session.query(Intersection).filter(Intersection.id == int_db.id).delete()
+                session.commit()
+
+
 
 
     ax.set_xlabel('X')

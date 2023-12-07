@@ -105,7 +105,13 @@ def update_list_well_markup_reg():
             fake = len(json.loads(i.list_fake)) if i.list_fake else 0
             measure = len(json.loads(i.list_measure))
             if i.type_markup == 'intersection':
-                inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                try:
+                    inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                except TypeError:
+                    session.query(MarkupReg).filter(MarkupReg.id == i.id).delete()
+                    session.commit()
+                    set_info(f'Обучающая скважина удалена из-за отсутствия пересечения', 'red')
+                    continue
                 item = (f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name.split("_")[0]} | '
                         f'{measure - fake} | {i.target_value} | id{i.id}')
             else:

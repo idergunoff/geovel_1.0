@@ -1137,7 +1137,7 @@ def get_list_marker():
 
 
 def get_list_marker_mlp():
-    markers = session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).all()
+    markers = session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).order_by(MarkerMLP.id).all()
     return [m.title for m in markers]
 
 

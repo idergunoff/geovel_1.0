@@ -196,7 +196,7 @@ def remove_marker_mlp():
 def update_list_marker_mlp():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()
-    for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.title).all():
+    for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).all():
         item = f'{i.title} id{i.id}'
         ui.comboBox_mark_mlp.addItem(f'{i.title} id{i.id}')
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
@@ -208,7 +208,7 @@ def update_list_marker_mlp():
 def update_list_marker_mlp_db():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()
-    for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.title).all():
+    for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).all():
         item = f'{i.title} id{i.id}'
         ui.comboBox_mark_mlp.addItem(f'{i.title} id{i.id}')
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
@@ -238,7 +238,7 @@ def add_well_markup_mlp():
             start = inter.i_profile - well_dist if inter.i_profile - well_dist > 0 else 0
             stop = inter.i_profile + well_dist if inter.i_profile + well_dist < len(x_prof) else len(x_prof)
             list_measure = list(range(start, stop))
-            new_markup_mlp = MarkupLDA(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
+            new_markup_mlp = MarkupMLP(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
                                        marker_id=marker_id, formation_id=formation_id,
                                        list_measure=json.dumps(list_measure), type_markup='intersection')
         else:
@@ -261,6 +261,66 @@ def add_well_markup_mlp():
         set_info('выбраны не все параметры', 'red')
 
 
+def add_profile_mlp():
+    """Добавить часть профиля в обучающую выборку MLP"""
+    AddProfClass = QtWidgets.QDialog()
+    ui_apc = Ui_AddProfileClass()
+    ui_apc.setupUi(AddProfClass)
+    AddProfClass.show()
+    AddProfClass.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+    ui_apc.spinBox_from.setMaximum(len(json.loads(form.T_top)))
+    ui_apc.spinBox_to.setMaximum(len(json.loads(form.T_top)))
+    ui_apc.spinBox_from.setValue(0)
+    ui_apc.spinBox_to.setValue(len(json.loads(form.T_top)))
+    ui_apc.label_question.setText(f'Добавить часть профиля {form.profile.title}')
+
+
+    def draw_border_addition():
+        global l_from, l_to
+        if globals().get('l_from') and globals().get('l_to'):
+            radarogramma.removeItem(l_from)
+            radarogramma.removeItem(l_to)
+        l_from = pg.InfiniteLine(pos=ui_apc.spinBox_from.value(), angle=90, pen=pg.mkPen(color='white', width=2, dash=[8, 2]))
+        l_to = pg.InfiniteLine(pos=ui_apc.spinBox_to.value(), angle=90, pen=pg.mkPen(color='white', width=2, dash=[8, 2]))
+        radarogramma.addItem(l_from)
+        radarogramma.addItem(l_to)
+
+
+    def add_profile_mlp_to_db():
+        new_markup_mlp = MarkupMLP(
+            analysis_id = get_MLP_id(),
+            well_id = 0,
+            profile_id = get_profile_id(),
+            formation_id = get_formation_id(),
+            marker_id = get_marker_mlp_id(),
+            list_measure = json.dumps(list(range(ui_apc.spinBox_from.value(), ui_apc.spinBox_to.value()))),
+            type_markup = 'profile'
+        )
+        session.add(new_markup_mlp)
+        session.commit()
+        set_info(f'Добавлена новая обучающий профиль для MLP - "{get_profile_name()}"', 'green')
+        update_list_well_markup_mlp()
+        add_profile_mlp_close()
+
+
+    def add_profile_mlp_close():
+        radarogramma.removeItem(l_from)
+        radarogramma.removeItem(l_to)
+        AddProfClass.close()
+
+
+    draw_border_addition()
+    ui_apc.spinBox_from.valueChanged.connect(draw_border_addition)
+    ui_apc.spinBox_to.valueChanged.connect(draw_border_addition)
+    ui_apc.buttonBox.accepted.connect(add_profile_mlp_to_db)
+    ui_apc.buttonBox.rejected.connect(add_profile_mlp_close)
+
+    AddProfClass.exec_()
+
+
+
 def update_well_markup_mlp():
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
@@ -272,6 +332,8 @@ def update_well_markup_mlp():
         start = well.i_profile - well_dist if well.i_profile - well_dist > 0 else 0
         stop = well.i_profile + well_dist if well.i_profile + well_dist < len(x_prof) else len(x_prof)
         list_measure = list(range(start, stop))
+    elif markup.type_markup == 'profile':
+        list_measure = json.loads(markup.list_measure)
     else:
         well = session.query(Well).filter(Well.id == markup.well_id).first()
         x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == markup.profile_id).first()[0])
@@ -285,7 +347,10 @@ def update_well_markup_mlp():
     session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).update(
         {'marker_id': get_marker_mlp_id(), 'list_measure': json.dumps(list_measure), 'formation_id': form_id})
     session.commit()
-    set_info(f'Изменена обучающая скважина для MLP - "{well.name} {get_marker_mlp_title()}"', 'green')
+    if markup.type_markup == 'profile':
+        set_info(f'Изменен обучающий профиль для MLP - "{get_profile_name()}"', 'green')
+    else:
+        set_info(f'Изменена обучающая скважина для MLP - "{well.name} {get_marker_mlp_title()}"', 'green')
     update_list_well_markup_mlp()
 
 
@@ -293,7 +358,7 @@ def remove_well_markup_mlp():
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
         return
-    skv_name = session.query(Well.name).filter(Well.id == markup.well_id).first()[0]
+    skv_name = 'profile markup' if markup.type_markup == 'profile' else session.query(Well.name).filter(Well.id == markup.well_id).first()[0]
     prof_name = session.query(Profile.title).filter(Profile.id == markup.profile_id).first()[0]
     mlp_name = session.query(AnalysisMLP.title).filter(AnalysisMLP.id == markup.analysis_id).first()[0]
     result = QtWidgets.QMessageBox.question(ui.listWidget_well_mlp, 'Remove markup MLP',
@@ -318,8 +383,16 @@ def update_list_well_markup_mlp():
             fake = len(json.loads(i.list_fake)) if i.list_fake else 0
             measure = len(json.loads(i.list_measure))
             if i.type_markup == 'intersection':
-                inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                try:
+                    inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                except TypeError:
+                    session.query(MarkupMLP).filter(MarkupMLP.id == i.id).delete()
+                    set_info(f'Обучающая скважина удалена из-за отсутствия пересечения', 'red')
+                    session.commit()
+                    continue
                 item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+            elif i.type_markup == 'profile':
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | | {measure - fake} из {measure} | id{i.id}'
             else:
                 item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
             ui.listWidget_well_mlp.addItem(item)
@@ -360,7 +433,10 @@ def choose_marker_mlp():
     draw_radarogram()
     ui.comboBox_plast.setCurrentText(f'{markup.formation.title} id{markup.formation_id}')
     draw_formation()
-    draw_intersection(markup.well_id) if markup.type_markup == 'intersection' else draw_well(markup.well_id)
+    if markup.type_markup == 'profile':
+        pass
+    else:
+        draw_intersection(markup.well_id) if markup.type_markup == 'intersection' else draw_well(markup.well_id)
     list_measure = json.loads(markup.list_measure)  # Получение списка измерений
     list_fake = json.loads(markup.list_fake) if markup.list_fake else []  # Получение списка пропущенных измерений
     list_up = json.loads(markup.formation.layer_up.layer_line)  # Получение списка с верхними границами формации
@@ -381,7 +457,8 @@ def add_param_signal_mlp():
             parameter=param
     ).count() == 0:
         add_param_mlp(param)
-        update_list_param_mlp()
+        # update_list_param_mlp()
+        set_color_button_updata()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -398,7 +475,8 @@ def add_all_param_signal_mlp():
             add_param_mlp(param)
         else:
             set_info(f'Параметр {param} уже добавлен', 'red')
-    update_list_param_mlp()
+    # update_list_param_mlp()
+    set_color_button_updata()
 
 
 def add_param_geovel_mlp():
@@ -414,7 +492,8 @@ def add_param_geovel_mlp():
             parameter= param
     ).count() == 0:
         add_param_mlp(param)
-        update_list_param_mlp()
+        set_color_button_updata()
+        # update_list_param_mlp()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -435,7 +514,8 @@ def add_all_param_geovel_mlp():
         add_param_mlp(param)
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
 
 
 def add_param_distr_mlp():
@@ -452,7 +532,8 @@ def add_param_distr_mlp():
     add_param_mlp('distr')
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_mlp.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
@@ -471,7 +552,8 @@ def add_param_sep_mlp():
     add_param_mlp('sep')
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_mlp.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
@@ -489,7 +571,8 @@ def add_all_param_distr_mlp():
         session.add(new_param_mlp)
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
 
 
@@ -507,7 +590,8 @@ def add_param_mfcc_mlp():
     add_param_mlp('mfcc')
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_mlp.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_mlp.currentText()}', 'green')
 
@@ -525,7 +609,8 @@ def add_all_param_mfcc_mlp():
         session.add(new_param_mlp)
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_mlp()
+    set_color_button_updata()
+    # update_list_param_mlp()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
@@ -559,23 +644,26 @@ def update_list_param_mlp(db=False):
     ui.listWidget_param_mlp.clear()
     list_param_mlp = data_train.columns.tolist()[2:]
     for param in list_param_mlp:
-        groups = []
-        for mark in list_marker:
-            groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
-        F, p = f_oneway(*groups)
-        if np.isnan(F) or np.isnan(p):
-            if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
-                    not param.startswith('Signal')):
-                session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
-                data_train.drop(param, axis=1, inplace=True)
-                session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
-                session.commit()
-                set_info(f'Параметр {param} удален', 'red')
-                continue
-        ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
-        if F < 1 or p > 0.05:
-            i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
-            i_item.setBackground(QBrush(QColor('red')))
+        if ui.checkBox_kf.isChecked():
+            groups = []
+            for mark in list_marker:
+                groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+            F, p = f_oneway(*groups)
+            if np.isnan(F) or np.isnan(p):
+                if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
+                        not param.startswith('Signal')):
+                    session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+                    data_train.drop(param, axis=1, inplace=True)
+                    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
+                    session.commit()
+                    set_info(f'Параметр {param} удален', 'red')
+                    continue
+            ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
+            if F < 1 or p > 0.05:
+                i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
+                i_item.setBackground(QBrush(QColor('red')))
+        else:
+            ui.listWidget_param_mlp.addItem(param)
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
     set_color_button_updata()
     update_list_trained_models_class()
@@ -622,6 +710,13 @@ def draw_MLP():
 
     ui_cls.spinBox_pca.setMaximum(len(list_param_mlp))
     ui_cls.spinBox_pca.setValue(len(list_param_mlp) // 2)
+
+
+    ui_cls.label.setText(
+        f'Тренеровочный сэмпл: {len(training_sample)}, '
+        f'{list_marker[0]}-{list(markup).count(list_marker[0])}, '
+        f'{list_marker[1]}-{list(markup).count(list_marker[1])}'
+    )
 
     def push_checkbutton_extra():
         if ui_cls.checkBox_rfc_ada.isChecked():

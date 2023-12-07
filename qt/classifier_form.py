@@ -485,6 +485,9 @@ class Ui_ClassifierForm(object):
         self.gridLayout_10.addWidget(self.pushButton_random_search, 0, 1, 1, 1)
         self.gridLayout_34.addLayout(self.gridLayout_10, 5, 0, 1, 1)
         self.gridLayout_35.addLayout(self.gridLayout_34, 0, 1, 1, 1)
+        self.label = QtWidgets.QLabel(ClassifierForm)
+        self.label.setObjectName("label")
+        self.gridLayout_35.addWidget(self.label, 1, 0, 1, 2)
 
         self.retranslateUi(ClassifierForm)
         self.comboBox_solvar_mlp.setCurrentIndex(1)
@@ -619,6 +622,7 @@ class Ui_ClassifierForm(object):
         self.pushButton_calc.setText(_translate("ClassifierForm", "CALC"))
         self.pushButton_random_search.setToolTip(_translate("ClassifierForm", "Подбор гиперпараметров"))
         self.pushButton_random_search.setText(_translate("ClassifierForm", "RndSrcCV"))
+        self.label.setText(_translate("ClassifierForm", "TextLabel"))
 
 
 if __name__ == "__main__":
