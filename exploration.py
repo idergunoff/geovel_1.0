@@ -591,7 +591,7 @@ def build_interp_table():
             set_info(f'LinAlgError - {el.title}', 'red')
         ui.progressBar.setValue(index + 1)
 
-    """ Вариограма и нтерполяция для параметров с георадара """
+    """ Вариограма и интерполяция для параметров с георадара """
     geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(geo_param))
     if len(geo_param) > 0:
@@ -1259,12 +1259,142 @@ def exploration_MLP():
 
 
 def show_interp_map():
-    data = session.query(AnalysisExploration).filter(
-        AnalysisExploration.id == get_analysis_expl_id()
-    ).first()
-    print(data.up_data, get_analysis_expl_id())
-    df = pd.DataFrame(json.loads(data.data))
-    print(df)
+    global form_prof
+    start_time = datetime.datetime.now()
+    data = pd.DataFrame()
+
+    # список точек по сетке для интерполирования
+    p_points = session.query(PointExploration).all()
+    x = [p.x_coord for p in p_points]
+    y = [p.y_coord for p in p_points]
+
+    x_min, x_max = min(x), max(x)
+    y_min, y_max = min(y), max(y)
+    step_x = 50
+    step_y = 50
+
+    x_values = np.arange(x_min, x_max + step_x, step_x)
+    y_values = np.arange(y_min, y_max + step_y, step_y)
+
+    x_grid, y_grid = np.meshgrid(x_values, y_values)
+    points_grid = np.column_stack((x_grid.ravel(), y_grid.ravel()))
+
+    data['x_coord'] = x_grid.ravel()
+    data['y_coord'] = y_grid.ravel()
+
+    x_grid, y_grid = list(x_grid.ravel()), list(y_grid.ravel())
+
+    # точки для вариограмы
+    points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+    if not points:
+        return
+    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    ui.progressBar.setMaximum(len(params))
+
+    for index, el in enumerate(params):
+        expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
+        ui.comboBox_expl.setCurrentText(f'{expl.title} id{expl.id}')
+        update_list_set_point()
+        points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
+
+        value_points = []
+        for i in points:
+            p = session.query(ParameterAnalysisExploration).filter_by(id=el.id).first()
+            value = session.query(ParameterPoint.value).filter_by(
+                param_id=p.param.id,
+                point_id=i.id
+            ).first()[0]
+
+            value_points.append(value)
+        set_info(f'Обработка параметра {p.title}', 'blue')
+        print(f'({index + 1}/{len(params)}) Обработка параметра {p.title}')
+        x_list = [p.x_coord for p in points]
+        y_list = [p.y_coord for p in points]
+
+        x_array = np.array(x_list)
+        y_array = np.array(y_list)
+        coord = np.column_stack((x_array, y_array))
+
+        # вариограма и кригинг
+        variogram = Variogram(coordinates=coord, values=np.array(value_points), estimator='matheron', dist_func='euclidean',
+                              bin_func='even', fit_sigma='linear', model='spherical', fit_method='trf')
+
+        try:
+            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=30, mode='exact')
+            field = kriging.transform(np.array(x_grid), np.array(y_grid))
+            x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
+            y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
+            list_nan = [i for i, val in enumerate(field) if np.isnan(val)]
+            field = [i for i in field if not np.isnan(i)]
+            for i in list_nan:
+                data.drop(i, inplace=True)
+            data[el.param.parameter] = field
+            data.reset_index(drop=True, inplace=True)
+        except LinAlgError:
+            set_info(f"LinAlgError - {el.param}", 'red')
+        ui.progressBar.setValue(index + 1)
+
+    # Георадар
+    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    ui.progressBar.setMaximum(len(geo_param))
+    if len(geo_param) > 0:
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        x_prof, y_prof, form_prof = [], [], []
+
+        for profile in profiles:
+            x_prof += json.loads(profile.x_pulc)
+            y_prof += json.loads(profile.y_pulc)
+            if len(profile.formations) == 1:
+                form_prof.append(profile.formations[0])
+            else:
+                Choose_Formation = QtWidgets.QDialog()
+                ui_cf = Ui_FormationMAP()
+                ui_cf.setupUi(Choose_Formation)
+                Choose_Formation.show()
+                Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                set_info(f'Выберите пласт для "{profile.title}"', 'blue')
+                for f in profile.formations:
+                    ui_cf.listWidget_form_map.addItem(f'{f.title} id{f.id}')
+                ui_cf.listWidget_form_map.setCurrentRow(0)
+
+                def form_lda_ok():
+                    global form_prof
+                    f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
+                    form = session.query(Formation).filter(Formation.id == f_id).first()
+                    form_prof.append(form)
+                    Choose_Formation.close()
+
+                ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
+                Choose_Formation.exec_()
+
+        coord_geo = np.column_stack((np.array(x_prof[::5]), np.array(y_prof[::5])))
+        for index, g in enumerate(geo_param):
+            set_info(f'Обработка параметра {g.param}', 'blue')
+            print(f'({index + 1}/{len(geo_param)}) Обработка параметра георадара {g.param}')
+            list_value = []
+            for f in form_prof:
+                list_value += json.loads(getattr(f, g.param))
+
+            variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron',
+                                  dist_func='euclidean', bin_func='even', fit_sigma='exp')
+            try:
+                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+                field = kriging.transform(np.array(x_grid), np.array(y_grid))
+                x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
+                y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
+                list_nan = [i for i, val in enumerate(field) if np.isnan(val)]
+                field = [i for i in field if not np.isnan(i)]
+                for i in list_nan:
+                    data.drop(i, inplace=True)
+                data[g.param] = field
+                data.reset_index(drop=True, inplace=True)
+            except LinAlgError:
+                set_info(f"LinAlgError - {g.param}", 'red')
+            ui.progressBar.setValue(index + 1)
+    # data = data.dropna()
+    data.to_excel('new_data.xlsx')
+    train_time = datetime.datetime.now() - start_time
+    print(train_time)
 
 def draw_interp_map():
 
