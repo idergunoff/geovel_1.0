@@ -700,6 +700,7 @@ class AnalysisExploration(Base):
     parameters = relationship('ParameterAnalysisExploration', back_populates='analysis')
     set_point = relationship("SetPoints", back_populates="analysis")
     geo_parameters = relationship('GeoParameterAnalysisExploration', back_populates='analysis')
+    trained_models = relationship('TrainedModelExploration', back_populates='analysis')
 
 
 class ParameterAnalysisExploration(Base):
@@ -722,6 +723,20 @@ class GeoParameterAnalysisExploration(Base):
     analysis_id = Column(Integer, ForeignKey('analysis_exploration.id'))
 
     analysis = relationship("AnalysisExploration", back_populates="geo_parameters")
+
+
+class TrainedModelExploration(Base):
+    __tablename__ = 'trained_model_exploration'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_exploration.id'))
+    title = Column(String)
+    path_model = Column(String)
+    list_params = Column(Text)
+    comment = Column(Text)
+
+    analysis = relationship('AnalysisExploration', back_populates='trained_models')
+
 
 
 Base.metadata.create_all(engine)

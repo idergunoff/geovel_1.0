@@ -1523,14 +1523,12 @@ def update_train_combobox():
 def update_train_list():
     """ Обновляем список тренировочных точек"""
     ui.listWidget_train_point.clear()
-    count = 0
     for i in session.query(PointTrain).filter_by(set_points_train_id=get_train_set_point_id()).all():
         try:
             item_text = (f'{i.title} id{i.id}')
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, i.id)
             ui.listWidget_train_point.addItem(item)
-            count += 1
         except AttributeError:
             session.query(PointTrain).filter_by(id=i.id).delete()
             session.commit()
@@ -1590,6 +1588,36 @@ def update_analysis_combobox():
         ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
         ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
     update_analysis_list()
+    update_models_expl_list()
+
+
+def update_models_expl_list():
+    " Обновление списка сохраненных моделей Исследований "
+    ui.listWidget_trained_model_expl.clear()
+    for i in session.query(TrainedModelExploration).filter_by(analysis_id=get_analysis_expl_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_trained_model_expl.addItem(item)
+        except AttributeError:
+            session.query(TrainedModelExploration).filter_by(id=i.id).delete()
+    session.commit()
+
+
+def remove_model_exploration():
+    " Удаляет выбранную модель исследования "
+
+    ch = get_analysis_expl_id()
+    if ch is None:
+        return
+    item = session.query(TrainedModelExploration).filter_by(
+        id=ui.listWidget_trained_model_expl.currentItem().text().split(' id')[-1]).first()
+    if item is not None:
+        session.delete(item)
+        session.commit()
+
+    update_models_expl_list()
 
 
 def check_trained_model():
@@ -1606,5 +1634,7 @@ def check_trained_model():
         if not os.path.exists(model.path_model):
             session.query(TrainedModelClass).filter_by(id=model.id).delete()
     session.commit()
+
+
 
 

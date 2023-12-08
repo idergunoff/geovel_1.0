@@ -656,13 +656,6 @@ def build_interp_table():
 
     return df, list_param
 
-def save_datatable(data):
-    data_train = json.dumps(data.to_dict())
-    session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True}, synchronize_session='fetch')
-    session.commit()
-
-
-
 def exploration_MLP():
     """ Тренировка моделей классификаторов """
     data = session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id(), up_data=True).first()
@@ -885,7 +878,6 @@ def exploration_MLP():
     def calc_model_class():
         """ Создание и тренировка модели """
         # global training_sample, markup
-
         start_time = datetime.datetime.now()
         # Нормализация данных
         scaler = StandardScaler()
@@ -1023,20 +1015,20 @@ def exploration_MLP():
             QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
-            path_model = f'models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(pipe, f)
 
-            new_trained_model = TrainedModelClass(
-                analysis_id=get_MLP_id(),
+            new_trained_model = TrainedModelExploration(
+                analysis_id=get_analysis_expl_id(),
                 title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_model=path_model,
-                list_params=json.dumps(list_param),
+                list_params=json.dumps(list_param_mlp),
                 comment=text_model
             )
             session.add(new_trained_model)
             session.commit()
-            # update_list_trained_models_class()
+            update_models_expl_list()
         else:
             pass
 
