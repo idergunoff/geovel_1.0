@@ -138,6 +138,9 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         except ValueError:
             set_info('ValueError: variogram', 'red')
             return
+        except AttributeError:
+            set_info('AttributeError', 'red')
+            return
 
         # variogram.fit()
         kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
