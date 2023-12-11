@@ -208,7 +208,6 @@ def del_analysis_parameter():
     update_analysis_list()
 
 
-
 def add_geo_analysis_param():
     """ Добавляет выбранный параметр с георадара в анализ """
     param = ui.comboBox_geovel_param_expl.currentText()
