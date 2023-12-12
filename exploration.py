@@ -3,11 +3,19 @@ from sqlite3 import OperationalError
 
 import numpy as np
 import pandas as pd
+import gstools as gs
+from gstools import Gaussian
 from scipy.interpolate import griddata
 
+import krige
 from func import *
 from krige import draw_map
 from random_search import *
+import pykrige.kriging_tools as kt
+import pykrige
+from pykrige.ok import OrdinaryKriging
+
+
 
 
 def add_exploration():
@@ -446,6 +454,7 @@ def draw_interpolation():
 
 def train_interpolation():
     """ Интерполяция по одному параметру на тренировочном наборе точек """
+    print("Начало работы")
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
@@ -474,18 +483,45 @@ def train_interpolation():
     y_train = [p.y_coord for p in t_points]
 
 
-    xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 75, min(y_train) - 200: max(y_train) + 200: 75]
+    xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 500, min(y_train) - 200: max(y_train) + 200: 500]
 
-    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm", estimator='matheron', bin_func='even')
-    # variogram.plot()
+    # variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm", estimator='matheron', bin_func='even')
+    # # variogram.plot()
+    #
+    # kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
+    # field = kriging.transform(np.array(x_train), np.array(y_train))
+    # print(field)
 
-    kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
-    field = kriging.transform(np.array(x_train), np.array(y_train))
-    print(field)
-    # plt.figure(figsize=(12, 9))
-    # # plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
-    # # plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
-    # plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+
+    OK = OrdinaryKriging(
+        x_array,
+        y_array,
+        value_points,
+        variogram_model="linear",
+        verbose=True,
+        enable_plotting=False,
+    )
+
+    z1, ss = OK.execute("grid", xx, yy)
+
+    plt.figure(figsize=(12, 9))
+    plt.contour(xx, yy, z1, colors='k', linewidths=0.5)
+    plt.pcolormesh(xx, yy, z1, shading='auto', cmap='jet')
+    plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    plt.colorbar(label='Z Value')
+    plt.scatter(x_array, y_array, c=value_points, marker='.', edgecolors='k', s=0.1)
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title('Ordinary Kriging Interpolation')
+    plt.tight_layout()
+    plt.show()
+
+
+    # plt.figure(figsize=(8, 6))
+    # # plt.axis([9, 10, 6, 10])
+    # plt.contour(x_train, y_train, z1, levels=10, colors='k', linewidths=0.5)
+    # plt.pcolormesh(x_train, y_train, z1, shading='auto', cmap='turbo')
+    # plt.scatter(x_array, y_array, c=value_points, cmap='turbo')
     # plt.colorbar(label='param')
     # plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
     #
