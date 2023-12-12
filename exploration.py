@@ -646,7 +646,7 @@ def build_interp_table():
     print(train_time)
 
 
-    df.to_excel('data_train1.xlsx')
+    df.to_excel('data_train.xlsx')
 
     data_train = json.dumps(df.to_dict())
     session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True},
@@ -1250,6 +1250,7 @@ def exploration_MLP():
 
 
 def show_interp_map():
+    """ Создание карты интерполяции для сгенерированных точек """
     global form_prof
     start_time = datetime.datetime.now()
     data = pd.DataFrame()
@@ -1387,9 +1388,87 @@ def show_interp_map():
     train_time = datetime.datetime.now() - start_time
     print(train_time)
 
-def draw_interp_map():
 
-    pass
+def calc_exploration_class():
+    Choose_ExplModel = QtWidgets.QDialog()
+    ui_rm = Ui_FormRegMod()
+    ui_rm.setupUi(Choose_ExplModel)
+    Choose_ExplModel.show()
+    Choose_ExplModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    def calc_exploration_model():
+        try:
+            model = session.query(TrainedModelExploration).filter_by(
+                id=ui.listWidget_trained_model_expl.currentItem().data(Qt.UserRole)).first()
+
+            with open(model.path_model, 'rb') as f:
+                class_model = pickle.load(f)
+        except:
+            set_info('Select model', 'red')
+            return
+
+        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        data = pd.read_excel("new_data.xlsx")
+        data_copy = data.copy()
+        working_sample = data[list_param_num].values.tolist()
+
+        list_cat = [0, 1]
+
+        try:
+            mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
+        except ValueError:
+            data = imputer.fit_transform(working_sample)
+            mark = class_model.predict(data)
+            probability = class_model.predict_proba(data)
+
+            for i in data_copy.index:
+                p_nan = [data_copy.columns[ic + 2] for ic, v in
+                         enumerate(data_copy.iloc[i, 2:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(
+                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([data_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = mark
+
+        x = list(working_data_result['x_coord'])
+        y = list(working_data_result['y_coord'])
+
+        z = list(working_data_result.iloc[:, -2])
+
+        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_expl.currentItem().text()}', color_marker=False)
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
+                                       QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?',
+                                           QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [0, 1]
+                list_col += ['x_coord', 'y_coord', 'mark']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(
+                    caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
+                    directory=file_name,
+                    filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
+            pass
+
+
+    ui_rm.pushButton_calc_model.clicked.connect(calc_exploration_model)
+    Choose_ExplModel.exec_()
+
+
 
 
 

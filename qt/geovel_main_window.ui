@@ -933,8 +933,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>336</width>
-                       <height>222</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2349,6 +2349,13 @@ Therm</string>
                  </layout>
                 </item>
                </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="pushButton_calc_expl_class">
+                <property name="text">
+                 <string>Calc Exploration Class</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -4330,7 +4337,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
