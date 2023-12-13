@@ -4,16 +4,17 @@ from sqlite3 import OperationalError
 import numpy as np
 import pandas as pd
 import gstools as gs
-from gstools import Gaussian
-from scipy.interpolate import griddata
+import skgstat
+# from gstools import Gaussian
+# from scipy.interpolate import griddata
 
 import krige
 from func import *
 from krige import draw_map
 from random_search import *
-import pykrige.kriging_tools as kt
-import pykrige
-from pykrige.ok import OrdinaryKriging
+# import pykrige.kriging_tools as kt
+# import pykrige
+# from pykrige.ok import OrdinaryKriging
 
 
 
@@ -491,33 +492,34 @@ def train_interpolation():
     # kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
     # field = kriging.transform(np.array(x_train), np.array(y_train))
     # print(field)
+    # ############################################################
+    #
+    # OK = OrdinaryKriging(
+    #     x_array,
+    #     y_array,
+    #     value_points,
+    #     variogram_model="linear",
+    #     verbose=True,
+    #     enable_plotting=False,
+    # )
+    #
+    # z1, ss = OK.execute("grid", xx, yy)
+    #
+    # plt.figure(figsize=(12, 9))
+    # plt.contour(xx, yy, z1, colors='k', linewidths=0.5)
+    # plt.pcolormesh(xx, yy, z1, shading='auto', cmap='jet')
+    # plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    # plt.colorbar(label='Z Value')
+    # plt.scatter(x_array, y_array, c=value_points, marker='.', edgecolors='k', s=0.1)
+    # plt.xlabel('X')
+    # plt.ylabel('Y')
+    # plt.title('Ordinary Kriging Interpolation')
+    # plt.tight_layout()
+    # plt.show()
 
-
-    OK = OrdinaryKriging(
-        x_array,
-        y_array,
-        value_points,
-        variogram_model="linear",
-        verbose=True,
-        enable_plotting=False,
-    )
-
-    z1, ss = OK.execute("grid", xx, yy)
-
-    plt.figure(figsize=(12, 9))
-    plt.contour(xx, yy, z1, colors='k', linewidths=0.5)
-    plt.pcolormesh(xx, yy, z1, shading='auto', cmap='jet')
-    plt.scatter(x_array, y_array, c=value_points, cmap='jet')
-    plt.colorbar(label='Z Value')
-    plt.scatter(x_array, y_array, c=value_points, marker='.', edgecolors='k', s=0.1)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title('Ordinary Kriging Interpolation')
-    plt.tight_layout()
-    plt.show()
-
-
-    # plt.figure(figsize=(8, 6))
+    #
+    # #############################################################
+    ##### plt.figure(figsize=(8, 6))
     # # plt.axis([9, 10, 6, 10])
     # plt.contour(x_train, y_train, z1, levels=10, colors='k', linewidths=0.5)
     # plt.pcolormesh(x_train, y_train, z1, shading='auto', cmap='turbo')
@@ -619,7 +621,7 @@ def build_interp_table():
         variogram = Variogram(coordinates=coord, values=np.array(value_points), estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
 
         try:
-            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
             field = kriging.transform(np.array(x_train), np.array(y_train))
             df[el.title] = field
         except LinAlgError:
@@ -669,7 +671,7 @@ def build_interp_table():
 
             variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
             try:
-                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+                kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
                 field = kriging.transform(np.array(x_train), np.array(y_train))
                 df[g.param] = field
             except LinAlgError:
@@ -1348,7 +1350,7 @@ def show_interp_map():
                               bin_func='even', fit_sigma='linear', model='spherical', fit_method='trf')
 
         try:
-            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=30, mode='exact')
+            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=30, mode='exact')
             field = kriging.transform(np.array(x_grid), np.array(y_grid))
             x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
             y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
@@ -1406,7 +1408,7 @@ def show_interp_map():
             variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron',
                                   dist_func='euclidean', bin_func='even', fit_sigma='exp')
             try:
-                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+                kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
                 field = kriging.transform(np.array(x_grid), np.array(y_grid))
                 x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
                 y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
@@ -1426,6 +1428,7 @@ def show_interp_map():
 
 
 def calc_exploration_class():
+    """ Предсказания модели """
     Choose_ExplModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_ExplModel)
