@@ -624,7 +624,7 @@ class SetPoints(Base):
 
     exploration = relationship("Exploration", back_populates="points")
     points = relationship('PointExploration', back_populates='set_point')
-    analysis = relationship('AnalysisExploration', back_populates='set_point')
+    # analysis = relationship('AnalysisExploration', back_populates='set_point')
 
 
 class PointExploration(Base):
@@ -690,7 +690,7 @@ class AnalysisExploration(Base):
     __tablename__ = 'analysis_exploration'
 
     id = Column(Integer, primary_key=True)
-    train_points_id = Column(Integer, ForeignKey('set_points.id'))
+    # train_points_id = Column(Integer, ForeignKey('set_points.id'))
     title = Column(String)
     type_analysis = Column(String)
     data = Column(Text)
@@ -698,7 +698,7 @@ class AnalysisExploration(Base):
 
     # exploration = relationship("Exploration", back_populates="analysis")
     parameters = relationship('ParameterAnalysisExploration', back_populates='analysis')
-    set_point = relationship("SetPoints", back_populates="analysis")
+    # set_point = relationship("SetPoints", back_populates="analysis")
     geo_parameters = relationship('GeoParameterAnalysisExploration', back_populates='analysis')
     trained_models = relationship('TrainedModelExploration', back_populates='analysis')
 

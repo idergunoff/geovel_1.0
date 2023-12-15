@@ -121,7 +121,7 @@ def add_analysis():
     """Добавить новый параметрический анализ"""
     if ui.lineEdit_string.text() == '':
         return
-    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), train_points_id=get_train_set_point_id())
+    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text())
     session.add(new_analysis)
     session.commit()
     update_analysis_combobox()
@@ -153,6 +153,10 @@ def add_all_analysis_parameter_tolist():
     for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
         check = get_analysis_expl_id()
         if check is not None:
+            analysis = session.query(ParameterAnalysisExploration).filter_by(analysis_id=check).all()
+            for a in analysis:
+                if a.parameter_id == i.id:
+                    return
             param = ParameterAnalysisExploration(analysis_id=get_analysis_expl_id(), parameter_id=i.id, title=i.parameter)
             session.add(param)
         else:
@@ -165,13 +169,14 @@ def add_all_analysis_parameter_tolist():
 
 def add_analysis_parameter_tolist():
     """ Добавляет выбранный параметр в анализ """
+    update_analysis_list()
     try:
         item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
     except:
         return
     check = get_analysis_expl_id()
     if check is not None:
-        analysis = session.query(ParameterAnalysisExploration).all()
+        analysis = session.query(ParameterAnalysisExploration).filter_by(analysis_id=check).all()
         for a in analysis:
             if a.parameter_id == item.id:
                 return
@@ -591,6 +596,7 @@ def build_interp_table():
         return
     params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(params))
+    print(get_analysis_expl_id())
 
     for index, el in enumerate(params):
         expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
@@ -628,6 +634,7 @@ def build_interp_table():
             set_info(f'LinAlgError - {el.title}', 'red')
         ui.progressBar.setValue(index + 1)
 
+    print(get_analysis_expl_id())
     """ Вариограма и интерполяция для параметров с георадара """
     geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(geo_param))
@@ -683,8 +690,7 @@ def build_interp_table():
     # print(df['Benzene, (1-methylethyl)-'])
     print(train_time)
 
-
-    df.to_excel('data_train.xlsx')
+    df.to_excel('data_excel/data_train.xlsx')
 
     data_train = json.dumps(df.to_dict())
     session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True},
@@ -696,7 +702,7 @@ def build_interp_table():
 def exploration_MLP():
     """ Тренировка моделей классификаторов """
     data = session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id(), up_data=True).first()
-    print(data, get_analysis_expl_id())
+    print(get_analysis_expl_id())
     if data is None:
         data_train, list_param = build_interp_table()
     else:
@@ -1053,6 +1059,8 @@ def exploration_MLP():
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
             path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            if os.path.exists(path_model):
+                path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")}.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(pipe, f)
 
@@ -1082,6 +1090,7 @@ def exploration_MLP():
         scaler = StandardScaler()
         training_sample_lof = scaler.fit_transform(data_lof)
         n_LOF = ui_cls.spinBox_lof_neighbor.value()
+
 
         tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
         data_tsne = tsne.fit_transform(training_sample_lof)
@@ -1287,7 +1296,7 @@ def exploration_MLP():
     Classifier.exec_()
 
 
-def show_interp_map():
+def  show_interp_map():
     """ Создание карты интерполяции для сгенерированных точек """
     global form_prof
     start_time = datetime.datetime.now()
@@ -1318,13 +1327,17 @@ def show_interp_map():
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
-    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    set_analysis_id = get_analysis_expl_id()
+
+    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=set_analysis_id).all()
     ui.progressBar.setMaximum(len(params))
 
     for index, el in enumerate(params):
+        # expl = session.query(Exploration).first()
         expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
         ui.comboBox_expl.setCurrentText(f'{expl.title} id{expl.id}')
         update_list_set_point()
+
         points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
 
         value_points = []
@@ -1365,7 +1378,7 @@ def show_interp_map():
         ui.progressBar.setValue(index + 1)
 
     # Георадар
-    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=set_analysis_id).all()
     ui.progressBar.setMaximum(len(geo_param))
     if len(geo_param) > 0:
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
@@ -1422,7 +1435,21 @@ def show_interp_map():
                 set_info(f"LinAlgError - {g.param}", 'red')
             ui.progressBar.setValue(index + 1)
     # data = data.dropna()
-    data.to_excel('new_data.xlsx')
+
+    # data.to_excel('all_three_data.xlsx')
+    # data.to_excel('geochem_georadar_data.xlsx')
+    try:
+        file_name = f'{get_analysis_name()}_data.xlsx'
+        fn = QFileDialog.getSaveFileName(
+            caption=f'Сохранить карту "{get_object_name()}_{get_research_name()}" в таблицу',
+            directory=file_name,
+            filter="Excel Files (*.xlsx)")
+        data.to_excel(fn[0])
+        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+    except ValueError:
+        pass
+
+    # data.to_excel('data_excel/vez_data.xlsx')
     train_time = datetime.datetime.now() - start_time
     print(train_time)
 
@@ -1446,7 +1473,16 @@ def calc_exploration_class():
             return
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params))
-        data = pd.read_excel("new_data.xlsx")
+
+        try:
+            file_name = \
+            QFileDialog.getOpenFileName(caption='Выберите файл Excel (разделитель ";")', filter='*.xls *.xlsx')[0]
+            set_info(file_name, 'blue')
+            data = pd.read_excel(file_name, header=0)
+        except FileNotFoundError:
+            return
+
+        # data = pd.read_excel("data_excel/vez_data.xlsx")
         data_copy = data.copy()
         working_sample = data[list_param_num].values.tolist()
 
@@ -1491,7 +1527,7 @@ def calc_exploration_class():
             else:
                 pass
             try:
-                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_expl_model_title()}.xlsx'
                 fn = QFileDialog.getSaveFileName(
                     caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
                     directory=file_name,
