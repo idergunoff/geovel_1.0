@@ -1060,7 +1060,7 @@ def exploration_MLP():
             # Сохранение модели в файл с помощью pickle
             path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
             if os.path.exists(path_model):
-                path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")}.pkl'
+                path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(pipe, f)
 
@@ -1309,8 +1309,8 @@ def  show_interp_map():
 
     x_min, x_max = min(x), max(x)
     y_min, y_max = min(y), max(y)
-    step_x = 50
-    step_y = 50
+    step_x = 120
+    step_y = 120
 
     x_values = np.arange(x_min, x_max + step_x, step_x)
     y_values = np.arange(y_min, y_max + step_y, step_y)
@@ -1322,6 +1322,7 @@ def  show_interp_map():
     data['y_coord'] = y_grid.ravel()
 
     x_grid, y_grid = list(x_grid.ravel()), list(y_grid.ravel())
+    print(f'x_grid {len(x_grid)}')
 
     # точки для вариограмы
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
@@ -1339,14 +1340,22 @@ def  show_interp_map():
         update_list_set_point()
 
         points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
-
         value_points = []
         for i in points:
             p = session.query(ParameterAnalysisExploration).filter_by(id=el.id).first()
-            value = session.query(ParameterPoint.value).filter_by(
-                param_id=p.param.id,
+            try:
+                value = session.query(ParameterPoint.value).filter_by(
+                param_id=p.parameter_id,
                 point_id=i.id
-            ).first()[0]
+                ).first()[0]
+            except TypeError:
+                value_param = session.query(ParameterPoint).join(ParameterExploration).filter(
+                    ParameterPoint.point_id == i.id,
+                    ParameterExploration.parameter == p.title,
+                    ParameterExploration.exploration_id == get_exploration_id()
+                ).first()
+                value = value_param.value
+                print(value_param.param.id)
 
             value_points.append(value)
         set_info(f'Обработка параметра {p.title}', 'blue')
@@ -1363,7 +1372,7 @@ def  show_interp_map():
                               bin_func='even', fit_sigma='linear', model='spherical', fit_method='trf')
 
         try:
-            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=30, mode='exact')
+            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=1, max_points=30, mode='exact')
             field = kriging.transform(np.array(x_grid), np.array(y_grid))
             x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
             y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
