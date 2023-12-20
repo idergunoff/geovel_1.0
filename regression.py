@@ -224,7 +224,8 @@ def add_param_signal_reg():
             parameter=param
     ).count() == 0:
         add_param_regmod(param)
-        update_list_param_regmod()
+        # update_list_param_regmod()
+        set_color_button_updata_regmod()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -241,7 +242,8 @@ def add_all_param_signal_reg():
             add_param_regmod(param)
         else:
             set_info(f'Параметр {param} уже добавлен', 'red')
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
 
 
 def add_param_geovel_reg():
@@ -257,7 +259,8 @@ def add_param_geovel_reg():
             parameter= param
     ).count() == 0:
         add_param_regmod(param)
-        update_list_param_regmod()
+        # update_list_param_regmod()
+        set_color_button_updata_regmod()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -278,7 +281,8 @@ def add_all_param_geovel_reg():
         add_param_regmod(param)
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
 
 
 def add_param_distr_reg():
@@ -295,7 +299,8 @@ def add_param_distr_reg():
     add_param_regmod('distr')
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_reg.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
 
@@ -314,7 +319,8 @@ def add_param_sep_reg():
     add_param_regmod('sep')
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_reg.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
 
@@ -332,7 +338,8 @@ def add_all_param_distr_reg():
         session.add(new_param_reg)
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
 
 
@@ -350,7 +357,8 @@ def add_param_mfcc_reg():
     add_param_regmod('mfcc')
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_reg.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_reg.currentText()}', 'green')
 
@@ -368,7 +376,8 @@ def add_all_param_mfcc_reg():
         session.add(new_param_mlp)
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    update_list_param_regmod()
+    # update_list_param_regmod()
+    set_color_button_updata_regmod()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
@@ -444,15 +453,6 @@ def train_regression_model():
     ui_r.spinBox_pca.setMaximum(len(list_param_reg))
     ui_r.spinBox_pca.setValue(len(list_param_reg) // 2)
 
-    def push_checkbutton_extra():
-        if ui_r.checkBox_rfr_ada.isChecked():
-            ui_r.checkBox_rfr_ada.setChecked(False)
-
-    def push_checkbutton_ada():
-        if ui_r.checkBox_rfr_extra.isChecked():
-            ui_r.checkBox_rfr_extra.setChecked(False)
-
-
     def choice_model_regressor(model):
         """ Выбор модели регрессии """
         if model == 'MLPR':
@@ -496,15 +496,16 @@ def train_regression_model():
             text_model = f'**DTR**: \nsplitter: {spl}, '
 
         elif model == 'RFR':
-            if ui_r.checkBox_rfr_ada.isChecked():
-                model_reg = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
-                text_model = f'**ABR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
-            elif ui_r.checkBox_rfr_extra.isChecked():
-                model_reg = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
-            else:
-                model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+            model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+
+        elif model == 'ABR':
+            model_reg = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
+            text_model = f'**ABR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+
+        elif model == 'ETR':
+            model_reg = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
 
         elif model == 'GPR':
             gpc_kernel_width = ui_r.doubleSpinBox_gpc_wigth.value()
@@ -582,18 +583,18 @@ def train_regression_model():
             list_model.append('dtr')
 
         if ui_r.checkBox_stv_rfr.isChecked():
-            if ui_r.checkBox_rfr_ada.isChecked():
-                abr = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
-                estimators.append(('abr', abr))
-                list_model.append('abr')
-            elif ui_r.checkBox_rfr_extra.isChecked():
-                etr = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('etr', etr))
-                list_model.append('etr')
-            else:
-                rfr = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('rfr', rfr))
-                list_model.append('rfr')
+            rfr = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('rfr', rfr))
+            list_model.append('rfr')
+
+        if ui_r.checkBox_stv_abr.isChecked():
+            abr = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
+            estimators.append(('abr', abr))
+
+        if ui_r.checkBox_stv_etr.isChecked():
+            etr = ExtraTreesRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('etr', etr))
+            list_model.append('etr')
 
         if ui_r.checkBox_stv_gpr.isChecked():
             gpc_kernel_width = ui_r.doubleSpinBox_gpc_wigth.value()
@@ -996,8 +997,6 @@ def train_regression_model():
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
     ui_r.pushButton_lof.clicked.connect(calc_lof)
-    ui_r.checkBox_rfr_extra.clicked.connect(push_checkbutton_extra)
-    ui_r.checkBox_rfr_ada.clicked.connect(push_checkbutton_ada)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     Regressor.exec_()
 
