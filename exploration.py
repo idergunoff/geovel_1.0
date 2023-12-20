@@ -1355,7 +1355,6 @@ def  show_interp_map():
                     ParameterExploration.exploration_id == get_exploration_id()
                 ).first()
                 value = value_param.value
-                print(value_param.param.id)
 
             value_points.append(value)
         set_info(f'Обработка параметра {p.title}', 'blue')
@@ -1443,10 +1442,6 @@ def  show_interp_map():
             except LinAlgError:
                 set_info(f"LinAlgError - {g.param}", 'red')
             ui.progressBar.setValue(index + 1)
-    # data = data.dropna()
-
-    # data.to_excel('all_three_data.xlsx')
-    # data.to_excel('geochem_georadar_data.xlsx')
     try:
         file_name = f'{get_analysis_name()}_data.xlsx'
         fn = QFileDialog.getSaveFileName(
@@ -1457,8 +1452,6 @@ def  show_interp_map():
         set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
     except ValueError:
         pass
-
-    # data.to_excel('data_excel/vez_data.xlsx')
     train_time = datetime.datetime.now() - start_time
     print(train_time)
 
@@ -1491,7 +1484,6 @@ def calc_exploration_class():
         except FileNotFoundError:
             return
 
-        # data = pd.read_excel("data_excel/vez_data.xlsx")
         data_copy = data.copy()
         working_sample = data[list_param_num].values.tolist()
 
