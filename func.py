@@ -44,6 +44,10 @@ def get_object_name():
 def get_obj_monitor_name():
     return ui.comboBox_object_monitor.currentText()
 
+# Функция получения имени выбранного анализа
+def get_analysis_name():
+    return ui.comboBox_analysis_expl.currentText().split(' id')[0]
+
 
 # Функция получения id выбранного профиля
 def get_profile_id():
@@ -843,6 +847,9 @@ def get_marker_title():
 def get_marker_mlp_title():
     return ui.comboBox_mark_mlp.currentText().split(' id')[0]
 
+def get_expl_model_title():
+    if ui.listWidget_trained_model_expl.currentItem():
+        return ui.listWidget_trained_model_expl.currentItem().text()
 
 def get_markup_id():
     if ui.listWidget_well_lda.currentItem():
@@ -1481,7 +1488,7 @@ def update_list_set_point():
         ui.comboBox_set_point.addItem(f'{i.title} id{i.id}')
         ui.comboBox_set_point.setItemData(ui.comboBox_set_point.count() - 1, {'id': i.id})
     update_list_point_exploration()
-    update_analysis_combobox()
+    # update_analysis_combobox()
     update_analysis_list()
 
 
@@ -1578,13 +1585,10 @@ def update_analysis_list():
             session.commit()
 
 
-
-
-
 def update_analysis_combobox():
     """ Обновление комбобокса Анализа """
     ui.comboBox_analysis_expl.clear()
-    for i in session.query(AnalysisExploration).filter_by(train_points_id=get_train_set_point_id()).all():
+    for i in session.query(AnalysisExploration).all():
         ui.comboBox_analysis_expl.addItem(f'{i.title} id{i.id}')
         ui.comboBox_analysis_expl.setItemData(ui.comboBox_analysis_expl.count() - 1, {'id': i.id})
     update_analysis_list()

@@ -933,8 +933,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>336</width>
-                       <height>222</height>
+                       <width>307</width>
+                       <height>230</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -2328,27 +2328,34 @@ Therm</string>
                   <item row="0" column="0">
                    <widget class="QPushButton" name="pushButton_train_interp">
                     <property name="text">
-                     <string>Train Interpolation</string>
+                     <string>Interpolate Train Data</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
                    <widget class="QPushButton" name="pushButton_field">
                     <property name="text">
-                     <string>Interpolation Field</string>
+                     <string>Model Training</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="2">
                    <widget class="QPushButton" name="pushButton_calc_expl">
                     <property name="text">
-                     <string>calc</string>
+                     <string>Calculate Interpolation Map</string>
                     </property>
                    </widget>
                   </item>
                  </layout>
                 </item>
                </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="pushButton_calc_expl_class">
+                <property name="text">
+                 <string>Model Prediction</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -4330,7 +4337,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

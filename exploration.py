@@ -3,11 +3,20 @@ from sqlite3 import OperationalError
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import griddata
+import gstools as gs
+import skgstat
+# from gstools import Gaussian
+# from scipy.interpolate import griddata
 
+import krige
 from func import *
 from krige import draw_map
 from random_search import *
+# import pykrige.kriging_tools as kt
+# import pykrige
+# from pykrige.ok import OrdinaryKriging
+
+
 
 
 def add_exploration():
@@ -112,7 +121,7 @@ def add_analysis():
     """Добавить новый параметрический анализ"""
     if ui.lineEdit_string.text() == '':
         return
-    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text(), train_points_id=get_train_set_point_id())
+    new_analysis = AnalysisExploration(title=ui.lineEdit_string.text())
     session.add(new_analysis)
     session.commit()
     update_analysis_combobox()
@@ -144,6 +153,10 @@ def add_all_analysis_parameter_tolist():
     for i in session.query(ParameterExploration).filter_by(exploration_id=get_exploration_id()).all():
         check = get_analysis_expl_id()
         if check is not None:
+            analysis = session.query(ParameterAnalysisExploration).filter_by(analysis_id=check).all()
+            for a in analysis:
+                if a.parameter_id == i.id:
+                    return
             param = ParameterAnalysisExploration(analysis_id=get_analysis_expl_id(), parameter_id=i.id, title=i.parameter)
             session.add(param)
         else:
@@ -156,13 +169,14 @@ def add_all_analysis_parameter_tolist():
 
 def add_analysis_parameter_tolist():
     """ Добавляет выбранный параметр в анализ """
+    update_analysis_list()
     try:
         item = session.query(ParameterExploration).filter_by(id=ui.listWidget_param_expl.currentItem().text().split(' id')[-1]).first()
     except:
         return
     check = get_analysis_expl_id()
     if check is not None:
-        analysis = session.query(ParameterAnalysisExploration).all()
+        analysis = session.query(ParameterAnalysisExploration).filter_by(analysis_id=check).all()
         for a in analysis:
             if a.parameter_id == item.id:
                 return
@@ -445,6 +459,7 @@ def draw_interpolation():
 
 def train_interpolation():
     """ Интерполяция по одному параметру на тренировочном наборе точек """
+    print("Начало работы")
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
@@ -473,18 +488,46 @@ def train_interpolation():
     y_train = [p.y_coord for p in t_points]
 
 
-    xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 75, min(y_train) - 200: max(y_train) + 200: 75]
+    xx, yy = np.mgrid[min(x_train) - 200: max(x_train) + 200: 500, min(y_train) - 200: max(y_train) + 200: 500]
 
-    variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm", estimator='matheron', bin_func='even')
-    # variogram.plot()
-
-    kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
-    field = kriging.transform(np.array(x_train), np.array(y_train))
-    print(field)
+    # variogram = Variogram(coordinates=coord, values=value_points, model="spherical", fit_method="lm", estimator='matheron', bin_func='even')
+    # # variogram.plot()
+    #
+    # kriging = OrdinaryKriging(variogram=variogram, min_points=3, max_points=10, mode='exact')
+    # field = kriging.transform(np.array(x_train), np.array(y_train))
+    # print(field)
+    # ############################################################
+    #
+    # OK = OrdinaryKriging(
+    #     x_array,
+    #     y_array,
+    #     value_points,
+    #     variogram_model="linear",
+    #     verbose=True,
+    #     enable_plotting=False,
+    # )
+    #
+    # z1, ss = OK.execute("grid", xx, yy)
+    #
     # plt.figure(figsize=(12, 9))
-    # # plt.contour(xx, yy, field, levels=10, colors='k', linewidths=0.5)
-    # # plt.pcolormesh(xx, yy, field, shading='auto', cmap='jet')
+    # plt.contour(xx, yy, z1, colors='k', linewidths=0.5)
+    # plt.pcolormesh(xx, yy, z1, shading='auto', cmap='jet')
     # plt.scatter(x_array, y_array, c=value_points, cmap='jet')
+    # plt.colorbar(label='Z Value')
+    # plt.scatter(x_array, y_array, c=value_points, marker='.', edgecolors='k', s=0.1)
+    # plt.xlabel('X')
+    # plt.ylabel('Y')
+    # plt.title('Ordinary Kriging Interpolation')
+    # plt.tight_layout()
+    # plt.show()
+
+    #
+    # #############################################################
+    ##### plt.figure(figsize=(8, 6))
+    # # plt.axis([9, 10, 6, 10])
+    # plt.contour(x_train, y_train, z1, levels=10, colors='k', linewidths=0.5)
+    # plt.pcolormesh(x_train, y_train, z1, shading='auto', cmap='turbo')
+    # plt.scatter(x_array, y_array, c=value_points, cmap='turbo')
     # plt.colorbar(label='param')
     # plt.scatter(x_array, y_array, c=value_points, marker='o', edgecolors='w', s=0.1)
     #
@@ -552,6 +595,7 @@ def build_interp_table():
         return
     params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(params))
+    print(get_analysis_expl_id())
 
     for index, el in enumerate(params):
         expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
@@ -582,13 +626,14 @@ def build_interp_table():
         variogram = Variogram(coordinates=coord, values=np.array(value_points), estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
 
         try:
-            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
             field = kriging.transform(np.array(x_train), np.array(y_train))
             df[el.title] = field
         except LinAlgError:
             set_info(f'LinAlgError - {el.title}', 'red')
         ui.progressBar.setValue(index + 1)
 
+    print(get_analysis_expl_id())
     """ Вариограма и интерполяция для параметров с георадара """
     geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
     ui.progressBar.setMaximum(len(geo_param))
@@ -632,7 +677,7 @@ def build_interp_table():
 
             variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron', dist_func='euclidean', bin_func='even', fit_sigma='exp')
             try:
-                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+                kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
                 field = kriging.transform(np.array(x_train), np.array(y_train))
                 df[g.param] = field
             except LinAlgError:
@@ -644,8 +689,7 @@ def build_interp_table():
     # print(df['Benzene, (1-methylethyl)-'])
     print(train_time)
 
-
-    df.to_excel('data_train1.xlsx')
+    df.to_excel('data_excel/data_train.xlsx')
 
     data_train = json.dumps(df.to_dict())
     session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'data': data_train, 'up_data': True},
@@ -657,7 +701,7 @@ def build_interp_table():
 def exploration_MLP():
     """ Тренировка моделей классификаторов """
     data = session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id(), up_data=True).first()
-    print(data, get_analysis_expl_id())
+    print(get_analysis_expl_id())
     if data is None:
         data_train, list_param = build_interp_table()
     else:
@@ -1014,6 +1058,8 @@ def exploration_MLP():
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
             path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            if os.path.exists(path_model):
+                path_model = f'models/expl_models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(pipe, f)
 
@@ -1043,6 +1089,7 @@ def exploration_MLP():
         scaler = StandardScaler()
         training_sample_lof = scaler.fit_transform(data_lof)
         n_LOF = ui_cls.spinBox_lof_neighbor.value()
+
 
         tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
         data_tsne = tsne.fit_transform(training_sample_lof)
@@ -1248,7 +1295,8 @@ def exploration_MLP():
     Classifier.exec_()
 
 
-def show_interp_map():
+def  show_interp_map():
+    """ Создание карты интерполяции для сгенерированных точек """
     global form_prof
     start_time = datetime.datetime.now()
     data = pd.DataFrame()
@@ -1260,8 +1308,8 @@ def show_interp_map():
 
     x_min, x_max = min(x), max(x)
     y_min, y_max = min(y), max(y)
-    step_x = 50
-    step_y = 50
+    step_x = 120
+    step_y = 120
 
     x_values = np.arange(x_min, x_max + step_x, step_x)
     y_values = np.arange(y_min, y_max + step_y, step_y)
@@ -1273,27 +1321,40 @@ def show_interp_map():
     data['y_coord'] = y_grid.ravel()
 
     x_grid, y_grid = list(x_grid.ravel()), list(y_grid.ravel())
+    print(f'x_grid {len(x_grid)}')
 
     # точки для вариограмы
     points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
     if not points:
         return
-    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    set_analysis_id = get_analysis_expl_id()
+
+    params = session.query(ParameterAnalysisExploration).filter_by(analysis_id=set_analysis_id).all()
     ui.progressBar.setMaximum(len(params))
 
     for index, el in enumerate(params):
+        # expl = session.query(Exploration).first()
         expl = session.query(Exploration).filter_by(id=el.param.exploration_id).first()
         ui.comboBox_expl.setCurrentText(f'{expl.title} id{expl.id}')
         update_list_set_point()
-        points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
 
+        points = session.query(PointExploration).filter_by(set_points_id=get_set_point_id()).all()
         value_points = []
         for i in points:
             p = session.query(ParameterAnalysisExploration).filter_by(id=el.id).first()
-            value = session.query(ParameterPoint.value).filter_by(
-                param_id=p.param.id,
+            try:
+                value = session.query(ParameterPoint.value).filter_by(
+                param_id=p.parameter_id,
                 point_id=i.id
-            ).first()[0]
+                ).first()[0]
+            except TypeError:
+                value_param = session.query(ParameterPoint).join(ParameterExploration).filter(
+                    ParameterPoint.point_id == i.id,
+                    ParameterExploration.parameter == p.title,
+                    ParameterExploration.exploration_id == get_exploration_id()
+                ).first()
+                value = value_param.value
+                print(value_param.param.id)
 
             value_points.append(value)
         set_info(f'Обработка параметра {p.title}', 'blue')
@@ -1310,7 +1371,7 @@ def show_interp_map():
                               bin_func='even', fit_sigma='linear', model='spherical', fit_method='trf')
 
         try:
-            kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=30, mode='exact')
+            kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=1, max_points=30, mode='exact')
             field = kriging.transform(np.array(x_grid), np.array(y_grid))
             x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
             y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
@@ -1325,7 +1386,7 @@ def show_interp_map():
         ui.progressBar.setValue(index + 1)
 
     # Георадар
-    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=get_analysis_expl_id()).all()
+    geo_param = session.query(GeoParameterAnalysisExploration).filter_by(analysis_id=set_analysis_id).all()
     ui.progressBar.setMaximum(len(geo_param))
     if len(geo_param) > 0:
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
@@ -1368,7 +1429,7 @@ def show_interp_map():
             variogram = Variogram(coordinates=coord_geo, values=list_value[::5], estimator='matheron',
                                   dist_func='euclidean', bin_func='even', fit_sigma='exp')
             try:
-                kriging = OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
+                kriging = skgstat.OrdinaryKriging(variogram=variogram, min_points=2, max_points=20, mode='exact')
                 field = kriging.transform(np.array(x_grid), np.array(y_grid))
                 x_grid = [x_i for inx, x_i in enumerate(x_grid) if not np.isnan(field[inx])]
                 y_grid = [y_i for iny, y_i in enumerate(y_grid) if not np.isnan(field[iny])]
@@ -1382,13 +1443,115 @@ def show_interp_map():
                 set_info(f"LinAlgError - {g.param}", 'red')
             ui.progressBar.setValue(index + 1)
     # data = data.dropna()
-    data.to_excel('new_data.xlsx')
+
+    # data.to_excel('all_three_data.xlsx')
+    # data.to_excel('geochem_georadar_data.xlsx')
+    try:
+        file_name = f'{get_analysis_name()}_data.xlsx'
+        fn = QFileDialog.getSaveFileName(
+            caption=f'Сохранить карту "{get_object_name()}_{get_research_name()}" в таблицу',
+            directory=file_name,
+            filter="Excel Files (*.xlsx)")
+        data.to_excel(fn[0])
+        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+    except ValueError:
+        pass
+
+    # data.to_excel('data_excel/vez_data.xlsx')
     train_time = datetime.datetime.now() - start_time
     print(train_time)
 
-def draw_interp_map():
 
-    pass
+def calc_exploration_class():
+    """ Предсказания модели """
+    Choose_ExplModel = QtWidgets.QDialog()
+    ui_rm = Ui_FormRegMod()
+    ui_rm.setupUi(Choose_ExplModel)
+    Choose_ExplModel.show()
+    Choose_ExplModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    def calc_exploration_model():
+        try:
+            model = session.query(TrainedModelExploration).filter_by(
+                id=ui.listWidget_trained_model_expl.currentItem().data(Qt.UserRole)).first()
+
+            with open(model.path_model, 'rb') as f:
+                class_model = pickle.load(f)
+        except:
+            set_info('Select model', 'red')
+            return
+
+        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+
+        try:
+            file_name = \
+            QFileDialog.getOpenFileName(caption='Выберите файл Excel (разделитель ";")', filter='*.xls *.xlsx')[0]
+            set_info(file_name, 'blue')
+            data = pd.read_excel(file_name, header=0)
+        except FileNotFoundError:
+            return
+
+        # data = pd.read_excel("data_excel/vez_data.xlsx")
+        data_copy = data.copy()
+        working_sample = data[list_param_num].values.tolist()
+
+        list_cat = [0, 1]
+
+        try:
+            mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
+        except ValueError:
+            data = imputer.fit_transform(working_sample)
+            mark = class_model.predict(data)
+            probability = class_model.predict_proba(data)
+
+            for i in data_copy.index:
+                p_nan = [data_copy.columns[ic + 2] for ic, v in
+                         enumerate(data_copy.iloc[i, 2:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(
+                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([data_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = mark
+
+        x = list(working_data_result['x_coord'])
+        y = list(working_data_result['y_coord'])
+
+        z = list(working_data_result.iloc[:, -2])
+
+        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_expl.currentItem().text()}', color_marker=False)
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
+                                       QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?',
+                                           QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [0, 1]
+                list_col += ['x_coord', 'y_coord', 'mark']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_expl_model_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(
+                    caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
+                    directory=file_name,
+                    filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
+            pass
+
+
+    ui_rm.pushButton_calc_model.clicked.connect(calc_exploration_model)
+    Choose_ExplModel.exec_()
+
+
 
 
 
