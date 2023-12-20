@@ -650,14 +650,15 @@ def update_list_param_mlp(db=False):
                 groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
             F, p = f_oneway(*groups)
             if np.isnan(F) or np.isnan(p):
-                if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
-                        not param.startswith('Signal')):
-                    session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
-                    data_train.drop(param, axis=1, inplace=True)
-                    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
-                    session.commit()
-                    set_info(f'Параметр {param} удален', 'red')
-                    continue
+                # if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
+                #         not param.startswith('Signal')):
+                #     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+                #     data_train.drop(param, axis=1, inplace=True)
+                #     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
+                #     session.commit()
+                #     set_info(f'Параметр {param} удален', 'red')
+                ui.listWidget_param_mlp.addItem(param)
+                continue
             ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
             if F < 1 or p > 0.05:
                 i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
@@ -695,6 +696,19 @@ def draw_MLP():
     """ Тренировка моделей классификаторов """
     data_train, list_param = build_table_train(True, 'mlp')
     list_param_mlp = data_train.columns.tolist()[2:]
+
+
+    list_nan_param, count_nan = [], 0
+    for i in data_train.index:
+        for param in list_param_mlp:
+            if pd.isna(data_train[param][i]):
+                count_nan += 1
+                list_nan_param.append(param)
+    if count_nan > 0:
+        list_col = data_train.columns.tolist()
+        data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
+        set_info(f'Заполнены пропуски в {count_nan} образцах в параметрах {", ".join(list_nan_param)}', 'red')
+
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
@@ -718,13 +732,6 @@ def draw_MLP():
         f'{list_marker[1]}-{list(markup).count(list_marker[1])}'
     )
 
-    def push_checkbutton_extra():
-        if ui_cls.checkBox_rfc_ada.isChecked():
-            ui_cls.checkBox_rfc_ada.setChecked(False)
-
-    def push_checkbutton_ada():
-        if ui_cls.checkBox_rfc_extra.isChecked():
-            ui_cls.checkBox_rfc_extra.setChecked(False)
 
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
@@ -776,15 +783,18 @@ def draw_MLP():
             model_class = DecisionTreeClassifier(splitter=spl, random_state=0)
             text_model = f'**DTC**: \nsplitter: {spl}, '
         elif model == 'RFC':
-            if ui_cls.checkBox_rfc_ada.isChecked():
-                model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
-                text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
-            elif ui_cls.checkBox_rfc_extra.isChecked():
-                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
-            else:
-                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+            model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                                 bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ABC':
+            model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+            text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ETC':
+            model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
         elif model == 'GPC':
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
             gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
@@ -800,17 +810,21 @@ def draw_MLP():
             )
             text_model = (f'**GPC**: \nwidth kernal: {round(gpc_kernel_width, 2)}, \nscale kernal: {round(gpc_kernel_scale, 2)}, '
                           f'\nn restart: {n_restart_optimization}, \nmulti_class: {multi_class} ,')
+
         elif model == 'QDA':
             model_class = QuadraticDiscriminantAnalysis(reg_param=ui_cls.doubleSpinBox_qda_reg_param.value())
             text_model = f'**QDA**: \nreg_param: {round(ui_cls.doubleSpinBox_qda_reg_param.value(), 2)}, '
+
         elif model == 'SVC':
             model_class = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(), probability=True,
                               C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
+
         else:
             model_class = QuadraticDiscriminantAnalysis()
             text_model = ''
+
         return model_class, text_model
 
 
@@ -858,18 +872,18 @@ def draw_MLP():
             list_model.append('dtc')
 
         if ui_cls.checkBox_stv_rfc.isChecked():
-            if ui_cls.checkBox_rfc_ada.isChecked():
-                abc = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
-                estimators.append(('abc', abc))
-                list_model.append('abc')
-            elif ui_cls.checkBox_rfc_extra.isChecked():
-                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('etc', etc))
-                list_model.append('etc')
-            else:
-                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('rfc', rfc))
-                list_model.append('rfc')
+            rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                         bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('rfc', rfc))
+            list_model.append('rfc')
+        if ui_cls.checkBox_stv_abc.isChecked():
+            abc = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+            estimators.append(('abc', abc))
+            list_model.append('abc')
+        if ui_cls.checkBox_stv_etc.isChecked():
+            etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('etc', etc))
+            list_model.append('etc')
 
         if ui_cls.checkBox_stv_gpc.isChecked():
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
@@ -1309,8 +1323,6 @@ def draw_MLP():
     ui_cls.pushButton_random_search.clicked.connect(push_random_search)
     ui_cls.pushButton_lof.clicked.connect(calc_lof)
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
-    ui_cls.checkBox_rfc_extra.clicked.connect(push_checkbutton_extra)
-    ui_cls.checkBox_rfc_ada.clicked.connect(push_checkbutton_ada)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     Classifier.exec_()

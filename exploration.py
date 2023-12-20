@@ -218,7 +218,6 @@ def add_geo_analysis_param():
     session.add(geo_param)
     session.query(AnalysisExploration).filter_by(id=get_analysis_expl_id()).update({'up_data': False},
                                                                               synchronize_session='fetch')
-
     session.commit()
 
     update_analysis_list()

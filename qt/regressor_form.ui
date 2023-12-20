@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>928</width>
-    <height>551</height>
+    <width>880</width>
+    <height>580</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -403,13 +403,6 @@
          <layout class="QGridLayout" name="gridLayout_16">
           <item row="0" column="0">
            <layout class="QGridLayout" name="gridLayout_15">
-            <item row="1" column="2">
-             <widget class="QCheckBox" name="checkBox_rfr_ada">
-              <property name="text">
-               <string>AdaBoost</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
              <widget class="QRadioButton" name="radioButton_rfr">
               <property name="toolTip">
@@ -429,13 +422,6 @@
               </attribute>
              </widget>
             </item>
-            <item row="1" column="1">
-             <widget class="QCheckBox" name="checkBox_rfr_extra">
-              <property name="text">
-               <string>ExtraTrees</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="2">
              <widget class="QSpinBox" name="spinBox_rfr_n">
               <property name="minimum">
@@ -445,11 +431,43 @@
                <number>10000</number>
               </property>
               <property name="singleStep">
-               <number>10</number>
+               <number>50</number>
               </property>
               <property name="value">
                <number>100</number>
               </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QRadioButton" name="radioButton_etr">
+              <property name="toolTip">
+               <string>ExtraTrees</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(161, 245, 173);</string>
+              </property>
+              <property name="text">
+               <string>ETR</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QRadioButton" name="radioButton_abr">
+              <property name="toolTip">
+               <string>AdaBoost</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(208, 253, 151);</string>
+              </property>
+              <property name="text">
+               <string>ABR</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
              </widget>
             </item>
            </layout>
@@ -536,7 +554,7 @@
                <number>1</number>
               </property>
               <property name="maximum">
-               <number>1000</number>
+               <number>10000</number>
               </property>
               <property name="singleStep">
                <number>50</number>
@@ -908,6 +926,49 @@
        <layout class="QGridLayout" name="gridLayout_10">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_4">
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_stv_knnr">
+            <property name="toolTip">
+             <string>K-Nearest Neighbors Regressor</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(252, 249, 206);</string>
+            </property>
+            <property name="text">
+             <string>KNNR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="radioButton_voting">
+            <property name="text">
+             <string>Voting</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup_stack_vote</string>
+            </attribute>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_stv_gbr">
+            <property name="toolTip">
+             <string>Gradient Boosting Regressor</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(187, 227, 250);</string>
+            </property>
+            <property name="text">
+             <string>GBR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_stack_vote">
+            <property name="text">
+             <string>ON</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_stv_mlpr">
             <property name="toolTip">
@@ -934,45 +995,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_stv_knnr">
-            <property name="toolTip">
-             <string>K-Nearest Neighbors Regressor</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(252, 249, 206);</string>
-            </property>
-            <property name="text">
-             <string>KNNR</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_stv_gbr">
-            <property name="toolTip">
-             <string>Gradient Boosting Regressor</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(187, 227, 250);</string>
-            </property>
-            <property name="text">
-             <string>GBR</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QCheckBox" name="checkBox_stv_dtr">
-            <property name="toolTip">
-             <string>Decision Tree Regressor</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(202, 251, 201);</string>
-            </property>
-            <property name="text">
-             <string>DTR</string>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="1">
            <widget class="QCheckBox" name="checkBox_stv_rfr">
             <property name="toolTip">
@@ -986,36 +1008,16 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QCheckBox" name="checkBox_stv_lr">
+          <item row="6" column="0">
+           <widget class="QCheckBox" name="checkBox_stv_svr">
             <property name="toolTip">
-             <string>LinearRegression</string>
+             <string>Support Vector Machines</string>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(252, 222, 222);</string>
+             <string notr="true">background-color: rgb(206, 185, 167);</string>
             </property>
             <property name="text">
-             <string>LR</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_stack_vote">
-            <property name="text">
-             <string>ON</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QCheckBox" name="checkBox_stv_en">
-            <property name="toolTip">
-             <string>ElasticNet</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(227, 200, 255);</string>
-            </property>
-            <property name="text">
-             <string>EN</string>
+             <string>SVR</string>
             </property>
            </widget>
           </item>
@@ -1032,30 +1034,20 @@
             </attribute>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QRadioButton" name="radioButton_voting">
-            <property name="text">
-             <string>Voting</string>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_stack_vote</string>
-            </attribute>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QCheckBox" name="checkBox_stv_svr">
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="checkBox_stv_dtr">
             <property name="toolTip">
-             <string>Support Vector Machines</string>
+             <string>Decision Tree Regressor</string>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(206, 185, 167);</string>
+             <string notr="true">background-color: rgb(202, 251, 201);</string>
             </property>
             <property name="text">
-             <string>SVR</string>
+             <string>DTR</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
+          <item row="7" column="1">
            <widget class="QCheckBox" name="checkBox_stv_lasso">
             <property name="toolTip">
              <string>Lasso</string>
@@ -1065,6 +1057,52 @@
             </property>
             <property name="text">
              <string>LSS</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QCheckBox" name="checkBox_stv_en">
+            <property name="toolTip">
+             <string>ElasticNet</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(227, 200, 255);</string>
+            </property>
+            <property name="text">
+             <string>EN</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QCheckBox" name="checkBox_stv_etr">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(161, 245, 173);</string>
+            </property>
+            <property name="text">
+             <string>ETR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QCheckBox" name="checkBox_stv_lr">
+            <property name="toolTip">
+             <string>LinearRegression</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(252, 222, 222);</string>
+            </property>
+            <property name="text">
+             <string>LR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QCheckBox" name="checkBox_stv_abr">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(208, 253, 151);</string>
+            </property>
+            <property name="text">
+             <string>ABR</string>
             </property>
            </widget>
           </item>
