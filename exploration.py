@@ -725,13 +725,13 @@ def exploration_MLP():
 
     ui_cls.spinBox_pca.setMaximum(len(list_param_mlp))
     ui_cls.spinBox_pca.setValue(len(list_param_mlp) // 2)
-    def push_checkbutton_extra():
-        if ui_cls.checkBox_rfc_ada.isChecked():
-            ui_cls.checkBox_rfc_ada.setChecked(False)
-
-    def push_checkbutton_ada():
-        if ui_cls.checkBox_rfc_extra.isChecked():
-            ui_cls.checkBox_rfc_extra.setChecked(False)
+    # def push_checkbutton_extra():
+    #     if ui_cls.checkBox_rfc_ada.isChecked():
+    #         ui_cls.checkBox_rfc_ada.setChecked(False)
+    #
+    # def push_checkbutton_ada():
+    #     if ui_cls.checkBox_rfc_extra.isChecked():
+    #         ui_cls.checkBox_rfc_extra.setChecked(False)
 
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
@@ -782,16 +782,21 @@ def exploration_MLP():
             spl = 'random' if ui_cls.checkBox_splitter_rnd.isChecked() else 'best'
             model_class = DecisionTreeClassifier(splitter=spl, random_state=0)
             text_model = f'**DTC**: \nsplitter: {spl}, '
+
         elif model == 'RFC':
-            if ui_cls.checkBox_rfc_ada.isChecked():
-                model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
-                text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
-            elif ui_cls.checkBox_rfc_extra.isChecked():
-                model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
-            else:
-                model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+            model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                                 bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ABC':
+            model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+            text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ETC':
+            model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                               bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
         elif model == 'GPC':
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
             gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
@@ -865,18 +870,19 @@ def exploration_MLP():
             list_model.append('dtc')
 
         if ui_cls.checkBox_stv_rfc.isChecked():
-            if ui_cls.checkBox_rfc_ada.isChecked():
-                abc = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
-                estimators.append(('abc', abc))
-                list_model.append('abc')
-            elif ui_cls.checkBox_rfc_extra.isChecked():
-                etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('etc', etc))
-                list_model.append('etc')
-            else:
-                rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced', bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
-                estimators.append(('rfc', rfc))
-                list_model.append('rfc')
+            rfc = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                         bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('rfc', rfc))
+            list_model.append('rfc')
+        if ui_cls.checkBox_stv_abc.isChecked():
+            abc = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+            estimators.append(('abc', abc))
+            list_model.append('abc')
+        if ui_cls.checkBox_stv_etc.isChecked():
+            etc = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                       bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            estimators.append(('etc', etc))
+            list_model.append('etc')
 
         if ui_cls.checkBox_stv_gpc.isChecked():
             gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
@@ -1032,8 +1038,8 @@ def exploration_MLP():
 
         title_graph = text_model
         if model_name == 'RFC':
-            if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
-                title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
+            # if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
+            title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(imp_name_params, imp_params)
@@ -1288,8 +1294,8 @@ def exploration_MLP():
     ui_cls.pushButton_random_search.clicked.connect(push_random_search)
     ui_cls.pushButton_lof.clicked.connect(calc_lof)
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
-    ui_cls.checkBox_rfc_extra.clicked.connect(push_checkbutton_extra)
-    ui_cls.checkBox_rfc_ada.clicked.connect(push_checkbutton_ada)
+    # ui_cls.checkBox_rfc_extra.clicked.connect(push_checkbutton_extra)
+    # ui_cls.checkBox_rfc_ada.clicked.connect(push_checkbutton_ada)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     Classifier.exec_()
@@ -1354,7 +1360,6 @@ def  show_interp_map():
                     ParameterExploration.exploration_id == get_exploration_id()
                 ).first()
                 value = value_param.value
-                print(value_param.param.id)
 
             value_points.append(value)
         set_info(f'Обработка параметра {p.title}', 'blue')
@@ -1442,10 +1447,6 @@ def  show_interp_map():
             except LinAlgError:
                 set_info(f"LinAlgError - {g.param}", 'red')
             ui.progressBar.setValue(index + 1)
-    # data = data.dropna()
-
-    # data.to_excel('all_three_data.xlsx')
-    # data.to_excel('geochem_georadar_data.xlsx')
     try:
         file_name = f'{get_analysis_name()}_data.xlsx'
         fn = QFileDialog.getSaveFileName(
@@ -1456,8 +1457,6 @@ def  show_interp_map():
         set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
     except ValueError:
         pass
-
-    # data.to_excel('data_excel/vez_data.xlsx')
     train_time = datetime.datetime.now() - start_time
     print(train_time)
 
@@ -1490,7 +1489,6 @@ def calc_exploration_class():
         except FileNotFoundError:
             return
 
-        # data = pd.read_excel("data_excel/vez_data.xlsx")
         data_copy = data.copy()
         working_sample = data[list_param_num].values.tolist()
 
