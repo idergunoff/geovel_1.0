@@ -1096,6 +1096,8 @@ def draw_MLP():
         if result == QtWidgets.QMessageBox.Yes:
             # Сохранение модели в файл с помощью pickle
             path_model = f'models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+            if os.path.exists(path_model):
+                path_model = f'models/classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
             with open(path_model, 'wb') as f:
                 pickle.dump(pipe, f)
 
