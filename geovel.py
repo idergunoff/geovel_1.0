@@ -18,6 +18,9 @@ from exploration import *
 
 MainWindow.show()
 
+m_width, m_height = get_width_height_monitor()
+MainWindow.resize(m_width - 100, m_height - 200)
+
 
 # def show_globals():
 #     print(globals().keys())
@@ -220,6 +223,7 @@ ui.pushButton_add_sep_reg.clicked.connect(add_param_sep_reg)
 ui.pushButton_add_all_distr_reg.clicked.connect(add_all_param_distr_reg)
 ui.pushButton_update_well_reg.clicked.connect(update_well_markup_reg)
 ui.pushButton_rem_well_reg.clicked.connect(remove_well_markup_reg)
+ui.pushButton_exp_well_reg.clicked.connect(export_well_markup_reg)
 ui.pushButton_rem_param_reg.clicked.connect(remove_param_geovel_reg)
 ui.pushButton_clear_params_reg.clicked.connect(remove_all_param_geovel_reg)
 ui.pushButton_train_regmod.clicked.connect(train_regression_model)

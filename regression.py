@@ -1606,3 +1606,75 @@ def import_model_reg():
 
     update_list_trained_models_regmod()
     set_info(f'Модель {model_name} добавлена', 'blue')
+
+
+def export_well_markup_reg():
+
+    dir = QFileDialog.getExistingDirectory()
+    if not dir:
+        return
+
+    markups = session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()).all()
+    ui.progressBar.setMaximum(len(markups))
+    for n,i in enumerate(markups):
+        if i.type_markup != 'intersection':
+            return set_info('Функция только для данных мониторинга', 'red')
+        ui.progressBar.setValue(n+1)
+        save_markup(i.id, dir, n)
+    set_info('Тренирочные точки сохранены в папку ' + dir, 'blue')
+
+
+def save_markup(markup_id, dir, num):
+    fig = plt.figure(figsize=(14, 14))
+    ax1 = fig.add_subplot(211)
+    all_x, all_y = [], []
+    reg_markup = session.query(MarkupReg).filter_by(id=markup_id).first()
+    profiles = session.query(Profile).filter(Profile.research_id == reg_markup.formation.profile.research_id).all()
+    data_incl = session.query(ParameterHWell).join(HorizontalWell).filter(
+        HorizontalWell.object_id == reg_markup.formation.profile.research.object_id,
+        ParameterHWell.parameter == 'Инклинометрия').all()
+    for incl in data_incl:
+        if incl.h_well.thermograms:
+            coord_inc = json.loads(incl.data)
+            all_x.extend(coord[0] for coord in coord_inc)
+            all_y.extend(coord[1] for coord in coord_inc)
+            continue
+    ax1.scatter(all_x, all_y, marker='.', s=1, color='blue')
+    for p in profiles:
+        xs = json.loads(p.x_pulc)
+        ys = json.loads(p.y_pulc)
+        ax1.scatter(xs, ys, marker='.', s=1, color='green')
+    for p in profiles:
+        for intersection in p.intersections:
+            if intersection.id == reg_markup.well_id:
+                size, fonts, color_mark, color_text = 130, 10, 'red', 'red'
+            else:
+                size, fonts, color_mark, color_text = 50, 7, 'orange', 'gray'
+            ax1.scatter(intersection.x_coord, intersection.y_coord, marker='o', s=size, color=color_mark)
+            ax1.text(intersection.x_coord + 25, intersection.y_coord + 25, round(intersection.temperature, 1),
+                     fontsize=fonts, color=color_text)
+    ax1.set_aspect('equal')
+    map_name = f'{reg_markup.formation.profile.research.object.title} - {reg_markup.formation.profile.research.date_research.strftime("%d.%m.%Y")}'
+    ax1.set_title(map_name)
+    ax2 = fig.add_subplot(212)
+    ints = session.query(Intersection).filter_by(id=reg_markup.well_id).first()
+    therm = json.loads(ints.thermogram.therm_data)
+    data_therm = [i for i in therm if len(i) > 2]
+    x_therm = [i[0] for i in therm]
+    y_therm = [i[1] for i in therm]
+    ax2.plot(x_therm, y_therm)
+    ax2.vlines(data_therm[ints.i_therm][0], 0, ints.temperature, color='green', linestyles='dashed', lw=2)
+    ax2.hlines(xmin=min(x_therm), xmax=data_therm[ints.i_therm][0], y=ints.temperature, color='red',
+               linestyles='dashed')
+    ax2.text(min(x_therm) + 25, ints.temperature - 5, 't=' + str(round(ints.temperature, 1)) + '°C', fontsize=16,
+             color='red')
+    ax2.text(data_therm[ints.i_therm][0] + 25, ints.temperature - 10, 'пр. ' + ints.profile.title, fontsize=16,
+             color='green')
+    ax2.set_xlim(min(x_therm), max(x_therm))
+    ax2.grid()
+    graph_name = f'скважина {ints.thermogram.h_well.title}, термограмма {ints.thermogram.date_time.strftime("%d.%m.%Y")}'
+    ax2.set_title(graph_name)
+    fig.tight_layout()
+    fig.savefig(f'{dir}/{num+1}_{map_name}_{graph_name}.png')
+    plt.close(fig)
+

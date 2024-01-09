@@ -1640,5 +1640,6 @@ def check_trained_model():
     session.commit()
 
 
-
-
+def get_width_height_monitor():
+    for monitor in get_monitors():
+        return monitor.width, monitor.height

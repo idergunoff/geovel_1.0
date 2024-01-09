@@ -933,8 +933,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>307</width>
-                       <height>230</height>
+                       <width>372</width>
+                       <height>222</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3583,9 +3583,6 @@ Therm</string>
                <layout class="QGridLayout" name="gridLayout_64" rowstretch="0,0,0,0">
                 <item row="1" column="0">
                  <layout class="QGridLayout" name="gridLayout_72">
-                  <item row="1" column="0">
-                   <widget class="QListWidget" name="listWidget_well_regmod"/>
-                  </item>
                   <item row="3" column="0">
                    <layout class="QGridLayout" name="gridLayout_75">
                     <item row="0" column="0">
@@ -3634,59 +3631,8 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
-                  <item row="2" column="0">
-                   <layout class="QGridLayout" name="gridLayout_73">
-                    <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_74">
-                      <item row="0" column="0">
-                       <widget class="QSpinBox" name="spinBox_well_dist_reg">
-                        <property name="minimum">
-                         <number>1</number>
-                        </property>
-                        <property name="maximum">
-                         <number>1000</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>5</number>
-                        </property>
-                        <property name="value">
-                         <number>5</number>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_rem_well_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove well</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_update_well_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>update well</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_well_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>add_well</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                   </layout>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidget_well_regmod"/>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_99">
@@ -3724,6 +3670,73 @@ Therm</string>
                        <string>clear fake</string>
                       </property>
                      </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="2" column="0">
+                   <layout class="QGridLayout" name="gridLayout_73">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_74">
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_rem_well_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                        </property>
+                        <property name="text">
+                         <string>remove well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QSpinBox" name="spinBox_well_dist_reg">
+                        <property name="minimum">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <number>1000</number>
+                        </property>
+                        <property name="singleStep">
+                         <number>5</number>
+                        </property>
+                        <property name="value">
+                         <number>5</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_well_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add_well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_update_well_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>update well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="5">
+                       <widget class="QPushButton" name="pushButton_exp_well_reg">
+                        <property name="toolTip">
+                         <string>Выгрузить данные по тренеровочному датасету</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(206, 186, 249);</string>
+                        </property>
+                        <property name="text">
+                         <string>export well</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </item>
                    </layout>
                   </item>
@@ -4337,7 +4350,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
