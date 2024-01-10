@@ -1383,6 +1383,9 @@ def calc_class_profile():
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
         except ValueError:
+
+            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+
             data = imputer.fit_transform(working_sample)
             mark = class_model.predict(data)
             probability = class_model.predict_proba(data)
@@ -1517,6 +1520,7 @@ def calc_object_class():
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
         except ValueError:
+            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
             mark = class_model.predict(data)
             probability = class_model.predict_proba(data)
