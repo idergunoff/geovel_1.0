@@ -738,5 +738,94 @@ class TrainedModelExploration(Base):
     analysis = relationship('AnalysisExploration', back_populates='trained_models')
 
 
+############## GEOCHEM ################
+
+
+class Geochem(Base):
+    __tablename__ = 'geochem'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    g_parameters = relationship("GeochemParameter", back_populates="geochem")
+    g_points = relationship("GeochemPoint", back_populates="geochem")
+    g_wells = relationship("GeochemWell", back_populates="geochem")
+
+
+class GeochemParameter(Base):
+    __tablename__ = 'geochem_parameter'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem.id'))
+    title = Column(String)
+
+    geochem = relationship("Geochem", back_populates="g_parameters")
+    g_point_values = relationship("GeochemPointValue", back_populates="g_param")
+    g_well_point_values = relationship("GeochemWellPointValue", back_populates="g_param")
+
+
+class GeochemPoint(Base):
+    __tablename__ = 'geochem_point'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem.id'))
+    title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+
+    geochem = relationship("Geochem", back_populates="g_points")
+    g_point_values = relationship("GeochemPointValue", back_populates="g_point")
+
+
+class GeochemWell(Base):
+    __tablename__ = 'geochem_well'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem.id'))
+    title = Column(String)
+    color = Column(String)
+
+    geochem = relationship("Geochem", back_populates="g_wells")
+    g_w_points = relationship("GeochemWellPoint", back_populates="g_well")
+
+
+class GeochemWellPoint(Base):
+    __tablename__ = 'geochem_well_point'
+
+    id = Column(Integer, primary_key=True)
+    g_well_id = Column(Integer, ForeignKey('geochem_well.id'))
+    title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+
+    g_well = relationship("GeochemWell", back_populates="g_w_points")
+    g_well_point_values = relationship("GeochemWellPointValue", back_populates="g_well_point")
+
+
+class GeochemPointValue(Base):
+    __tablename__ = 'geochem_point_value'
+
+    id = Column(Integer, primary_key=True)
+    g_point_id = Column(Integer, ForeignKey('geochem_point.id'))
+    g_param_id = Column(Integer, ForeignKey('geochem_parameter.id'))
+    value = Column(Float)
+
+    g_point = relationship("GeochemPoint", back_populates="g_point_values")
+    g_param = relationship("GeochemParameter", back_populates="g_point_values")
+
+
+class GeochemWellPointValue(Base):
+    __tablename__ = 'geochem_well_point_value'
+
+    id = Column(Integer, primary_key=True)
+    g_well_point_id = Column(Integer, ForeignKey('geochem_well_point.id'))
+    g_param_id = Column(Integer, ForeignKey('geochem_parameter.id'))
+    value = Column(Float)
+
+
+    g_well_point = relationship("GeochemWellPoint", back_populates="g_well_point_values")
+    g_param = relationship("GeochemParameter", back_populates="g_well_point_values")
+
+
 
 Base.metadata.create_all(engine)
