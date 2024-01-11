@@ -1,8 +1,5 @@
 import traceback
 
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QColorDialog
-
 from load import *
 from filtering import *
 from draw import *
@@ -15,6 +12,7 @@ from krige import *
 from formation_ai import *
 from regression import *
 from exploration import *
+from geochem import *
 
 MainWindow.show()
 
@@ -80,13 +78,6 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
     print(text)
     QtWidgets.QMessageBox.critical(None, 'Error', text)
     sys.exit()
-
-
-def change_color():
-    button_color = ui.pushButton_color.palette().color(ui.pushButton_color.backgroundRole())
-    color = QColorDialog.getColor(button_color)
-    ui.pushButton_color.setStyleSheet(f"background-color: {color.name()};")
-    ui.pushButton_color.setText(color.name())
 
 
     # result = QtWidgets.QMessageBox.question(None, 'Вопрос', 'Вы уверены, что хотите выйти?',
@@ -381,6 +372,12 @@ ui.comboBox_train_point.activated.connect(update_train_list)
 ui.comboBox_train_point.activated.connect(update_analysis_combobox)
 ui.comboBox_object.activated.connect(update_train_combobox)
 
+######################################################
+###################### GEOCHEM #######################
+######################################################
+
+ui.pushButton_del_geochem.clicked.connect(remove_geochem)
+ui.pushButton_load_geochem.clicked.connect(load_geochem)
 
 
 
@@ -394,7 +391,7 @@ clear_window_profile()
 # update_layers()
 update_list_well()
 set_info('Старт...', 'green')
-set_random_color()
+set_random_color(ui.pushButton_color)
 update_list_lda(True)
 update_list_mlp(True)
 update_list_reg()

@@ -3,9 +3,10 @@ import random, math
 from sqlite3 import connect
 
 from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog
 from PyQt5.QtGui import QBrush, QColor
 from pyqtgraph.Qt import QtWidgets
+
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *
@@ -21,6 +22,7 @@ from qt.choose_formation_map import *
 from qt.load_points import *
 from qt.form_delete_therm import *
 from qt.add_profile_class import *
+from qt.geochem_loader import *
 
 from model import *
 import numpy as np

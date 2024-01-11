@@ -108,13 +108,22 @@ def vacuum():
     conn.close()
 
 
-def set_random_color():
+def set_random_color(button):
     red = random.randint(0, 255)
     green = random.randint(0, 255)
     blue = random.randint(0, 255)
     color = f'#{red:02x}{green:02x}{blue:02x}'
-    ui.pushButton_color.setStyleSheet(f"background-color: {color};")
-    ui.pushButton_color.setText(color)
+    button.setStyleSheet(f"background-color: {color};")
+    button.setText(color)
+
+
+def change_color():
+    button_color = ui.pushButton_color.palette().color(ui.pushButton_color.backgroundRole())
+    color = QColorDialog.getColor(button_color)
+    ui.pushButton_color.setStyleSheet(f"background-color: {color.name()};")
+    ui.pushButton_color.setText(color.name())
+
+
 
 
 def changeSpinBox():
