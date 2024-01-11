@@ -1,8 +1,71 @@
 from func import *
 
 
+def update_combobox_geochem():
+    ui.comboBox_geochem.clear()
+    for i in session.query(Geochem).order_by(Geochem.title).all():
+        ui.comboBox_geochem.addItem(f'{i.title} id{i.id}')
+    if ui.comboBox_geochem.count() > 0:
+        update_listwidget_geochem_point()
+        update_combobox_geochem_well()
+        update_listwidget_param_geochem()
+
+
+def update_combobox_geochem_well():
+    ui.comboBox_geochem_well.clear()
+    for i in session.query(GeochemWell).filter_by(geochem_id=get_geochem_id()).all():
+        ui.comboBox_geochem_well.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_geochem_well.setItemData(
+            ui.comboBox_geochem_well.findText(f'{i.title} id{i.id}'),
+            QBrush(QColor(i.color)),
+            Qt.UserRole
+        )
+    update_listwidget_geochem_well_point()
+
+
+def update_listwidget_param_geochem():
+    ui.listWidget_geochem_param.clear()
+    for i in session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all():
+        ui.listWidget_geochem_param.addItem(f'{i.title} id{i.id}')
+
+
+def update_listwidget_geochem_point():
+    ui.listWidget_g_point.clear()
+    for i in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).order_by(GeochemPoint.title).all():
+        ui.listWidget_g_point.addItem(f'{i.title} id{i.id}')
+
+
+def update_listwidget_geochem_well_point():
+    ui.listWidget_g_well_point.clear()
+    for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).order_by(GeochemWellPoint.title).all():
+        ui.listWidget_g_well_point.addItem(f'{i.title} id{i.id}')
+
+
 def remove_geochem():
-    pass
+    """ Удалить объект геохимических данных """
+
+    gchm = session.query(Geochem).filter_by(id=get_geochem_id()).first()
+    geochem_name = gchm.title
+
+    for gparam in session.query(GeochemParameter).filter_by(geochem_id=gchm.id).all():
+        session.delete(gparam)
+
+    for gp in session.query(GeochemPoint).filter_by(geochem_id=gchm.id).all():
+        for gpv in session.query(GeochemPointValue).filter_by(g_point_id=gp.id).all():
+            session.delete(gpv)
+        session.delete(gp)
+
+    for gw in session.query(GeochemWell).filter_by(geochem_id=gchm.id).all():
+        for gwp in session.query(GeochemWellPoint).filter_by(g_well_id=gw.id).all():
+            for gwpv in session.query(GeochemWellPointValue).filter_by(g_well_point_id=gwp.id).all():
+                session.delete(gwpv)
+            session.delete(gwp)
+        session.delete(gw)
+    session.delete(gchm)
+    session.commit()
+    set_info(f'Геохимический объект {geochem_name} и все данные по нему удалены', 'green')
+    update_combobox_geochem()
+
 
 
 def load_geochem():
@@ -160,9 +223,8 @@ def load_geochem():
             session.commit()
 
         set_info(f'Геохимический объект "{new_geochem.title}" успешно загружен в базу данных', 'green')
+        update_combobox_geochem()
         GeochemLoader.close()
-
-
 
     update_list_g_param()
     update_combobox_geochem_classes()

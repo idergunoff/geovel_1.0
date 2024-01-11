@@ -4272,6 +4272,9 @@ Therm</string>
                     </item>
                     <item row="0" column="0">
                      <widget class="QPushButton" name="pushButton_del_g_param">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
                       <property name="text">
                        <string>delete</string>
                       </property>
@@ -4394,6 +4397,9 @@ Therm</string>
                   </item>
                   <item row="1" column="0">
                    <widget class="QPushButton" name="pushButton_load_geochem">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(148, 255, 232);</string>
+                    </property>
                     <property name="text">
                      <string>LOAD</string>
                     </property>

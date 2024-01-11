@@ -1652,3 +1652,13 @@ def check_trained_model():
 def get_width_height_monitor():
     for monitor in get_monitors():
         return monitor.width, monitor.height
+
+
+def get_geochem_id():
+    if ui.comboBox_geochem.count() > 0:
+        return int(ui.comboBox_geochem.currentText().split(' id')[-1])
+
+
+def get_geochem_well_id():
+    if ui.comboBox_geochem_well.count() > 0:
+        return int(ui.comboBox_geochem_well.currentText().split(' id')[-1])

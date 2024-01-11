@@ -378,6 +378,10 @@ ui.comboBox_object.activated.connect(update_train_combobox)
 
 ui.pushButton_del_geochem.clicked.connect(remove_geochem)
 ui.pushButton_load_geochem.clicked.connect(load_geochem)
+ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_geochem_point)
+ui.comboBox_geochem.currentTextChanged.connect(update_combobox_geochem_well)
+ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_param_geochem)
+ui.comboBox_geochem_well.currentTextChanged.connect(update_listwidget_geochem_well_point)
 
 
 
@@ -407,6 +411,7 @@ check_coordinates_profile()
 check_coordinates_research()
 update_list_exploration()
 update_models_expl_list()
+update_combobox_geochem()
 
 
 # update_list_param_lda()
