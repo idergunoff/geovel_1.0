@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Anova</class>
- <widget class="QWidget" name="Anova">
+ <class>TSNE_PCA</class>
+ <widget class="QWidget" name="TSNE_PCA">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>ANOVA</string>
+   <string>TSNE PCA</string>
   </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="3,1">
    <item row="1" column="0">
@@ -22,9 +22,12 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,1,5">
       <item>
-       <widget class="QListWidget" name="listWidget"/>
+       <widget class="QListWidget" name="listWidget_point"/>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listWidget_checkbox_well"/>
       </item>
       <item>
        <widget class="QFrame" name="frame_3">
@@ -36,23 +39,9 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QRadioButton" name="radioButton_strip">
+          <widget class="QRadioButton" name="radioButton_tsne">
            <property name="text">
-            <string>StripPlot</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="radioButton_box">
-           <property name="text">
-            <string>BoxPlot</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="radioButton_boxen">
-           <property name="text">
-            <string>BoxenPlot</string>
+            <string>TSNE</string>
            </property>
            <property name="checked">
             <bool>true</bool>
@@ -60,14 +49,37 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioButton_violin">
+          <widget class="QRadioButton" name="radioButton_pca">
            <property name="text">
-            <string>ViolinPlot</string>
+            <string>PCA</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_standart">
+           <property name="text">
+            <string>standart</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
         </layout>
        </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </widget>
@@ -82,7 +94,7 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout"/>
+       <layout class="QVBoxLayout" name="verticalLayout_graph"/>
       </item>
      </layout>
     </widget>

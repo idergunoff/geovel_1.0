@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from func import *
 
 
@@ -18,7 +21,7 @@ def update_combobox_geochem_well():
         ui.comboBox_geochem_well.setItemData(
             ui.comboBox_geochem_well.findText(f'{i.title} id{i.id}'),
             QBrush(QColor(i.color)),
-            Qt.UserRole
+            Qt.BackgroundRole
         )
     update_listwidget_geochem_well_point()
 
@@ -65,6 +68,30 @@ def remove_geochem():
     session.commit()
     set_info(f'Геохимический объект {geochem_name} и все данные по нему удалены', 'green')
     update_combobox_geochem()
+
+
+def build_table_geochem_analytic(point_name=False):
+    param = session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all()
+    list_param = [i.title for i in param]
+    if point_name:
+        data_geochem = pd.DataFrame(columns=['well', 'point', 'color'] + list_param)
+    else:
+        data_geochem = pd.DataFrame(columns=['well'] + list_param)
+    for g_well in session.query(GeochemWell).filter_by(geochem_id=get_geochem_id()).all():
+        well = g_well.title
+        for gwp in session.query(GeochemWellPoint).filter_by(g_well_id=g_well.id).all():
+            dict_value = {'well': well, 'point': gwp.title, 'color': g_well.color} if point_name else {'well': well}
+            for gwpv in session.query(GeochemWellPointValue).filter_by(g_well_point_id=gwp.id).all():
+                dict_value[gwpv.g_param.title] = gwpv.value
+            data_geochem = pd.concat([data_geochem, pd.DataFrame([dict_value])], ignore_index=True)
+    for g_point in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
+        dict_value = {'well': 'field', 'point': g_point.title, 'color': 'green'} if point_name else {'well': 'field'}
+        for gpv in session.query(GeochemPointValue).filter_by(g_point_id=g_point.id).all():
+            dict_value[gpv.g_param.title] = gpv.value
+        data_geochem = pd.concat([data_geochem, pd.DataFrame([dict_value])], ignore_index=True)
+
+    return data_geochem
+
 
 
 
@@ -243,3 +270,178 @@ def load_geochem():
     ui_gl.buttonBox.accepted.connect(load_geochem_to_db)
 
     GeochemLoader.exec_()
+
+
+def anova_geochem():
+    Anova = QtWidgets.QDialog()
+    ui_anova = Ui_Anova()
+    ui_anova.setupUi(Anova)
+    Anova.show()
+    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
+
+    m_width, m_height = get_width_height_monitor()
+    Anova.resize(int(m_width/3)*2, int(m_height/3)*2)
+
+    # ui_anova.graphicsView.setBackground('w')
+    data_plot = build_table_geochem_analytic()
+    markers = list(set(data_plot['well']))
+    pallet = {'field': 'green'}
+    for m in markers:
+        if m == 'field':
+            continue
+        pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
+
+    for w in data_plot['well'].unique():
+        check_box_widget = QCheckBox(w)
+        check_box_widget.setChecked(True)
+        list_item = QListWidgetItem()
+        ui_anova.listWidget_checkbox_well.addItem(list_item)
+        ui_anova.listWidget_checkbox_well.setItemWidget(list_item, check_box_widget)
+
+
+    figure = plt.figure()
+    canvas = FigureCanvas(figure)
+    ui_anova.horizontalLayout.addWidget(canvas)
+
+
+    for i in data_plot.columns.tolist()[2:]:
+        ui_anova.listWidget.addItem(i)
+
+    def draw_graph_anova():
+        try:
+            figure.clear()
+            list_well = get_list_check_checkbox(ui_anova.listWidget_checkbox_well)
+            data_plot_new = data_plot.loc[data_plot['well'].isin(list_well)]
+            param = ui_anova.listWidget.currentItem().text()
+            if ui_anova.radioButton_box.isChecked():
+                sns.boxplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet)
+            if ui_anova.radioButton_violin.isChecked():
+                sns.violinplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet)
+            if ui_anova.radioButton_strip.isChecked():
+                sns.stripplot(data=data_plot_new, y=param, x='well', hue='well', orient='v', palette=pallet)
+            if ui_anova.radioButton_boxen.isChecked():
+                sns.boxenplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet)
+            figure.tight_layout()
+            canvas.draw()
+        except ValueError:
+            pass
+
+    ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
+    ui_anova.radioButton_boxen.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_strip.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_violin.clicked.connect(draw_graph_anova)
+    ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
+    for i in range(ui_anova.listWidget_checkbox_well.count()):
+        ui_anova.listWidget_checkbox_well.itemWidget(ui_anova.listWidget_checkbox_well.item(i)).stateChanged.connect(draw_graph_anova)
+
+
+    Anova.exec_()
+
+
+def tsne_geochem():
+    TSNE_form = QtWidgets.QDialog()
+    ui_tsne = Ui_TSNE_PCA()
+    ui_tsne.setupUi(TSNE_form)
+    TSNE_form.show()
+    TSNE_form.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
+
+    m_width, m_height = get_width_height_monitor()
+    TSNE_form.resize(int(m_width/3)*2, int(m_height/3)*2)
+
+    # ui_anova.graphicsView.setBackground('w')
+    data_plot = build_table_geochem_analytic(point_name=True)
+    markers = list(set(data_plot['well']))
+    pallet = {'field': 'green'}
+    for m in markers:
+        if m == 'field':
+            continue
+        pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
+
+    for w in data_plot['well'].unique():
+        check_box_widget = QCheckBox(w)
+        check_box_widget.setChecked(True)
+        list_item = QListWidgetItem()
+        ui_tsne.listWidget_checkbox_well.addItem(list_item)
+        ui_tsne.listWidget_checkbox_well.setItemWidget(list_item, check_box_widget)
+
+    def set_list_point():
+        ui_tsne.listWidget_point.clear()
+        list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
+        data_plot_new = data_plot.loc[data_plot['well'].isin(list_well)]
+
+        for i in data_plot_new.index:
+            ui_tsne.listWidget_point.addItem(str(data_plot_new['point'][i]))
+            ui_tsne.listWidget_point.findItems(str(data_plot_new['point'][i]), Qt.MatchExactly)[0].setBackground(
+                QColor(data_plot_new['color'][i]))
+        # ui_tsne.listWidget_point.setCurrentRow(0)
+
+    figure = plt.figure()
+    canvas = FigureCanvas(figure)
+    mpl_toolbar = NavigationToolbar(canvas)
+    ui_tsne.verticalLayout_graph.addWidget(mpl_toolbar)
+    ui_tsne.verticalLayout_graph.addWidget(canvas)
+
+    def draw_graph_tsne():
+        list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
+        data_plot_new = data_plot.loc[data_plot['well'].isin(list_well)].reset_index(drop=False)
+
+        try:
+            figure.clear()
+
+            data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
+
+            if ui_tsne.checkBox_standart.isChecked():
+                scaler = StandardScaler()
+                data_tsne = scaler.fit_transform(data_tsne)
+            if ui_tsne.radioButton_tsne.isChecked():
+                name_graph = 't-SNE'
+                tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+                data_tsne_result = tsne.fit_transform(data_tsne)
+            if ui_tsne.radioButton_pca.isChecked():
+                name_graph = 'PCA'
+                pca = PCA(n_components=2)
+                data_tsne_result = pca.fit_transform(data_tsne)
+            data_plot_new = pd.concat([data_plot_new, pd.DataFrame(data_tsne_result, columns=['0', '1'])], axis=1)
+
+            pd.set_option('display.max_rows', None)
+            print(data_plot_new)
+
+            sns.scatterplot(data=data_plot_new, x='0', y='1', hue='well', s=100, palette=pallet)
+            try:
+                plt.vlines(
+                    x=data_plot_new['0'].loc[data_plot_new['point'] == ui_tsne.listWidget_point.currentItem().text()],
+                    ymin=data_plot_new['1'].min(),
+                    ymax=data_plot_new['1'].max(),
+                    color='black',
+                    linestyle='--'
+                )
+                plt.hlines(
+                    y=data_plot_new['1'].loc[data_plot_new['point'] == ui_tsne.listWidget_point.currentItem().text()],
+                    xmin=data_plot_new['0'].min(),
+                    xmax=data_plot_new['0'].max(),
+                    color='black',
+                    linestyle='--'
+                )
+            except AttributeError:
+                print('AttributeError')
+                pass
+            plt.grid()
+            figure.suptitle(name_graph)
+            figure.tight_layout()
+            canvas.draw()
+        except ValueError:
+            pass
+
+    ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
+    ui_tsne.radioButton_tsne.clicked.connect(draw_graph_tsne)
+    ui_tsne.radioButton_pca.clicked.connect(draw_graph_tsne)
+    ui_tsne.checkBox_standart.clicked.connect(draw_graph_tsne)
+    # ui_tsne.listWidget_point.clicked.connect(set_list_point)
+    ui_tsne.listWidget_point.clicked.connect(draw_graph_tsne)
+    for i in range(ui_tsne.listWidget_checkbox_well.count()):
+        ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(draw_graph_tsne)
+
+    set_list_point()
+    draw_graph_tsne()
+
+    TSNE_form.exec_()

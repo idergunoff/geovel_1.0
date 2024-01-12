@@ -750,6 +750,7 @@ class Geochem(Base):
     g_parameters = relationship("GeochemParameter", back_populates="geochem")
     g_points = relationship("GeochemPoint", back_populates="geochem")
     g_wells = relationship("GeochemWell", back_populates="geochem")
+    makets = relationship("GeochemMaket", back_populates="geochem")
 
 
 class GeochemParameter(Base):
@@ -762,6 +763,7 @@ class GeochemParameter(Base):
     geochem = relationship("Geochem", back_populates="g_parameters")
     g_point_values = relationship("GeochemPointValue", back_populates="g_param")
     g_well_point_values = relationship("GeochemWellPointValue", back_populates="g_param")
+    train_params = relationship("GeochemTrainParameter", back_populates="param")
 
 
 class GeochemPoint(Base):
@@ -775,6 +777,7 @@ class GeochemPoint(Base):
 
     geochem = relationship("Geochem", back_populates="g_points")
     g_point_values = relationship("GeochemPointValue", back_populates="g_point")
+    train_points = relationship("GeochemTrainPoint", back_populates="point")
 
 
 class GeochemWell(Base):
@@ -800,6 +803,7 @@ class GeochemWellPoint(Base):
 
     g_well = relationship("GeochemWell", back_populates="g_w_points")
     g_well_point_values = relationship("GeochemWellPointValue", back_populates="g_well_point")
+    train_points = relationship("GeochemTrainPoint", back_populates="well_point")
 
 
 class GeochemPointValue(Base):
@@ -826,6 +830,55 @@ class GeochemWellPointValue(Base):
     g_well_point = relationship("GeochemWellPoint", back_populates="g_well_point_values")
     g_param = relationship("GeochemParameter", back_populates="g_well_point_values")
 
+
+class GeochemMaket(Base):
+    __tablename__ = 'geochem_maket'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem.id'))
+    title = Column(String)
+
+    geochem = relationship("Geochem", back_populates="makets")
+    categories = relationship("GeochemCategory", back_populates="maket")
+    train_params = relationship("GeochemTrainParameter", back_populates="maket")
+
+
+
+class GeochemCategory(Base):
+    __tablename__ = 'geochem_category'
+
+    id = Column(Integer, primary_key=True)
+    maket_id = Column(Integer, ForeignKey('geochem_maket.id'))
+    title = Column(String)
+    color = Column(String)
+
+    maket = relationship("GeochemMaket", back_populates="categories")
+    train_points = relationship("GeochemTrainPoint", back_populates="category")
+
+
+class GeochemTrainPoint(Base):
+    __tablename__ = 'geochem_train_point'
+
+    id = Column(Integer, primary_key=True)
+    cat_id = Column(Integer, ForeignKey('geochem_category.id'))
+    type_point = Column(String, default='well')
+    point_well_id = Column(Integer, ForeignKey('geochem_well_point.id'))
+    point_id = Column(Integer, ForeignKey('geochem_point.id'))
+
+    category = relationship("GeochemCategory", back_populates="train_points")
+    point = relationship("GeochemPoint", back_populates="train_points")
+    well_point = relationship("GeochemWellPoint", back_populates="train_points")
+
+
+class GeochemTrainParameter(Base):
+    __tablename__ = 'geochem_train_parameter'
+
+    id = Column(Integer, primary_key=True)
+    maket_id = Column(Integer, ForeignKey('geochem_maket.id'))
+    param_id = Column(Integer, ForeignKey('geochem_parameter.id'))
+
+    maket = relationship("GeochemMaket", back_populates="train_params")
+    param = relationship("GeochemParameter", back_populates="train_params")
 
 
 Base.metadata.create_all(engine)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'qt/test.ui'
+# Form implementation generated from reading ui file 'qt/anova_form.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -26,6 +26,9 @@ class Ui_Anova(object):
         self.listWidget = QtWidgets.QListWidget(self.frame_2)
         self.listWidget.setObjectName("listWidget")
         self.horizontalLayout_3.addWidget(self.listWidget)
+        self.listWidget_checkbox_well = QtWidgets.QListWidget(self.frame_2)
+        self.listWidget_checkbox_well.setObjectName("listWidget_checkbox_well")
+        self.horizontalLayout_3.addWidget(self.listWidget_checkbox_well)
         self.frame_3 = QtWidgets.QFrame(self.frame_2)
         self.frame_3.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.frame_3.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -47,7 +50,7 @@ class Ui_Anova(object):
         self.verticalLayout.addWidget(self.radioButton_violin)
         self.horizontalLayout_3.addWidget(self.frame_3)
         self.horizontalLayout_3.setStretch(0, 2)
-        self.horizontalLayout_3.setStretch(1, 1)
+        self.horizontalLayout_3.setStretch(2, 1)
         self.gridLayout.addWidget(self.frame_2, 1, 0, 1, 1)
         self.frame = QtWidgets.QFrame(Anova)
         self.frame.setFrameShape(QtWidgets.QFrame.StyledPanel)

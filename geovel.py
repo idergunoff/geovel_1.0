@@ -382,6 +382,8 @@ ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_geochem_point)
 ui.comboBox_geochem.currentTextChanged.connect(update_combobox_geochem_well)
 ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_param_geochem)
 ui.comboBox_geochem_well.currentTextChanged.connect(update_listwidget_geochem_well_point)
+ui.pushButton_geochem_anova.clicked.connect(anova_geochem)
+ui.pushButton_geochem_tsne.clicked.connect(tsne_geochem)
 
 
 

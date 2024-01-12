@@ -1662,3 +1662,12 @@ def get_geochem_id():
 def get_geochem_well_id():
     if ui.comboBox_geochem_well.count() > 0:
         return int(ui.comboBox_geochem_well.currentText().split(' id')[-1])
+
+
+def get_list_check_checkbox(listwidget):
+    """ Получение списка выбранных чекбоксов """
+    list_stat = []
+    for i in range(listwidget.count()):
+        if listwidget.itemWidget(listwidget.item(i)).isChecked():
+            list_stat.append(listwidget.itemWidget(listwidget.item(i)).text())
+    return list_stat

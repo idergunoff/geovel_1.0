@@ -11,7 +11,7 @@ from pyqtgraph.Qt import QtWidgets
 from qt.geovel_main_window import *
 from qt.classifier_form import *
 from qt.regressor_form import *
-from qt.test import *
+from qt.anova_form import *
 from qt.lof_form import *
 from qt.formation_ai_form import *
 from qt.choose_formation_lda import *
@@ -23,6 +23,7 @@ from qt.load_points import *
 from qt.form_delete_therm import *
 from qt.add_profile_class import *
 from qt.geochem_loader import *
+from qt.tsne_form import *
 
 from model import *
 import numpy as np
@@ -73,6 +74,7 @@ from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
