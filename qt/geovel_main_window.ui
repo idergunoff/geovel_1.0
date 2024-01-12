@@ -4277,24 +4277,24 @@ Therm</string>
                 <item row="1" column="0">
                  <layout class="QGridLayout" name="gridLayout_128">
                   <item row="0" column="1">
-                   <layout class="QGridLayout" name="gridLayout_130">
+                   <layout class="QGridLayout" name="gridLayout_130" columnstretch="3,0">
                     <item row="0" column="1">
                      <widget class="QPushButton" name="pushButton_del_train_point_2">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
                       <property name="text">
-                       <string>delete</string>
+                       <string/>
                       </property>
                      </widget>
                     </item>
                     <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_add_train_point_2">
+                     <widget class="QPushButton" name="pushButton_add_train_well">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>
                       <property name="text">
-                       <string>add</string>
+                       <string>add train well</string>
                       </property>
                      </widget>
                     </item>
@@ -4307,14 +4307,14 @@ Therm</string>
                    <widget class="QListWidget" name="listWidget_g_well_point"/>
                   </item>
                   <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_129">
+                   <layout class="QGridLayout" name="gridLayout_129" columnstretch="3,0">
                     <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_add_set_point_2">
+                     <widget class="QPushButton" name="pushButton_add_train_g_point">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>
                       <property name="text">
-                       <string>add</string>
+                       <string>add train point</string>
                       </property>
                      </widget>
                     </item>
@@ -4324,7 +4324,7 @@ Therm</string>
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
                       <property name="text">
-                       <string>delete</string>
+                       <string/>
                       </property>
                      </widget>
                     </item>
