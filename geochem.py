@@ -569,6 +569,7 @@ def update_maket_combobox():
     update_geochem_param_train_list()
     update_category_combobox()
 
+
 def update_category_combobox():
     ui.comboBox_geochem_cat.clear()
     for i in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
@@ -707,7 +708,8 @@ def remove_geochem_param_train():
 
 def update_g_train_point_list():
     ui.listWidget_g_train_point.clear()
-    for i in session.query(GeochemTrainPoint).all():
+    for i in session.query(GeochemTrainPoint).join(GeochemCategory).filter(
+            GeochemCategory.maket_id == get_maket_id()).all():
         try:
             if i.type_point == 'well':
                 item_text = (f'{i.well_point.title} id{i.id}')
