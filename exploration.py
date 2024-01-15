@@ -202,8 +202,7 @@ def clear_all_analysis_parameters():
 
 def del_analysis_parameter():
     """ Удаляет выбранный параметр из анализа """
-    ch = get_analysis_expl_id()
-    if ch is None:
+    if get_analysis_expl_id() is None:
         return
 
     item = session.query(ParameterAnalysisExploration).filter_by(

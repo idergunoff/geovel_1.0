@@ -378,12 +378,27 @@ ui.comboBox_object.activated.connect(update_train_combobox)
 
 ui.pushButton_del_geochem.clicked.connect(remove_geochem)
 ui.pushButton_load_geochem.clicked.connect(load_geochem)
-ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_geochem_point)
-ui.comboBox_geochem.currentTextChanged.connect(update_combobox_geochem_well)
-ui.comboBox_geochem.currentTextChanged.connect(update_listwidget_param_geochem)
-ui.comboBox_geochem_well.currentTextChanged.connect(update_listwidget_geochem_well_point)
+ui.comboBox_geochem.activated.connect(update_listwidget_geochem_point)
+ui.comboBox_geochem.activated.connect(update_combobox_geochem_well)
+ui.comboBox_geochem.activated.connect(update_listwidget_param_geochem)
+ui.comboBox_geochem_well.activated.connect(update_listwidget_geochem_well_point)
 ui.pushButton_geochem_anova.clicked.connect(anova_geochem)
 ui.pushButton_geochem_tsne.clicked.connect(tsne_geochem)
+ui.pushButton_add_g_maket.clicked.connect(add_maket)
+ui.pushButton_rem_g_maket.clicked.connect(remove_maket)
+ui.pushButton_add_g_param_train.clicked.connect(add_geochem_param_train)
+ui.pushButton_add_all_g_param.clicked.connect(add_all_geochem_param_train)
+ui.pushButton_rem_g_param_train.clicked.connect(remove_geochem_param_train)
+ui.pushButton_add_g_cat.clicked.connect(add_category)
+ui.pushButton_rem_g_cat.clicked.connect(remove_category)
+ui.comboBox_geochem_maket.activated.connect(update_geochem_param_train_list)
+ui.comboBox_geochem_maket.activated.connect(update_category_combobox)
+ui.comboBox_geochem_cat.activated.connect(update_g_train_point_list)
+ui.pushButton_add_train_well.clicked.connect(add_whole_well_to_list)
+ui.pushButton_add_train_g_point.clicked.connect(add_field_point_to_list)
+ui.listWidget_g_train_point.doubleClicked.connect(del_g_train_point)
+
+
 
 
 
@@ -414,6 +429,10 @@ check_coordinates_research()
 update_list_exploration()
 update_models_expl_list()
 update_combobox_geochem()
+update_maket_combobox()
+update_category_combobox()
+update_geochem_param_train_list()
+update_g_train_point_list()
 
 
 # update_list_param_lda()

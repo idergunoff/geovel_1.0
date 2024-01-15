@@ -30,18 +30,24 @@ def update_listwidget_param_geochem():
     ui.listWidget_geochem_param.clear()
     for i in session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all():
         ui.listWidget_geochem_param.addItem(f'{i.title} id{i.id}')
+    ui.label_29.setText(f'Parameters: {ui.listWidget_geochem_param.count()}')
+
+
 
 
 def update_listwidget_geochem_point():
     ui.listWidget_g_point.clear()
     for i in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).order_by(GeochemPoint.title).all():
         ui.listWidget_g_point.addItem(f'{i.title} id{i.id}')
+    update_maket_combobox()
+    ui.label_point_expl_3.setText(f'Field Points: {ui.listWidget_g_point.count()}')
 
 
 def update_listwidget_geochem_well_point():
     ui.listWidget_g_well_point.clear()
     for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).order_by(GeochemWellPoint.title).all():
         ui.listWidget_g_well_point.addItem(f'{i.title} id{i.id}')
+    ui.label_point_expl_4.setText(f'Well Points: {ui.listWidget_g_well_point.count()}')
 
 
 def remove_geochem():
@@ -553,3 +559,210 @@ def tsne_geochem():
     draw_graph_anova()
 
     TSNE_form.exec_()
+
+
+def update_maket_combobox():
+    ui.comboBox_geochem_maket.clear()
+    for i in session.query(GeochemMaket).filter_by(geochem_id=get_geochem_id()).all():
+        ui.comboBox_geochem_maket.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_geochem_maket.setItemData(ui.comboBox_geochem_maket.count() - 1, {'id': i.id})
+    update_geochem_param_train_list()
+    update_category_combobox()
+
+def update_category_combobox():
+    ui.comboBox_geochem_cat.clear()
+    for i in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
+        ui.comboBox_geochem_cat.addItem(f'{i.title} id{i.id}')
+        ui.comboBox_geochem_cat.setItemData(
+            ui.comboBox_geochem_cat.findText(f'{i.title} id{i.id}'),
+            QBrush(QColor(i.color)),
+            Qt.BackgroundRole
+        )
+    update_g_train_point_list()
+
+def get_maket_id():
+    try:
+        return int(ui.comboBox_geochem_maket.currentText().split('id')[-1])
+    except ValueError:
+        pass
+
+def get_category_id():
+    try:
+        return int(ui.comboBox_geochem_cat.currentText().split('id')[-1])
+    except ValueError:
+        pass
+
+def add_maket():
+    """Добавить новый макет"""
+    if ui.lineEdit_string.text() == '':
+        return
+    new_maket = GeochemMaket(title=ui.lineEdit_string.text(), geochem_id=get_geochem_id())
+    session.add(new_maket)
+    session.commit()
+    update_maket_combobox()
+    update_geochem_param_train_list()
+    set_info(f'Макет {new_maket.title} добавлен', 'green')
+
+def remove_maket():
+    """Удалить макет"""
+    maket_title = ui.comboBox_geochem_maket.currentText()
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление макета',
+        f'Вы уверены, что хотите удалить макет {maket_title}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(GeochemMaket).filter_by(id=get_maket_id()).delete()
+        session.commit()
+        set_info(f'Макет "{maket_title}" удален', 'green')
+        update_maket_combobox()
+    else:
+        pass
+
+def add_category():
+    """Добавить новую категорию"""
+    if ui.lineEdit_string.text() == '':
+        return
+    new_cat = GeochemCategory(title=ui.lineEdit_string.text(), maket_id=get_maket_id(), color=ui.pushButton_color.text())
+    session.add(new_cat)
+    session.commit()
+    update_category_combobox()
+    update_geochem_param_train_list()
+    set_info(f'Категория {new_cat.title} добавлена', 'green')
+
+def remove_category():
+    """Удалить категорию"""
+    cat_title = ui.comboBox_geochem_cat.currentText()
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление категории',
+        f'Вы уверены, что хотите удалить категорию {cat_title}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(GeochemTrainPoint).filter_by(cat_id=get_category_id()).delete()
+        session.query(GeochemCategory).filter_by(id=get_category_id()).delete()
+        session.commit()
+        set_info(f'Категория "{cat_title}" удалена', 'green')
+        update_category_combobox()
+    else:
+        pass
+
+def update_geochem_param_train_list():
+    ui.listWidget_geochem_param_train.clear()
+    for i in session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all():
+        try:
+            item_text = (f'{i.param.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_geochem_param_train.addItem(item)
+        except AttributeError:
+            session.query(GeochemTrainParameter).filter_by(id=i.id).delete()
+    session.commit()
+    ui.label_30.setText(f'Parameters: {ui.listWidget_geochem_param_train.count()}')
+    # update_category_combobox()
+
+def add_all_geochem_param_train():
+    """ Добавляет все параметры геохимии в список для тренировки """
+    for i in session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all():
+        if get_maket_id():
+            maket = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
+            flag = 0
+            for mk in maket:
+                if mk.param_id == i.id:
+                    flag = 1
+                    break
+            if flag == 0:
+                param = GeochemTrainParameter(maket_id=get_maket_id(), param_id=i.id)
+                session.add(param)
+        else:
+            set_info(f'Для добавления параметра создайте макет', 'red')
+    update_geochem_param_train_list()
+
+def add_geochem_param_train():
+    item = session.query(GeochemParameter).filter_by(id=ui.listWidget_geochem_param.currentItem().text().split(' id')[-1]).first()
+    if get_maket_id():
+        maket = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
+        for mk in maket:
+            if mk.param_id == item.id:
+                return
+        param = GeochemTrainParameter(param_id=item.id, maket_id=get_maket_id())
+        session.add(param)
+    else:
+        set_info(f'Для добавления тренировочного параметра создайте макет', 'red')
+    session.commit()
+    update_geochem_param_train_list()
+
+
+def remove_geochem_param_train():
+    item = session.query(GeochemTrainParameter).filter_by(
+        id=ui.listWidget_geochem_param_train.currentItem().text().split(' id')[-1]).first()
+    if item:
+        session.delete(item)
+        session.commit()
+    update_geochem_param_train_list()
+
+def update_g_train_point_list():
+    ui.listWidget_g_train_point.clear()
+    for i in session.query(GeochemTrainPoint).all():
+        try:
+            if i.type_point == 'well':
+                item_text = (f'{i.well_point.title} id{i.id}')
+            else:
+                item_text = (f'{i.point.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            item.setBackground(QBrush(QColor(i.category.color)))
+            ui.listWidget_g_train_point.addItem(item)
+        except AttributeError:
+            session.query(GeochemTrainPoint).filter_by(id=i.id).delete()
+    session.commit()
+    ui.label_27.setText(f'Train points: {ui.listWidget_g_train_point.count()}')
+
+
+def add_whole_well_to_list():
+    for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).all():
+        if get_category_id():
+            cat = session.query(GeochemTrainPoint).filter_by(cat_id=get_category_id()).all()
+            for c in cat:
+                if c.point_well_id == i.id:
+                    return
+        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id)
+        session.add(point)
+        session.commit()
+    update_g_train_point_list()
+
+def add_field_point_to_list():
+    item = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
+    if get_category_id():
+        cat = session.query(GeochemTrainPoint).filter_by(cat_id=get_category_id()).all()
+        for c in cat:
+            if c.point_id == item.id:
+                return
+        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='field', point_id=item.id)
+        session.add(point)
+        session.commit()
+    update_g_train_point_list()
+
+
+def del_g_train_point():
+    point_name = ui.listWidget_g_train_point.currentItem().text()
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление точки',
+        f'Вы уверены, что хотите удалить точку {point_name}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        session.query(GeochemTrainPoint).filter_by(
+            id=ui.listWidget_g_train_point.currentItem().text().split(' id')[-1]).delete()
+        session.commit()
+        set_info(f'Точка "{point_name}" удалена', 'green')
+        update_g_train_point_list()
+    else:
+        pass
+
+
