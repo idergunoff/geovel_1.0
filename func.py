@@ -1129,6 +1129,56 @@ def build_table_test(analisis='lda'):
     return test_data, curr_form
 
 
+def update_list_well_markup_mlp():
+    """Обновление списка обучающих скважин MLP"""
+    ui.listWidget_well_mlp.clear()
+    count_markup, count_measure, count_fake = 0, 0, 0
+    for i in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
+        try:
+            fake = len(json.loads(i.list_fake)) if i.list_fake else 0
+            measure = len(json.loads(i.list_measure))
+            if i.type_markup == 'intersection':
+                try:
+                    inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                except TypeError:
+                    session.query(MarkupMLP).filter(MarkupMLP.id == i.id).delete()
+                    set_info(f'Обучающая скважина удалена из-за отсутствия пересечения', 'red')
+                    session.commit()
+                    continue
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+            elif i.type_markup == 'profile':
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | | {measure - fake} из {measure} | id{i.id}'
+            else:
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
+            ui.listWidget_well_mlp.addItem(item)
+            i_item = ui.listWidget_well_mlp.findItems(item, Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor(i.marker.color)))
+            count_markup += 1
+            count_measure += measure - fake
+            count_fake += fake
+            # ui.listWidget_well_mlp.setItemData(ui.listWidget_well_mlp.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        except AttributeError:
+            set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+            session.delete(i)
+            session.commit()
+    ui.label_count_markup_mlp.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; '
+                                      f'<i><u>{count_measure}</u></i> измерений; '
+                                      f'<i><u>{count_fake}</u></i> выбросов')
+
+
+def update_list_trained_models_class():
+    """ Обновление списка тренерованных моделей """
+
+    models = session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all()
+    ui.listWidget_trained_model_class.clear()
+    for model in models:
+        item_text = model.title
+        item = QListWidgetItem(item_text)
+        item.setData(Qt.UserRole, model.id)
+        item.setToolTip(model.comment)
+        ui.listWidget_trained_model_class.addItem(item)
+    ui.listWidget_trained_model_class.setCurrentRow(0)
+
 def get_list_param_numerical(list_param):
     new_list_param = []
     for param in list_param:
@@ -1685,3 +1735,41 @@ def clear_layout(layout):
             item.widget().deleteLater()
         elif item.layout():
             clear_layout(item.layout())
+
+
+def get_maket_id():
+    try:
+        return int(ui.comboBox_geochem_maket.currentText().split('id')[-1])
+    except ValueError:
+        pass
+
+
+def get_category_id():
+    try:
+        return int(ui.comboBox_geochem_cat.currentText().split('id')[-1])
+    except ValueError:
+        pass
+
+
+def update_g_train_point_list():
+    ui.listWidget_g_train_point.clear()
+    count_fake = 0
+    for i in session.query(GeochemTrainPoint).join(GeochemCategory).filter(
+            GeochemCategory.maket_id == get_maket_id()).all():
+        try:
+            if i.type_point == 'well':
+                item_text = (f'{i.well_point.title} id{i.id}')
+            else:
+                item_text = (f'{i.point.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            if i.fake:
+                item.setBackground(QBrush(QColor('red')))
+                count_fake += 1
+            else:
+                item.setBackground(QBrush(QColor(i.category.color)))
+            ui.listWidget_g_train_point.addItem(item)
+        except AttributeError:
+            session.query(GeochemTrainPoint).filter_by(id=i.id).delete()
+    session.commit()
+    ui.label_27.setText(f'Train points: {ui.listWidget_g_train_point.count()}, fake: {count_fake}')

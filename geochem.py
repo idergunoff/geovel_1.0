@@ -581,17 +581,7 @@ def update_category_combobox():
         )
     update_g_train_point_list()
 
-def get_maket_id():
-    try:
-        return int(ui.comboBox_geochem_maket.currentText().split('id')[-1])
-    except ValueError:
-        pass
 
-def get_category_id():
-    try:
-        return int(ui.comboBox_geochem_cat.currentText().split('id')[-1])
-    except ValueError:
-        pass
 
 def add_maket():
     """Добавить новый макет"""
@@ -706,23 +696,7 @@ def remove_geochem_param_train():
         session.commit()
     update_geochem_param_train_list()
 
-def update_g_train_point_list():
-    ui.listWidget_g_train_point.clear()
-    for i in session.query(GeochemTrainPoint).join(GeochemCategory).filter(
-            GeochemCategory.maket_id == get_maket_id()).all():
-        try:
-            if i.type_point == 'well':
-                item_text = (f'{i.well_point.title} id{i.id}')
-            else:
-                item_text = (f'{i.point.title} id{i.id}')
-            item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, i.id)
-            item.setBackground(QBrush(QColor(i.category.color)))
-            ui.listWidget_g_train_point.addItem(item)
-        except AttributeError:
-            session.query(GeochemTrainPoint).filter_by(id=i.id).delete()
-    session.commit()
-    ui.label_27.setText(f'Train points: {ui.listWidget_g_train_point.count()}')
+
 
 
 def add_whole_well_to_list():
@@ -732,7 +706,7 @@ def add_whole_well_to_list():
             for c in cat:
                 if c.point_well_id == i.id:
                     return
-        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id)
+        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id, title=i.title)
         session.add(point)
         session.commit()
     update_g_train_point_list()
@@ -744,7 +718,7 @@ def add_field_point_to_list():
         for c in cat:
             if c.point_id == item.id:
                 return
-        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='field', point_id=item.id)
+        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='field', point_id=item.id, title=item.title)
         session.add(point)
         session.commit()
     update_g_train_point_list()

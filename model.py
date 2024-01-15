@@ -860,10 +860,13 @@ class GeochemTrainPoint(Base):
     __tablename__ = 'geochem_train_point'
 
     id = Column(Integer, primary_key=True)
+
     cat_id = Column(Integer, ForeignKey('geochem_category.id'))
+    title = Column(String)
     type_point = Column(String, default='well')
     point_well_id = Column(Integer, ForeignKey('geochem_well_point.id'))
     point_id = Column(Integer, ForeignKey('geochem_point.id'))
+    fake = Column(Boolean, default=False)
 
     category = relationship("GeochemCategory", back_populates="train_points")
     point = relationship("GeochemPoint", back_populates="train_points")
