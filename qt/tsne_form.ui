@@ -13,7 +13,41 @@
   <property name="windowTitle">
    <string>TSNE PCA</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="3,1">
+  <layout class="QGridLayout" name="gridLayout_3" rowstretch="3,1">
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,1">
+     <item row="0" column="0">
+      <widget class="QFrame" name="frame_5">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_anova"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QFrame" name="frame">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_graph"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item row="1" column="0">
     <widget class="QFrame" name="frame_2">
      <property name="frameShape">
@@ -22,12 +56,64 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,1,5">
+     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,2,2,2,1,1,0">
+      <item>
+       <widget class="QFrame" name="frame_4">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
+          <widget class="QRadioButton" name="radioButton_strip">
+           <property name="text">
+            <string>StripPlot</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_box">
+           <property name="text">
+            <string>BoxPlot</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_boxen">
+           <property name="text">
+            <string>BoxenPlot</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_violin">
+           <property name="text">
+            <string>ViolinPlot</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listWidget_param"/>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listWidget_checkbox_well"/>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listWidget_check_param"/>
+      </item>
       <item>
        <widget class="QListWidget" name="listWidget_point"/>
       </item>
       <item>
-       <widget class="QListWidget" name="listWidget_checkbox_well"/>
+       <widget class="QListWidget" name="listWidget_check_point"/>
       </item>
       <item>
        <widget class="QFrame" name="frame_3">
@@ -49,6 +135,19 @@
           </widget>
          </item>
          <item>
+          <widget class="QSpinBox" name="spinBox_perplexity">
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="maximum">
+            <number>200</number>
+           </property>
+           <property name="value">
+            <number>30</number>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QRadioButton" name="radioButton_pca">
            <property name="text">
             <string>PCA</string>
@@ -61,40 +160,29 @@
             <string>standart</string>
            </property>
            <property name="checked">
-            <bool>true</bool>
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_name_point">
+           <property name="text">
+            <string>name</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_apply">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 190, 111);</string>
+           </property>
+           <property name="text">
+            <string>apply</string>
            </property>
           </widget>
          </item>
         </layout>
        </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_graph"/>
       </item>
      </layout>
     </widget>

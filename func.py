@@ -1664,10 +1664,24 @@ def get_geochem_well_id():
         return int(ui.comboBox_geochem_well.currentText().split(' id')[-1])
 
 
-def get_list_check_checkbox(listwidget):
-    """ Получение списка выбранных чекбоксов """
-    list_stat = []
-    for i in range(listwidget.count()):
-        if listwidget.itemWidget(listwidget.item(i)).isChecked():
-            list_stat.append(listwidget.itemWidget(listwidget.item(i)).text())
-    return list_stat
+def get_list_check_checkbox(list_widget, is_checked=True):
+    """Get a list of selected checkboxes"""
+    selected_checkboxes = []
+    for i in range(list_widget.count()):
+        checkbox = list_widget.itemWidget(list_widget.item(i))
+        if is_checked:
+            if checkbox.isChecked():
+                selected_checkboxes.append(checkbox.text())
+        else:
+            if not checkbox.isChecked():
+                selected_checkboxes.append(checkbox.text())
+    return selected_checkboxes
+
+
+def clear_layout(layout):
+    while layout.count():
+        item = layout.takeAt(0)
+        if item.widget():
+            item.widget().deleteLater()
+        elif item.layout():
+            clear_layout(item.layout())
