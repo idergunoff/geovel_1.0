@@ -728,9 +728,10 @@ def update_g_train_point_list():
 def add_whole_well_to_list():
     for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).all():
         if get_category_id():
-            cat = session.query(GeochemTrainPoint).filter_by(cat_id=get_category_id()).all()
+            cat = session.query(GeochemTrainPoint).filter_by(
+                cat_id=get_category_id()).all()
             for c in cat:
-                if c.point_well_id == i.id:
+                if c.point_well_id == i.id :
                     return
         point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id)
         session.add(point)
@@ -766,5 +767,30 @@ def del_g_train_point():
         update_g_train_point_list()
     else:
         pass
+
+def build_geochem_table():
+    param = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
+    list_param = [i.param.title for i in param]
+    data = pd.DataFrame(columns=['title', 'category'] + list_param)
+
+    for point in session.query(GeochemTrainPoint).join(GeochemMaket).filter(
+            GeochemMaket.id == get_maket_id()).all():
+        dict_point = {}
+        if point.fake:
+            continue
+        dict_point['title'] = point.title
+        dict_point['category'] = point.category.title
+        for p in param:
+            if point.type_point == 'field':
+                value = session.query(GeochemWellPointValue).filter_by(g_point_id=point.point_id,
+                                                                       g_param_id=p.param_id).first()
+            else:
+                value = session.query(GeochemWellPointValue).filter_by(g_well_point_id=point.point_well_id,
+                                                                         g_param_id=p.param_id).first()
+            dict_point[p.param.title] = value.value
+
+        data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
+    return data
+
 
 
