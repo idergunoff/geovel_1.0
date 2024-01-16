@@ -399,6 +399,8 @@ ui.pushButton_add_train_well.clicked.connect(add_whole_well_to_list)
 ui.pushButton_add_train_g_point.clicked.connect(add_field_point_to_list)
 ui.listWidget_g_train_point.doubleClicked.connect(del_g_train_point)
 ui.pushButton_geochem_train_model.clicked.connect(train_model_geochem)
+ui.pushButton_calc_g_class.clicked.connect(calc_geochem_classification)
+ui.pushButton_g_drop_fake.clicked.connect(drop_fake_geochem)
 
 
 
