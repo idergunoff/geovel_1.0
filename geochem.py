@@ -54,24 +54,45 @@ def remove_geochem():
     gchm = session.query(Geochem).filter_by(id=get_geochem_id()).first()
     geochem_name = gchm.title
 
-    for gparam in session.query(GeochemParameter).filter_by(geochem_id=gchm.id).all():
-        session.delete(gparam)
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Удаление макета',
+        f'Вы уверены, что хотите удалить геохимический объект {geochem_name}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
 
-    for gp in session.query(GeochemPoint).filter_by(geochem_id=gchm.id).all():
-        for gpv in session.query(GeochemPointValue).filter_by(g_point_id=gp.id).all():
-            session.delete(gpv)
-        session.delete(gp)
+    if result == QtWidgets.QMessageBox.Yes:
+        for gp in session.query(GeochemPoint).filter_by(geochem_id=gchm.id).all():
+            for gpv in session.query(GeochemPointValue).filter_by(g_point_id=gp.id).all():
+                session.delete(gpv)
+            session.delete(gp)
+        for gw in session.query(GeochemWell).filter_by(geochem_id=gchm.id).all():
+            for gwp in session.query(GeochemWellPoint).filter_by(g_well_id=gw.id).all():
+                for gwpv in session.query(GeochemWellPointValue).filter_by(g_well_point_id=gwp.id).all():
+                    session.delete(gwpv)
+                session.delete(gwp)
+            session.delete(gw)
+        for gparam in session.query(GeochemMaket).filter_by(geochem_id=gchm.id).all():
+            for c in session.query(GeochemCategory).filter_by(maket_id=gparam.id).all():
+                session.delete(c)
+        for gm in session.query(GeochemMaket).filter_by(geochem_id=gchm.id).all():
+            session.delete(gm)
+        for gparam in session.query(GeochemParameter).filter_by(geochem_id=gchm.id).all():
+            session.delete(gparam)
+        session.delete(gchm)
+        session.commit()
+        set_info(f'Геохимический объект {geochem_name} и все данные по нему удалены', 'green')
+        update_combobox_geochem()
+        update_combobox_geochem_well()
+        update_listwidget_param_geochem()
+        update_listwidget_geochem_point()
+        update_listwidget_geochem_well_point()
+        update_maket_combobox()
+        update_category_combobox()
+    else:
+        pass
 
-    for gw in session.query(GeochemWell).filter_by(geochem_id=gchm.id).all():
-        for gwp in session.query(GeochemWellPoint).filter_by(g_well_id=gw.id).all():
-            for gwpv in session.query(GeochemWellPointValue).filter_by(g_well_point_id=gwp.id).all():
-                session.delete(gwpv)
-            session.delete(gwp)
-        session.delete(gw)
-    session.delete(gchm)
-    session.commit()
-    set_info(f'Геохимический объект {geochem_name} и все данные по нему удалены', 'green')
-    update_combobox_geochem()
 
 
 def build_table_geochem_analytic(point_name=False):
