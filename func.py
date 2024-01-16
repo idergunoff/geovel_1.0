@@ -1324,6 +1324,8 @@ def string_to_unique_number(strings, type_analysis):
         markers = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
     elif type_analysis == 'mlp':
         markers = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
+    elif type_analysis == 'geochem':
+        markers = session.query(GeochemCategory).filter(GeochemCategory.maket_id == get_maket_id()).all()
 
     for marker in markers:
         num = len(unique_strings) + 1

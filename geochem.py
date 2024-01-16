@@ -1,5 +1,6 @@
 from func import *
 from classification_func import train_classifier
+from krige import draw_map
 
 
 def update_combobox_geochem():
@@ -796,11 +797,10 @@ def build_geochem_table_field():
     list_param = [i.title for i in parameters]
     data = pd.DataFrame(columns=['title', 'X', 'Y'] + list_param)
 
-    for point in session.query(GeochemPoint).filter(geochem_id=get_geochem_id()).all():
+    for point in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
         dict_point = {'title': point.title, 'X': point.x_coord, 'Y': point.y_coord}
-        for p in list_param:
-            dict_point[p] = session.query(GeochemPointValue).filter_by(g_point_id=point.point_id,
-                                                                       g_param_id=p.param_id).first()
+        for p in parameters:
+            dict_point[p.title] = session.query(GeochemPointValue).filter_by(g_point_id=point.id, g_param_id=p.id).first().value
         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
     return data, list_param
 
@@ -828,10 +828,12 @@ def calc_geochem_classification():
         model = session.query(GeochemTrainedModel).filter_by(
             id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
 
+        list_param_model = json.loads(model.list_params)
+
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        working_sample = data_test[list_param].values.tolist()
+        working_sample = data_test[list_param_model].values.tolist()
 
         list_cat = list(class_model.classes_)
 
@@ -844,9 +846,9 @@ def calc_geochem_classification():
             mark = class_model.predict(data)
             probability = class_model.predict_proba(data)
 
-            for i in working_data_result_copy.index:
-                p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in
-                         enumerate(working_data_result_copy.iloc[i, 3:].tolist()) if
+            for i in working_sample.index:
+                p_nan = [working_sample.columns[ic + 3] for ic, v in
+                         enumerate(working_sample.iloc[i, 3:].tolist()) if
                          np.isnan(v)]
                 if len(p_nan) > 0:
                     set_info(
@@ -854,28 +856,27 @@ def calc_geochem_classification():
                         f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
-        working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
         working_data_result['mark'] = mark
 
-        x = list(working_data_result['x_pulc'])
-        y = list(working_data_result['y_pulc'])
+        x = list(working_data_result['X'])
+        y = list(working_data_result['Y'])
         if len(set(mark)) == 2 and not ui_rm.checkBox_color_marker.isChecked():
-            marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
-            z = list(working_data_result[marker_mlp.title])
+            z = list(working_data_result[list_cat[0]])
             color_marker = False
-            z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            z_number = string_to_unique_number(list(working_data_result['mark']), 'geochem')
             working_data_result['mark_number'] = z_number
         else:
-            z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            z = string_to_unique_number(list(working_data_result['mark']), 'geochem')
             color_marker = True
             working_data_result['mark_number'] = z
-        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_class.currentItem().text()}', color_marker)
+        draw_map(x, y, z, f'Classifier {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
         result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
         if result1 == QMessageBox.Yes:
             result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
             if result2 == QMessageBox.Yes:
-                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                list_col = [i.title for i in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()]
+                list_col += ['X', 'Y', 'mark', 'mark_number']
                 working_data_result = working_data_result[list_col]
             else:
                 pass
@@ -889,8 +890,12 @@ def calc_geochem_classification():
                 pass
         else:
             pass
-
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
     Choose_RegModel.exec_()
 
 
+def drop_fake_geochem():
+    for cat in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
+        session.query(GeochemTrainPoint).filter_by(cat_id=cat.id).update({'fake': 0}, synchronize_session='fetch')
+    session.commit()
+    update_g_train_point_list()
