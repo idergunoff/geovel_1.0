@@ -206,7 +206,7 @@ def load_geochem():
                 ui.progressBar.setValue(pb + 1)
                 new_geochem_well_point = GeochemWellPoint(
                     g_well_id=new_geochem_well.id,
-                    title=data_geochem[ui_gl.comboBox_name.currentText()][point_well],
+                    title=str(data_geochem[ui_gl.comboBox_name.currentText()][point_well]),
                     x_coord=float(data_geochem[ui_gl.comboBox_x.currentText()][point_well]),
                     y_coord=float(data_geochem[ui_gl.comboBox_y.currentText()][point_well])
                 )
@@ -236,7 +236,7 @@ def load_geochem():
             ui.progressBar.setValue(point + 1)
             new_geochem_point = GeochemPoint(
                 geochem_id=new_geochem.id,
-                title=data_geochem[ui_gl.comboBox_name.currentText()][point],
+                title=str(data_geochem[ui_gl.comboBox_name.currentText()][point]),
                 x_coord=float(data_geochem[ui_gl.comboBox_x.currentText()][point]),
                 y_coord=float(data_geochem[ui_gl.comboBox_y.currentText()][point])
             )
@@ -361,11 +361,11 @@ def tsne_geochem():
             continue
         pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
-    for i in data_plot.columns.tolist()[4:]:
+    for i in data_plot.columns.tolist()[3:]:
         ui_tsne.listWidget_param.addItem(i)
         ui_tsne.listWidget_param.setCurrentRow(0)
 
-    for i_param in data_plot.columns.tolist()[4:]:
+    for i_param in data_plot.columns.tolist()[3:]:
         check_box_widget = QCheckBox(i_param)
         check_box_widget.setChecked(True)
         list_item = QListWidgetItem()
@@ -745,10 +745,7 @@ def del_g_train_point():
 
 def build_geochem_table():
     parameters = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
-    print(get_maket_id())
-    print(parameters)
     list_param = [i.param.title for i in parameters]
-    print(list_param)
     data = pd.DataFrame(columns=['title', 'category'] + list_param)
 
     for point in session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
@@ -776,7 +773,6 @@ def train_model_geochem():
     colors = {}
     for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
         colors[c.title] = c.color
-    print(data_train)
     train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
 
 
