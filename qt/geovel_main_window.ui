@@ -4583,9 +4583,12 @@ Therm</string>
                  </widget>
                 </item>
                 <item row="2" column="0">
-                 <widget class="QPushButton" name="pushButton_interp_2">
+                 <widget class="QPushButton" name="pushButton_g_drop_fake">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(249, 240, 107);</string>
+                  </property>
                   <property name="text">
-                   <string/>
+                   <string>clear fake</string>
                   </property>
                  </widget>
                 </item>
