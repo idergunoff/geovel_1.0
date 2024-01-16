@@ -704,10 +704,9 @@ def remove_geochem_param_train():
 def add_whole_well_to_list():
     for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).all():
         if get_category_id():
-            cat = session.query(GeochemTrainPoint).filter_by(
-                cat_id=get_category_id()).all()
+            cat = session.query(GeochemTrainPoint).all()
             for c in cat:
-                if c.point_well_id == i.id :
+                if c.point_well_id == i.id:
                     return
         point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id, title=i.title)
         session.add(point)
