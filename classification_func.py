@@ -1,6 +1,5 @@
 from func import *
 from random_search import push_random_search
-from geochem import update_g_model_list
 
 
 def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, mark: str, point_name: str, type_case: str):

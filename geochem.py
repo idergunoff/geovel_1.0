@@ -814,5 +814,80 @@ def train_model_geochem():
 def calc_geochem_classification():
     data_test, list_param = build_geochem_table_field()
 
+    Choose_RegModel = QtWidgets.QDialog()
+    ui_rm = Ui_FormRegMod()
+    ui_rm.setupUi(Choose_RegModel)
+    Choose_RegModel.show()
+    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    def calc_class_model():
+
+        model = session.query(GeochemTrainedModel).filter_by(
+            id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
+
+        with open(model.path_model, 'rb') as f:
+            class_model = pickle.load(f)
+
+        working_sample = data_test[list_param].values.tolist()
+
+        list_cat = list(class_model.classes_)
+
+        try:
+            mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
+        except ValueError:
+            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+            data = imputer.fit_transform(working_sample)
+            mark = class_model.predict(data)
+            probability = class_model.predict_proba(data)
+
+            for i in working_data_result_copy.index:
+                p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in
+                         enumerate(working_data_result_copy.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(
+                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f' этого измерения может быть не корректен', 'red')
+
+        # Добавление предсказанных меток и вероятностей в рабочие данные
+        working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
+        working_data_result['mark'] = mark
+
+        x = list(working_data_result['x_pulc'])
+        y = list(working_data_result['y_pulc'])
+        if len(set(mark)) == 2 and not ui_rm.checkBox_color_marker.isChecked():
+            marker_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).first()
+            z = list(working_data_result[marker_mlp.title])
+            color_marker = False
+            z_number = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            working_data_result['mark_number'] = z_number
+        else:
+            z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
+            color_marker = True
+            working_data_result['mark_number'] = z
+        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_class.currentItem().text()}', color_marker)
+        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
+        if result1 == QMessageBox.Yes:
+            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
+            if result2 == QMessageBox.Yes:
+                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                working_data_result = working_data_result[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
+                                                 filter="Excel Files (*.xlsx)")
+                working_data_result.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
+        else:
+            pass
+
+    ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
+    Choose_RegModel.exec_()
 
 
