@@ -27,7 +27,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
 
     training_sample = np.array(data_train[list_param].values.tolist())
     markup = np.array(sum(data_train[[mark]].values.tolist(), []))
-    list_marker = get_list_marker_mlp()
+    list_marker = get_list_marker_mlp(type_case)
 
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
@@ -289,6 +289,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
             text_model += f'\nCalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
 
         pipe.fit(training_sample_train, markup_train)
+        print(pipe.classes_)
         # Оценка точности на всей обучающей выборке
         train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
@@ -326,20 +327,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
 
             scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
-        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
+        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC':
             imp_name_params, imp_params = [], []
             if not ui_cls.checkBox_calibr.isChecked():
                 for n, i in enumerate(model_class.feature_importances_):
-                    if i >= np.mean(model_class.feature_importances_):
+                    if ui_cls.checkBox_all_imp.isChecked():
                         imp_name_params.append(list_param[n])
                         imp_params.append(i)
+                    else:
+                        if i >= np.mean(model_class.feature_importances_):
+                            imp_name_params.append(list_param[n])
+                            imp_params.append(i)
+
 
 
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
         fig_train.set_size_inches(25, 10)
 
         if not hard_flag:
-            sns.scatterplot(data=data_tsne, x=0, y=1, hue='mark', s=200, palette=colors, ax=axes[0])
+            sns.scatterplot(data=data_tsne, x=0, y=1, hue=mark, s=200, palette=colors, ax=axes[0])
             axes[0].grid()
             axes[0].xaxis.grid(True, "minor", linewidth=.25)
             axes[0].yaxis.grid(True, "minor", linewidth=.25)
@@ -359,14 +365,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
                 axes[1].set_ylabel('True Positive Rate')
                 axes[1].set_title('ROC-кривая')
                 axes[1].legend(loc="lower right")
-
+                # from sklearn.metrics import DetCurveDisplay, RocCurveDisplay
+                #
+                # RocCurveDisplay.from_estimator(pipe, markup_test, preds_test, pos_label=list_marker[0], ax=axes[1], name="ROC")
         title_graph = text_model
-        if model_name == 'RFC':
-            if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
-                if not ui_cls.checkBox_calibr.isChecked():
-                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
+        if model_name == 'RFC' or model_name == 'ETC':
+            if not ui_cls.checkBox_calibr.isChecked():
+                title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
-        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
+        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC') and not ui_cls.checkBox_cross_val.isChecked():
             if not ui_cls.checkBox_calibr.isChecked():
                 axes[2].bar(imp_name_params, imp_params)
                 axes[2].set_xticklabels(imp_name_params, rotation=90)
@@ -482,7 +489,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
                 update_list_well_markup_mlp()
             if type_case == 'geochem':
                 for ix in lof_index:
-                    train_point = session.query(GeochemTrainPoint).join(GeochemMaket).filter(
+                    train_point = session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
                         GeochemMaket.id == get_maket_id(),
                         GeochemTrainPoint.title == data_train[point_name][ix]
                     ).first()
