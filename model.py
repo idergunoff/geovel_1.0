@@ -841,6 +841,7 @@ class GeochemMaket(Base):
     geochem = relationship("Geochem", back_populates="makets")
     categories = relationship("GeochemCategory", back_populates="maket")
     train_params = relationship("GeochemTrainParameter", back_populates="maket")
+    g_trained_models = relationship("GeochemTrainedModel", back_populates="maket")
 
 
 
@@ -882,6 +883,19 @@ class GeochemTrainParameter(Base):
 
     maket = relationship("GeochemMaket", back_populates="train_params")
     param = relationship("GeochemParameter", back_populates="train_params")
+
+
+class GeochemTrainedModel(Base):
+    __tablename__ = 'geochem_trained_model'
+
+    id = Column(Integer, primary_key=True)
+    maket_id = Column(Integer, ForeignKey('geochem_maket.id'))
+    title = Column(String)
+    path_model = Column(String)
+    list_params = Column(Text)
+    comment = Column(Text)
+
+    maket = relationship('GeochemMaket', back_populates='g_trained_models')
 
 
 Base.metadata.create_all(engine)

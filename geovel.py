@@ -434,11 +434,7 @@ update_category_combobox()
 update_geochem_param_train_list()
 update_g_train_point_list()
 
-
 # update_list_param_lda()
-
-
-
 
 sys.excepthook = log_uncaught_exceptions
 # app.processEvents()

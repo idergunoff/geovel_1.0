@@ -289,7 +289,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
             text_model += f'\nCalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
 
         pipe.fit(training_sample_train, markup_train)
-        print(pipe.classes_)
+
         # Оценка точности на всей обучающей выборке
         train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
