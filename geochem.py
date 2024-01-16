@@ -768,11 +768,30 @@ def build_geochem_table():
     return data, list_param
 
 
+def build_geochem_table_field():
+    parameters = session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all()
+    list_param = [i.title for i in parameters]
+    data = pd.DataFrame(columns=['title', 'X', 'Y'] + list_param)
+
+    for point in session.query(GeochemPoint).filter(geochem_id=get_geochem_id()).all():
+        dict_point = {'title': point.title, 'X': point.x_coord, 'Y': point.y_coord}
+        for p in list_param:
+            dict_point[p] = session.query(GeochemPointValue).filter_by(g_point_id=point.point_id,
+                                                                       g_param_id=p.param_id).first()
+        data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
+    return data, list_param
+
+
 def train_model_geochem():
     data_train, list_param = build_geochem_table()
     colors = {}
     for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
         colors[c.title] = c.color
     train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
+
+
+def calc_geochem_classification():
+    data_test, list_param = build_geochem_table_field()
+
 
 

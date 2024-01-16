@@ -1,5 +1,6 @@
 from func import *
 from random_search import push_random_search
+from geochem import update_g_model_list
 
 
 def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, mark: str, point_name: str, type_case: str):
@@ -657,5 +658,30 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
     else:
         pass
 
-def save_model_geochem_class():
-    pass
+def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param):
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Сохранение модели',
+        f'Сохранить модель {model_name}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        # Сохранение модели в файл с помощью pickle
+        path_model = f'models/g_classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+        if os.path.exists(path_model):
+            path_model = f'models/g_classifier/{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
+        with open(path_model, 'wb') as f:
+            pickle.dump(pipe, f)
+
+        new_trained_model = GeochemTrainedModel(
+            maket_id = get_MLP_id(),
+            title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
+            path_model=path_model,
+            list_params=json.dumps(list_param),
+            comment=text_model
+        )
+        session.add(new_trained_model)
+        session.commit()
+        update_g_model_list()
+    else:
+        pass
