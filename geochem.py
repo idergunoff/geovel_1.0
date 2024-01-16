@@ -605,6 +605,10 @@ def remove_maket():
         QtWidgets.QMessageBox.No
     )
     if result == QtWidgets.QMessageBox.Yes:
+        for i in session.query(GeochemMaket).filter_by(id=get_maket_id()).first().categories:
+            session.query(GeochemTrainPoint).filter_by(cat_id=i.id).delete()
+        session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).delete()
+        session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).delete()
         session.query(GeochemMaket).filter_by(id=get_maket_id()).delete()
         session.commit()
         set_info(f'Макет "{maket_title}" удален', 'green')
