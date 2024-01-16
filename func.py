@@ -1777,3 +1777,18 @@ def update_g_train_point_list():
             session.query(GeochemTrainPoint).filter_by(id=i.id).delete()
     session.commit()
     ui.label_27.setText(f'Train points: {ui.listWidget_g_train_point.count()}, fake: {count_fake}')
+
+def update_g_model_list():
+    ui.listWidget_g_trained_model.clear()
+    for i in session.query(GeochemTrainedModel).filter_by(maket_id=get_maket_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_g_trained_model.addItem(item)
+        except AttributeError:
+            session.query(GeochemTrainedModel).filter_by(id=i.id).delete()
+    session.commit()
+    ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')
+    pass
+

@@ -587,6 +587,7 @@ def update_maket_combobox():
         ui.comboBox_geochem_maket.setItemData(ui.comboBox_geochem_maket.count() - 1, {'id': i.id})
     update_geochem_param_train_list()
     update_category_combobox()
+    update_g_model_list()
 
 
 def update_category_combobox():
@@ -802,6 +803,20 @@ def build_geochem_table_field():
         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
     return data, list_param
 
+
+def update_g_model_list():
+    ui.listWidget_g_trained_model.clear()
+    for i in session.query(GeochemTrainedModel).filter_by(maket_id=get_maket_id()).all():
+        try:
+            item_text = (f'{i.title} id{i.id}')
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, i.id)
+            ui.listWidget_g_trained_model.addItem(item)
+        except AttributeError:
+            session.query(GeochemTrainedModel).filter_by(id=i.id).delete()
+    session.commit()
+    ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')
+    pass
 
 def train_model_geochem():
     data_train, list_param = build_geochem_table()
