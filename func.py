@@ -1202,9 +1202,13 @@ def get_list_marker():
     return [m.title for m in markers]
 
 
-def get_list_marker_mlp():
-    markers = session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).order_by(MarkerMLP.id).all()
-    return [m.title for m in markers]
+def get_list_marker_mlp(type_case):
+    if type_case == 'georadar':
+        markers = session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).order_by(MarkerMLP.id).all()
+        return [m.title for m in markers]
+    if type_case == 'geochem':
+        markers = session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()
+        return [m.title for m in markers]
 
 
 def get_list_param_lda():

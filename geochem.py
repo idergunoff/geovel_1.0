@@ -1,7 +1,5 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-
 from func import *
+from classification_func import train_classifier
 
 
 def update_combobox_geochem():
@@ -747,18 +745,21 @@ def del_g_train_point():
         pass
 
 def build_geochem_table():
-    param = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
-    list_param = [i.param.title for i in param]
+    parameters = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
+    print(get_maket_id())
+    print(parameters)
+    list_param = [i.param.title for i in parameters]
+    print(list_param)
     data = pd.DataFrame(columns=['title', 'category'] + list_param)
 
-    for point in session.query(GeochemTrainPoint).join(GeochemMaket).filter(
+    for point in session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
             GeochemMaket.id == get_maket_id()).all():
         dict_point = {}
         if point.fake:
             continue
         dict_point['title'] = point.title
         dict_point['category'] = point.category.title
-        for p in param:
+        for p in parameters:
             if point.type_point == 'field':
                 value = session.query(GeochemWellPointValue).filter_by(g_point_id=point.point_id,
                                                                        g_param_id=p.param_id).first()
@@ -768,7 +769,15 @@ def build_geochem_table():
             dict_point[p.param.title] = value.value
 
         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
-    return data
+    return data, list_param
 
+
+def train_model_geochem():
+    data_train, list_param = build_geochem_table()
+    colors = {}
+    for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
+        colors[c.title] = c.color
+    print(data_train)
+    train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
 
 

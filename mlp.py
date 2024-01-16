@@ -607,7 +607,7 @@ def remove_all_param_geovel_mlp():
 
 def update_list_param_mlp(db=False):
     data_train, list_param = build_table_train(db, 'mlp')
-    list_marker = get_list_marker_mlp()
+    list_marker = get_list_marker_mlp('georadar')
     ui.listWidget_param_mlp.clear()
     list_param_mlp = data_train.columns.tolist()[2:]
     for param in list_param_mlp:
