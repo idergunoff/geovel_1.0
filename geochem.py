@@ -713,12 +713,13 @@ def add_geochem_param_train():
 
 
 def remove_geochem_param_train():
-    item = session.query(GeochemTrainParameter).filter_by(
-        id=ui.listWidget_geochem_param_train.currentItem().text().split(' id')[-1]).first()
-    if item:
-        session.delete(item)
-        session.commit()
-    update_geochem_param_train_list()
+    if ui.listWidget_geochem_param_train.currentItem():
+        item = session.query(GeochemTrainParameter).filter_by(
+            id=ui.listWidget_geochem_param_train.currentItem().text().split(' id')[-1]).first()
+        if item:
+            session.delete(item)
+            session.commit()
+            update_geochem_param_train_list()
 
 
 
@@ -804,26 +805,13 @@ def build_geochem_table_field():
     return data, list_param
 
 
-def update_g_model_list():
-    ui.listWidget_g_trained_model.clear()
-    for i in session.query(GeochemTrainedModel).filter_by(maket_id=get_maket_id()).all():
-        try:
-            item_text = (f'{i.title} id{i.id}')
-            item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, i.id)
-            ui.listWidget_g_trained_model.addItem(item)
-        except AttributeError:
-            session.query(GeochemTrainedModel).filter_by(id=i.id).delete()
-    session.commit()
-    ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')
-    pass
-
 def train_model_geochem():
     data_train, list_param = build_geochem_table()
     colors = {}
-    for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
-        colors[c.title] = c.color
-    train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
+    if session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).first():
+        for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
+            colors[c.title] = c.color
+        train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
 
 
 def calc_geochem_classification():

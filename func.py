@@ -1781,14 +1781,30 @@ def update_g_train_point_list():
 def update_g_model_list():
     ui.listWidget_g_trained_model.clear()
     for i in session.query(GeochemTrainedModel).filter_by(maket_id=get_maket_id()).all():
-        try:
-            item_text = (f'{i.title} id{i.id}')
-            item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, i.id)
-            ui.listWidget_g_trained_model.addItem(item)
-        except AttributeError:
-            session.query(GeochemTrainedModel).filter_by(id=i.id).delete()
+        item_text = (f'{i.title} id{i.id}')
+        item = QListWidgetItem(item_text)
+        item.setData(Qt.UserRole, i.id)
+        ui.listWidget_g_trained_model.addItem(item)
     session.commit()
     ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')
-    pass
+
+def remove_g_model():
+    if ui.listWidget_g_trained_model.currentItem():
+        model_title = ui.listWidget_g_trained_model.currentItem().text().split(' id')[0]
+        result = QtWidgets.QMessageBox.question(
+            MainWindow,
+            'Удаление макета',
+            f'Вы уверены, что хотите удалить модель {model_title}?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+        if result == QtWidgets.QMessageBox.Yes:
+            session.query(GeochemTrainedModel).filter_by(
+                id=ui.listWidget_g_trained_model.currentItem().text().split(' id')[-1]).delete()
+            session.commit()
+            set_info(f'Модель "{model_title}" удалена', 'green')
+            update_g_model_list()
+        else:
+            pass
+
 
