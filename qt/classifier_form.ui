@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>921</width>
+    <width>961</width>
     <height>655</height>
    </rect>
   </property>
@@ -826,7 +826,7 @@
    </item>
    <item row="0" column="1">
     <layout class="QGridLayout" name="gridLayout_34">
-     <item row="0" column="0">
+     <item row="0" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_12">
        <property name="title">
         <string>Выбросы</string>
@@ -855,7 +855,7 @@
        </layout>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="1" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_5">
        <property name="title">
         <string>Stacking/Voting Classifier</string>
@@ -1042,7 +1042,7 @@
        </layout>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="2" column="0" colspan="2">
       <layout class="QGridLayout" name="gridLayout_18">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_9">
@@ -1102,7 +1102,7 @@
        </item>
       </layout>
      </item>
-     <item row="3" column="0">
+     <item row="3" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_14">
        <property name="title">
         <string>Over Sampling</string>
@@ -1130,47 +1130,54 @@
       </widget>
      </item>
      <item row="4" column="0">
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="title">
+        <string>PCA</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_pca">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_pca">
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QCheckBox" name="checkBox_pca_mle">
+          <property name="text">
+           <string>mle</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="1">
       <layout class="QGridLayout" name="gridLayout_33">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_11">
-         <property name="title">
-          <string>PCA</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_pca">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_pca">
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QCheckBox" name="checkBox_pca_mle">
-            <property name="text">
-             <string>mle</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="1">
         <widget class="QCheckBox" name="checkBox_save_model">
          <property name="text">
           <string>save</string>
          </property>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="checkBox_save_table">
+         <property name="text">
+          <string>table</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
-     <item row="5" column="0">
+     <item row="5" column="0" colspan="2">
       <layout class="QGridLayout" name="gridLayout_10">
        <item row="0" column="0">
         <widget class="QPushButton" name="pushButton_calc">
@@ -1208,7 +1215,7 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item row="1" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>TextLabel</string>
@@ -1220,7 +1227,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_stack_vote"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

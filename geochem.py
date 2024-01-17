@@ -1,3 +1,7 @@
+import pdb
+
+import pandas as pd
+
 from func import *
 from classification_func import train_classifier
 from krige import draw_map

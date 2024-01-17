@@ -1,3 +1,5 @@
+import pandas as pd
+
 from func import *
 from random_search import push_random_search
 
@@ -380,9 +382,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 axes[1].set_ylabel('True Positive Rate')
                 axes[1].set_title('ROC-кривая')
                 axes[1].legend(loc="lower right")
-                # from sklearn.metrics import DetCurveDisplay, RocCurveDisplay
-                #
-                # RocCurveDisplay.from_estimator(pipe, markup_test, preds_test, pos_label=list_marker[0], ax=axes[1], name="ROC")
+
         title_graph = text_model
         if model_name == 'RFC' or model_name == 'ETC':
             if not ui_cls.checkBox_calibr.isChecked():
@@ -411,6 +411,17 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         fig_train.suptitle(title_graph)
         fig_train.tight_layout()
         fig_train.show()
+
+        if ui_cls.checkBox_save_table.isChecked():
+            preds_train = pipe.predict(training_sample)
+            probability = pipe.predict_proba(training_sample)
+            list_cat = list(pipe.classes_)
+            data_result = pd.concat([data_train, pd.DataFrame(probability, columns=list_cat)], axis=1)
+            data_result['mark'] = preds_train
+            table_name = QFileDialog.getSaveFileName(
+                caption=f'Сохранить расчеты модели {model_name} в таблицу', directory=f'model_table_{model_name}.xlsx', filter="Excel Files (*.xlsx)")
+            data_result.to_excel(table_name[0])
+            set_info(f'Таблица сохранена в файл: {table_name[0]}', 'green')
 
         if not ui_cls.checkBox_save_model.isChecked():
             return
