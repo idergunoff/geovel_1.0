@@ -737,11 +737,16 @@ def add_whole_well_to_list():
 
 
 def add_field_point_to_list():
-    item = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
+    try:
+        item = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
+    except AttributeError:
+        set_info(f'Выберите точку', 'red')
+        return
     if get_category_id():
-        cat = session.query(GeochemTrainPoint).filter_by(cat_id=get_category_id()).all()
+        cat = session.query(GeochemTrainPoint).join(GeochemCategory).filter_by(maket_id=get_maket_id()).all()
         for c in cat:
             if c.point_id == item.id:
+                set_info(f'Точка "{item.title}" уже добавлена', 'red')
                 return
         point = GeochemTrainPoint(cat_id=get_category_id(), type_point='field', point_id=item.id, title=item.title)
         session.add(point)
@@ -780,7 +785,7 @@ def build_geochem_table():
         dict_point['category'] = point.category.title
         for p in parameters:
             if point.type_point == 'field':
-                value = session.query(GeochemWellPointValue).filter_by(g_point_id=point.point_id,
+                value = session.query(GeochemPointValue).filter_by(g_point_id=point.point_id,
                                                                        g_param_id=p.param_id).first()
             else:
                 value = session.query(GeochemWellPointValue).filter_by(g_well_point_id=point.point_well_id,
