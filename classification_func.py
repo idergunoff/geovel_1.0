@@ -38,11 +38,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
     ui_cls.spinBox_pca.setMaximum(len(list_param))
     ui_cls.spinBox_pca.setValue(len(list_param) // 2)
 
-    ui_cls.label.setText(
-        f'Тренеровочный сэмпл: {len(training_sample)}, '
-        f'{list_marker[0]}-{list(markup).count(list_marker[0])}, '
-        f'{list_marker[1]}-{list(markup).count(list_marker[1])}'
-    )
+    text_label = f'Тренеровочный сэмпл: {len(training_sample)}, '
+    for i_mark in range(len(list_marker)):
+        text_label += f'{list_marker[i_mark]}-{list(markup).count(list_marker[i_mark])}, '
+
+    ui_cls.label.setText(text_label)
 
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
