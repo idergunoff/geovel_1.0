@@ -59,6 +59,10 @@ class Ui_GraphParam(object):
         self.checkBox_well_all.setChecked(True)
         self.checkBox_well_all.setObjectName("checkBox_well_all")
         self.verticalLayout_4.addWidget(self.checkBox_well_all)
+        self.checkBox_marker = QtWidgets.QCheckBox(self.frame_2)
+        self.checkBox_marker.setChecked(True)
+        self.checkBox_marker.setObjectName("checkBox_marker")
+        self.verticalLayout_4.addWidget(self.checkBox_marker)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_4.addItem(spacerItem2)
         self.horizontalLayout_3.addLayout(self.verticalLayout_4)
@@ -85,6 +89,7 @@ class Ui_GraphParam(object):
     def retranslateUi(self, GraphParam):
         _translate = QtCore.QCoreApplication.translate
         GraphParam.setWindowTitle(_translate("GraphParam", "GraphParam"))
+        self.checkBox_marker.setText(_translate("GraphParam", "marker"))
 
 
 if __name__ == "__main__":

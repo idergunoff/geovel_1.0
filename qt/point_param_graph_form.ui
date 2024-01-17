@@ -99,6 +99,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="checkBox_marker">
+          <property name="text">
+           <string>marker</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer_3">
           <property name="orientation">
            <enum>Qt::Vertical</enum>

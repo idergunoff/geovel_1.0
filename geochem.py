@@ -940,10 +940,10 @@ def draw_point_graph():
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
 
         for p in list_point:
-            plt.plot(
-                data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0],
-                label=p
-            )
+            if ui_pg.checkBox_marker.isChecked():
+                plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
+            else:
+                plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p)
         num_param = range(len(list_param))
         plt.xticks(num_param, list_param, rotation=90)
         plt.grid()
@@ -1011,4 +1011,5 @@ def draw_point_graph():
     ui_pg.checkBox_param_all.stateChanged.connect(all_check_param)
     ui_pg.checkBox_point_all.stateChanged.connect(all_check_point)
     ui_pg.checkBox_well_all.stateChanged.connect(all_check_well)
+    ui_pg.checkBox_marker.clicked.connect(draw_graph)
     PointGraph.exec_()
