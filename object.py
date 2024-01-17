@@ -24,6 +24,7 @@ from qt.form_delete_therm import *
 from qt.add_profile_class import *
 from qt.geochem_loader import *
 from qt.tsne_form import *
+from qt.point_param_graph_form import *
 
 from model import *
 import numpy as np

@@ -4336,6 +4336,16 @@ Therm</string>
               </item>
               <item row="3" column="0">
                <layout class="QGridLayout" name="gridLayout_135">
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_geochem_tsne">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 190, 111);</string>
+                  </property>
+                  <property name="text">
+                   <string>T-SNE</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="0" column="0">
                  <widget class="QPushButton" name="pushButton_geochem_anova">
                   <property name="styleSheet">
@@ -4346,13 +4356,13 @@ Therm</string>
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_geochem_tsne">
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_g_graph">
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(255, 190, 111);</string>
                   </property>
                   <property name="text">
-                   <string>T-SNE</string>
+                   <string>GRAPH</string>
                   </property>
                  </widget>
                 </item>

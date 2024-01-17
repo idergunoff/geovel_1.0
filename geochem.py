@@ -1,5 +1,6 @@
 import pdb
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from func import *
@@ -334,7 +335,7 @@ def anova_geochem():
     ui_anova.horizontalLayout.addWidget(canvas)
 
 
-    for i in data_plot.columns.tolist()[2:]:
+    for i in data_plot.columns.tolist()[1:]:
         ui_anova.listWidget.addItem(i)
 
     def draw_graph_anova():
@@ -907,3 +908,107 @@ def drop_fake_geochem():
         session.query(GeochemTrainPoint).filter_by(cat_id=cat.id).update({'fake': 0}, synchronize_session='fetch')
     session.commit()
     update_g_train_point_list()
+
+
+def draw_point_graph():
+    PointGraph = QtWidgets.QDialog()
+    ui_pg = Ui_GraphParam()
+    ui_pg.setupUi(PointGraph)
+    PointGraph.show()
+    PointGraph.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    m_width, m_height = get_width_height_monitor()
+    PointGraph.resize(m_width - 200, m_height - 200)
+
+    data_plot = build_table_geochem_analytic(point_name=True)
+    markers = list(set(data_plot['well']))
+    # pallet = {'field': 'green'}
+    # for m in markers:
+    #     if m == 'field':
+    #         continue
+    #     pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
+
+    def draw_graph():
+        clear_layout(ui_pg.verticalLayout)
+        figure = plt.figure()
+        canvas = FigureCanvas(figure)
+        mpl_toolbar = NavigationToolbar(canvas)
+        ui_pg.verticalLayout.addWidget(mpl_toolbar)
+        ui_pg.verticalLayout.addWidget(canvas)
+
+        list_point = get_list_check_checkbox(ui_pg.listWidget_point)
+        list_param = get_list_check_checkbox(ui_pg.listWidget_param)
+
+        for p in list_point:
+            plt.plot(
+                data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0],
+                label=p
+            )
+        num_param = range(len(list_param))
+        plt.xticks(num_param, list_param, rotation=90)
+        plt.grid()
+        plt.legend()
+        figure.tight_layout()
+        figure.subplots_adjust(bottom=0.25)
+        canvas.draw()
+
+    for i_param in data_plot.columns.tolist()[3:]:
+        check_box_widget = QCheckBox(i_param)
+        check_box_widget.setChecked(True)
+        check_box_widget.clicked.connect(draw_graph)
+        list_item = QListWidgetItem()
+        ui_pg.listWidget_param.addItem(list_item)
+        ui_pg.listWidget_param.setItemWidget(list_item, check_box_widget)
+
+    def set_list_point():
+        ui_pg.listWidget_point.clear()
+        list_well = get_list_check_checkbox(ui_pg.listWidget_well)
+        data_plot_point = data_plot.loc[data_plot['well'].isin(list_well)]
+        for n, point_name in enumerate(data_plot_point['point']):
+            check_box_widget = QCheckBox(point_name)
+            if n < 2:
+                check_box_widget.setChecked(True)
+            check_box_widget.clicked.connect(draw_graph)
+            list_item = QListWidgetItem()
+            ui_pg.listWidget_point.addItem(list_item)
+            ui_pg.listWidget_point.setItemWidget(list_item, check_box_widget)
+
+
+    for w in data_plot['well'].unique():
+        check_box_widget = QCheckBox(w)
+        check_box_widget.setChecked(True)
+        check_box_widget.clicked.connect(set_list_point)
+        check_box_widget.clicked.connect(draw_graph)
+        list_item = QListWidgetItem()
+        ui_pg.listWidget_well.addItem(list_item)
+        ui_pg.listWidget_well.setItemWidget(list_item, check_box_widget)
+
+    def all_check_param():
+        all_check(ui_pg.listWidget_param, ui_pg.checkBox_param_all)
+        draw_graph()
+
+    def all_check_point():
+        all_check(ui_pg.listWidget_point, ui_pg.checkBox_point_all)
+        draw_graph()
+
+    def all_check_well():
+        all_check(ui_pg.listWidget_well, ui_pg.checkBox_well_all)
+        draw_graph()
+        set_list_point()
+
+    def all_check(widget, check):
+        check = True if check.isChecked() else False
+        for i in range(widget.count()):
+            item = widget.item(i)
+            if isinstance(item, QListWidgetItem):
+                checkbox = widget.itemWidget(item)
+                if isinstance(checkbox, QCheckBox):
+                    checkbox.setChecked(check)
+
+    set_list_point()
+    draw_graph()
+
+    ui_pg.checkBox_param_all.stateChanged.connect(all_check_param)
+    ui_pg.checkBox_point_all.stateChanged.connect(all_check_point)
+    ui_pg.checkBox_well_all.stateChanged.connect(all_check_well)
+    PointGraph.exec_()
