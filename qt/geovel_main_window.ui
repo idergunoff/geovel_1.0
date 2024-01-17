@@ -4289,7 +4289,7 @@ Therm</string>
                      </widget>
                     </item>
                     <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_add_train_well">
+                     <widget class="QPushButton" name="pushButton_add_g_train_well">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>

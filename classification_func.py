@@ -255,8 +255,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
             text_over_sample = '\nSMOTE'
 
         if ui_cls.checkBox_adasyn.isChecked():
-            adasyn = ADASYN(random_state=0)
-            training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
+            try:
+                adasyn = ADASYN(random_state=0)
+                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
+            except ValueError:
+                set_info('Невозможно применить ADASYN c n_neighbors=5, значение уменьшено до n_neighbors=3', 'red')
+                adasyn = ADASYN(random_state=0, n_neighbors=3)
+                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
             text_over_sample = '\nADASYN'
 
         if ui_cls.checkBox_pca.isChecked():
@@ -308,11 +313,16 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
 
         if not hard_flag:
             preds_proba_train = pipe.predict_proba(training_sample)
-
-            tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-            train_tsne = tsne.fit_transform(preds_proba_train)
-            data_tsne = pd.DataFrame(train_tsne)
-            data_tsne[mark] = preds_train
+            try:
+                tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+                train_tsne = tsne.fit_transform(preds_proba_train)
+                data_tsne = pd.DataFrame(train_tsne)
+                data_tsne[mark] = preds_train
+            except ValueError:
+                tsne = TSNE(n_components=2, perplexity=len(data_train.index) - 1, learning_rate=200, random_state=42)
+                train_tsne = tsne.fit_transform(preds_proba_train)
+                data_tsne = pd.DataFrame(train_tsne)
+                data_tsne[mark] = preds_train
 
         if ui_cls.checkBox_cross_val.isChecked():
             kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
@@ -414,8 +424,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
         training_sample_lof = scaler.fit_transform(data_lof)
         n_LOF = ui_cls.spinBox_lof_neighbor.value()
 
-        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-        data_tsne = tsne.fit_transform(training_sample_lof)
+        try:
+            tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+            data_tsne = tsne.fit_transform(training_sample_lof)
+        except ValueError:
+            tsne = TSNE(n_components=2, perplexity=len(data_train.index) - 1, learning_rate=200, random_state=42)
+            data_tsne = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)
         data_pca = pca.fit_transform(training_sample_lof)

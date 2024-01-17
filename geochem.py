@@ -722,19 +722,18 @@ def remove_geochem_param_train():
     update_geochem_param_train_list()
 
 
-
-
 def add_whole_well_to_list():
+    points = session.query(GeochemTrainPoint).join(GeochemCategory).filter(
+        GeochemCategory.maket_id == get_maket_id()
+    ).all()
+    list_points = [p.point_well_id for p in points]
     for i in session.query(GeochemWellPoint).filter_by(g_well_id=get_geochem_well_id()).all():
-        if get_category_id():
-            cat = session.query(GeochemTrainPoint).all()
-            for c in cat:
-                if c.point_well_id == i.id:
-                    return
-        point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id, title=i.title)
-        session.add(point)
-        session.commit()
+        if i.id not in list_points:
+            point = GeochemTrainPoint(cat_id=get_category_id(), type_point='well', point_well_id=i.id, title=i.title)
+            session.add(point)
+            session.commit()
     update_g_train_point_list()
+
 
 def add_field_point_to_list():
     item = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
