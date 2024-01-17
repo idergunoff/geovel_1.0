@@ -682,7 +682,7 @@ def update_geochem_param_train_list():
         except AttributeError:
             session.query(GeochemTrainParameter).filter_by(id=i.id).delete()
     session.commit()
-    ui.label_30.setText(f'Parameters: {ui.listWidget_geochem_param_train.count()}')
+    ui.label_30.setText(f'Train parameters: {ui.listWidget_geochem_param_train.count()}')
     # update_category_combobox()
 
 def add_all_geochem_param_train():
