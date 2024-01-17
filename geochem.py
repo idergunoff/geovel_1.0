@@ -815,7 +815,7 @@ def train_model_geochem():
     if session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).first():
         for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
             colors[c.title] = c.color
-        train_classifier(data_train, list_param, colors, 'category', 'title', 'geochem')
+        train_classifier(data_train, list_param, list_param, colors, 'category', 'title', 'geochem')
 
 
 def calc_geochem_classification():
@@ -874,13 +874,13 @@ def calc_geochem_classification():
             z = string_to_unique_number(list(working_data_result['mark']), 'geochem')
             color_marker = True
             working_data_result['mark_number'] = z
-        draw_map(x, y, z, f'Classifier {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
+        draw_map(x, y, z, f'Geochem {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
         result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
         if result1 == QMessageBox.Yes:
             result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
             if result2 == QMessageBox.Yes:
                 list_col = [i.title for i in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()]
-                list_col += ['X', 'Y', 'mark', 'mark_number']
+                list_col += ['title', 'X', 'Y', 'mark', 'mark_number']
                 working_data_result = working_data_result[list_col]
             else:
                 pass

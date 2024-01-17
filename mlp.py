@@ -668,7 +668,7 @@ def draw_MLP():
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
 
-    train_classifier(data_train, list_param_mlp, colors, 'mark', 'prof_well_index', 'georadar')
+    train_classifier(data_train, list_param_mlp, list_param, colors, 'mark', 'prof_well_index', 'georadar')
 
 
 def remove_trained_model_class():
@@ -709,7 +709,7 @@ def calc_class_profile():
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
         except ValueError:
-
+            print(working_data)
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
 
             data = imputer.fit_transform(working_sample)

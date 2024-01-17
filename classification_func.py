@@ -2,12 +2,13 @@ from func import *
 from random_search import push_random_search
 
 
-def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, mark: str, point_name: str, type_case: str):
+def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str):
     """
     Обучить классификатор
 
     :param data_train: обучающая выборка
     :param list_param: список параметров
+    :param list_param_save: список параметров для сохранения
     :param colors: цвета маркеров
     :param mark: название столбца в data_train с маркерами
     :param point_name: название столбца с названиями точек
@@ -35,8 +36,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
     Classifier.show()
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-    ui_cls.spinBox_pca.setMaximum(len(list_param))
-    ui_cls.spinBox_pca.setValue(len(list_param) // 2)
+    max_pca = min(len(list_param), len(data_train.index))
+    max_pca -= int(round(max_pca/5, 0))
+    ui_cls.spinBox_pca.setMaximum(max_pca)
+    ui_cls.spinBox_pca.setValue(max_pca // 2)
+    if len (list_param) > len(data_train.index):
+        ui_cls.checkBox_pca_mle.hide()
 
     text_label = f'Тренеровочный сэмпл: {len(training_sample)}, '
     for i_mark in range(len(list_marker)):
@@ -266,7 +271,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
 
         if ui_cls.checkBox_pca.isChecked():
             n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
-            pca = PCA(n_components=n_comp, random_state=0)
+            pca = PCA(n_components=n_comp, random_state=0, svd_solver='full')
             pipe_steps.append(('pca', pca))
         text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
 
@@ -410,9 +415,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, colors: dict, m
         if not ui_cls.checkBox_save_model.isChecked():
             return
         if type_case == 'georadar':
-            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param)
+            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save)
         if type_case == 'geochem':
-            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param)
+            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save)
 
     def calc_lof():
         """ Расчет выбросов методом LOF """

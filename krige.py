@@ -114,6 +114,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
             color_map = ListedColormap(colors_mlp)
             legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_mlp)])
             levels_count = len(markers_mlp) - 1
+        elif param.startswith('Geochem'):
+            markers_chem = session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()
+            colors_chem = [marker.color for marker in markers_chem]
+            color_map = ListedColormap(colors_chem)
+            legend = '\n'.join([f'{n + 1}-{m.title}' for n, m in enumerate(markers_chem)])
+            levels_count = len(markers_chem) - 1
         if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
         # ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=False)
