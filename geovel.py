@@ -401,6 +401,8 @@ ui.listWidget_g_train_point.doubleClicked.connect(del_g_train_point)
 ui.pushButton_geochem_train_model.clicked.connect(train_model_geochem)
 ui.pushButton_calc_g_class.clicked.connect(calc_geochem_classification)
 ui.pushButton_g_drop_fake.clicked.connect(drop_fake_geochem)
+ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
+
 
 
 
