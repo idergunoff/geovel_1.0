@@ -439,6 +439,7 @@ update_maket_combobox()
 update_category_combobox()
 update_geochem_param_train_list()
 update_g_train_point_list()
+check_and_create_folders()
 
 # update_list_param_lda()
 
