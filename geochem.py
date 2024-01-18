@@ -937,8 +937,6 @@ def draw_point_graph():
                 list_result.append(data_mean[param].mean())
             if ui_pg.radioButton_median.isChecked():
                 list_result.append(data_mean[param].median())
-            if ui_pg.radioButton_moda.isChecked():
-                list_result.append(data_mean[param].mode()[0])
         return list_result
 
     def calc_conf_interval_well(well_name: str, list_param: list):
@@ -1072,6 +1070,5 @@ def draw_point_graph():
     ui_pg.checkBox_log.clicked.connect(draw_graph)
     ui_pg.radioButton_mean.clicked.connect(draw_graph)
     ui_pg.radioButton_median.clicked.connect(draw_graph)
-    ui_pg.radioButton_moda.clicked.connect(draw_graph)
     ui_pg.checkBox_conf_int.clicked.connect(draw_graph)
     PointGraph.exec_()

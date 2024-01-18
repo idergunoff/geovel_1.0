@@ -110,14 +110,17 @@
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="2" column="0">
-          <widget class="QRadioButton" name="radioButton_moda">
-           <property name="text">
-            <string>moda</string>
+          <spacer name="verticalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroup</string>
-           </attribute>
-          </widget>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
          </item>
          <item row="0" column="0">
           <widget class="QRadioButton" name="radioButton_mean">
@@ -141,19 +144,6 @@
             <string notr="true">buttonGroup</string>
            </attribute>
           </widget>
-         </item>
-         <item row="3" column="0">
-          <spacer name="verticalSpacer_4">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </widget>
