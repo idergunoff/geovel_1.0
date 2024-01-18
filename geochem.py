@@ -2,6 +2,7 @@ import pdb
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy import stats
 
 from func import *
 from classification_func import train_classifier
@@ -928,6 +929,37 @@ def draw_point_graph():
     #         continue
     #     pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
+    def calc_mean_well(well_name: str, list_param: list):
+        data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
+        list_result = []
+        for param in list_param:
+            if ui_pg.radioButton_mean.isChecked():
+                list_result.append(data_mean[param].mean())
+            if ui_pg.radioButton_median.isChecked():
+                list_result.append(data_mean[param].median())
+            if ui_pg.radioButton_moda.isChecked():
+                list_result.append(data_mean[param].mode()[0])
+        return list_result
+
+    def calc_conf_interval_well(well_name: str, list_param: list):
+        data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
+        list_conf_top, list_conf_bottom = [], []
+        for param in list_param:
+            param_mean = data_mean[param].mean()
+            param_std = data_mean[param].std()
+            param_conf_interval = stats.norm.interval(0.95, loc=param_mean, scale=param_std)
+            if param_conf_interval[0] < 0:
+                list_conf_top.append(0)
+            else:
+                list_conf_top.append(param_conf_interval[0])
+            if param_conf_interval[1] < 0:
+                list_conf_bottom.append(0)
+            else:
+                list_conf_bottom.append(param_conf_interval[1])
+        return list_conf_top, list_conf_bottom
+
+
+
     def draw_graph():
         clear_layout(ui_pg.verticalLayout)
         figure = plt.figure()
@@ -938,6 +970,7 @@ def draw_point_graph():
 
         list_point = get_list_check_checkbox(ui_pg.listWidget_point)
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
+        list_well_graph = get_list_check_checkbox(ui_pg.listWidget_well_graph)
 
         for p in list_point:
             if ui_pg.checkBox_marker.isChecked():
@@ -945,6 +978,21 @@ def draw_point_graph():
             else:
                 plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p)
         num_param = range(len(list_param))
+
+        for wg in list_well_graph:
+            if ui_pg.checkBox_marker.isChecked():
+                plt.plot(calc_mean_well(wg, list_param), label=f'mean_{wg}', marker='o', linestyle='--', linewidth=3)
+            else:
+                plt.plot(calc_mean_well(wg, list_param), label=f'mean_{wg}', linestyle='--', linewidth=3)
+
+        if ui_pg.checkBox_conf_int.isChecked():
+            for wg in list_well_graph:
+                list_conf_top, list_conf_bottom = calc_conf_interval_well(wg, list_param)
+                plt.fill_between(num_param, list_conf_top, list_conf_bottom, alpha=0.2, label=f'conf_int_{wg}')
+
+
+        if ui_pg.checkBox_log.isChecked():
+            plt.yscale('log')
         plt.xticks(num_param, list_param, rotation=90)
         plt.grid()
         plt.legend()
@@ -983,6 +1031,15 @@ def draw_point_graph():
         ui_pg.listWidget_well.addItem(list_item)
         ui_pg.listWidget_well.setItemWidget(list_item, check_box_widget)
 
+    for n_w, w in enumerate(data_plot['well'].unique()):
+        check_box_widget = QCheckBox(w)
+        if n_w < 1:
+            check_box_widget.setChecked(True)
+        check_box_widget.clicked.connect(draw_graph)
+        list_item = QListWidgetItem()
+        ui_pg.listWidget_well_graph.addItem(list_item)
+        ui_pg.listWidget_well_graph.setItemWidget(list_item, check_box_widget)
+
     def all_check_param():
         all_check(ui_pg.listWidget_param, ui_pg.checkBox_param_all)
         draw_graph()
@@ -1012,4 +1069,9 @@ def draw_point_graph():
     ui_pg.checkBox_point_all.stateChanged.connect(all_check_point)
     ui_pg.checkBox_well_all.stateChanged.connect(all_check_well)
     ui_pg.checkBox_marker.clicked.connect(draw_graph)
+    ui_pg.checkBox_log.clicked.connect(draw_graph)
+    ui_pg.radioButton_mean.clicked.connect(draw_graph)
+    ui_pg.radioButton_median.clicked.connect(draw_graph)
+    ui_pg.radioButton_moda.clicked.connect(draw_graph)
+    ui_pg.checkBox_conf_int.clicked.connect(draw_graph)
     PointGraph.exec_()
