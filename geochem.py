@@ -388,6 +388,8 @@ def tsne_geochem():
             continue
         pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
+    ui_tsne.spinBox_lof.setValue(int(len(data_plot) * 0.1))
+
     for i in data_plot.columns.tolist()[3:]:
         ui_tsne.listWidget_param.addItem(i)
         ui_tsne.listWidget_param.setCurrentRow(0)
@@ -403,7 +405,6 @@ def tsne_geochem():
         ui_tsne.listWidget_point.clear()
         list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
         data_plot_new = data_plot.loc[data_plot['well'].isin(list_well)]
-
 
         for i in data_plot_new.index:
             ui_tsne.listWidget_point.addItem(str(data_plot_new['point'][i]))
@@ -450,7 +451,10 @@ def tsne_geochem():
                 data_tsne_result = tsne.fit_transform(data_tsne)
             if ui_tsne.radioButton_pca.isChecked():
                 name_graph = 'PCA'
-                pca = PCA(n_components=2)
+                pca = PCA(
+                    n_components=2,
+                    random_state=ui_tsne.spinBox_random_stat.value()
+                )
                 data_tsne_result = pca.fit_transform(data_tsne)
             data_plot_new = pd.concat([data_plot_new, pd.DataFrame(data_tsne_result, columns=['0', '1'])], axis=1)
 
@@ -545,7 +549,7 @@ def tsne_geochem():
             list_item = QListWidgetItem()
             ui_tsne.listWidget_check_point.addItem(list_item)
             ui_tsne.listWidget_check_point.setItemWidget(list_item, check_box_widget)
-
+        ui_tsne.spinBox_lof.setValue(int(len(data_plot_point) * 0.1))
 
     for w in data_plot['well'].unique():
         check_box_widget = QCheckBox(w)
@@ -558,13 +562,20 @@ def tsne_geochem():
     def find_best_param():
         list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
         list_param = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+        list_point = get_list_check_checkbox(ui_tsne.listWidget_check_point)
+        data_find = data_plot.loc[data_plot['point'].isin(list_point)]
+        data_find.reset_index(inplace=True, drop=True)
         # print(distance_between_centers(data_plot, list_well[0], list_well[1], list_param))
         # print(find_optimal_params_add_one_at_a_time(data_plot, list_well[0], list_well[1], list_param))
-        best_param = find_optimal_params_remove_one_at_a_time(data_plot, list_well[0], list_well[1], list_param)
+        best_param = find_optimal_params_remove_one_at_a_time(data_find, list_well[0], list_well[1], list_param)
         print(best_param)
         check_param(best_param)
         draw_graph_tsne()
 
+    def all_check_param():
+        for i in range(ui_tsne.listWidget_check_param.count()):
+            checkbox = ui_tsne.listWidget_check_param.itemWidget(ui_tsne.listWidget_check_param.item(i))
+            checkbox.setChecked(True)
 
     def check_param(param):
         for i in range(ui_tsne.listWidget_check_param.count()):
@@ -576,14 +587,23 @@ def tsne_geochem():
         # draw_graph_tsne()
         # draw_graph_anova()
 
-
     def distance_between_centers(data, well1, well2, params):
         data_param = data[params]
         if ui_tsne.checkBox_standart.isChecked():
             scaler = StandardScaler()
             data_param = scaler.fit_transform(data_param)
-        tsne = TSNE(n_components=2, random_state=ui_tsne.spinBox_random_stat.value())
-        projected_data = pd.DataFrame(tsne.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+        if ui_tsne.radioButton_tsne.isChecked():
+            tsne = TSNE(
+                n_components=2,
+                perplexity=ui_tsne.spinBox_perplexity.value(),
+                learning_rate=200,
+                random_state=ui_tsne.spinBox_random_stat.value()
+            )
+            projected_data = pd.DataFrame(tsne.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+        if ui_tsne.radioButton_pca.isChecked():
+            pca = PCA(n_components=2, random_state=ui_tsne.spinBox_random_stat.value())
+            projected_data = pd.DataFrame(pca.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+
         projected_data['well'] = data['well']
 
         center1 = np.array([projected_data.loc[projected_data['well'] == well1]['tsne1'].median(),
@@ -634,6 +654,110 @@ def tsne_geochem():
 
         return best_params
 
+    def calc_lof():
+        list_param = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+        list_point = get_list_check_checkbox(ui_tsne.listWidget_check_point)
+        data_param = data_plot.loc[data_plot['point'].isin(list_point)][list_param]
+        data_param.reset_index(inplace=True, drop=True)
+        data_point = data_plot.loc[data_plot['point'].isin(list_point)]
+        data_point.reset_index(inplace=True, drop=True)
+        scaler = StandardScaler()
+        data_param = scaler.fit_transform(data_param)
+        if ui_tsne.radioButton_tsne.isChecked():
+            try:
+                tsne = TSNE(
+                    n_components=2,
+                    perplexity=ui_tsne.spinBox_perplexity.value(),
+                    learning_rate=200,
+                    random_state=ui_tsne.spinBox_random_stat.value()
+                )
+                projected_data = pd.DataFrame(tsne.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+            except ValueError:
+                set_info('ValueError, параметр perplexity должен быть меньше количества точек', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Параметр perplexity должен быть меньше количества точек')
+                return
+        if ui_tsne.radioButton_pca.isChecked():
+            pca = PCA(n_components=2, random_state=ui_tsne.spinBox_random_stat.value())
+            projected_data = pd.DataFrame(pca.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+        lof = LocalOutlierFactor(n_neighbors=ui_tsne.spinBox_lof.value())
+        label_lof = lof.fit_predict(data_param)
+        factor_lof = -lof.negative_outlier_factor_
+
+        data_lof = data_point.copy()
+        data_lof['lof'] = label_lof
+        data_lof = pd.concat([projected_data, data_lof], axis=1)
+
+        colors_lof = ['red' if label == -1 else 'blue' for label in label_lof]
+
+        clear_layout(ui_tsne.verticalLayout_anova)
+        figure_bar = plt.figure()
+        canvas_bar = FigureCanvas(figure_bar)
+        mpl_toolbar = NavigationToolbar(canvas_bar)
+        ui_tsne.verticalLayout_anova.addWidget(mpl_toolbar)
+        ui_tsne.verticalLayout_anova.addWidget(canvas_bar)
+        plt.bar(range(len(label_lof)), factor_lof, color=colors_lof)
+        plt.xticks(range(len(label_lof)), list_point, rotation=90)
+        figure_bar.suptitle(f'коэффициенты LOF')
+        figure_bar.tight_layout()
+        canvas_bar.show()
+
+        clear_layout(ui_tsne.verticalLayout_graph)
+        figure_tsne = plt.figure()
+        canvas_tsne = FigureCanvas(figure_tsne)
+        mpl_toolbar = NavigationToolbar(canvas_tsne)
+        ui_tsne.verticalLayout_graph.addWidget(mpl_toolbar)
+        ui_tsne.verticalLayout_graph.addWidget(canvas_tsne)
+        sns.scatterplot(data=data_lof, x='tsne1', y='tsne2', hue='lof', s=100, palette={-1: 'red', 1: 'blue'})
+        for i_data in data_lof.index:
+            plt.text(data_lof['tsne1'][i_data], data_lof['tsne2'][i_data],
+                data_lof['point'][i_data], horizontalalignment='left',
+                size='medium', color='black', weight='semibold')
+        plt.grid()
+        figure_tsne.suptitle(f't-SNE')
+        figure_tsne.tight_layout()
+        canvas_tsne.draw()
+
+    def clear_lof():
+        list_param = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+        list_point = get_list_check_checkbox(ui_tsne.listWidget_check_point)
+        data_param = data_plot.loc[data_plot['point'].isin(list_point)][list_param]
+        data_param.reset_index(inplace=True, drop=True)
+        data_point = data_plot.loc[data_plot['point'].isin(list_point)]
+        data_point.reset_index(inplace=True, drop=True)
+        scaler = StandardScaler()
+        data_param = scaler.fit_transform(data_param)
+        lof = LocalOutlierFactor(n_neighbors=ui_tsne.spinBox_lof.value())
+        label_lof = lof.fit_predict(data_param)
+        data_lof = data_point.copy()
+        data_lof['lof'] = label_lof
+        for i in range(ui_tsne.listWidget_check_point.count()):
+            checkbox = ui_tsne.listWidget_check_point.itemWidget(ui_tsne.listWidget_check_point.item(i))
+            try:
+                if data_lof['lof'].loc[data_lof['point'] == checkbox.text()].values[0] == -1:
+                    checkbox.setChecked(False)
+                else:
+                    checkbox.setChecked(True)
+            except IndexError:
+                pass
+
+    def set_param_maket():
+        session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).delete()
+        for i in range(ui_tsne.listWidget_check_param.count()):
+            checkbox = ui_tsne.listWidget_check_param.itemWidget(ui_tsne.listWidget_check_param.item(i))
+            if checkbox.isChecked():
+                param_id = session.query(GeochemParameter).filter_by(
+                    title=checkbox.text(),
+                    geochem_id=get_geochem_id()
+                ).first().id
+                new_train_param = GeochemTrainParameter(
+                    maket_id=get_maket_id(),
+                    param_id=param_id
+                )
+                session.add(new_train_param)
+        session.commit()
+        update_geochem_param_train_list()
+
+
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_anova)
     # ui_tsne.radioButton_tsne.clicked.connect(draw_graph_tsne)
@@ -650,8 +774,12 @@ def tsne_geochem():
     ui_tsne.radioButton_box.clicked.connect(draw_graph_anova)
     ui_tsne.pushButton_apply.clicked.connect(draw_graph_tsne)
     ui_tsne.pushButton_apply.clicked.connect(draw_graph_anova)
-
+    ui_tsne.toolButton.clicked.connect(all_check_param)
     ui_tsne.pushButton_best_param.clicked.connect(find_best_param)
+    ui_tsne.pushButton_lof.clicked.connect(calc_lof)
+    ui_tsne.toolButton_lof_clean.clicked.connect(clear_lof)
+    ui_tsne.toolButton_lof_all.clicked.connect(set_list_check_point)
+    ui_tsne.pushButton_to_maket.clicked.connect(set_param_maket)
 
     for i in range(ui_tsne.listWidget_checkbox_well.count()):
         ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(set_list_check_point)

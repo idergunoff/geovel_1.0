@@ -56,7 +56,7 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,2,2,2,1,1,0,0">
+     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,2,1,2,1,1,0,0">
       <item>
        <widget class="QFrame" name="frame_4">
         <property name="frameShape">
@@ -107,13 +107,72 @@
        <widget class="QListWidget" name="listWidget_checkbox_well"/>
       </item>
       <item>
-       <widget class="QListWidget" name="listWidget_check_param"/>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="pushButton_to_maket">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(172, 244, 166);</string>
+          </property>
+          <property name="text">
+           <string>TO MAKET</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QListWidget" name="listWidget_check_param"/>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="QListWidget" name="listWidget_point"/>
       </item>
       <item>
-       <widget class="QListWidget" name="listWidget_check_point"/>
+       <layout class="QGridLayout" name="gridLayout_6">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="3">
+           <widget class="QToolButton" name="toolButton_lof_all">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(249, 240, 107);</string>
+            </property>
+            <property name="text">
+             <string>#</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QSpinBox" name="spinBox_lof">
+            <property name="minimum">
+             <number>2</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_lof">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(170, 63, 251);</string>
+            </property>
+            <property name="text">
+             <string>LOF</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QToolButton" name="toolButton_lof_clean">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(252, 171, 171);</string>
+            </property>
+            <property name="text">
+             <string>-</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0">
+         <widget class="QListWidget" name="listWidget_check_point"/>
+        </item>
+       </layout>
       </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,7">
@@ -221,7 +280,18 @@
           </widget>
          </item>
          <item>
-          <widget class="QSpinBox" name="spinBox_random_stat"/>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="0" column="0">
+            <widget class="QSpinBox" name="spinBox_random_stat"/>
+           </item>
+           <item row="0" column="1">
+            <widget class="QToolButton" name="toolButton">
+             <property name="text">
+              <string>#</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_best_param">
