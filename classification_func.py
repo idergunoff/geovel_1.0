@@ -283,8 +283,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             model_name = ui_cls.buttonGroup.checkedButton().text()
             model_class, text_model = choice_model_classifier(model_name)
 
+        if ui_cls.checkBox_baggig.isChecked():
+            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
+                                            random_state=0, n_jobs=-1)
+        bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
+
         text_model += text_pca
         text_model += text_over_sample
+        text_model += bagging_text
 
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
@@ -345,16 +351,17 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC':
-            imp_name_params, imp_params = [], []
-            if not ui_cls.checkBox_calibr.isChecked():
-                for n, i in enumerate(model_class.feature_importances_):
-                    if ui_cls.checkBox_all_imp.isChecked():
-                        imp_name_params.append(list_param[n])
-                        imp_params.append(i)
-                    else:
-                        if i >= np.mean(model_class.feature_importances_):
+            if not ui_cls.checkBox_baggig.isChecked():
+                imp_name_params, imp_params = [], []
+                if not ui_cls.checkBox_calibr.isChecked():
+                    for n, i in enumerate(model_class.feature_importances_):
+                        if ui_cls.checkBox_all_imp.isChecked():
                             imp_name_params.append(list_param[n])
                             imp_params.append(i)
+                        else:
+                            if i >= np.mean(model_class.feature_importances_):
+                                imp_name_params.append(list_param[n])
+                                imp_params.append(i)
 
 
 
@@ -386,13 +393,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         title_graph = text_model
         if model_name == 'RFC' or model_name == 'ETC':
             if not ui_cls.checkBox_calibr.isChecked():
-                title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
+                if not ui_cls.checkBox_baggig.isChecked():
+                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC') and not ui_cls.checkBox_cross_val.isChecked():
             if not ui_cls.checkBox_calibr.isChecked():
-                axes[2].bar(imp_name_params, imp_params)
-                axes[2].set_xticklabels(imp_name_params, rotation=90)
-                axes[2].set_title('Важность признаков')
+                if not ui_cls.checkBox_baggig.isChecked():
+                    axes[2].bar(imp_name_params, imp_params)
+                    axes[2].set_xticklabels(imp_name_params, rotation=90)
+                    axes[2].set_title('Важность признаков')
 
         if ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(range(len(scores_cv)), scores_cv)

@@ -1824,5 +1824,5 @@ def check_and_create_folders():
             print(f"Папка '{folder}' не найдена. Создаем...")
             os.makedirs(folder_path)
             print(f"Папка '{folder}' успешно создана.")
-        else:
-            print(f"Папка '{folder}' уже существует.")
+        # else:
+        #     print(f"Папка '{folder}' уже существует.")

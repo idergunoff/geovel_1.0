@@ -1,6 +1,7 @@
 import pdb
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from scipy import stats
 
@@ -365,8 +366,6 @@ def anova_geochem():
     ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
     for i in range(ui_anova.listWidget_checkbox_well.count()):
         ui_anova.listWidget_checkbox_well.itemWidget(ui_anova.listWidget_checkbox_well.item(i)).stateChanged.connect(draw_graph_anova)
-
-
     Anova.exec_()
 
 
@@ -440,8 +439,14 @@ def tsne_geochem():
                 scaler = StandardScaler()
                 data_tsne = scaler.fit_transform(data_tsne)
             if ui_tsne.radioButton_tsne.isChecked():
+                print(ui_tsne.spinBox_random_stat.value())
                 name_graph = 't-SNE'
-                tsne = TSNE(n_components=2, perplexity=ui_tsne.spinBox_perplexity.value(), learning_rate=200, random_state=42)
+                tsne = TSNE(
+                    n_components=2,
+                    perplexity=ui_tsne.spinBox_perplexity.value(),
+                    learning_rate=200,
+                    random_state=ui_tsne.spinBox_random_stat.value()
+                )
                 data_tsne_result = tsne.fit_transform(data_tsne)
             if ui_tsne.radioButton_pca.isChecked():
                 name_graph = 'PCA'
@@ -550,6 +555,84 @@ def tsne_geochem():
         ui_tsne.listWidget_checkbox_well.addItem(list_item)
         ui_tsne.listWidget_checkbox_well.setItemWidget(list_item, check_box_widget)
 
+    def find_best_param():
+        list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
+        list_param = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+        # print(distance_between_centers(data_plot, list_well[0], list_well[1], list_param))
+        # print(find_optimal_params_add_one_at_a_time(data_plot, list_well[0], list_well[1], list_param))
+        best_param = find_optimal_params_remove_one_at_a_time(data_plot, list_well[0], list_well[1], list_param)
+        print(best_param)
+        check_param(best_param)
+        draw_graph_tsne()
+
+
+    def check_param(param):
+        for i in range(ui_tsne.listWidget_check_param.count()):
+            checkbox = ui_tsne.listWidget_check_param.itemWidget(ui_tsne.listWidget_check_param.item(i))
+            if checkbox.text() in param:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
+        # draw_graph_tsne()
+        # draw_graph_anova()
+
+
+    def distance_between_centers(data, well1, well2, params):
+        data_param = data[params]
+        if ui_tsne.checkBox_standart.isChecked():
+            scaler = StandardScaler()
+            data_param = scaler.fit_transform(data_param)
+        tsne = TSNE(n_components=2, random_state=ui_tsne.spinBox_random_stat.value())
+        projected_data = pd.DataFrame(tsne.fit_transform(data_param), columns=['tsne1', 'tsne2'])
+        projected_data['well'] = data['well']
+
+        center1 = np.array([projected_data.loc[projected_data['well'] == well1]['tsne1'].median(),
+                            projected_data.loc[projected_data['well'] == well1]['tsne2'].median()])
+        center2 = np.array([projected_data.loc[projected_data['well'] == well2]['tsne1'].median(),
+                            projected_data.loc[projected_data['well'] == well2]['tsne2'].median()])
+
+        # print(np.linalg.norm(center1 - center2))
+        return np.sqrt((center2[0] - center1[0]) ** 2 + (center2[1] - center1[1]) ** 2)
+
+    def find_optimal_params_remove_one_at_a_time(data, well1, well2, initial_params):
+        current_params, best_params = initial_params.copy(), initial_params.copy()
+        current_distance = distance_between_centers(data, well1, well2, current_params)
+        len_params = len(current_params)
+        ui_tsne.progressBar_1.setMaximum(len_params)
+        while True:
+            max_distance = current_distance
+            ui_tsne.lcdNumber.display(len(best_params))
+            print(f'max_distance={max_distance},current={len(current_params)}, best={len(best_params)}')
+            param_to_remove = None
+            list_dist, list_param = [], []
+            ui_tsne.progressBar_1.setValue(len_params - len(current_params))
+            ui_tsne.progressBar_2.setMaximum(len(current_params))
+            for np, param in enumerate(current_params):
+                ui_tsne.progressBar_2.setValue(np)
+                temp_params = current_params.copy()
+                temp_params.remove(param)
+                temp_distance = distance_between_centers(data, well1, well2, temp_params)
+                list_dist.append(temp_distance)
+                list_param.append(param)
+
+                if temp_distance > max_distance:
+                    max_distance = temp_distance
+                    param_to_remove = param
+
+            if param_to_remove is not None:
+                print(param_to_remove)
+                current_params.remove(param_to_remove)
+                current_distance = max_distance
+                best_params = current_params.copy()
+                check_param(best_params)
+                draw_graph_tsne()
+            else:
+                i_rem = list_dist.index(max(list_dist))
+                current_params.remove(list_param[i_rem])
+            if len(current_params) == 2:
+                break
+
+        return best_params
 
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_anova)
@@ -567,6 +650,8 @@ def tsne_geochem():
     ui_tsne.radioButton_box.clicked.connect(draw_graph_anova)
     ui_tsne.pushButton_apply.clicked.connect(draw_graph_tsne)
     ui_tsne.pushButton_apply.clicked.connect(draw_graph_anova)
+
+    ui_tsne.pushButton_best_param.clicked.connect(find_best_param)
 
     for i in range(ui_tsne.listWidget_checkbox_well.count()):
         ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(set_list_check_point)
@@ -1072,3 +1157,43 @@ def draw_point_graph():
     ui_pg.radioButton_median.clicked.connect(draw_graph)
     ui_pg.checkBox_conf_int.clicked.connect(draw_graph)
     PointGraph.exec_()
+
+
+
+
+# def find_optimal_params_add_one_at_a_time(data, well1, well2, initial_params):
+#     current_params = [initial_params[0], initial_params[1]]
+#     current_distance, dop = 0, 0
+#
+#     while len(current_params) < len(initial_params):
+#         max_distance = current_distance
+#         param_to_add = None
+#         print(max_distance, len(current_params), dop)
+#         list_dist, list_param = [], []
+#
+#         for param in initial_params:
+#             if param not in current_params:
+#                 temp_params = current_params.copy()
+#                 temp_params.append(param)
+#                 temp_distance = distance_between_centers(data, well1, well2, temp_params)
+#                 list_dist.append(temp_distance)
+#                 list_param.append(param)
+#
+#                 if temp_distance > max_distance:
+#                     max_distance = temp_distance
+#                     param_to_add = param
+#
+#         if param_to_add is not None:
+#             current_params.append(param_to_add)
+#             print(param_to_add)
+#             current_distance = max_distance
+#             dop = 0
+#         else:
+#             i_add = list_dist.index(max(list_dist))
+#             current_params.append(list_param[i_add])
+#             dop += 1
+#             if dop > 10:
+#                 break
+#
+#     return current_params
+#
