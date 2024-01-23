@@ -1,4 +1,3 @@
-from scipy.fftpack import fft2, ifft2, dctn, idctn
 
 from func import *
 from qt.new_window_dialog import *
@@ -461,6 +460,5 @@ def secret_filter():
     ui.pushButton_rang.click()
     ui.pushButton_filtfilt.click()
     filter19()
-
 
 

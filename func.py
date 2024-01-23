@@ -999,6 +999,10 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
                     # Загрузка сигнала из профиля
                     locals()[str(markup.profile.id) + '_signal'] = json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+            elif param == 'CRL':
+                if not str(markup.profile.id) + '_CRL' in locals():
+                    locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
+                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
             # Если параметр сохранён в базе
             else:
                 # Загрузка значений параметра из формации
@@ -1027,6 +1031,10 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
                     sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     for i_sig in range(len(sig_measure)):
                         dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+                elif param == 'CRL':
+                    sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                    for i_sig in range(len(sig_measure)):
+                        dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
                 elif param.startswith('distr'):
                     # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
@@ -1087,6 +1095,10 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_signal' in locals():
                 locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
+        elif param == 'CRL':
+            if not str(curr_form.profile.id) + '_CRL' in locals():
+                locals()[str(curr_form.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
+                    session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
     ui.progressBar.setMaximum(len(list_up))
@@ -1101,6 +1113,10 @@ def build_table_test(analisis='lda'):
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 for i_sig in range(len(sig_measure)):
                     dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+            elif param == 'CRL':
+                p, atr = param.split('_')[0], param.split('_')[1]
+                for i_sig in range(len(locals()[str(curr_form.profile.id) + '_CRL'])):
+                    dict_value[f'{param}_{i_sig + 1}'] = locals()[str(curr_form.profile.id) + '_CRL'][i_sig]
             elif param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
@@ -1826,3 +1842,18 @@ def check_and_create_folders():
             print(f"Папка '{folder}' успешно создана.")
         # else:
         #     print(f"Папка '{folder}' уже существует.")
+
+
+
+def calc_CRL_filter(radar):
+    radar_dct = dctn(radar, type=2, norm='ortho', axes=1)
+    radar_rang = rankdata(radar_dct, axis=1)
+    radar_log = np.log(radar_rang)
+    radar_idct = idctn(radar_log, type=2, norm='ortho', axes=1)
+    radar_rang2 = rankdata(radar_idct, axis=1)
+    k_b, k_a = butter(3, 0.05)
+    radar_filtfilt = filtfilt(k_b, k_a, radar_rang2)
+    radar_median1 = medfilt2d(radar_filtfilt, [19, 1])
+    radar_median2 = medfilt2d(radar_median1, [19, 19])
+    radar_median3 = medfilt2d(radar_median2, [1, 19])
+    return radar_median3

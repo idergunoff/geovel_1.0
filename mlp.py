@@ -446,6 +446,20 @@ def add_all_param_signal_mlp():
     set_color_button_updata()
 
 
+def add_param_crl_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    if session.query(ParameterMLP).filter_by(
+            analysis_id=get_MLP_id(),
+            parameter='CRL'
+    ).count() == 0:
+        add_param_mlp('CRL')
+        # update_list_param_mlp()
+        set_color_button_updata()
+    else:
+        set_info(f'Параметр CRL уже добавлен', 'red')
+
+
 def add_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -584,7 +598,8 @@ def add_all_param_mfcc_mlp():
 def remove_param_geovel_mlp():
     param = ui.listWidget_param_mlp.currentItem().text().split(' ')[0]
     if param:
-        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or param.startswith('Signal'):
+        if (param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or
+                param.startswith('Signal') or param.startswith('CRL')):
             for p in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
                 if p.parameter.startswith('_'.join(param.split('_')[:-1])):
                     session.query(ParameterMLP).filter_by(id=p.id).delete()

@@ -707,7 +707,7 @@
               <item row="9" column="0">
                <widget class="QPushButton" name="pushButton_secret_filter">
                 <property name="text">
-                 <string> SFFAI</string>
+                 <string>CRL-filter</string>
                 </property>
                </widget>
               </item>
@@ -3244,15 +3244,9 @@ Therm</string>
                  </layout>
                 </item>
                 <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_29" columnstretch="5,4">
-                  <item row="0" column="0">
-                   <widget class="QListWidget" name="listWidget_param_mlp"/>
-                  </item>
+                 <layout class="QGridLayout" name="gridLayout_29" columnstretch="5,2">
                   <item row="0" column="1">
                    <layout class="QGridLayout" name="gridLayout_96">
-                    <item row="0" column="0">
-                     <widget class="QListWidget" name="listWidget_trained_model_class"/>
-                    </item>
                     <item row="1" column="0">
                      <layout class="QGridLayout" name="gridLayout_98">
                       <item row="1" column="1">
@@ -3294,6 +3288,40 @@ Therm</string>
                          <string>Export</string>
                         </property>
                        </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="0">
+                     <widget class="QListWidget" name="listWidget_trained_model_class"/>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_145">
+                    <item row="0" column="0">
+                     <widget class="QListWidget" name="listWidget_param_mlp"/>
+                    </item>
+                    <item row="1" column="0">
+                     <layout class="QGridLayout" name="gridLayout_146">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_33">
+                        <property name="text">
+                         <string>Signal exception:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLabel" name="label_34">
+                        <property name="text">
+                         <string>CRL exception:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLineEdit" name="lineEdit_signal_except"/>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QLineEdit" name="lineEdit_crl_except"/>
                       </item>
                      </layout>
                     </item>
@@ -3357,7 +3385,27 @@ Therm</string>
                      </layout>
                     </item>
                     <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_106" columnstretch="2,0,0">
+                     <layout class="QGridLayout" name="gridLayout_106" columnstretch="2,0,0,0">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_all_signal_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
+                        </property>
+                        <property name="text">
+                         <string>add all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_signal_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
                        <widget class="QComboBox" name="comboBox_signal_mlp">
                         <item>
@@ -3392,23 +3440,13 @@ Therm</string>
                         </item>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_signal_mlp">
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_add_crl">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(147, 220, 236);</string>
                         </property>
                         <property name="text">
-                         <string>add</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_all_signal_mlp">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(148, 255, 232);</string>
-                        </property>
-                        <property name="text">
-                         <string>add all</string>
+                         <string>add CRL</string>
                         </property>
                        </widget>
                       </item>
@@ -4014,7 +4052,7 @@ Therm</string>
                    </layout>
                   </item>
                   <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_85">
+                   <layout class="QGridLayout" name="gridLayout_85" columnstretch="5,2">
                     <item row="0" column="1">
                      <layout class="QGridLayout" name="gridLayout_86">
                       <item row="0" column="0">

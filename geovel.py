@@ -178,6 +178,7 @@ ui.pushButton_add_all_geovel_mlp.clicked.connect(add_all_param_geovel_mlp)
 ui.pushButton_add_distr_mlp.clicked.connect(add_param_distr_mlp)
 ui.pushButton_add_sep_mlp.clicked.connect(add_param_sep_mlp)
 ui.pushButton_add_all_distr_mlp.clicked.connect(add_all_param_distr_mlp)
+ui.pushButton_add_crl.clicked.connect(add_param_crl_mlp)
 ui.pushButton_update_well_mlp.clicked.connect(update_well_markup_mlp)
 ui.pushButton_rem_well_mlp.clicked.connect(remove_well_markup_mlp)
 ui.pushButton_rem_param_mlp.clicked.connect(remove_param_geovel_mlp)
@@ -403,7 +404,6 @@ ui.pushButton_calc_g_class.clicked.connect(calc_geochem_classification)
 ui.pushButton_g_drop_fake.clicked.connect(drop_fake_geochem)
 ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
 ui.pushButton_g_graph.clicked.connect(draw_point_graph)
-
 
 
 
