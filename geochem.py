@@ -1325,3 +1325,5 @@ def draw_point_graph():
 #
 #     return current_params
 #
+def try_func():
+    ui.label_31.setText("Enter Pressed")

@@ -406,6 +406,10 @@ ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
 ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
 
+# реакция на нажатие Enter
+ui.lineEdit_test.returnPressed.connect(try_func)
+
+
 
 
 check_trained_model()
