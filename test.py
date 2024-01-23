@@ -52,3 +52,7 @@ def parse_range(input_str):
 
 
 print(parse_range("512,1,3,3-8,10,22"))
+from func import *
+
+# session.query(TrainedModelClass).update({"except_signal": "", "except_crl": ""}, synchronize_session='fetch')
+# session.commit()

@@ -973,14 +973,22 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         data_train = pd.DataFrame(columns=['prof_well_index', 'target_value'])
     else:
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
-
+    except_param = False
     # Получаем размеченные участки
     if analisis == 'lda':
         markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
     elif analisis == 'mlp':
         markups = session.query(MarkupMLP).filter_by(analysis_id=analisis_id).all()
+        except_param = session.query(ExceptionMLP).filter_by(analysis_id=analisis_id).first()
     elif analisis == 'regmod':
         markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
+
+    list_except_signal, list_except_crl = [], []
+    if except_param:
+        if except_param.except_signal:
+            list_except_signal = parse_range_exception(except_param.except_signal)
+        if except_param.except_crl:
+            list_except_crl = parse_range_exception(except_param.except_crl)
 
     ui.progressBar.setMaximum(len(markups))
 
@@ -1030,11 +1038,13 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
                     p, atr = param.split('_')[0], param.split('_')[1]
                     sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     for i_sig in range(len(sig_measure)):
-                        dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+                        if i_sig + 1 not in list_except_signal:
+                            dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
                 elif param == 'CRL':
                     sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
                     for i_sig in range(len(sig_measure)):
-                        dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+                        if i_sig + 1 not in list_except_crl:
+                            dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
                 elif param.startswith('distr'):
                     # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
@@ -1076,11 +1086,16 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
 
 
 def build_table_test(analisis='lda'):
+    list_except_signal, list_except_crl = [], []
     if analisis == 'lda':
         list_param, analisis_title = get_list_param_lda(), ui.comboBox_lda_analysis.currentText()
     elif analisis == 'mlp':
         model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
-        list_param, analisis_title = json.loads(model.list_params), model.title
+        list_param, analisis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
+                                                                           model.except_signal, model.except_crl)
+        list_except_signal, list_except_crl = parse_range_exception(except_signal), parse_range_exception(except_crl)
+        list_except_signal = [] if list_except_signal == -1 else list_except_signal
+        list_except_crl = [] if list_except_crl == -1 else list_except_crl
     elif analisis == 'regmod':
         model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         list_param, analisis_title = json.loads(model.list_params), model.title
@@ -1112,11 +1127,13 @@ def build_table_test(analisis='lda'):
                 p, atr = param.split('_')[0], param.split('_')[1]
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 for i_sig in range(len(sig_measure)):
-                    dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+                    if i_sig + 1 not in list_except_signal:
+                        dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
             elif param.startswith('CRL'):
                 sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
                 for i_sig in range(len(sig_measure)):
-                    dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+                    if i_sig + 1 not in list_except_crl:
+                        dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
             elif param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
@@ -1198,19 +1215,32 @@ def update_list_trained_models_class():
 
 def get_list_param_numerical(list_param):
     new_list_param = []
+    except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
     for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
             for num in range(n):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
         elif param.startswith('Signal'):
+            if except_mlp:
+                list_except = parse_range_exception(except_mlp.except_signal)
+                list_except = [] if list_except == -1 else list_except
+            else:
+                list_except = []
             p, atr = param.split('_')[0], param.split('_')[1]
             n_i = 511 if atr == 'diff' or atr == 'Wt' else 512
             for i_sig in range(n_i):
-                new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
+                if i_sig + 1 not in list_except:
+                    new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         elif param.startswith('CRL'):
+            if except_mlp:
+                list_except = parse_range_exception(except_mlp.except_crl)
+                list_except = [] if list_except == -1 else list_except
+            else:
+                list_except = []
             for i_sig in range(512):
-                new_list_param.append(f'CRL_{i_sig + 1}')
+                if i_sig + 1 not in list_except:
+                    new_list_param.append(f'CRL_{i_sig + 1}')
         else:
             new_list_param.append(param)
     return new_list_param
@@ -1800,6 +1830,7 @@ def update_g_train_point_list():
     session.commit()
     ui.label_27.setText(f'Train points: {ui.listWidget_g_train_point.count()}, fake: {count_fake}')
 
+
 def update_g_model_list():
     ui.listWidget_g_trained_model.clear()
     for i in session.query(GeochemTrainedModel).filter_by(maket_id=get_maket_id()).all():
@@ -1809,6 +1840,7 @@ def update_g_model_list():
         ui.listWidget_g_trained_model.addItem(item)
     session.commit()
     ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')
+
 
 def remove_g_model():
     if ui.listWidget_g_trained_model.currentItem():
@@ -1861,3 +1893,25 @@ def calc_CRL_filter(radar):
     radar_median2 = medfilt2d(radar_median1, [19, 19])
     radar_median3 = medfilt2d(radar_median2, [1, 19])
     return radar_median3
+
+
+def parse_range_exception(input_str):
+    if input_str == '':
+        return -1
+    result = set()
+    ranges = input_str.split(',')
+    for i in ranges:
+        try:
+            if '-' in i:
+                start, end = map(int, i.split('-'))
+                if 1 <= start <= 512 and 1 <= end <= 512:
+                    result.update(range(start, end + 1))
+            else:
+                num = int(i)
+                if 1 <= num <= 512:
+                    result.add(num)
+        except:
+            print("Incorrect input")
+            return False
+    res_list = list(result)
+    return res_list

@@ -198,6 +198,8 @@ ui.pushButton_rem_trained_model_class.clicked.connect(remove_trained_model_class
 ui.pushButton_comment.clicked.connect(update_trained_model_comment)
 ui.pushButton_export_model_class.clicked.connect(export_model_class)
 ui.pushButton_import_model_class.clicked.connect(import_model_class)
+ui.lineEdit_signal_except.returnPressed.connect(add_signal_except_mlp)
+ui.lineEdit_crl_except.returnPressed.connect(add_crl_except_mlp)
 
 
 #   regression

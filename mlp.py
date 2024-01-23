@@ -456,6 +456,7 @@ def add_param_crl_mlp():
         add_param_mlp('CRL')
         # update_list_param_mlp()
         set_color_button_updata()
+        set_info(f'Параметр CRL добавлен', 'green')
     else:
         set_info(f'Параметр CRL уже добавлен', 'red')
 
@@ -650,6 +651,16 @@ def update_list_param_mlp(db=False):
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
     set_color_button_updata()
     update_list_trained_models_class()
+    update_line_edit_exception_mlp()
+
+
+def update_line_edit_exception_mlp():
+    ui.lineEdit_signal_except.clear()
+    ui.lineEdit_crl_except.clear()
+    except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+    if except_mlp:
+        ui.lineEdit_signal_except.setText(except_mlp.except_signal)
+        ui.lineEdit_crl_except.setText(except_mlp.except_crl)
 
 
 def set_color_button_updata():
@@ -1160,3 +1171,47 @@ def import_model_class():
 
     update_list_trained_models_class()
     set_info(f'Модель {model_name} импортирована', 'blue')
+
+
+def add_signal_except_mlp():
+    """ Список исключений для параметра Signal """
+    check_str = parse_range_exception(ui.lineEdit_signal_except.text())
+    if not check_str:
+        set_info('Неверный формат диапазона исключений', 'red')
+        return
+    except_line = '' if check_str == -1 else ui.lineEdit_signal_except.text()
+    excetp_signal = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+    if excetp_signal:
+        excetp_signal.except_signal = except_line
+    else:
+        new_except = ExceptionMLP(
+            analysis_id=get_MLP_id(),
+            except_signal=except_line
+        )
+        session.add(new_except)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata()
+    set_info('Исключения добавлены', 'green')
+
+
+def add_crl_except_mlp():
+    """ Список исключений для параметра Crl """
+    check_str = parse_range_exception(ui.lineEdit_crl_except.text())
+    if not check_str:
+        set_info('Неверный формат диапазона исключений', 'red')
+        return
+    except_line = '' if check_str == -1 else ui.lineEdit_crl_except.text()
+    excetp_crl = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+    if excetp_crl:
+        excetp_crl.except_crl = except_line
+    else:
+        new_except = ExceptionMLP(
+            analysis_id=get_MLP_id(),
+            except_crl=except_line
+        )
+        session.add(new_except)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata()
+    set_info('Исключения добавлены', 'green')

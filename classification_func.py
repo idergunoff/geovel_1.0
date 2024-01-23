@@ -688,6 +688,8 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
             title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
             path_model=path_model,
             list_params=json.dumps(list_param),
+            except_signal = ui.lineEdit_signal_except.text(),
+            except_crl = ui.lineEdit_crl_except.text(),
             comment=text_model
         )
         session.add(new_trained_model)

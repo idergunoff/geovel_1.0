@@ -371,6 +371,8 @@ class AnalysisMLP(Base):
     markers = relationship('MarkerMLP', back_populates='analysis')
     markups = relationship('MarkupMLP', back_populates='analysis')
     trained_models = relationship('TrainedModelClass', back_populates='analysis')
+    exceptions = relationship('ExceptionMLP', back_populates='analysis')
+
 
 
 class ParameterMLP(Base):
@@ -381,6 +383,17 @@ class ParameterMLP(Base):
     parameter = Column(String)
 
     analysis = relationship('AnalysisMLP', back_populates='parameters')
+
+
+class ExceptionMLP(Base):
+    __tablename__ = 'exception_mlp'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
+
+    analysis = relationship('AnalysisMLP', back_populates='exceptions')
 
 
 class MarkerMLP(Base):
@@ -423,6 +436,8 @@ class TrainedModelClass(Base):
     title = Column(String)
     path_model = Column(String)
     list_params = Column(Text)
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
     comment = Column(Text)
 
     analysis = relationship('AnalysisMLP', back_populates='trained_models')
