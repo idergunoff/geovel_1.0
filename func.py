@@ -1095,7 +1095,7 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_signal' in locals():
                 locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
-        elif param == 'CRL':
+        elif param.startswith('CRL'):
             if not str(curr_form.profile.id) + '_CRL' in locals():
                 locals()[str(curr_form.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
@@ -1113,10 +1113,10 @@ def build_table_test(analisis='lda'):
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 for i_sig in range(len(sig_measure)):
                     dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
-            elif param == 'CRL':
-                p, atr = param.split('_')[0], param.split('_')[1]
-                for i_sig in range(len(locals()[str(curr_form.profile.id) + '_CRL'])):
-                    dict_value[f'{param}_{i_sig + 1}'] = locals()[str(curr_form.profile.id) + '_CRL'][i_sig]
+            elif param.startswith('CRL'):
+                sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
+                for i_sig in range(len(sig_measure)):
+                    dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
             elif param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                 sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
@@ -1142,6 +1142,7 @@ def build_table_test(analisis='lda'):
         ui.progressBar.setValue(i + 1)
     test_data['x_pulc'] = x_pulc
     test_data['y_pulc'] = y_pulc
+
     return test_data, curr_form
 
 
@@ -1207,6 +1208,9 @@ def get_list_param_numerical(list_param):
             n_i = 511 if atr == 'diff' or atr == 'Wt' else 512
             for i_sig in range(n_i):
                 new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
+        elif param.startswith('CRL'):
+            for i_sig in range(512):
+                new_list_param.append(f'CRL_{i_sig + 1}')
         else:
             new_list_param.append(param)
     return new_list_param

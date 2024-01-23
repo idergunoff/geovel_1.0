@@ -407,7 +407,7 @@ ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
 
 # реакция на нажатие Enter
-ui.lineEdit_test.returnPressed.connect(try_func)
+# ui.lineEdit_test.returnPressed.connect(try_func)
 
 
 
