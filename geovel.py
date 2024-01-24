@@ -410,8 +410,12 @@ ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
 # реакция на нажатие Enter
 # ui.lineEdit_test.returnPressed.connect(try_func)
+def testtest():
+    print(radarogramma.getViewBox().viewRange())
+    print(radarogramma.getViewBox().viewRect())
+    print(radarogramma.getViewBox().viewPixelSize())
 
-
+radarogramma.getViewBox().sigRangeChanged.connect(testtest)
 
 
 check_trained_model()

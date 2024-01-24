@@ -25,6 +25,15 @@ def draw_radarogram():
     save_max_min(radar)
     ui.checkBox_minmax.setCheckState(0)
     draw_image(radar)
+    # radarogramma.getAxis('bottom').setLabel('x 2.5 метра')
+    # Устанавливаем подписи для тикетов по X
+    # x_ticks = [(i, f'{i * 2.5:.0f}') for i in range(0, len(radar) + 1, 200)]
+    # radarogramma.getAxis('bottom').setTicks([x_ticks, []])
+    #
+    # # Устанавливаем подписи для тикетов по Y
+    # y_ticks = [(j, f'{j * 8:.0f}') for j in range(0 ,len(radar[0]) + 1, 60)]
+    # radarogramma.getAxis('left').setTicks([y_ticks, []])
+    #
     set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
     updatePlot()
     line_up = ui.spinBox_rad_up.value()
