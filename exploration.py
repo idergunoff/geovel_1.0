@@ -1544,7 +1544,6 @@ def calc_exploration_class():
         else:
             pass
 
-
     ui_rm.pushButton_calc_model.clicked.connect(calc_exploration_model)
     Choose_ExplModel.exec_()
 
