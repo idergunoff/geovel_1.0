@@ -82,6 +82,15 @@ def draw_image(radar):
     hist.gradient.setColorMap(cmap)
     img.setImage(np.array(radar))
 
+    radarogramma.getAxis('bottom').setLabel('Профиль, м')
+    radarogramma.getAxis('bottom').setScale(2.5)
+
+    radarogramma.getAxis('left').setLabel('Время, нсек')
+    radarogramma.getAxis('left').setScale(8)
+    if ui.checkBox_grid.isChecked():
+        radarogramma.showGrid(x=True, y=True)
+
+
 
 # Функция очистки текущего профиля
 def clear_current_profile():

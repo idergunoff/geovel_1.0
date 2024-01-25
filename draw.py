@@ -25,15 +25,7 @@ def draw_radarogram():
     save_max_min(radar)
     ui.checkBox_minmax.setCheckState(0)
     draw_image(radar)
-    # radarogramma.getAxis('bottom').setLabel('x 2.5 метра')
-    # Устанавливаем подписи для тикетов по X
-    # x_ticks = [(i, f'{i * 2.5:.0f}') for i in range(0, len(radar) + 1, 200)]
-    # radarogramma.getAxis('bottom').setTicks([x_ticks, []])
-    #
-    # # Устанавливаем подписи для тикетов по Y
-    # y_ticks = [(j, f'{j * 8:.0f}') for j in range(0 ,len(radar[0]) + 1, 60)]
-    # radarogramma.getAxis('left').setTicks([y_ticks, []])
-    #
+
     set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
     updatePlot()
     line_up = ui.spinBox_rad_up.value()
@@ -46,6 +38,26 @@ def draw_radarogram():
     draw_layers()
     update_formation_combobox()
 
+
+def set_scale():
+    radarogramma.setXRange(0, 400)
+    exp = ImageExporter(radarogramma)
+    exp.export('radarogramma.png')
+    # img.save('radarogramma.png')
+
+
+def show_grid():
+    if ui.checkBox_grid.isChecked():
+        radarogramma.showGrid(x=True, y=True)
+    else:
+        radarogramma.showGrid(x=False, y=False)
+
+# def draw_axis():
+#
+#     axis_x = radarogramma.getAxis('bottom')
+#     ticks_x = axis_x.tickValues(axis_x.range[0], axis_x.range[1], axis_x.width())
+#     major_tick_x_str = axis_x.tickStrings(ticks_x[0][1], 2.5, ticks_x[0][0])
+#     minor_tick_x_str = axis_x.tickStrings(ticks_x[2][1], 2.5, ticks_x[2][0])
 
 def draw_current_radarogram():
     global l_up, l_down

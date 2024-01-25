@@ -29,6 +29,7 @@ from qt.point_param_graph_form import *
 from model import *
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
 import zipfile

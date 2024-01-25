@@ -130,6 +130,10 @@ ui.pushButton_rem_well.clicked.connect(remove_well)
 ui.pushButton_add_bound.clicked.connect(add_boundary)
 ui.pushButton_rem_bound.clicked.connect(remove_boundary)
 ui.pushButton_color.clicked.connect(change_color)
+ui.pushButton_set_scale.clicked.connect(set_scale)
+ui.checkBox_grid.clicked.connect(show_grid)
+
+
 #   lda
 ui.pushButton_add_lda.clicked.connect(add_lda)
 ui.pushButton_rem_lda.clicked.connect(remove_lda)
@@ -407,15 +411,7 @@ ui.pushButton_g_drop_fake.clicked.connect(drop_fake_geochem)
 ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
 ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
-
-# реакция на нажатие Enter
-# ui.lineEdit_test.returnPressed.connect(try_func)
-def testtest():
-    print(radarogramma.getViewBox().viewRange())
-    print(radarogramma.getViewBox().viewRect())
-    print(radarogramma.getViewBox().viewPixelSize())
-
-radarogramma.getViewBox().sigRangeChanged.connect(testtest)
+# radarogramma.getViewBox().sigRangeChanged.connect(draw_axis)
 
 
 check_trained_model()
