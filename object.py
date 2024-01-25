@@ -98,6 +98,7 @@ img = pg.ImageItem()
 radarogramma.invertY(True)
 radarogramma.addItem(img)
 
+
 hist = pg.HistogramLUTItem(gradientPosition='left')
 
 ui.radarogram.addItem(hist)

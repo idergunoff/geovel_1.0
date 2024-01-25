@@ -92,6 +92,7 @@ def draw_image(radar):
 
 
 
+
 # Функция очистки текущего профиля
 def clear_current_profile():
     session.query(CurrentProfile).delete()
@@ -181,6 +182,8 @@ def updatePlot():
     ui.signal.showGrid(x=True, y=True)
     # Инвертируем направление оси Y на графике
     ui.signal.invertY(True)
+    ui.signal.getAxis('left').setScale(8)
+    ui.signal.getAxis('left').setLabel('Время, нсек')
 
 
 def update_profile_combobox():
@@ -328,6 +331,8 @@ def draw_param():
         ui.graph.addItem(curve)  # добавляем график данных на график
         ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
         ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+        ui.graph.getAxis('bottom').setScale(2.5)
+        ui.graph.getAxis('bottom').setLabel('Профиль, м')
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
 
 

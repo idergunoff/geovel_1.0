@@ -29,29 +29,33 @@
 #     target_train.extend(i)
 #
 # print(target_train)
+#
+#
+# def parse_range(input_str):
+#     result = set()
+#
+#     ranges = input_str.split(',')
+#     for i in ranges:
+#         try:
+#             if '-' in i:
+#                 start, end = map(int, i.split('-'))
+#                 if 1 <= start <= 512 and 1 <= end <= 512:
+#                     result.update(range(start, end + 1))
+#             else:
+#                 num = int(i)
+#                 if 1 <= num <= 512:
+#                     result.add(num)
+#         except:
+#             print("Incorrect input")
+#             return
+#     res_list = list(result)
+#     return res_list
+#
+# print(parse_range("512,/1,3,3-8,10,22"))
+import pyqtgraph
+import pyqtgraph.examples
+pyqtgraph.examples.run()
 
-def parse_range(input_str):
-    result = set()
-
-    ranges = input_str.split(',')
-    for i in ranges:
-        try:
-            if '-' in i:
-                start, end = map(int, i.split('-'))
-                if 1 <= start <= 512 and 1 <= end <= 512:
-                    result.update(range(start, end + 1))
-            else:
-                num = int(i)
-                if 1 <= num <= 512:
-                    result.add(num)
-        except:
-            print("Incorrect input")
-            return
-    res_list = list(result)
-    return res_list
-
-
-print(parse_range("512,1,3,3-8,10,22"))
 from func import *
 
 # session.query(TrainedModelClass).update({"except_signal": "", "except_crl": ""}, synchronize_session='fetch')
