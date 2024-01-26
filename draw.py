@@ -41,9 +41,76 @@ def draw_radarogram():
 
 def set_scale():
     radarogramma.setXRange(0, 400)
-    exp = ImageExporter(radarogramma)
-    exp.export('radarogramma.png')
-    # img.save('radarogramma.png')
+    # radarogramma.getAxis('left').setStyle(showValues=False)
+    # radarogramma.getAxis('left').setLabel('')
+    # exp = ImageExporter(radarogramma)
+    # exp.parameters()['width'] = 300
+    # exp.export('radarogramma.png')
+    img.save('radarogramma.png')
+
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    # Открываем изображение
+    result_image = Image.open("radarogramma.png")
+
+    # Получаем размеры изображения
+    width, height = result_image.size
+
+    # Задаем отступы для увеличения изображения
+    lp = 50
+    bp = 50
+
+    # Создаем новое изображение с учетом отступов
+    new_width = width + lp
+    new_height = height + bp
+    new_image = Image.new("RGB", (new_width, new_height), "black")
+
+    # Вставляем текущее изображение с учетом отступов
+    new_image.paste(result_image, (lp, 0))
+
+    # Создаем объект для рисования на новом изображении
+    draw = ImageDraw.Draw(new_image)
+    # Создаем объект для рисования
+    # draw = ImageDraw.Draw(result_image)
+
+    font = ImageFont.load_default()
+
+    # Рисуем ось x (горизонтальную линию внизу)
+    draw.line([(0 + lp, height - 1), (width + lp, height - 1)], fill="white", width=1)
+
+    # Рисуем ось y (вертикальную линию слева)
+    draw.line([(0 + lp, 0), (0 + lp, height)], fill="white", width=1)
+
+    # Добавляем деления и подписи на оси X
+    for x in range(25, width, 50):
+        draw.line([(x + lp, height - 5), (x + lp, height + 5)], fill="white", width=1)
+        tick_label = f"{(x / 50) * 100}"
+        draw.text((x + lp - 10, height + 10), tick_label, fill="white", font=font)
+
+    # Добавляем деления и подписи на оси Y
+    for y in range(64, height, 64):
+        draw.line([(-5 + lp, y), (5 + lp, y)], fill="white", width=2)
+        tick_label = f"{(y / 64) * 512}"
+        draw.text((-50 + lp, y - 10), tick_label, fill="white", font=font)
+
+    # Добавляем тонкую светлую сетку грида
+    dash_length = 5
+    for x in range(25, width, 50):
+        for y in range(0, height, dash_length * 2):
+            draw.point((x + lp, y), fill=(200, 200, 200))
+
+    for y in range(64, height, 64):
+        for x in range(0, width, dash_length * 2):
+            draw.point((x + lp, y), fill=(200, 200, 200))
+
+    # Подписываем оси
+    draw.text((width + lp - 20, height - 20), "X", fill="white", font=font)
+    draw.text((10 + lp, 10), "Y", fill="white", font=font)
+
+    # Сохраняем результат
+    new_image.save("output_with_axes_and_grid.png")
+
 
 
 def show_grid():
