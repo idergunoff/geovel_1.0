@@ -132,6 +132,7 @@ ui.pushButton_rem_bound.clicked.connect(remove_boundary)
 ui.pushButton_color.clicked.connect(change_color)
 ui.pushButton_set_scale.clicked.connect(set_scale)
 ui.checkBox_grid.clicked.connect(show_grid)
+ui.pushButton_save_img.clicked.connect(save_image)
 
 
 #   lda

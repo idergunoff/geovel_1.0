@@ -42,9 +42,9 @@ def draw_radarogram():
 def set_scale():
     radarogramma.setXRange(0, 400)
 
+
+def save_image():
     img.save('radarogramma.png')
-
-
 
     # Открываем изображение
     result_image = Image.open("radarogramma.png")
@@ -104,8 +104,22 @@ def set_scale():
     draw.text((10 + lp, 10), "Y", fill="white", font=font)
 
     # Сохраняем результат
-    new_image.save("output_with_axes_and_grid.png")
+    try:
+        file_name = f"{get_profile_name()}.png"
+        fn = QFileDialog.getSaveFileName(
+            caption=f'Сохранить файл "{get_profile_name()}"',
+            directory=file_name,
+            filter="Изображения (*.png)")
+        print(fn)
+        new_image.save(fn[0])
+        set_info(f'Сохранено в файл: {fn[0]}', 'green')
+    except ValueError:
+        pass
 
+    # Удаляем файл
+    del_img = 'radarogramma.png'
+    if os.path.exists(del_img):
+        os.remove(del_img)
 
 
 def show_grid():
