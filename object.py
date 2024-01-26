@@ -2,6 +2,7 @@ import sys, os
 import random, math
 from sqlite3 import connect
 
+from PIL import Image, ImageDraw, ImageFont
 from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog
 from PyQt5.QtGui import QBrush, QColor

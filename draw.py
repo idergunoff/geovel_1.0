@@ -41,15 +41,10 @@ def draw_radarogram():
 
 def set_scale():
     radarogramma.setXRange(0, 400)
-    # radarogramma.getAxis('left').setStyle(showValues=False)
-    # radarogramma.getAxis('left').setLabel('')
-    # exp = ImageExporter(radarogramma)
-    # exp.parameters()['width'] = 300
-    # exp.export('radarogramma.png')
+
     img.save('radarogramma.png')
 
 
-    from PIL import Image, ImageDraw, ImageFont
 
     # Открываем изображение
     result_image = Image.open("radarogramma.png")
@@ -59,7 +54,7 @@ def set_scale():
 
     # Задаем отступы для увеличения изображения
     lp = 50
-    bp = 50
+    bp = 25
 
     # Создаем новое изображение с учетом отступов
     new_width = width + lp
