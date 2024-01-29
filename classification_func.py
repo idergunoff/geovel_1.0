@@ -273,7 +273,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         if ui_cls.checkBox_pca.isChecked():
             n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
-            pca = PCA(n_components=n_comp, random_state=0, svd_solver='full')
+            pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
             pipe_steps.append(('pca', pca))
         text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
 
