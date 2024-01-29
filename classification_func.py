@@ -39,7 +39,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     max_pca = min(len(list_param), len(data_train.index))
-    # max_pca -= int(round(max_pca/5, 0))
+    max_pca -= int(round(max_pca/5, 0))
     ui_cls.spinBox_pca.setMaximum(max_pca)
     ui_cls.spinBox_pca.setValue(max_pca // 2)
     if len (list_param) > len(data_train.index):
