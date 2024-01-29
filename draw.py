@@ -78,24 +78,24 @@ def save_image():
     draw.line([(0 + lp, 0), (0 + lp, height)], fill="white", width=1)
 
     # Добавляем деления и подписи на оси X
-    for x in range(25, width, 50):
+    for x in range(0, width, 40):
         draw.line([(x + lp, height - 5), (x + lp, height + 5)], fill="white", width=1)
-        tick_label = f"{(x / 50) * 100}"
+        tick_label = f"{int(x * 2.5)}"
         draw.text((x + lp - 10, height + 10), tick_label, fill="white", font=font)
 
     # Добавляем деления и подписи на оси Y
-    for y in range(64, height, 64):
+    for y in range(0, height, 64):
         draw.line([(-5 + lp, y), (5 + lp, y)], fill="white", width=2)
-        tick_label = f"{(y / 64) * 512}"
-        draw.text((-50 + lp, y - 10), tick_label, fill="white", font=font)
+        tick_label = f"{y * 8}"
+        draw.text((-30 + lp, y + 5), tick_label, fill="white", font=font)
 
     # Добавляем тонкую светлую сетку грида
     dash_length = 5
-    for x in range(25, width, 50):
+    for x in range(0, width, 40):
         for y in range(0, height, dash_length * 2):
             draw.point((x + lp, y), fill=(200, 200, 200))
 
-    for y in range(64, height, 64):
+    for y in range(0, height, 64):
         for x in range(0, width, dash_length * 2):
             draw.point((x + lp, y), fill=(200, 200, 200))
 
