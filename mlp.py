@@ -727,7 +727,13 @@ def calc_class_profile():
             class_model = pickle.load(f)
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params))
-        working_sample = working_data_class[list_param_num].values.tolist()
+        try:
+            working_sample = working_data_class[list_param_num].values.tolist()
+        except KeyError:
+            set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                     'рассчитайте заново', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            return
 
         list_cat = list(class_model.classes_)
 
@@ -818,9 +824,20 @@ def draw_result_mlp(working_data, curr_form):
 
 def calc_object_class():
     """ Расчет объекта по модели """
+    global flag_break
     working_data_result = pd.DataFrame()
     list_formation = []
-    for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    flag_break = []
+    for n, prof in enumerate(profiles):
+        if flag_break:
+            if flag_break[0] == 'stop':
+                break
+            else:
+                set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
+                                                           f'{flag_break[0]}, выберите пласты для каждого профиля.')
+                return
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
         set_info(f'Профиль {prof.title} ({count_measure} измерений)', 'blue')
@@ -839,11 +856,30 @@ def calc_object_class():
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
+                global flag_break
                 # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
-                list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
-                Choose_Formation.close()
+                if ui_cf.checkBox_to_all.isChecked():
+                    title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                    for prof in profiles:
+                        prof_form = session.query(Formation).filter_by(
+                            profile_id=prof.id,
+                            title=title_form
+                        ).first()
+                        if prof_form:
+                            list_formation.append(f'{prof_form.title} id{prof_form.id}')
+                        else:
+                            flag_break = [prof.title, title_form]
+                            Choose_Formation.close()
+                            return
+                    flag_break = ['stop', 'stop']
+                    Choose_Formation.close()
+                else:
+                    list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
+                    Choose_Formation.close()
+
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
+    print(list_formation)
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
@@ -869,7 +905,13 @@ def calc_object_class():
             class_model = pickle.load(f)
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params))
-        working_sample = working_data_result_copy[list_param_num].values.tolist()
+        try:
+            working_sample = working_data_result_copy[list_param_num].values.tolist()
+        except KeyError:
+            set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                     'рассчитайте заново', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            return
 
         list_cat = list(class_model.classes_)
 
@@ -879,7 +921,13 @@ def calc_object_class():
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            mark = class_model.predict(data)
+            try:
+                mark = class_model.predict(data)
+            except ValueError:
+                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                         'рассчитайте заново', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                return
             probability = class_model.predict_proba(data)
 
             for i in working_data_result_copy.index:

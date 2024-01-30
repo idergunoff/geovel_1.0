@@ -1229,15 +1229,17 @@ def update_list_trained_models_class():
 
 def get_list_param_numerical(list_param):
     new_list_param = []
-    except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+    train_model = session.query(TrainedModelClass).filter_by(
+            id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    # except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
     for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
             for num in range(n):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
         elif param.startswith('Signal'):
-            if except_mlp:
-                list_except = parse_range_exception(except_mlp.except_signal)
+            if train_model.except_signal:
+                list_except = parse_range_exception(train_model.except_signal)
                 list_except = [] if list_except == -1 else list_except
             else:
                 list_except = []
@@ -1247,8 +1249,8 @@ def get_list_param_numerical(list_param):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         elif param.startswith('CRL'):
-            if except_mlp:
-                list_except = parse_range_exception(except_mlp.except_crl)
+            if train_model.except_crl:
+                list_except = parse_range_exception(train_model.except_crl)
                 list_except = [] if list_except == -1 else list_except
             else:
                 list_except = []
