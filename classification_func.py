@@ -16,6 +16,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
     """
+    print(data_train)
 
     list_nan_param, count_nan = [], 0
     for i in data_train.index:
@@ -425,7 +426,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             preds_train = pipe.predict(training_sample)
             probability = pipe.predict_proba(training_sample)
             list_cat = list(pipe.classes_)
-            data_result = pd.concat([data_train, pd.DataFrame(probability, columns=list_cat)], axis=1)
+
+            # pd.concat работает не корректно, поэтому преобразуем в словари, складываем и создаем датафрейм
+            data_train_dict = data_train.to_dict(orient='series')
+            probability_dict = pd.DataFrame(probability, columns=list_cat).to_dict(orient='list')
+            result_dict = {**data_train_dict, **probability_dict}
+            data_result = pd.DataFrame(result_dict, columns=data_train.columns.tolist() + list_cat)
+            # data_result = pd.concat([data_train, pd.DataFrame(probability, columns=list_cat)], axis=1)
+
             data_result['mark'] = preds_train
             table_name = QFileDialog.getSaveFileName(
                 caption=f'Сохранить расчеты модели {model_name} в таблицу', directory=f'model_table_{model_name}.xlsx', filter="Excel Files (*.xlsx)")

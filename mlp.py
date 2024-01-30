@@ -761,7 +761,11 @@ def calc_class_profile():
                              f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
+        print(pd.DataFrame(probability, columns=list_cat))
+        print(working_data_class)
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability, columns=list_cat)], axis=1)
+
+        print(working_data_result)
         working_data_result['mark'] = mark
 
         draw_result_mlp(working_data_result, curr_form)
