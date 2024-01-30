@@ -225,7 +225,7 @@ def show_profiles():
     x = np.array(list_x)
     y = np.array(list_y)
 
-    plt.figure(figsize=(12, 9))
+    fig_profiles = plt.figure(figsize=(12, 9))
 
     grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
     if grid:
@@ -269,4 +269,4 @@ def show_profiles():
 
     plt.title('Профили')
     plt.tight_layout()
-    plt.show()
+    fig_profiles.show()
