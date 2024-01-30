@@ -431,10 +431,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             data_train_dict = data_train.to_dict(orient='series')
             probability_dict = pd.DataFrame(probability, columns=list_cat).to_dict(orient='list')
             result_dict = {**data_train_dict, **probability_dict}
-            data_result = pd.DataFrame(result_dict, columns=data_train.columns.tolist() + list_cat)
+            data_result = pd.DataFrame(result_dict)
             # data_result = pd.concat([data_train, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
-            data_result['mark'] = preds_train
+            data_result['mark_result'] = preds_train
             table_name = QFileDialog.getSaveFileName(
                 caption=f'Сохранить расчеты модели {model_name} в таблицу', directory=f'model_table_{model_name}.xlsx', filter="Excel Files (*.xlsx)")
             data_result.to_excel(table_name[0])
