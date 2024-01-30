@@ -177,7 +177,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         # print(z_interp)
 
         # Визуализация результатов
-        plt.figure(figsize=(12, 9))
+        fig_interp = plt.figure(figsize=(12, 9))
         plt.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
         plt.pcolormesh(xx, yy, z_interp, shading='auto', cmap=color_map)
         plt.scatter(x, y, c=z, cmap=color_map)
@@ -203,7 +203,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
                   f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
-        plt.show()
+        fig_interp.show()
 
 
     ui_dm.pushButton_map.clicked.connect(form_lda_ok)
