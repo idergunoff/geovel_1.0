@@ -32,6 +32,29 @@ def add_binding():
     update_list_binding()
 
 
+def remove_bind_point():
+    for key, value in globals().items():
+        if key == 'bind_scatter_id{}'.format(ui.listWidget_bind.currentItem().text().split(' id')[-1]):
+            radarogramma.removeItem(globals()[key])
+
+def draw_bind_point():
+    for key, value in globals().items():
+        if key.startswith('bind_'):
+            radarogramma.removeItem(globals()[key])
+
+    bind = session.query(Binding).filter_by(id=ui.listWidget_bind.currentItem().text().split(' id')[-1]).first()
+    layer = session.query(Layers).filter_by(id=bind.layer_id).first()
+
+    layer_line = json.loads(layer.layer_line)
+    x_coord = bind.index_measure
+    y_coord = layer_line[bind.index_measure]
+
+    scatter = pg.ScatterPlotItem(x=[x_coord], y=[y_coord], pen=pg.mkPen('r', width=3), brush=pg.mkBrush('r'),
+                                 symbol='o', size=15, hoverable=True)
+    radarogramma.addItem(scatter)
+    globals()[f'bind_scatter_id{bind.id}'] = scatter
+
+
 def remove_binding():
     session.query(Binding).filter(Binding.id == int(ui.listWidget_bind.currentItem().text().split(' id')[-1])).delete()
     session.commit()
