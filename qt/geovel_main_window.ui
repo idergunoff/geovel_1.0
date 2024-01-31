@@ -800,8 +800,8 @@
              <attribute name="title">
               <string>Layer, Well</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_13">
-              <item row="0" column="0" colspan="2">
+             <layout class="QGridLayout" name="gridLayout_148">
+              <item row="0" column="0" colspan="3">
                <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,4">
                 <item>
                  <layout class="QGridLayout" name="gridLayout_14">
@@ -957,8 +957,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -993,7 +993,7 @@
                 </item>
                </layout>
               </item>
-              <item row="1" column="0" colspan="2">
+              <item row="1" column="0" colspan="3">
                <layout class="QGridLayout" name="gridLayout_21">
                 <item row="0" column="0">
                  <widget class="QCheckBox" name="checkBox_profile_well">
@@ -1079,7 +1079,7 @@
                 </item>
                </layout>
               </item>
-              <item row="2" column="1">
+              <item row="2" column="2">
                <layout class="QGridLayout" name="gridLayout_12">
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_12">
@@ -1105,140 +1105,205 @@
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
+              <item row="3" column="0" colspan="2">
                <widget class="QListWidget" name="listWidget_well"/>
               </item>
-              <item row="3" column="1">
+              <item row="3" column="2">
                <widget class="QTextEdit" name="textEdit_datawell"/>
               </item>
               <item row="4" column="0">
-               <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
+               <layout class="QGridLayout" name="gridLayout_13">
                 <item row="0" column="0">
-                 <widget class="QLabel" name="label_13">
-                  <property name="font">
-                   <font>
-                    <pointsize>12</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>Boundaries:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QCheckBox" name="checkBox_show_bound">
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLabel" name="label_14">
-                <property name="font">
-                 <font>
-                  <pointsize>12</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Well Logs:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
-               <layout class="QGridLayout" name="gridLayout_23">
-                <item row="0" column="0">
-                 <widget class="QListWidget" name="listWidget_bound"/>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_24">
+                 <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
                   <item row="0" column="0">
-                   <widget class="QLabel" name="label_16">
+                   <widget class="QLabel" name="label_13">
+                    <property name="font">
+                     <font>
+                      <pointsize>12</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
-                     <string>Vmin</string>
+                     <string>Boundaries:</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLabel" name="label_17">
+                   <widget class="QCheckBox" name="checkBox_show_bound">
                     <property name="text">
-                     <string>Vср</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_18">
-                    <property name="text">
-                     <string>Vmax</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vmin">
-                    <property name="decimals">
-                     <number>1</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>99.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>3.500000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vsr">
-                    <property name="decimals">
-                     <number>1</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>99.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>5.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_vmax">
-                    <property name="decimals">
-                     <number>1</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>99.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>7.500000000000000</double>
+                     <string/>
                     </property>
                    </widget>
                   </item>
                  </layout>
                 </item>
+                <item row="1" column="0">
+                 <layout class="QGridLayout" name="gridLayout_23">
+                  <item row="0" column="0">
+                   <widget class="QListWidget" name="listWidget_bound"/>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QGridLayout" name="gridLayout_24">
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_16">
+                      <property name="text">
+                       <string>Vmin</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLabel" name="label_17">
+                      <property name="text">
+                       <string>Vср</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QLabel" name="label_18">
+                      <property name="text">
+                       <string>Vmax</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QDoubleSpinBox" name="doubleSpinBox_vmin">
+                      <property name="decimals">
+                       <number>1</number>
+                      </property>
+                      <property name="minimum">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="maximum">
+                       <double>99.000000000000000</double>
+                      </property>
+                      <property name="singleStep">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="value">
+                       <double>3.500000000000000</double>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QDoubleSpinBox" name="doubleSpinBox_vsr">
+                      <property name="decimals">
+                       <number>1</number>
+                      </property>
+                      <property name="minimum">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="maximum">
+                       <double>99.000000000000000</double>
+                      </property>
+                      <property name="singleStep">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="value">
+                       <double>5.000000000000000</double>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="2">
+                     <widget class="QDoubleSpinBox" name="doubleSpinBox_vmax">
+                      <property name="decimals">
+                       <number>1</number>
+                      </property>
+                      <property name="minimum">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="maximum">
+                       <double>99.000000000000000</double>
+                      </property>
+                      <property name="singleStep">
+                       <double>0.100000000000000</double>
+                      </property>
+                      <property name="value">
+                       <double>7.500000000000000</double>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
                </layout>
               </item>
-              <item row="5" column="1">
-               <widget class="QListWidget" name="listWidget_well_log"/>
+              <item row="4" column="1" colspan="2">
+               <layout class="QGridLayout" name="gridLayout_134">
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_136">
+                  <item row="0" column="0">
+                   <layout class="QHBoxLayout" name="horizontalLayout_8">
+                    <item>
+                     <widget class="QLabel" name="label_14">
+                      <property name="text">
+                       <string>Binding:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_add_bind">
+                      <property name="toolTip">
+                       <string>Привязка отбивок скважин к отрисованным границам</string>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add bind</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_del_bind">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>del bind</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidget_bind"/>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <layout class="QGridLayout" name="gridLayout_147">
+                  <item row="0" column="0">
+                   <layout class="QHBoxLayout" name="horizontalLayout_9">
+                    <item>
+                     <widget class="QLabel" name="label_31">
+                      <property name="toolTip">
+                       <string>Cкоростные модели по пласту</string>
+                      </property>
+                      <property name="text">
+                       <string>Velocity Models: </string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_del_vel_model">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>del vel model</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidget_vel_form"/>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
               </item>
-              <item row="6" column="0" colspan="2">
+              <item row="5" column="0" colspan="3">
                <layout class="QGridLayout" name="gridLayout_20">
                 <item row="0" column="0">
                  <widget class="QPushButton" name="pushButton_add_well">
@@ -1247,36 +1312,6 @@
                   </property>
                   <property name="text">
                    <string>add well</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_add_bound">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add boundary</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_add_well_log">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add well log</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="pushButton_add_wells">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(148, 255, 232);</string>
-                  </property>
-                  <property name="text">
-                   <string>add wells</string>
                   </property>
                  </widget>
                 </item>
@@ -1296,27 +1331,37 @@
                    <string notr="true">background-color: rgb(255, 185, 185);</string>
                   </property>
                   <property name="text">
-                   <string>remove boundary</string>
+                   <string>del boundary</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_well_log">
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_add_bound">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
                   <property name="text">
-                   <string>remove well log</string>
+                   <string>add boundary</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="3">
-                 <widget class="QPushButton" name="pushButton_attach_layer">
+                <item row="0" column="4">
+                 <widget class="QPushButton" name="pushButton_calc_vel_form">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 204, 121);</string>
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
                   <property name="text">
-                   <string>Attach Layer</string>
+                   <string>calc vel model</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_add_wells">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(148, 255, 232);</string>
+                  </property>
+                  <property name="text">
+                   <string>add wells</string>
                   </property>
                  </widget>
                 </item>

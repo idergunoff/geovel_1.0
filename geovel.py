@@ -13,6 +13,7 @@ from formation_ai import *
 from regression import *
 from exploration import *
 from geochem import *
+from velocity_model import *
 
 MainWindow.show()
 
@@ -256,6 +257,7 @@ ui.comboBox_research.activated.connect(update_profile_combobox)
 ui.comboBox_research.activated.connect(check_coordinates_research)
 ui.comboBox_profile.activated.connect(update_formation_combobox)
 ui.comboBox_profile.activated.connect(check_coordinates_profile)
+ui.comboBox_profile.activated.connect(update_list_binding)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)
@@ -414,6 +416,9 @@ ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
 # radarogramma.getViewBox().sigRangeChanged.connect(draw_axis)
 
+############### VELOCITY MODEL ################
+ui.pushButton_add_bind.clicked.connect(add_binding)
+
 
 check_trained_model()
 update_object()
@@ -447,6 +452,7 @@ update_category_combobox()
 update_geochem_param_train_list()
 update_g_train_point_list()
 check_and_create_folders()
+update_list_binding()
 
 # update_list_param_lda()
 
