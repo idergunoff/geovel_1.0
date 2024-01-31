@@ -30,3 +30,28 @@ def add_binding():
     session.add(new_bind)
     session.commit()
     update_list_binding()
+
+
+def remove_binding():
+    session.query(Binding).filter(Binding.id == int(ui.listWidget_bind.currentItem().text().split(' id')[-1])).delete()
+    session.commit()
+    update_list_binding()
+
+
+def calc_velocity_model():
+    list_layer_id = []
+    for i in ui.widget_layer.findChildren(QtWidgets.QCheckBox):
+        if i.isChecked():
+            list_layer_id.append(int(i.text().split(' id')[-1]))
+
+    if not list_layer_id:
+        set_info('Должен быть выбран хотя бы один слой', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Должен быть выбран хотя бы один слой')
+        return
+
+    list_layer_line = []
+    for i in list_layer_id:
+        list_layer_line.append(json.loads(session.query(Layers).filter_by(id=i).first().layer_line))
+
+    print(list_layer_line)
+

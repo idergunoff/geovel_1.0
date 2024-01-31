@@ -418,6 +418,8 @@ ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 
 ############### VELOCITY MODEL ################
 ui.pushButton_add_bind.clicked.connect(add_binding)
+ui.pushButton_del_bind.clicked.connect(remove_binding)
+ui.pushButton_calc_vel_form.clicked.connect(calc_velocity_model)
 
 
 check_trained_model()
