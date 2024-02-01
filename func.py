@@ -13,6 +13,9 @@ list_param_geovel = [
     'A_Sn_wmf', 'Vt_Sn_wmf', 'At_Sn_wmf', 'Pht_Sn_wmf', 'Wt_Sn_wmf', 'k_r'
     ]
 
+rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
+                   "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
+
 
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
@@ -118,11 +121,12 @@ def vacuum():
     conn.close()
 
 
+def get_rnd_color():
+    return f'#{random.randint(0, 255):02x}{random.randint(0, 255):02x}{random.randint(0, 255):02x}'
+
+
 def set_random_color(button):
-    red = random.randint(0, 255)
-    green = random.randint(0, 255)
-    blue = random.randint(0, 255)
-    color = f'#{red:02x}{green:02x}{blue:02x}'
+    color = get_rnd_color()
     button.setStyleSheet(f"background-color: {color};")
     button.setText(color)
 

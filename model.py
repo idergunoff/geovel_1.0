@@ -60,6 +60,7 @@ class Profile(Base):
     formations = relationship('Formation', back_populates='profile')
     bindings = relationship('Binding', back_populates='profile')
     velocity_formations = relationship('VelocityFormation', back_populates='profile')
+    velocity_models = relationship('VelocityModel', back_populates='profile')
     deep_profiles = relationship('DeepProfile', back_populates='profile')
     markups_lda = relationship('MarkupLDA', back_populates='profile')
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
@@ -292,12 +293,25 @@ class VelocityFormation(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
+    vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
     layer_top = Column(String)
     layer_bottom = Column(String)
     color = Column(String)
     velocity = Column(String)
 
     profile = relationship("Profile", back_populates="velocity_formations")
+    velocity_model = relationship("VelocityModel", back_populates="velocity_formations")
+
+
+class VelocityModel(Base):
+    __tablename__ = 'velocity_model'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    title = Column(String)
+
+    profile = relationship("Profile", back_populates="velocity_models")
+    velocity_formations = relationship("VelocityFormation", back_populates="velocity_model")
 
 
 class WellOptionally(Base):

@@ -1273,14 +1273,21 @@
                 <item row="1" column="0">
                  <layout class="QGridLayout" name="gridLayout_147">
                   <item row="0" column="0">
-                   <layout class="QHBoxLayout" name="horizontalLayout_9">
+                   <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="1,0,1">
                     <item>
                      <widget class="QLabel" name="label_31">
                       <property name="toolTip">
                        <string>Cкоростные модели по пласту</string>
                       </property>
                       <property name="text">
-                       <string>Velocity Models: </string>
+                       <string>Velocity:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QCheckBox" name="checkBox_vel_color">
+                      <property name="text">
+                       <string>V</string>
                       </property>
                      </widget>
                     </item>
@@ -1297,7 +1304,7 @@
                    </layout>
                   </item>
                   <item row="1" column="0">
-                   <widget class="QListWidget" name="listWidget_vel_form"/>
+                   <widget class="QListWidget" name="listWidget_vel_model"/>
                   </item>
                  </layout>
                 </item>

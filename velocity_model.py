@@ -1,3 +1,6 @@
+import json
+
+from draw import remove_fill_form, draw_fill_model
 from func import *
 
 
@@ -61,6 +64,110 @@ def remove_binding():
     update_list_binding()
 
 
+def check_intersection(list_line):
+    for line1 in range(len(list_line) - 1):
+        for line2 in range(line1 + 1, len(list_line)):
+            diff_line = [y - x for x, y in zip(list_line[line1], list_line[line2])]
+            for i in diff_line:
+                if i <= 0:
+                    return False
+    return True
+
+
+def calc_velocity_formation(type_form, lt_id, lb_id):
+    if type_form == 'top':
+        # линии кровли и подошвы слоя
+        list_line_bottom = json.loads(session.query(Layers).filter_by(id=lb_id).first().layer_line)
+        list_line_top = [0] * len(list_line_bottom)
+        # точки измерения скорости
+        list_bind_bottom = session.query(Binding).filter_by(layer_id=lb_id).order_by(Binding.index_measure).all()
+        list_i_bing = [b.index_measure for b in list_bind_bottom]
+        # интерполяция скорости по слою
+        list_ib_vel = []
+        for n, ib in enumerate(list_i_bing):
+            dist = (list_bind_bottom[n].boundary.depth) * 100
+            t_ns = list_line_bottom[ib] * 8
+            list_ib_vel.append(dist / t_ns)
+
+    elif type_form == 'bottom':
+        # линии кровли и подошвы слоя
+        list_line_top = json.loads(session.query(Layers).filter_by(id=lt_id).first().layer_line)
+        list_line_bottom = [511] * len(list_line_top)
+        # точки измерения скорости
+        list_bind_top = session.query(Binding).filter_by(layer_id=lt_id).order_by(Binding.index_measure).all()
+        list_i_bing = [b.index_measure for b in list_bind_top]
+        # интерполяция скорости по слою
+        list_ib_vel = [ui.doubleSpinBox_vsr.value()] * len(list_bind_top)
+
+    else:
+        # линии кровли и подошвы слоя
+        list_line_top = json.loads(session.query(Layers).filter_by(id=lt_id).first().layer_line)
+        list_line_bottom = json.loads(session.query(Layers).filter_by(id=lb_id).first().layer_line)
+        # точки измерения скорости
+        list_bind_top = session.query(Binding).filter_by(layer_id=lt_id).order_by(Binding.index_measure).all()
+        list_bind_bottom = session.query(Binding).filter_by(layer_id=lb_id).order_by(Binding.index_measure).all()
+        list_ib_top = [b.index_measure for b in list_bind_top]
+        list_ib_bottom = [b.index_measure for b in list_bind_bottom]
+        # проверка наличия точек измерения скорости по кровле и подошве
+        list_del = []
+        for n, i in enumerate(list_ib_top):
+            if i not in list_ib_bottom:
+                list_del.append(list_bind_top[n])
+        for i in list_del:
+            list_bind_top.remove(i)
+        list_del = []
+        for n, i in enumerate(list_ib_bottom):
+            if i not in list_ib_top:
+                list_del.append(list_bind_bottom[n])
+        for i in list_del:
+            list_bind_bottom.remove(i)
+        list_i_bing = [b.index_measure for b in list_bind_top]
+        # интерполяция скорости по слоям
+        list_ib_vel = []
+        for n, ib in enumerate(list_i_bing):
+            dist = (list_bind_bottom[n].boundary.depth - list_bind_top[n].boundary.depth) * 100
+            t_ns = (list_line_bottom[ib] - list_line_top[ib]) * 8
+            list_ib_vel.append(dist / t_ns)
+
+    return list_line_top, list_line_bottom, list_i_bing, list_ib_vel
+
+
+
+def interpolate_speed(L, index_list, speed_list):
+    result = [0] * L
+
+    # Проверка наличия точек измерения скорости
+    if not index_list or not speed_list:
+        return result
+
+    # Сортировка индексов точек
+    sorted_indices = sorted(index_list)
+
+    # Первая точка - копирование скорости
+    result[sorted_indices[0]] = speed_list[0]
+
+    # Интерполяция между точками
+    for i in range(1, len(sorted_indices)):
+        start_index = sorted_indices[i - 1]
+        end_index = sorted_indices[i]
+        start_speed = speed_list[i - 1]
+        end_speed = speed_list[i]
+
+        # Интерполяция скорости между точками
+        interpolation = np.linspace(start_speed, end_speed, end_index - start_index)
+
+        # Заполнение результата
+        result[start_index:end_index] = interpolation
+
+    # Последняя точка - копирование скорости
+    result[sorted_indices[-1]:] = [speed_list[-1]] * (L - sorted_indices[-1])
+    result = [speed_list[0] if x == 0 else x for x in result ]
+
+    return result
+
+
+
+
 def calc_velocity_model():
     list_layer_id = []
     for i in ui.widget_layer.findChildren(QtWidgets.QCheckBox):
@@ -75,6 +182,104 @@ def calc_velocity_model():
     list_layer_line = []
     for i in list_layer_id:
         list_layer_line.append(json.loads(session.query(Layers).filter_by(id=i).first().layer_line))
+    list_layer_line = sorted(list_layer_line, key=lambda x: x[0])
+    if not check_intersection(list_layer_line):
+        set_info('Слои не должны пересекаться', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Слои не должны пересекаться')
 
-    print(list_layer_line)
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите название скоростной модели', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите название скоростной модели')
+        return
 
+    new_vel_model = VelocityModel(profile_id = get_profile_id(), title=ui.lineEdit_string.text())
+    session.add(new_vel_model)
+    session.commit()
+
+    list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('top', False, list_layer_id[0])
+    list_velocity = interpolate_speed(len(list_line_top), list_i_bing, list_ib_vel)
+
+    new_vel_form = VelocityFormation(
+        profile_id=get_profile_id(),
+        vel_model_id=new_vel_model.id,
+        layer_top=json.dumps(list_line_top),
+        layer_bottom=json.dumps(list_line_bottom),
+        color=get_rnd_color(),
+        velocity=json.dumps(list_velocity)
+    )
+    session.add(new_vel_form)
+    session.commit()
+
+    for n, l_id in enumerate(list_layer_id):
+        if n == len(list_layer_id) - 1:
+            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('bottom', l_id, False)
+        else:
+            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('middle', l_id, l_id + 1)
+        list_velocity = interpolate_speed(len(list_line_top), list_i_bing, list_ib_vel)
+
+        new_vel_form = VelocityFormation(
+            profile_id=get_profile_id(),
+            vel_model_id=new_vel_model.id,
+            layer_top=json.dumps(list_line_top),
+            layer_bottom=json.dumps(list_line_bottom),
+            color=get_rnd_color(),
+            velocity=json.dumps(list_velocity)
+        )
+        session.add(new_vel_form)
+        session.commit()
+
+    update_list_velocity_model()
+
+
+def update_list_velocity_model():
+    ui.listWidget_vel_model.clear()
+    for i in session.query(VelocityModel).filter_by(profile_id=get_profile_id()):
+        ui.listWidget_vel_model.addItem(f'{i.title} id{i.id}')
+
+
+def remove_velocity_model():
+    if not ui.listWidget_vel_model.currentItem():
+        set_info('Выберите скоростную модель для удаления', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите скоростную модель для удаления')
+        return
+    vel_model = session.query(VelocityModel).filter_by(id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
+    title_model = vel_model.title
+    for i in vel_model.velocity_formations:
+        session.delete(i)
+    session.delete(vel_model)
+    session.commit()
+    set_info(f'Скоростная модель "{title_model}" удалена', 'green')
+    update_list_velocity_model()
+
+
+def draw_vel_model_point():
+    remove_fill_form()
+    try:
+        vel_model = session.query(VelocityModel).filter_by(id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
+    except AttributeError:
+        return
+    for i in vel_model.velocity_formations:
+        list_top = json.loads(i.layer_top)
+        list_bottom = json.loads(i.layer_bottom)
+        list_vel = json.loads(i.velocity)
+        if ui.checkBox_vel_color.isChecked():
+            list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in list_vel]
+            previous_element = None
+            list_dupl = []
+            for index, current_element in enumerate(list_color):
+                if current_element == previous_element:
+                    list_dupl.append(index)
+                else:
+                    if list_dupl:
+                        list_dupl.append(list_dupl[-1] + 1)
+                        y_up = [list_top[i] for i in list_dupl]
+                        y_down = [list_bottom[i] for i in list_dupl]
+                        draw_fill_model(list_dupl, y_up, y_down, previous_element)
+                    list_dupl = [index]
+                previous_element = current_element
+            if len(list_dupl) > 0:
+                y_up = [list_top[i] for i in list_dupl]
+                y_down = [list_bottom[i] for i in list_dupl]
+                draw_fill_model(list_dupl, y_up, y_down, previous_element)
+        else:
+            draw_fill_model(list(range(len(list_top))), list_top, list_bottom, i.color)

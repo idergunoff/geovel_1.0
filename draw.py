@@ -11,6 +11,7 @@ def draw_radarogram():
         radarogramma.removeItem(globals()['text_item'])
     if 'poly_item' in globals():
         radarogramma.removeItem(globals()['poly_item'])
+    remove_fill_form()
     remove_poly_item()
     remove_curve_fake()
     ui.info.clear()
@@ -282,6 +283,12 @@ def remove_poly_item():
             radarogramma.removeItem(globals()[key])
 
 
+def remove_fill_form():
+    for key, value in globals().items():
+        if key.startswith('fill_form_'):
+            radarogramma.removeItem(globals()[key])
+
+
 def remove_curve_fake():
     for key, value in globals().items():
         if key.startswith('curve_fake_'):
@@ -296,3 +303,13 @@ def draw_fill_result(x, y1, y2, color):
     poly_item.setOpacity(0.5)
     poly_item.setZValue(1)
     globals()[f'poly_item{x[0]}'] = poly_item
+
+
+def draw_fill_model(x, y1, y2, color):
+    curve_up = pg.PlotCurveItem(x=x, y=y1)
+    curve_down = pg.PlotCurveItem(x=x, y=y2)
+    poly_item = pg.FillBetweenItem(curve1=curve_down, curve2=curve_up, brush=color)
+    radarogramma.addItem(poly_item)
+    poly_item.setOpacity(0.5)
+    poly_item.setZValue(1)
+    globals()[f'fill_form_{color}_{y1[0]}_{y2[0]}_{x[0]}'] = poly_item
