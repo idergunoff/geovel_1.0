@@ -76,6 +76,19 @@ class DeepProfile(Base):
     signal = Column(Text)
 
     profile = relationship('Profile', back_populates='deep_profiles')
+    deep_layers = relationship('DeepLayer', back_populates='deep_profile')
+
+
+class DeepLayer(Base):
+    __tablename__ = 'deep_layer'
+
+    id = Column(Integer, primary_key=True)
+    deep_profile_id = Column(Integer, ForeignKey('deep_profile.id'))
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+    layer_line = Column(Text)
+
+    deep_profile = relationship('DeepProfile', back_populates='deep_layers')
+    layer = relationship('Layers', back_populates='deep_layers')
 
 
 class CurrentProfile(Base):
@@ -140,6 +153,7 @@ class Layers(Base):
     formation_up = relationship('Formation', back_populates='layer_up', foreign_keys='Formation.up')
     formation_down = relationship('Formation', back_populates='layer_down', foreign_keys='Formation.down')
     bindings = relationship('Binding', back_populates='layer')
+    deep_layers = relationship('DeepLayer', back_populates='layer')
 
 
 class PointsOfLayer(Base):
