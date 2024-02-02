@@ -94,6 +94,32 @@ def draw_image(radar):
         radarogramma.showGrid(x=True, y=True)
 
 
+def draw_image_deep_prof(radar):
+    hist.setImageItem(img)
+    hist.setLevels(np.array(radar).min(), np.array(radar).max())
+    colors = [
+        (255, 0, 0),
+        (0, 0, 0),
+        (0, 0, 255)
+    ]
+    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
+    img.setColorMap(cmap)
+    hist.gradient.setColorMap(cmap)
+    img.setImage(np.array(radar))
+
+    radarogramma.getAxis('bottom').setLabel('Профиль, м')
+    radarogramma.getAxis('bottom').setScale(2.5)
+
+    radarogramma.getAxis('left').setLabel('Глубина, м')
+    radarogramma.getAxis('left').setScale(0.1)
+    if ui.checkBox_grid.isChecked():
+        radarogramma.showGrid(x=True, y=True)
+
+    # radarogramma.removeItem(roi)
+
+    roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), len(radar[0])], maxBounds=QRect(0, 0, 100000000, len(radar[0])))
+    radarogramma.addItem(roi)
+    updatePlot()
 
 
 # Функция очистки текущего профиля
@@ -1935,3 +1961,22 @@ def parse_range_exception(input_str):
             return False
     res_list = list(result)
     return res_list
+
+
+def interpolate_list(input_list, result_length):
+    if len(input_list) < 2 or result_length < 2:
+        raise ValueError("Input list should have at least 2 elements and result length should be at least 2.")
+
+    step = (len(input_list) - 1) / (result_length - 1)
+    result_list = []
+
+    for i in range(result_length):
+        index = i * step
+        lower_index = int(index)
+        upper_index = min(lower_index + 1, len(input_list) - 1)
+
+        alpha = index - lower_index
+        interpolated_value = int((1 - alpha) * input_list[lower_index] + alpha * input_list[upper_index])
+        result_list.append(interpolated_value)
+
+    return result_list

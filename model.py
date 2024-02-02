@@ -73,9 +73,11 @@ class DeepProfile(Base):
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
+    vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
     signal = Column(Text)
 
     profile = relationship('Profile', back_populates='deep_profiles')
+    vel_model = relationship('VelocityModel', back_populates='deep_profile')
     deep_layers = relationship('DeepLayer', back_populates='deep_profile')
 
 
@@ -84,11 +86,55 @@ class DeepLayer(Base):
 
     id = Column(Integer, primary_key=True)
     deep_profile_id = Column(Integer, ForeignKey('deep_profile.id'))
-    layer_id = Column(Integer, ForeignKey('layers.id'))
-    layer_line = Column(Text)
+    vel_form_id = Column(Integer, ForeignKey('velocity_formation.id'))
+    layer_line_thick = Column(Text)
+    index = Column(Integer)     # номер по порядку сверху вниз
 
     deep_profile = relationship('DeepProfile', back_populates='deep_layers')
-    layer = relationship('Layers', back_populates='deep_layers')
+    vel_form = relationship('VelocityFormation', back_populates='deep_layer')
+
+
+class Binding(Base):
+    __tablename__ = 'binding'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    boundary_id = Column(Integer, ForeignKey('boundary.id'))
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+    index_measure = Column(Integer)
+
+    profile = relationship("Profile", back_populates="bindings")
+    boundary = relationship("Boundary", back_populates="bindings")
+    layer = relationship('Layers', back_populates="bindings")
+
+
+class VelocityFormation(Base):
+    __tablename__ = 'velocity_formation'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
+    layer_top = Column(String)
+    layer_bottom = Column(String)
+    color = Column(String)
+    velocity = Column(String)
+    index = Column(Integer)
+
+    profile = relationship("Profile", back_populates="velocity_formations")
+    velocity_model = relationship("VelocityModel", back_populates="velocity_formations")
+    deep_layer = relationship('DeepLayer', back_populates='vel_form')
+
+
+class VelocityModel(Base):
+    __tablename__ = 'velocity_model'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    title = Column(String)
+
+    profile = relationship("Profile", back_populates="velocity_models")
+    velocity_formations = relationship("VelocityFormation", back_populates="velocity_model")
+    deep_profile = relationship('DeepProfile', back_populates='vel_model')
 
 
 class CurrentProfile(Base):
@@ -153,7 +199,6 @@ class Layers(Base):
     formation_up = relationship('Formation', back_populates='layer_up', foreign_keys='Formation.up')
     formation_down = relationship('Formation', back_populates='layer_down', foreign_keys='Formation.down')
     bindings = relationship('Binding', back_populates='layer')
-    deep_layers = relationship('DeepLayer', back_populates='layer')
 
 
 class PointsOfLayer(Base):
@@ -286,46 +331,6 @@ class Boundary(Base):
 
     well = relationship("Well", back_populates="boundaries")
     bindings = relationship("Binding", back_populates='boundary')
-
-
-class Binding(Base):
-    __tablename__ = 'binding'
-
-    id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    boundary_id = Column(Integer, ForeignKey('boundary.id'))
-    layer_id = Column(Integer, ForeignKey('layers.id'))
-    index_measure = Column(Integer)
-
-    profile = relationship("Profile", back_populates="bindings")
-    boundary = relationship("Boundary", back_populates="bindings")
-    layer = relationship('Layers', back_populates="bindings")
-
-
-class VelocityFormation(Base):
-    __tablename__ = 'velocity_formation'
-
-    id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
-    layer_top = Column(String)
-    layer_bottom = Column(String)
-    color = Column(String)
-    velocity = Column(String)
-
-    profile = relationship("Profile", back_populates="velocity_formations")
-    velocity_model = relationship("VelocityModel", back_populates="velocity_formations")
-
-
-class VelocityModel(Base):
-    __tablename__ = 'velocity_model'
-
-    id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    title = Column(String)
-
-    profile = relationship("Profile", back_populates="velocity_models")
-    velocity_formations = relationship("VelocityFormation", back_populates="velocity_model")
 
 
 class WellOptionally(Base):

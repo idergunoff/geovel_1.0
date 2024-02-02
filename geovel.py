@@ -426,6 +426,7 @@ ui.listWidget_bind.itemDoubleClicked.connect(remove_bind_point)
 ui.pushButton_del_vel_model.clicked.connect(remove_velocity_model)
 ui.listWidget_vel_model.itemClicked.connect(draw_vel_model_point)
 ui.checkBox_vel_color.clicked.connect(draw_vel_model_point)
+ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
 
 check_trained_model()
 update_object()

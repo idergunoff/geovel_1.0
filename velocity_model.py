@@ -198,6 +198,7 @@ def calc_velocity_model():
 
     list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('top', False, list_layer_id[0])
     list_velocity = interpolate_speed(len(list_line_top), list_i_bing, list_ib_vel)
+    index_form = 1
 
     new_vel_form = VelocityFormation(
         profile_id=get_profile_id(),
@@ -205,36 +206,86 @@ def calc_velocity_model():
         layer_top=json.dumps(list_line_top),
         layer_bottom=json.dumps(list_line_bottom),
         color=get_rnd_color(),
-        velocity=json.dumps(list_velocity)
+        velocity=json.dumps(list_velocity),
+        index=index_form
     )
     session.add(new_vel_form)
     session.commit()
 
     for n, l_id in enumerate(list_layer_id):
         if n == len(list_layer_id) - 1:
-            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('bottom', l_id, False)
+            type_form = 'bottom'
+            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation(type_form, l_id, False)
         else:
-            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation('middle', l_id, l_id + 1)
+            type_form = 'middle'
+            list_line_top, list_line_bottom, list_i_bing, list_ib_vel = calc_velocity_formation(type_form, l_id, l_id + 1)
+
         list_velocity = interpolate_speed(len(list_line_top), list_i_bing, list_ib_vel)
 
+        index_form += 1
         new_vel_form = VelocityFormation(
             profile_id=get_profile_id(),
             vel_model_id=new_vel_model.id,
             layer_top=json.dumps(list_line_top),
             layer_bottom=json.dumps(list_line_bottom),
             color=get_rnd_color(),
-            velocity=json.dumps(list_velocity)
+            velocity=json.dumps(list_velocity),
+            index=index_form
         )
         session.add(new_vel_form)
         session.commit()
 
     update_list_velocity_model()
 
+    calc_deep_layers(new_vel_model.id)
+
+
+def calc_deep_layers(vel_model_id):
+    new_deep_prof = DeepProfile(profile_id=get_profile_id(), vel_model_id=vel_model_id)
+    session.add(new_deep_prof)
+    session.commit()
+    signal = json.loads(new_deep_prof.profile.signal)
+    deep_signal = [[] for _ in range(len(signal))]
+    index_deep_layer = 1
+    for vm in session.query(VelocityFormation).filter_by(vel_model_id=vel_model_id).order_by(VelocityFormation.index).all():
+        list_layer_top = json.loads(vm.layer_top)
+        list_layer_bottom = json.loads(vm.layer_bottom)
+        list_velocity = json.loads(vm.velocity)
+        list_deep_line = [v * 8 * (list_layer_bottom[nv] - list_layer_top[nv]) for nv, v in enumerate(list_velocity)]
+        new_deep_layer = DeepLayer(
+            deep_profile_id=new_deep_prof.id,
+            vel_form_id = vm.id,
+            layer_line_thick=json.dumps(list_deep_line),
+            index=index_deep_layer
+        )
+        session.add(new_deep_layer)
+        session.commit()
+        index_deep_layer += 1
+        for nm, measure in enumerate(signal):
+            deep_signal[nm] = deep_signal[nm] + interpolate_list(
+                measure[list_layer_top[nm]:list_layer_bottom[nm]],
+                int(list_deep_line[nm] / 10))
+
+    new_deep_prof.signal = json.dumps(deep_signal)
+    session.commit()
+
+
 
 def update_list_velocity_model():
     ui.listWidget_vel_model.clear()
     for i in session.query(VelocityModel).filter_by(profile_id=get_profile_id()):
         ui.listWidget_vel_model.addItem(f'{i.title} id{i.id}')
+
+
+def draw_deep_profile():
+    deep_prof = session.query(DeepProfile).filter_by(
+        vel_model_id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
+
+    l_max = 0
+    for i in json.loads(deep_prof.signal):
+        l_max = len(i) if len(i) > l_max else l_max
+    deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in json.loads(deep_prof.signal)]
+    draw_image_deep_prof(deep_signal)
 
 
 def remove_velocity_model():
@@ -246,7 +297,11 @@ def remove_velocity_model():
     title_model = vel_model.title
     for i in vel_model.velocity_formations:
         session.delete(i)
+    deep_prof = session.query(DeepProfile).filter_by(vel_model_id=vel_model.id).first()
+    for i in deep_prof.deep_layers:
+        session.delete(i)
     session.delete(vel_model)
+    session.delete(deep_prof)
     session.commit()
     set_info(f'Скоростная модель "{title_model}" удалена', 'green')
     update_list_velocity_model()
