@@ -14,6 +14,7 @@ from regression import *
 from exploration import *
 from geochem import *
 from velocity_model import *
+from test_model import *
 
 MainWindow.show()
 
@@ -206,6 +207,7 @@ ui.pushButton_export_model_class.clicked.connect(export_model_class)
 ui.pushButton_import_model_class.clicked.connect(import_model_class)
 ui.lineEdit_signal_except.returnPressed.connect(add_signal_except_mlp)
 ui.lineEdit_crl_except.returnPressed.connect(add_crl_except_mlp)
+ui.pushButton_test_model_class.clicked.connect(test_start)
 
 
 #   regression

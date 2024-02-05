@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>494</width>
-    <height>390</height>
+    <height>404</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QComboBox" name="comboBox_mlp_analysis"/>
+        <widget class="QComboBox" name="comboBox_test_analysis"/>
        </item>
        <item row="0" column="1">
         <layout class="QGridLayout" name="gridLayout">
@@ -44,7 +44,7 @@
      <item row="1" column="0">
       <layout class="QGridLayout" name="gridLayout_3" columnstretch="1,2">
        <item row="0" column="0">
-        <widget class="QListWidget" name="listWidget_trained_model"/>
+        <widget class="QListWidget" name="listWidget_test_model"/>
        </item>
        <item row="0" column="1">
         <widget class="QListWidget" name="listWidget_test_point"/>

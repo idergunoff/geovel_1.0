@@ -26,6 +26,7 @@ from qt.add_profile_class import *
 from qt.geochem_loader import *
 from qt.tsne_form import *
 from qt.point_param_graph_form import *
+from qt.form_test_model import *
 
 from model import *
 import numpy as np

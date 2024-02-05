@@ -1010,7 +1010,7 @@ def build_table_train(db=False, analisis='lda'):
     return data_train, list_param
 
 
-def build_table_test_no_db(analisis, analisis_id, list_param):
+def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) -> (pd.DataFrame, list):
 
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     if analisis == 'regmod':
@@ -1034,6 +1034,7 @@ def build_table_test_no_db(analisis, analisis_id, list_param):
         if except_param.except_crl:
             list_except_crl = parse_range_exception(except_param.except_crl)
 
+    print(markups)
     ui.progressBar.setMaximum(len(markups))
 
     for nm, markup in enumerate(markups):

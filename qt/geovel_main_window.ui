@@ -65,7 +65,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>6</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -957,8 +957,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>354</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4860,7 +4860,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
