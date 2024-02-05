@@ -1,5 +1,3 @@
-import json
-
 from draw import remove_fill_form, draw_fill_model
 from func import *
 

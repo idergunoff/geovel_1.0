@@ -117,9 +117,9 @@ def draw_image_deep_prof(radar):
 
     # radarogramma.removeItem(roi)
 
-    roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), len(radar[0])], maxBounds=QRect(0, 0, 100000000, len(radar[0])))
-    radarogramma.addItem(roi)
-    updatePlot()
+    # roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), len(radar[0])], maxBounds=QRect(0, 0, 100000000, len(radar[0])))
+    # radarogramma.addItem(roi)
+    # updatePlot()
 
 
 # Функция очистки текущего профиля

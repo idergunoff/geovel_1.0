@@ -3150,6 +3150,16 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_30">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_60">
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_calc_obj_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Object</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_draw_mlp">
                         <property name="styleSheet">
@@ -3177,16 +3187,6 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>save profile</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_calc_obj_mlp">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>Calc Object</string>
                         </property>
                        </widget>
                       </item>
@@ -3262,6 +3262,16 @@ Therm</string>
                 </item>
                 <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_89">
+                  <item row="1" column="5">
+                   <widget class="QPushButton" name="pushButton_corr_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>CORR</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="1" column="4">
                    <widget class="QPushButton" name="pushButton_updata_mlp">
                     <property name="styleSheet">
@@ -3294,29 +3304,6 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="2">
-                   <spacer name="horizontalSpacer_3">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                  <item row="1" column="5">
-                   <widget class="QPushButton" name="pushButton_corr_mlp">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>CORR</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="1">
                    <widget class="QCheckBox" name="checkBox_kf">
                     <property name="toolTip">
@@ -3324,6 +3311,13 @@ Therm</string>
                     </property>
                     <property name="text">
                      <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_test_model_class">
+                    <property name="text">
+                     <string>TEST</string>
                     </property>
                    </widget>
                   </item>
@@ -4271,16 +4265,6 @@ Therm</string>
                 </item>
                 <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_92">
-                  <item row="0" column="4">
-                   <widget class="QPushButton" name="pushButton_corr_regmod">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>CORR</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_count_param_regmod">
                     <property name="font">
@@ -4293,29 +4277,6 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="3">
-                   <widget class="QPushButton" name="pushButton_updata_regmod">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>UP DATA</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <spacer name="horizontalSpacer_4">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
                   <item row="0" column="2">
                    <widget class="QPushButton" name="pushButton_anova_regmod">
                     <property name="styleSheet">
@@ -4323,6 +4284,33 @@ Therm</string>
                     </property>
                     <property name="text">
                      <string>ANOVA</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_test_model_reg">
+                    <property name="text">
+                     <string>TEST</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QPushButton" name="pushButton_corr_regmod">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>CORR</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QPushButton" name="pushButton_updata_regmod">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>UP DATA</string>
                     </property>
                    </widget>
                   </item>
