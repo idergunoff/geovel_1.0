@@ -25,15 +25,21 @@
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
           <widget class="QPushButton" name="pushButton_test">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(200, 171, 252);</string>
+           </property>
            <property name="text">
             <string>TEST</string>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="pushButton_test_all">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(160, 125, 252);</string>
+           </property>
            <property name="text">
-            <string>PushButton</string>
+            <string>TEST ALL</string>
            </property>
           </widget>
          </item>
