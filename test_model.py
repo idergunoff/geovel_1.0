@@ -159,11 +159,11 @@ def test_start():
             profile = session.query(Profile).filter(Profile.id == result_df.loc[index, 'prof_well_index'].split('_')[0]).first()
             well = session.query(Well).filter(Well.id == result_df.loc[index, 'prof_well_index'].split('_')[1]).first()
 
-            if (comp != total and total != 0):
+            if comp != total and total != 0:
                 ui_tm.textEdit_test_result.setTextColor(Qt.red)
                 ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
                                                            f'  bitum {ones/total:.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
-            elif (comp == total and total != 0):
+            elif comp == total and total != 0:
                 ui_tm.textEdit_test_result.setTextColor(Qt.black)
                 ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
                                                            f'  bitum {ones/total:.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
