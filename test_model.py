@@ -1,4 +1,8 @@
+from decimal import Decimal
+
 from func import *
+from decimal import *
+
 
 def get_test_MLP_id(ui_tm):
     return ui_tm.comboBox_test_analysis.currentText().split(' id')[-1]
@@ -106,16 +110,18 @@ def test_start():
                     set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                              f' этого измерения может быть не корректен', 'red')
         print('Probability')
-        print(pd.DataFrame(probability, columns=list_cat))
+        # print(pd.DataFrame(probability, columns=list_cat))
 
         result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
         result_df['mark_probability'] = mark
         result_df['mark_probability'] = result_df['mark_probability'].replace({'bitum': 'нефть', 'empty': 'пусто'})
+        result_df['mark'] = result_df['mark'].replace({'bitum': 'нефть', 'empty': 'пусто'})
 
         result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
         correct_matches = result_df['совпадение'].sum()
         print('\nMarked')
+        pd.set_option('display.max_columns', None)
         print(result_df)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
 
@@ -147,7 +153,7 @@ def test_start():
             else:
                 ui_tm.textEdit_test_result.setTextColor(Qt.black)
                 ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                                                           f'  bitum {ones/total:.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
+                                                           f'  bitum {Decimal(ones)/Decimal(total):.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
 
             index += 1
         percent = correct_matches / len(result_df) * 100
