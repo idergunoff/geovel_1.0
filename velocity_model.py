@@ -307,22 +307,25 @@ def draw_deep_profile():
     l_max = 0
     for i in deep_signal:
         l_max = len(i) if len(i) > l_max else l_max
-    deep_signal = [i + [128 for _ in range(l_max - len(i))] for i in deep_signal]
+    deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
     deep_signal = [interpolate_list(i, 512) for i in deep_signal]
     # draw_image_deep_prof(deep_signal)
 
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(deep_signal))
     session.add(new_current)
+    clear_current_velocity_model()
     new_curr_vel_mod = CurrentVelocityModel(
         vel_model_id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1],
-        active=True
+        active=True,
+        scale=l_max/10/512
     )
     session.add(new_curr_vel_mod)
     session.commit()
     save_max_min(deep_signal)
-    ui.checkBox_minmax.setCheckState(0)
-    draw_image_deep_prof(deep_signal)
+    if ui.checkBox_minmax.isChecked():
+        deep_signal = json.loads(session.query(CurrentProfileMinMax).filter_by(id=1).first().signal)
+    draw_image_deep_prof(deep_signal, l_max/10/512)
 #
 
 def remove_velocity_model():

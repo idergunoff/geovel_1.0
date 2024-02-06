@@ -15,6 +15,7 @@ def draw_radarogram():
     remove_poly_item()
     remove_curve_fake()
     ui.info.clear()
+    clear_current_velocity_model()
     clear_current_profile()
     rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
     ui.progressBar.setMaximum(len(rad))
@@ -214,8 +215,12 @@ def choose_minmax():
         radar = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
     else:
         radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
-    # todo проверка скоростной модели
-    draw_image(radar)
+    vel_mod = session.query(CurrentVelocityModel).first()
+    if vel_mod:
+        if vel_mod.active:
+            draw_image_deep_prof(radar, vel_mod.scale)
+    else:
+        draw_image(radar)
     updatePlot()
 
 
@@ -245,8 +250,8 @@ def draw_formation():
     vel_mod = session.query(CurrentVelocityModel).first()
     if vel_mod:
         if vel_mod.active:
-            layer_up = calc_line_by_vel_model(vel_mod.id, layer_up)
-            layer_down = calc_line_by_vel_model(vel_mod.id, layer_down)
+            layer_up = calc_line_by_vel_model(vel_mod.vel_model_id, layer_up, vel_mod.scale)
+            layer_down = calc_line_by_vel_model(vel_mod.vel_model_id, layer_down, vel_mod.scale)
 
     # Создаем объект линии и добавляем его на радарограмму
     curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(color='white', width=2))

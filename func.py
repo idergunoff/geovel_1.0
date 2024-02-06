@@ -94,7 +94,7 @@ def draw_image(radar):
         radarogramma.showGrid(x=True, y=True)
 
 
-def draw_image_deep_prof(radar):
+def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
@@ -111,7 +111,7 @@ def draw_image_deep_prof(radar):
     radarogramma.getAxis('bottom').setScale(2.5)
 
     radarogramma.getAxis('left').setLabel('Глубина, м')
-    radarogramma.getAxis('left').setScale(0.512)
+    radarogramma.getAxis('left').setScale(scale)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
 
@@ -517,6 +517,10 @@ def draw_layer(layer_id, save=False):
                 session.commit()
     else:
         y = json.loads(session.query(Layers.layer_line).filter(Layers.id == layer_id).first()[0])
+        vel_mod = session.query(CurrentVelocityModel).first()
+        if vel_mod:
+            if vel_mod.active:
+                y = calc_line_by_vel_model(vel_mod.vel_model_id, y, vel_mod.scale)
         x = list(range(len(y)))
         # Создаем объект линии и добавляем его на радарограмму
         curve = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen(color='white', width=2))
@@ -1989,16 +1993,19 @@ def interpolate_list(input_list, result_length):
     return result_list
 
 
-def calc_line_by_vel_model(vel_mod_id: int, line: list) -> list:
+def calc_line_by_vel_model(vel_mod_id: int, line: list, scale: float) -> list:
     list_vel_board, list_vel_form = get_lists_vel_model(vel_mod_id)
     new_line = []
     for measure in range(len(line)):
-        index = 0
+        index, thick, h_time = 0, 0, 0
         while index < len(list_vel_board[measure]):
             if line[measure] <= list_vel_board[measure][index]:
                 break
+            thick += ((list_vel_board[measure][index] - h_time) * 8 * list_vel_form[measure][index]) / 100 / scale
+            h_time = list_vel_board[measure][index]
             index += 1
-        new_line.append(((line[measure] * 8 * list_vel_form[measure][index]) / 100) / 0.512)
+        new_line.append(thick + (((line[measure] - h_time) * 8 * list_vel_form[measure][index]) / 100) / scale)
+    # print(new_line)
     return new_line
 
 

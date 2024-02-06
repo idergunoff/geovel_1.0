@@ -164,6 +164,7 @@ class CurrentVelocityModel(Base):
     id = Column(Integer, primary_key=True)
     active = Column(Boolean, default=False)
     vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
+    scale = Column(Float)
 
     vel_model = relationship('VelocityModel', back_populates='current_velocity_model')
 
