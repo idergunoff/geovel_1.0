@@ -87,6 +87,10 @@ def test_start():
             return
 
         list_cat = list(class_model.classes_)
+        if set(data_table['mark'].values.tolist()) != set(list_cat):
+            set_info('Не совпадают названия меток для данной модели.', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадают названия меток для данной модели.')
+            return
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
