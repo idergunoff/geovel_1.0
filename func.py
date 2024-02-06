@@ -111,7 +111,7 @@ def draw_image_deep_prof(radar):
     radarogramma.getAxis('bottom').setScale(2.5)
 
     radarogramma.getAxis('left').setLabel('Глубина, м')
-    radarogramma.getAxis('left').setScale(0.1)
+    radarogramma.getAxis('left').setScale(0.512)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
 
@@ -131,6 +131,12 @@ def clear_current_profile():
 def clear_current_profile_min_max():
     """Очистить таблицу текущего профиля минимальных и максимальных значений"""
     session.query(CurrentProfileMinMax).delete()
+    session.commit()
+
+
+def clear_current_velocity_model():
+    """Очистить таблицу текущей модели скоростей"""
+    session.query(CurrentVelocityModel).delete()
     session.commit()
 
 
@@ -1981,3 +1987,41 @@ def interpolate_list(input_list, result_length):
         result_list.append(interpolated_value)
 
     return result_list
+
+
+def calc_line_by_vel_model(vel_mod_id: int, line: list) -> list:
+    list_vel_board, list_vel_form = get_lists_vel_model(vel_mod_id)
+    new_line = []
+    for measure in range(len(line)):
+        index = 0
+        while index < len(list_vel_board[measure]):
+            if line[measure] <= list_vel_board[measure][index]:
+                break
+            index += 1
+        new_line.append(((line[measure] * 8 * list_vel_form[measure][index]) / 100) / 0.512)
+    return new_line
+
+
+def get_lists_vel_model(vel_mod_id: int) -> (list, list):
+    # получаем список слоев в скоростной модели
+    vel_forms = session.query(VelocityFormation).filter_by(vel_model_id=vel_mod_id).order_by(VelocityFormation.index).all()
+    # список списков границ подошвы
+    form_bottom = [json.loads(vf.layer_bottom) for vf in vel_forms]
+    # список списков скоростей по слоям
+    form_vel = [json.loads(vf.velocity) for vf in vel_forms]
+
+    list_vel_bord, list_vel_form = [], []
+    # собираем списки границ и скоростей по измерениям
+    for i in range(len(form_bottom[0])):
+        list_bord, list_vel = [], []
+        for j in range(len(form_bottom)):
+            list_bord.append(form_bottom[j][i])
+            list_vel.append(form_vel[j][i])
+
+        list_vel_bord.append(list_bord)
+        list_vel_form.append(list_vel)
+
+    return list_vel_bord, list_vel_form
+
+
+

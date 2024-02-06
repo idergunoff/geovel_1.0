@@ -135,6 +135,7 @@ class VelocityModel(Base):
     profile = relationship("Profile", back_populates="velocity_models")
     velocity_formations = relationship("VelocityFormation", back_populates="velocity_model")
     deep_profile = relationship('DeepProfile', back_populates='vel_model')
+    current_velocity_model = relationship('CurrentVelocityModel', back_populates='vel_model')
 
 
 class CurrentProfile(Base):
@@ -155,6 +156,16 @@ class CurrentProfileMinMax(Base):
     signal = Column(Text)
 
     profile = relationship('Profile', back_populates='min_max')
+
+
+class CurrentVelocityModel(Base):
+    __tablename__ = 'current_velocity_model'
+
+    id = Column(Integer, primary_key=True)
+    active = Column(Boolean, default=False)
+    vel_model_id = Column(Integer, ForeignKey('velocity_model.id'))
+
+    vel_model = relationship('VelocityModel', back_populates='current_velocity_model')
 
 
 class Grid(Base):

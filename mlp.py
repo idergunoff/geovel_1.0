@@ -176,6 +176,18 @@ def add_marker_mlp():
     update_list_marker_mlp()
 
 
+def edit_marker_mlp():
+    """Редактировать маркер MLP"""
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите новое название маркера', 'red')
+        return
+    session.query(MarkerMLP).filter_by(id=get_marker_mlp_id()).update(
+            {'title': ui.lineEdit_string.text()}, synchronize_session='fetch')
+    session.commit()
+    set_info(f'Изменено название маркера - "{ui.lineEdit_string.text()}"', 'green')
+    update_list_marker_mlp()
+
+
 def remove_marker_mlp():
     """Удалить маркер MLP"""
     marker_title = get_marker_mlp_title()

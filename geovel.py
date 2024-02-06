@@ -208,7 +208,7 @@ ui.pushButton_import_model_class.clicked.connect(import_model_class)
 ui.lineEdit_signal_except.returnPressed.connect(add_signal_except_mlp)
 ui.lineEdit_crl_except.returnPressed.connect(add_crl_except_mlp)
 ui.pushButton_test_model_class.clicked.connect(test_start)
-
+ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
 
 #   regression
 ui.pushButton_add_regmod.clicked.connect(add_regression_model)
@@ -429,12 +429,14 @@ ui.pushButton_del_vel_model.clicked.connect(remove_velocity_model)
 ui.listWidget_vel_model.itemClicked.connect(draw_vel_model_point)
 ui.checkBox_vel_color.clicked.connect(draw_vel_model_point)
 ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
+ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
 
 check_trained_model()
 update_object()
 update_list_object_monitor()
 clear_current_profile()
 clear_current_profile_min_max()
+clear_current_velocity_model()
 clear_spectr()
 clear_window_profile()
 # update_layers()
@@ -465,7 +467,6 @@ check_and_create_folders()
 update_list_binding()
 update_list_velocity_model()
 
-# update_list_param_lda()
 
 sys.excepthook = log_uncaught_exceptions
 # app.processEvents()

@@ -239,6 +239,7 @@ def calc_velocity_model():
 
 
 def calc_deep_layers(vel_model_id):
+    """ Расчет и сохранение глубинного профиля по скоростной модели """
     new_deep_prof = DeepProfile(profile_id=get_profile_id(), vel_model_id=vel_model_id)
     session.add(new_deep_prof)
     session.commit()
@@ -268,6 +269,29 @@ def calc_deep_layers(vel_model_id):
     session.commit()
 
 
+def calc_deep_layers_to_current_profile(vel_model_id):
+    """ Расчет глубинного профиля по текущему профилю """
+    curr_prof = session.query(CurrentProfile).filter_by(id=1).first()
+    vel_mod = session.query(VelocityModel).filter_by(id=vel_model_id).first()
+    if curr_prof.profile_id != vel_mod.profile_id:
+        set_info('Текущий профиль и профиль скоростной модели не соответствуют', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Текущий профиль и профиль скоростной модели не соответствуют')
+        return
+    signal = json.loads(curr_prof.signal)
+    deep_signal = [[] for _ in range(len(signal))]
+    for vf in session.query(VelocityFormation).filter_by(vel_model_id=vel_model_id).order_by(VelocityFormation.index).all():
+        list_layer_top = json.loads(vf.layer_top)
+        list_layer_bottom = json.loads(vf.layer_bottom)
+        list_velocity = json.loads(vf.velocity)
+        list_deep_line = [v * 8 * (list_layer_bottom[nv] - list_layer_top[nv]) for nv, v in enumerate(list_velocity)]
+
+        for nm, measure in enumerate(signal):
+            deep_signal[nm] = deep_signal[nm] + interpolate_list(
+                measure[list_layer_top[nm]:list_layer_bottom[nm]],
+                int(list_deep_line[nm] / 10))
+
+    return deep_signal
+
 
 def update_list_velocity_model():
     ui.listWidget_vel_model.clear()
@@ -276,15 +300,30 @@ def update_list_velocity_model():
 
 
 def draw_deep_profile():
-    deep_prof = session.query(DeepProfile).filter_by(
-        vel_model_id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
-
+    # deep_prof = session.query(DeepProfile).filter_by(
+    #     vel_model_id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
+    #
+    deep_signal = calc_deep_layers_to_current_profile(ui.listWidget_vel_model.currentItem().text().split(' id')[-1])
     l_max = 0
-    for i in json.loads(deep_prof.signal):
+    for i in deep_signal:
         l_max = len(i) if len(i) > l_max else l_max
-    deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in json.loads(deep_prof.signal)]
-    draw_image_deep_prof(deep_signal)
+    deep_signal = [i + [128 for _ in range(l_max - len(i))] for i in deep_signal]
+    deep_signal = [interpolate_list(i, 512) for i in deep_signal]
+    # draw_image_deep_prof(deep_signal)
 
+    clear_current_profile()
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(deep_signal))
+    session.add(new_current)
+    new_curr_vel_mod = CurrentVelocityModel(
+        vel_model_id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1],
+        active=True
+    )
+    session.add(new_curr_vel_mod)
+    session.commit()
+    save_max_min(deep_signal)
+    ui.checkBox_minmax.setCheckState(0)
+    draw_image_deep_prof(deep_signal)
+#
 
 def remove_velocity_model():
     if not ui.listWidget_vel_model.currentItem():

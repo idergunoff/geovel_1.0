@@ -214,6 +214,7 @@ def choose_minmax():
         radar = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
     else:
         radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+    # todo проверка скоростной модели
     draw_image(radar)
     updatePlot()
 
@@ -241,6 +242,12 @@ def draw_formation():
         layer_down = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.down).first()[0])
         title_text = formation.title
     x = list(range(len(layer_up)))
+    vel_mod = session.query(CurrentVelocityModel).first()
+    if vel_mod:
+        if vel_mod.active:
+            layer_up = calc_line_by_vel_model(vel_mod.id, layer_up)
+            layer_down = calc_line_by_vel_model(vel_mod.id, layer_down)
+
     # Создаем объект линии и добавляем его на радарограмму
     curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(color='white', width=2))
     curve_down = pg.PlotCurveItem(x=x, y=layer_down, pen=pg.mkPen(color='white', width=2))

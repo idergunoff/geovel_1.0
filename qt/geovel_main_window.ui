@@ -65,7 +65,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>6</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -957,8 +957,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3134,13 +3134,23 @@ Therm</string>
                       </property>
                      </spacer>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QPushButton" name="pushButton_clear_fake">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
                       <property name="text">
                        <string>clear fake</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_edit_marker_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>edit marker</string>
                       </property>
                      </widget>
                     </item>
@@ -4860,7 +4870,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
