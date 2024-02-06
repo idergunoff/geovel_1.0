@@ -59,11 +59,13 @@ def test_start():
             ui_tm.listWidget_test_model.addItem(item)
         ui_tm.listWidget_test_model.setCurrentRow(0)
 
+    def get_test_list_marker_mlp():
+        markers = session.query(MarkerMLP).filter_by(analysis_id=get_test_MLP_id(ui_tm)).order_by(MarkerMLP.id).all()
+        return [m.title for m in markers]
 
     update_test_analysis_combobox(ui_tm)
     update_test_model_list(ui_tm)
     update_list_test_well()
-
 
     def test_classif_model():
         ui_tm.textEdit_test_result.clear()
@@ -71,12 +73,25 @@ def test_start():
             id=ui_tm.listWidget_test_model.currentItem().text().split(' id')[-1]).first()
         list_param = json.loads(model.list_params)
 
+        try:
+            with open(model.path_model, 'rb') as f:
+                class_model = pickle.load(f)
+            list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        except:
+            set_info('Не удалось загрузить модель. Выберите нужную модель и рассчитайте заново', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
+            return
+
+        list_cat = list(class_model.classes_)
+        if set(get_test_list_marker_mlp()) != set(list_cat):
+            set_info('Не совпадают названия меток для данной модели.', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадают названия меток для данной модели.')
+            return
+
+        print('list marks: ', list_cat, get_test_list_marker_mlp())
+
         data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(ui_tm), list_param)
         data_test = data_table.copy()
-
-        with open(model.path_model, 'rb') as f:
-            class_model = pickle.load(f)
-        list_param_num = get_list_param_numerical(json.loads(model.list_params))
 
         try:
             working_sample = data_test[list_param_num].values.tolist()
@@ -86,11 +101,6 @@ def test_start():
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
             return
 
-        list_cat = list(class_model.classes_)
-        if set(data_table['mark'].values.tolist()) != set(list_cat):
-            set_info('Не совпадают названия меток для данной модели.', 'red')
-            QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадают названия меток для данной модели.')
-            return
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
@@ -113,19 +123,18 @@ def test_start():
                 if len(p_nan) > 0:
                     set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                              f' этого измерения может быть не корректен', 'red')
-        print('Probability')
-        # print(pd.DataFrame(probability, columns=list_cat))
+
 
         result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
         result_df['mark_probability'] = mark
-        result_df['mark_probability'] = result_df['mark_probability'].replace({'bitum': 'нефть', 'empty': 'пусто'})
-        result_df['mark'] = result_df['mark'].replace({'bitum': 'нефть', 'empty': 'пусто'})
+        # result_df['mark_probability'] = result_df['mark_probability'].replace({'bitum': 'нефть', 'empty': 'пусто'})
+        # result_df['mark'] = result_df['mark'].replace({'bitum': 'нефть', 'empty': 'пусто'})
 
         result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
         correct_matches = result_df['совпадение'].sum()
-        print('\nMarked')
-        pd.set_option('display.max_columns', None)
+        # print('\nMarked')
+        # pd.set_option('display.max_columns', None)
         print(result_df)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
 
@@ -146,27 +155,128 @@ def test_start():
                 if result_df.loc[index, 'совпадение'] == 1:
                     comp += 1
                 total += 1
-
+            print('total comp:', total, comp)
             profile = session.query(Profile).filter(Profile.id == result_df.loc[index, 'prof_well_index'].split('_')[0]).first()
             well = session.query(Well).filter(Well.id == result_df.loc[index, 'prof_well_index'].split('_')[1]).first()
 
-            if (comp != total):
+            if (comp != total and total != 0):
                 ui_tm.textEdit_test_result.setTextColor(Qt.red)
                 ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
                                                            f'  bitum {ones/total:.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
-            else:
+            elif (comp == total and total != 0):
                 ui_tm.textEdit_test_result.setTextColor(Qt.black)
                 ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                                                           f'  bitum {Decimal(ones)/Decimal(total):.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
+                                                           f'  bitum {ones/total:.3f} | empty {nulls/total:.3f} | {comp}/{total} \n')
 
             index += 1
         percent = correct_matches / len(result_df) * 100
         ui_tm.textEdit_test_result.insertPlainText(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
 
+    def test_all_classif_models():
+        ui_tm.textEdit_test_result.clear()
+        for model in session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all():
+            list_param = json.loads(model.list_params)
+            try:
+                with open(model.path_model, 'rb') as f:
+                    class_model = pickle.load(f)
+                list_param_num = get_list_param_numerical(json.loads(model.list_params))
+            except:
+                set_info('Не удалось загрузить модель. Выберите нужную модель и рассчитайте заново', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
+                return
 
+            list_cat = list(class_model.classes_)
+            if set(get_test_list_marker_mlp()) != set(list_cat):
+                set_info('Не совпадают названия меток для данной модели.', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадают названия меток для данной модели.')
+                return
+
+            data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(ui_tm), list_param)
+            data_test = data_table.copy()
+
+            try:
+                working_sample = data_test[list_param_num].values.tolist()
+            except KeyError:
+                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                         'рассчитайте заново', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                return
+
+            try:
+                mark = class_model.predict(working_sample)
+                probability = class_model.predict_proba(working_sample)
+            except ValueError:
+                working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+
+                data = imputer.fit_transform(working_sample)
+                try:
+                    mark = class_model.predict(data)
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+                probability = class_model.predict_proba(data)
+
+                for i in data_test.index:
+                    p_nan = [data_test.columns[ic + 3] for ic, v in enumerate(data_test.iloc[i, 3:].tolist()) if
+                             np.isnan(v)]
+                    if len(p_nan) > 0:
+                        set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                                 f' этого измерения может быть не корректен', 'red')
+
+
+            result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
+            result_df['mark_probability'] = mark
+            result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
+            correct_matches = result_df['совпадение'].sum()
+
+            ui_tm.textEdit_test_result.setTextColor(QColor("darkgreen"))
+            ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n")
+            index = 0
+            while index + 1 < len(result_df):
+                comp, total = 0, 0
+                nulls, ones = 0, 0
+                while index + 1 < len(result_df) and \
+                        result_df.loc[index, 'prof_well_index'].split('_')[0] == \
+                        result_df.loc[index + 1, 'prof_well_index'].split('_')[0] and \
+                        result_df.loc[index, 'prof_well_index'].split('_')[1] == \
+                        result_df.loc[index + 1, 'prof_well_index'].split('_')[1]:
+                    if result_df.loc[index, 'совпадение'] == 1:
+                        comp += 1
+                    nulls = nulls + result_df.loc[index, 'empty']
+                    ones = ones + result_df.loc[index, 'bitum']
+                    total += 1
+                    index += 1
+                if result_df.loc[index, 'prof_well_index'].split('_')[1] == \
+                        result_df.loc[index - 1, 'prof_well_index'].split('_')[1]:
+                    if result_df.loc[index, 'совпадение'] == 1:
+                        comp += 1
+                    total += 1
+
+                profile = session.query(Profile).filter(
+                    Profile.id == result_df.loc[index, 'prof_well_index'].split('_')[0]).first()
+                well = session.query(Well).filter(Well.id == result_df.loc[index, 'prof_well_index'].split('_')[1]).first()
+
+                if (comp != total and total != 0):
+                    ui_tm.textEdit_test_result.setTextColor(Qt.red)
+                    ui_tm.textEdit_test_result.append(
+                        f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                        f'  bitum {ones / total:.3f} | empty {nulls / total:.3f} | {comp}/{total}')
+                elif (comp == total and total != 0):
+                    ui_tm.textEdit_test_result.setTextColor(Qt.black)
+                    ui_tm.textEdit_test_result.append(
+                        f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                        f'  bitum {ones / total:.3f} | empty {nulls / total:.3f} | {comp}/{total}')
+
+                index += 1
+            percent = correct_matches / len(result_df) * 100
+            ui_tm.textEdit_test_result.append(
+                f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
 
 
     ui_tm.pushButton_test.clicked.connect(test_classif_model)
+    ui_tm.pushButton_test_all.clicked.connect(test_all_classif_models)
     ui_tm.comboBox_test_analysis.activated.connect(update_list_test_well)
     test_classifModel.exec_()
 
