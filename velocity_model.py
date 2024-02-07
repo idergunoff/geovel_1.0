@@ -353,9 +353,15 @@ def draw_vel_model_point():
         vel_model = session.query(VelocityModel).filter_by(id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
     except AttributeError:
         return
+
+    curr_vel_model = session.query(CurrentVelocityModel).first()
     for i in vel_model.velocity_formations:
         list_top = json.loads(i.layer_top)
         list_bottom = json.loads(i.layer_bottom)
+        if curr_vel_model:
+            if curr_vel_model.active:
+                list_top = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_top, curr_vel_model.scale)
+                list_bottom = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_bottom, curr_vel_model.scale)
         list_vel = json.loads(i.velocity)
         if ui.checkBox_vel_color.isChecked():
             list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in list_vel]

@@ -1477,8 +1477,8 @@ def calc_exploration_class():
         except:
             set_info('Select model', 'red')
             return
-
-        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        # todo модель в функции с исключениями по параметрам
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
         try:
             file_name = \

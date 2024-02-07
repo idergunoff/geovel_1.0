@@ -1267,10 +1267,10 @@ def update_list_trained_models_class():
         ui.listWidget_trained_model_class.addItem(item)
     ui.listWidget_trained_model_class.setCurrentRow(0)
 
-def get_list_param_numerical(list_param):
+def get_list_param_numerical(list_param, train_model):
     new_list_param = []
-    train_model = session.query(TrainedModelClass).filter_by(
-            id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    # train_model = session.query(TrainedModelClass).filter_by(
+    #         id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
     # except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
     for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
@@ -1302,6 +1302,41 @@ def get_list_param_numerical(list_param):
     return new_list_param
 
 
+def get_list_param_numerical_for_train(list_param):
+    # todo дописать исключения для параметров signal и crl
+    new_list_param = []
+    train_model = session.query(TrainedModelClass).filter_by(
+        id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    # except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+
+    for param in list_param:
+        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+            p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+            for num in range(n):
+                new_list_param.append(f'{p}_{atr}_{num + 1}')
+        elif param.startswith('Signal'):
+            if train_model.except_signal:
+                list_except = parse_range_exception(train_model.except_signal)
+                list_except = [] if list_except == -1 else list_except
+            else:
+                list_except = []
+            p, atr = param.split('_')[0], param.split('_')[1]
+            n_i = 511 if atr == 'diff' or atr == 'Wt' else 512
+            for i_sig in range(n_i):
+                if i_sig + 1 not in list_except:
+                    new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
+        elif param.startswith('CRL'):
+            if train_model.except_crl:
+                list_except = parse_range_exception(train_model.except_crl)
+                list_except = [] if list_except == -1 else list_except
+            else:
+                list_except = []
+            for i_sig in range(512):
+                if i_sig + 1 not in list_except:
+                    new_list_param.append(f'CRL_{i_sig + 1}')
+        else:
+            new_list_param.append(param)
+    return new_list_param
 
 def get_list_marker():
     markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()

@@ -738,7 +738,7 @@ def calc_class_profile():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_class[list_param_num].values.tolist()
         except KeyError:
@@ -921,7 +921,7 @@ def calc_object_class():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        list_param_num = get_list_param_numerical(json.loads(model.list_params))
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()
         except KeyError:
