@@ -1313,9 +1313,12 @@ def get_list_param_numerical_for_train(list_param):
             for num in range(n):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
         elif param.startswith('Signal'):
-            if except_reg.except_signal:
-                list_except = parse_range_exception(except_reg.except_signal)
-                list_except = [] if list_except == -1 else list_except
+            if except_reg:
+                if except_reg.except_signal:
+                    list_except = parse_range_exception(except_reg.except_signal)
+                    list_except = [] if list_except == -1 else list_except
+                else:
+                    list_except = []
             else:
                 list_except = []
             p, atr = param.split('_')[0], param.split('_')[1]
@@ -1324,9 +1327,12 @@ def get_list_param_numerical_for_train(list_param):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         elif param.startswith('CRL'):
-            if except_reg.except_crl:
-                list_except = parse_range_exception(except_reg.except_crl)
-                list_except = [] if list_except == -1 else list_except
+            if except_reg:
+                if except_reg.except_crl:
+                    list_except = parse_range_exception(except_reg.except_crl)
+                    list_except = [] if list_except == -1 else list_except
+                else:
+                    list_except = []
             else:
                 list_except = []
             for i_sig in range(512):
