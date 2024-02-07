@@ -1268,7 +1268,7 @@ def calc_profile_model_regmod():
     def calc_class_model():
         model = session.query(TrainedModelReg).filter_by(
         id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
-        list_param_num = get_list_param_numerical_111(json.loads(model.list_params), model)
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         working_sample = working_data[list_param_num].values.tolist()
 
         with open(model.path_model, 'rb') as f:
@@ -1350,7 +1350,7 @@ def calc_object_model_regmod():
         with open(model.path_model, 'rb') as f:
             reg_model = pickle.load(f)
 
-        list_param_num = get_list_param_numerical_111(json.loads(model.list_params), model)
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         working_sample = working_data_result_copy[list_param_num].values.tolist()
 
         try:

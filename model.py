@@ -531,6 +531,7 @@ class AnalysisReg(Base):
     parameters = relationship('ParameterReg', back_populates='analysis')
     markups = relationship('MarkupReg', back_populates='analysis')
     trained_models = relationship('TrainedModelReg', back_populates='analysis')
+    exceptions = relationship('ExceptionReg', back_populates='analysis')
 
 
 class ParameterReg(Base):
@@ -542,6 +543,16 @@ class ParameterReg(Base):
 
     analysis = relationship('AnalysisReg', back_populates='parameters')
 
+
+class ExceptionReg(Base):
+    __tablename__ = 'exception_reg'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
+
+    analysis = relationship('AnalysisReg', back_populates='exceptions')
 
 class MarkupReg(Base):
     __tablename__ = 'markup_reg'
@@ -571,6 +582,8 @@ class TrainedModelReg(Base):
     path_model = Column(String)
     path_scaler = Column(String)
     list_params = Column(Text)
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
     comment = Column(Text)
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')
