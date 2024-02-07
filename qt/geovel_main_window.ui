@@ -720,6 +720,9 @@
               </item>
               <item row="9" column="0">
                <widget class="QPushButton" name="pushButton_secret_filter">
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 163, 72);</string>
+                </property>
                 <property name="text">
                  <string>CRL-filter</string>
                 </property>
@@ -3326,6 +3329,9 @@ Therm</string>
                   </item>
                   <item row="1" column="2">
                    <widget class="QPushButton" name="pushButton_test_model_class">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(200, 171, 252);</string>
+                    </property>
                     <property name="text">
                      <string>TEST</string>
                     </property>
@@ -4053,7 +4059,27 @@ Therm</string>
                     <item row="1" column="0">
                      <layout class="QGridLayout" name="gridLayout_82">
                       <item row="0" column="0">
-                       <layout class="QGridLayout" name="gridLayout_107" columnstretch="2,0,0">
+                       <layout class="QGridLayout" name="gridLayout_107" columnstretch="2,0,0,0">
+                        <item row="0" column="2">
+                         <widget class="QPushButton" name="pushButton_add_all_signal_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(148, 255, 232);</string>
+                          </property>
+                          <property name="text">
+                           <string>add all</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_add_signal_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>add</string>
+                          </property>
+                         </widget>
+                        </item>
                         <item row="0" column="0">
                          <widget class="QComboBox" name="comboBox_signal_reg">
                           <item>
@@ -4088,23 +4114,13 @@ Therm</string>
                           </item>
                          </widget>
                         </item>
-                        <item row="0" column="1">
-                         <widget class="QPushButton" name="pushButton_add_signal_reg">
+                        <item row="0" column="3">
+                         <widget class="QPushButton" name="pushButton_add_crl_reg">
                           <property name="styleSheet">
-                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                           <string notr="true">background-color: rgb(147, 220, 236);</string>
                           </property>
                           <property name="text">
-                           <string>add</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="2">
-                         <widget class="QPushButton" name="pushButton_add_all_signal_reg">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(148, 255, 232);</string>
-                          </property>
-                          <property name="text">
-                           <string>add all</string>
+                           <string>add CRL</string>
                           </property>
                          </widget>
                         </item>
@@ -4143,11 +4159,39 @@ Therm</string>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_85" columnstretch="5,2">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_152">
+                      <item row="0" column="0">
+                       <widget class="QListWidget" name="listWidget_param_reg"/>
+                      </item>
+                      <item row="1" column="0">
+                       <layout class="QGridLayout" name="gridLayout_153">
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="label_39">
+                          <property name="text">
+                           <string>Signal exception:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QLabel" name="label_40">
+                          <property name="text">
+                           <string>CRL exception:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QLineEdit" name="lineEdit_signal_except_reg"/>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QLineEdit" name="lineEdit_crl_except_reg"/>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </item>
                     <item row="0" column="1">
                      <layout class="QGridLayout" name="gridLayout_86">
-                      <item row="0" column="0">
-                       <widget class="QListWidget" name="listWidget_trained_model_reg"/>
-                      </item>
                       <item row="1" column="0">
                        <layout class="QGridLayout" name="gridLayout_100">
                         <item row="1" column="0">
@@ -4192,10 +4236,10 @@ Therm</string>
                         </item>
                        </layout>
                       </item>
+                      <item row="0" column="0">
+                       <widget class="QListWidget" name="listWidget_trained_model_reg"/>
+                      </item>
                      </layout>
-                    </item>
-                    <item row="0" column="0">
-                     <widget class="QListWidget" name="listWidget_param_reg"/>
                     </item>
                    </layout>
                   </item>
@@ -4299,6 +4343,9 @@ Therm</string>
                   </item>
                   <item row="0" column="1">
                    <widget class="QPushButton" name="pushButton_test_model_reg">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(200, 171, 252);</string>
+                    </property>
                     <property name="text">
                      <string>TEST</string>
                     </property>
