@@ -1036,6 +1036,7 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
         except_param = session.query(ExceptionMLP).filter_by(analysis_id=analisis_id).first()
     elif analisis == 'regmod':
         markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
+        except_param = session.query(ExceptionReg).filter_by(analysis_id=analisis_id).first()
 
     list_except_signal, list_except_crl = [], []
     if except_param:
@@ -1303,11 +1304,8 @@ def get_list_param_numerical(list_param, train_model):
 
 
 def get_list_param_numerical_for_train(list_param):
-    # todo дописать исключения для параметров signal и crl
     new_list_param = []
-    train_model = session.query(TrainedModelClass).filter_by(
-        id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
-    # except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+    except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
 
     for param in list_param:
         if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
@@ -1315,8 +1313,8 @@ def get_list_param_numerical_for_train(list_param):
             for num in range(n):
                 new_list_param.append(f'{p}_{atr}_{num + 1}')
         elif param.startswith('Signal'):
-            if train_model.except_signal:
-                list_except = parse_range_exception(train_model.except_signal)
+            if except_reg.except_signal:
+                list_except = parse_range_exception(except_reg.except_signal)
                 list_except = [] if list_except == -1 else list_except
             else:
                 list_except = []
@@ -1326,8 +1324,8 @@ def get_list_param_numerical_for_train(list_param):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
         elif param.startswith('CRL'):
-            if train_model.except_crl:
-                list_except = parse_range_exception(train_model.except_crl)
+            if except_reg.except_crl:
+                list_except = parse_range_exception(except_reg.except_crl)
                 list_except = [] if list_except == -1 else list_except
             else:
                 list_except = []

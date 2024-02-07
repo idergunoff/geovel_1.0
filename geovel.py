@@ -235,7 +235,8 @@ ui.pushButton_reg_clear_fake.clicked.connect(clear_fake_reg)
 ui.pushButton_reg_comment.clicked.connect(update_trained_model_reg_comment)
 ui.pushButton_export_model_reg.clicked.connect(export_model_reg)
 ui.pushButton_import_model_reg.clicked.connect(import_model_reg)
-
+ui.lineEdit_signal_except_reg.returnPressed.connect(add_signal_except_reg)
+ui.lineEdit_crl_except_reg.returnPressed.connect(add_crl_except_reg)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)

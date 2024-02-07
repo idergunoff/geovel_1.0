@@ -433,6 +433,16 @@ def update_list_param_regmod(db=False):
     ui.label_count_param_regmod.setText(f'<i><u>{ui.listWidget_param_reg.count()}</u></i> параметров')
     update_list_trained_models_regmod()
     set_color_button_updata_regmod()
+    update_line_edit_exception_reg()
+
+
+def update_line_edit_exception_reg():
+    ui.lineEdit_signal_except_reg.clear()
+    ui.lineEdit_crl_except_reg.clear()
+    except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
+    if except_reg:
+        ui.lineEdit_signal_except_reg.setText(except_reg.except_signal)
+        ui.lineEdit_crl_except_reg.setText(except_reg.except_crl)
 
 
 def set_color_button_updata_regmod():
@@ -804,6 +814,8 @@ def train_regression_model():
                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                 path_model=path_model,
                 list_params=json.dumps(list_param_name),
+                except_signal=ui.lineEdit_signal_except_reg.text(),
+                except_crl=ui.lineEdit_crl_except_reg.text(),
                 comment = text_model
             )
             session.add(new_trained_model)
@@ -1695,3 +1707,45 @@ def save_markup(markup_id, dir, num):
     fig.savefig(f'{dir}/{num+1}_{map_name}_{graph_name}.png')
     plt.close(fig)
 
+def add_signal_except_reg():
+    """ Список исключений для параметра Signal """
+    check_str = parse_range_exception(ui.lineEdit_signal_except_reg.text())
+    if not check_str:
+        set_info('Неверный формат диапазона исключений', 'red')
+        return
+    except_line = '' if check_str == -1 else ui.lineEdit_signal_except_reg.text()
+    excetp_signal = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
+    if excetp_signal:
+        excetp_signal.except_signal = except_line
+    else:
+        new_except = ExceptionReg(
+            analysis_id=get_regmod_id(),
+            except_signal=except_line
+        )
+        session.add(new_except)
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata_regmod()
+    set_info('Исключения добавлены', 'green')
+
+
+def add_crl_except_reg():
+    """ Список исключений для параметра Crl """
+    check_str = parse_range_exception(ui.lineEdit_crl_except_reg.text())
+    if not check_str:
+        set_info('Неверный формат диапазона исключений', 'red')
+        return
+    except_line = '' if check_str == -1 else ui.lineEdit_crl_except_reg.text()
+    except_crl = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
+    if except_crl:
+        except_crl.except_crl = except_line
+    else:
+        new_except = ExceptionReg(
+            analysis_id=get_regmod_id(),
+            except_crl=except_line
+        )
+        session.add(new_except)
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata_regmod()
+    set_info('Исключения добавлены', 'green')
