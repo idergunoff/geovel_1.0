@@ -1,3 +1,4 @@
+import math
 
 import pandas as pd
 from func import *
@@ -470,6 +471,7 @@ def regression_test():
         #
         # print(working_data['prof_well_index'])
 
+        ui_tr.textEdit_test_result.setTextColor(Qt.black)
         ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
         ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
 
@@ -489,18 +491,16 @@ def regression_test():
                     working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
                 summ += working_data.loc[index, 'diff']
                 total += 1
-            # if total != 0:
-            #     print('result:', summ/total)
-            # else: total = 1
+            if total == 0: total = 1
             profile = session.query(Profile).filter(
                 Profile.id == working_data.loc[index, 'prof_well_index'].split('_')[0]).first()
             well = session.query(Well).filter(Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
-            # color_text = Qt.black
-            # if comp / total < 0.5:
-            #     color_text = Qt.red
-            # if 0.9 > comp / total >= 0.5:
-            #     color_text = Qt.darkYellow
-            # ui_tr.textEdit_test_result.setTextColor(color_text)
+            color_text = Qt.black
+            if math.fabs(summ/total) >= 50:
+                 color_text = Qt.red
+            if 50 > math.fabs(summ/total) > 10:
+                 color_text = Qt.darkYellow
+            ui_tr.textEdit_test_result.setTextColor(color_text)
             ui_tr.textEdit_test_result.insertPlainText(
                 f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
                 f' predict {round(working_data.loc[index, "y_pred"], 2)} | target {round(working_data.loc[index, "target_value"], 2)} | погрешность: {round(summ/total, 2)}\n')
@@ -529,8 +529,76 @@ def regression_test():
             fig.show()
 
         regress_test_graphs()
+
+    def test_all_regress_models():
+        ui_tr.textEdit_test_result.clear()
+        for model in session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all():
+            list_param = json.loads(model.list_params)
+            list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+            working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
+            working_sample = working_data[list_param_num].values.tolist()
+
+            with open(model.path_model, 'rb') as f:
+                reg_model = pickle.load(f)
+
+            try:
+                y_pred = reg_model.predict(working_sample)
+            except ValueError:
+                data = imputer.fit_transform(working_sample)
+                y_pred = reg_model.predict(data)
+
+                for i in working_data.index:
+                    p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                             np.isnan(v)]
+                    if len(p_nan) > 0:
+                        set_info(
+                            f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                            f' этого измерения может быть не корректен', 'red')
+
+            working_data['y_pred'] = y_pred
+            working_data['diff'] = working_data['target_value'] - working_data['y_pred']
+            accuracy = reg_model.score(working_sample, working_data['target_value'].values.tolist())
+            mse = round(mean_squared_error(working_data['target_value'].values.tolist(),
+                                           working_data['y_pred'].values.tolist()), 5)
+
+            ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
+            ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
+            index = 0
+            while index + 1 < len(working_data):
+                comp, total = 0, 0
+                summ = 0
+                while index + 1 < len(working_data) and \
+                        working_data.loc[index, 'prof_well_index'].split('_')[0] == \
+                        working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
+                        working_data.loc[index, 'prof_well_index'].split('_')[1] == \
+                        working_data.loc[index + 1, 'prof_well_index'].split('_')[1]:
+                    summ += working_data.loc[index, 'diff']
+                    total += 1
+                    index += 1
+                if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
+                        working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
+                    summ += working_data.loc[index, 'diff']
+                    total += 1
+                if total == 0: total = 1
+                profile = session.query(Profile).filter(
+                    Profile.id == working_data.loc[index, 'prof_well_index'].split('_')[0]).first()
+                well = session.query(Well).filter(
+                    Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
+                color_text = Qt.black
+                if math.fabs(summ / total) >= 50:
+                    color_text = Qt.red
+                if 50 > math.fabs(summ / total) > 10:
+                    color_text = Qt.darkYellow
+                ui_tr.textEdit_test_result.setTextColor(color_text)
+                ui_tr.textEdit_test_result.insertPlainText(
+                    f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
+                    f' predict {round(working_data.loc[index, "y_pred"], 2)} | target {round(working_data.loc[index, "target_value"], 2)} | погрешность: {round(summ / total, 2)}\n')
+                index += 1
+
     ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
     ui_tr.pushButton_test.clicked.connect(test_regress_model)
+    ui_tr.pushButton_test_all.clicked.connect(test_all_regress_models)
 
     test_regressModel.exec_()
 
