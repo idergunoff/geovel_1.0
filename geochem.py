@@ -757,6 +757,20 @@ def tsne_geochem():
         session.commit()
         update_geochem_param_train_list()
 
+    def set_point_fake():
+        """ Установить флаг fake на отключенные точки """
+        for i in range(ui_tsne.listWidget_check_point.count()):
+            checkbox = ui_tsne.listWidget_check_point.itemWidget(ui_tsne.listWidget_check_point.item(i))
+            fake = False if checkbox.isChecked() else True
+            point = session.query(GeochemTrainPoint).join(GeochemCategory).filter(
+                GeochemTrainPoint.title == checkbox.text(),
+                GeochemCategory.maket_id == get_maket_id()
+            ).first()
+            if point:
+                session.query(GeochemTrainPoint).filter_by(id=point.id).update(
+                    {'fake': fake}, synchronize_session='fetch')
+        session.commit()
+        update_g_train_point_list()
 
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_anova)
@@ -780,6 +794,7 @@ def tsne_geochem():
     ui_tsne.toolButton_lof_clean.clicked.connect(clear_lof)
     ui_tsne.toolButton_lof_all.clicked.connect(set_list_check_point)
     ui_tsne.pushButton_to_maket.clicked.connect(set_param_maket)
+    ui_tsne.pushButton_point_to_fake.clicked.connect(set_point_fake)
 
     for i in range(ui_tsne.listWidget_checkbox_well.count()):
         ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(set_list_check_point)

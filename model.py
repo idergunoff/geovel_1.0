@@ -945,7 +945,6 @@ class GeochemMaket(Base):
     g_trained_models = relationship("GeochemTrainedModel", back_populates="maket")
 
 
-
 class GeochemCategory(Base):
     __tablename__ = 'geochem_category'
 
