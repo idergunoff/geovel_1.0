@@ -394,7 +394,6 @@ def regression_test():
     def update_test_reg_list_well():
         ui_tr.listWidget_test_point.clear()
         count_markup, count_measure, count_fake = 0, 0, 0
-        print(get_test_regmod_id())
 
         for i in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_test_regmod_id()).all():
             try:
@@ -434,13 +433,14 @@ def regression_test():
     update_test_reg_list_well()
     update_test_reg_model_list()
 
-    working_data, curr_form = build_table_test('regmod')
-
     def test_regress_model():
         ui_tr.textEdit_test_result.clear()
         model = session.query(TrainedModelReg).filter_by(
-            id=ui.listWidget_test_model.currentItem().data(Qt.UserRole)).first()
+            id=ui_tr.listWidget_test_model.currentItem().data(Qt.UserRole)).first()
+        list_param = json.loads(model.list_params)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+        working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
         working_sample = working_data[list_param_num].values.tolist()
 
         with open(model.path_model, 'rb') as f:
@@ -449,7 +449,6 @@ def regression_test():
         try:
             y_pred = reg_model.predict(working_sample)
         except ValueError:
-            # working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
             y_pred = reg_model.predict(data)
 
@@ -460,17 +459,76 @@ def regression_test():
                     set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                              f' этого измерения может быть не корректен', 'red')
 
-            ui.graph.clear()
-            number = list(range(1, len(y_pred) + 1))
-            # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-            curve = pg.PlotCurveItem(x=number, y=y_pred)
-            curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(y_pred, 31, 3),
-                                            pen=pg.mkPen(color='red', width=2.4))
-            # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-            ui.graph.addItem(curve)
-            ui.graph.addItem(curve_filter)
+        working_data['y_pred'] = y_pred
+        working_data['diff'] = working_data['target_value'] - working_data['y_pred']
 
+        # print(working_data[['target_value', 'y_pred', 'diff']].head(20))
 
+        accuracy = reg_model.score(working_sample, working_data['target_value'].values.tolist())
+        mse = round(mean_squared_error(working_data['target_value'].values.tolist(), working_data['y_pred'].values.tolist()), 5)
+        # print(accuracy)
+        #
+        # print(working_data['prof_well_index'])
+
+        ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
+        ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
+
+        index = 0
+        while index + 1 < len(working_data):
+            comp, total = 0, 0
+            summ = 0
+            while index + 1 < len(working_data) and \
+                    working_data.loc[index, 'prof_well_index'].split('_')[0] == \
+                    working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
+                    working_data.loc[index, 'prof_well_index'].split('_')[1] == \
+                    working_data.loc[index + 1, 'prof_well_index'].split('_')[1]:
+                summ += working_data.loc[index, 'diff']
+                total += 1
+                index += 1
+            if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
+                    working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
+                summ += working_data.loc[index, 'diff']
+                total += 1
+            # if total != 0:
+            #     print('result:', summ/total)
+            # else: total = 1
+            profile = session.query(Profile).filter(
+                Profile.id == working_data.loc[index, 'prof_well_index'].split('_')[0]).first()
+            well = session.query(Well).filter(Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
+            # color_text = Qt.black
+            # if comp / total < 0.5:
+            #     color_text = Qt.red
+            # if 0.9 > comp / total >= 0.5:
+            #     color_text = Qt.darkYellow
+            # ui_tr.textEdit_test_result.setTextColor(color_text)
+            ui_tr.textEdit_test_result.insertPlainText(
+                f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
+                f' predict {round(working_data.loc[index, "y_pred"], 2)} | target {round(working_data.loc[index, "target_value"], 2)} | погрешность: {round(summ/total, 2)}\n')
+            index += 1
+
+        def regress_test_graphs():
+            data_graph = pd.DataFrame({
+                'y_test': working_data['target_value'].values.tolist(),
+                'y_pred': working_data['y_pred'].values.tolist(),
+                'y_remain': working_data['diff'].values.tolist()
+            })
+
+            fig, axes = plt.subplots(nrows=2, ncols=2)
+            fig.set_size_inches(15, 10)
+            fig.suptitle(f'Модель {model.title}:\n точность: {accuracy} '
+                         f' Mean Squared Error:\n {mse},')
+            sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+            sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+            try:
+                sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+            except MemoryError:
+                pass
+            fig.tight_layout()
+            fig.show()
+
+        regress_test_graphs()
     ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
     ui_tr.pushButton_test.clicked.connect(test_regress_model)
 
