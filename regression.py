@@ -1269,8 +1269,12 @@ def remove_trained_model_regmod():
 
 
 def calc_profile_model_regmod():
-    working_data, curr_form = build_table_test('regmod')
-
+    try:
+        working_data, curr_form = build_table_test('regmod')
+    except TypeError:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Недостаточно  параметров для рассчета по выбранной модели',
+                             QMessageBox.Ok)
+        return
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)

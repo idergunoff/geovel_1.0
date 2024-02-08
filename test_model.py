@@ -1,10 +1,7 @@
-from decimal import Decimal
 
 import pandas as pd
-
 from func import *
 from decimal import *
-
 
 
 def test_start():
@@ -19,7 +16,6 @@ def test_start():
 
     def get_test_MLP_id():
         return ui_tm.comboBox_test_analysis.currentText().split(' id')[-1]
-
 
     def update_list_test_well():
         ui_tm.listWidget_test_point.clear()
@@ -64,7 +60,6 @@ def test_start():
         for i in get_test_list_marker_mlp():
             ui_tm.comboBox_mark.addItem(i)
 
-
     def update_test_model_list():
         ui_tm.listWidget_test_model.clear()
         models = session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all()
@@ -82,7 +77,7 @@ def test_start():
 
     update_test_analysis_combobox()
     update_test_model_list()
-    # update_list_test_well()
+    update_list_test_well()
 
     def test_classif_model():
         global list_cat
@@ -372,4 +367,112 @@ def test_start():
     ui_tm.pushButton_test_all.clicked.connect(test_all_classif_models)
     ui_tm.comboBox_test_analysis.activated.connect(update_list_test_well)
     test_classifModel.exec_()
+
+
+
+def regression_test():
+    test_regressModel = QtWidgets.QDialog()
+    ui_tr = Ui_FormTestModel()
+    ui_tr.setupUi(test_regressModel)
+    test_regressModel.show()
+    test_regressModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    def update_test_reg_model_list():
+        ui_tr.listWidget_test_model.clear()
+        models = session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
+        for model in models:
+            item_text = model.title
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, model.id)
+            item.setToolTip(model.comment)
+            ui_tr.listWidget_test_model.addItem(item)
+        ui_tr.listWidget_test_model.setCurrentRow(0)
+
+    def get_test_regmod_id():
+        return ui_tr.comboBox_test_analysis.currentText().split(' id')[-1]
+
+    def update_test_reg_list_well():
+        ui_tr.listWidget_test_point.clear()
+        count_markup, count_measure, count_fake = 0, 0, 0
+        print(get_test_regmod_id())
+
+        for i in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_test_regmod_id()).all():
+            try:
+                fake = len(json.loads(i.list_fake)) if i.list_fake else 0
+                measure = len(json.loads(i.list_measure))
+                if i.type_markup == 'intersection':
+                    try:
+                        inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                    except TypeError:
+                        # session.query(MarkupReg).filter(MarkupReg.id == i.id).delete()
+                        session.commit()
+                        set_info(f'Обучающая скважина удалена из-за отсутствия пересечения', 'red')
+                        continue
+                    item = (
+                        f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name.split("_")[0]} | '
+                        f'{measure - fake} | {i.target_value} | id{i.id}')
+                else:
+                    item = (
+                        f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | '
+                        f'{measure - fake} | {i.target_value} | id{i.id}')
+                ui_tr.listWidget_test_point.addItem(item)
+                count_markup += 1
+                count_measure += measure - fake
+                count_fake += fake
+            except AttributeError:
+                set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+                # session.delete(i)
+                session.commit()
+
+    def update_test_reg_analysis_combobox():
+        ui_tr.comboBox_test_analysis.clear()
+        for i in session.query(AnalysisReg).order_by(AnalysisReg.title).all():
+            ui_tr.comboBox_test_analysis.addItem(f'{i.title} id{i.id}')
+        update_test_reg_list_well()
+
+    update_test_reg_analysis_combobox()
+    update_test_reg_list_well()
+    update_test_reg_model_list()
+
+    working_data, curr_form = build_table_test('regmod')
+
+    def test_regress_model():
+        ui_tr.textEdit_test_result.clear()
+        model = session.query(TrainedModelReg).filter_by(
+            id=ui.listWidget_test_model.currentItem().data(Qt.UserRole)).first()
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+        working_sample = working_data[list_param_num].values.tolist()
+
+        with open(model.path_model, 'rb') as f:
+            reg_model = pickle.load(f)
+
+        try:
+            y_pred = reg_model.predict(working_sample)
+        except ValueError:
+            # working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+            data = imputer.fit_transform(working_sample)
+            y_pred = reg_model.predict(data)
+
+            for i in working_data.index:
+                p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
+                         np.isnan(v)]
+                if len(p_nan) > 0:
+                    set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                             f' этого измерения может быть не корректен', 'red')
+
+            ui.graph.clear()
+            number = list(range(1, len(y_pred) + 1))
+            # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
+            curve = pg.PlotCurveItem(x=number, y=y_pred)
+            curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(y_pred, 31, 3),
+                                            pen=pg.mkPen(color='red', width=2.4))
+            # Добавляем кривую и отфильтрованную кривую на график для всех пластов
+            ui.graph.addItem(curve)
+            ui.graph.addItem(curve_filter)
+
+
+    ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
+    ui_tr.pushButton_test.clicked.connect(test_regress_model)
+
+    test_regressModel.exec_()
 
