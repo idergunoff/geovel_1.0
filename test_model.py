@@ -534,13 +534,19 @@ def regression_test():
 
     def test_all_regress_models():
         ui_tr.textEdit_test_result.clear()
+        curr_list_param, current_data_table = [], pd.DataFrame()
         for model in session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all():
             list_param = json.loads(model.list_params)
             list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
-            working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
-            working_sample = working_data[list_param_num].values.tolist()
+            if curr_list_param == list_param_num:
+                working_data = current_data_table.copy()
+            else:
+                working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
+            curr_list_param = list_param_num.copy()
+            current_data_table = working_data.copy()
 
+            working_sample = working_data[list_param_num].values.tolist()
             with open(model.path_model, 'rb') as f:
                 reg_model = pickle.load(f)
 
