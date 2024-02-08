@@ -235,6 +235,7 @@ ui.pushButton_reg_clear_fake.clicked.connect(clear_fake_reg)
 ui.pushButton_reg_comment.clicked.connect(update_trained_model_reg_comment)
 ui.pushButton_export_model_reg.clicked.connect(export_model_reg)
 ui.pushButton_import_model_reg.clicked.connect(import_model_reg)
+ui.pushButton_test_model_reg.clicked.connect(regression_test)
 ui.lineEdit_signal_except_reg.returnPressed.connect(add_signal_except_reg)
 ui.lineEdit_crl_except_reg.returnPressed.connect(add_crl_except_reg)
 
@@ -245,6 +246,7 @@ ui.toolButton_load_plast.clicked.connect(load_param)
 ui.toolButton_del_plast.clicked.connect(remove_formation)
 ui.toolButton_crop_up.clicked.connect(crop_up)
 ui.toolButton_crop_down.clicked.connect(crop_down)
+
 
 
 ui.comboBox_object.activated.connect(update_research_combobox)

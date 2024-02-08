@@ -1171,6 +1171,7 @@ def build_table_test(analisis='lda'):
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
+
     ui.progressBar.setMaximum(len(list_up))
     set_info(f'Процесс сбора параметров {analisis_title} по профилю {curr_form.profile.title}',
              'blue')
