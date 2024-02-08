@@ -478,7 +478,7 @@ def regression_test():
         index = 0
         while index + 1 < len(working_data):
             comp, total = 0, 0
-            summ = 0
+            summ, summ_pred = 0, 0
             while index + 1 < len(working_data) and \
                     working_data.loc[index, 'prof_well_index'].split('_')[0] == \
                     working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
@@ -490,6 +490,7 @@ def regression_test():
             if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                     working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
                 summ += working_data.loc[index, 'diff']
+                summ_pred += working_data.loc[index, 'y_pred']
                 total += 1
             if total == 0: total = 1
             profile = session.query(Profile).filter(
@@ -503,7 +504,8 @@ def regression_test():
             ui_tr.textEdit_test_result.setTextColor(color_text)
             ui_tr.textEdit_test_result.insertPlainText(
                 f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
-                f' predict {round(working_data.loc[index, "y_pred"], 2)} | target {round(working_data.loc[index, "target_value"], 2)} | погрешность: {round(summ/total, 2)}\n')
+                f' predict {round(summ_pred/total, 2)} | target {round(working_data.loc[index, "target_value"], 2)} '
+                f'| погрешность: {round(working_data.loc[index, "target_value"] - summ_pred/total, 2)}\n')
             index += 1
 
         def regress_test_graphs():
@@ -562,18 +564,20 @@ def regression_test():
             mse = round(mean_squared_error(working_data['target_value'].values.tolist(),
                                            working_data['y_pred'].values.tolist()), 5)
 
+            ui_tr.textEdit_test_result.setTextColor(Qt.black)
             ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
             ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
             index = 0
             while index + 1 < len(working_data):
                 comp, total = 0, 0
-                summ = 0
+                summ, summ_pred = 0, 0
                 while index + 1 < len(working_data) and \
                         working_data.loc[index, 'prof_well_index'].split('_')[0] == \
                         working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
                         working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                         working_data.loc[index + 1, 'prof_well_index'].split('_')[1]:
                     summ += working_data.loc[index, 'diff']
+                    summ_pred += working_data.loc[index, 'y_pred']
                     total += 1
                     index += 1
                 if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
@@ -593,7 +597,8 @@ def regression_test():
                 ui_tr.textEdit_test_result.setTextColor(color_text)
                 ui_tr.textEdit_test_result.insertPlainText(
                     f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
-                    f' predict {round(working_data.loc[index, "y_pred"], 2)} | target {round(working_data.loc[index, "target_value"], 2)} | погрешность: {round(summ / total, 2)}\n')
+                    f' predict {round(summ_pred/total, 2)} | target {round(working_data.loc[index, "target_value"], 2)} '
+                    f'| погрешность: {round(working_data.loc[index, "target_value"] - summ_pred/total, 2)}\n')
                 index += 1
 
     ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
