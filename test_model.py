@@ -503,7 +503,7 @@ def regression_test():
 
 
             min_target, max_target = working_data['target_value'].min(), working_data['target_value'].max()
-            lin_target = np.linspace(min_target, max_target, working_data['target_value'].size)
+            lin_target = np.linspace(0, max_target - min_target, working_data['target_value'].size)
             print('lin_target: ', lin_target)
             percentile_20 = np.percentile(lin_target, 20)
             percentile_50 = np.percentile(lin_target, 50)
