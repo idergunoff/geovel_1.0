@@ -13,7 +13,7 @@ def test_start():
     test_classifModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
-    test_classifModel.resize(int(m_width/3), m_height - 200)
+    test_classifModel.resize(int(m_width/2.2), m_height - 200)
 
     def get_test_MLP_id():
         return ui_tm.comboBox_test_analysis.currentText().split(' id')[-1]
@@ -378,6 +378,10 @@ def regression_test():
     test_regressModel.show()
     test_regressModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+    m_width, m_height = get_width_height_monitor()
+    test_regressModel.resize(int(m_width/2.2), m_height - 200)
+    ui_tr.comboBox_mark.hide()
+
     def update_test_reg_model_list():
         ui_tr.listWidget_test_model.clear()
         models = session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
@@ -535,7 +539,16 @@ def regression_test():
     def test_all_regress_models():
         ui_tr.textEdit_test_result.clear()
         curr_list_param, current_data_table = [], pd.DataFrame()
-        for model in session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all():
+        all_models =  session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
+
+        grid_cell = math.sqrt(len(all_models))
+        grid_cell = grid_cell if grid_cell.is_integer() else int(grid_cell) + 1
+        print(grid_cell)
+        fig, axes = plt.subplots(nrows=grid_cell, ncols=grid_cell)
+        fig.set_size_inches(grid_cell * 4, grid_cell * 4)
+        fig.suptitle(f'Тестирование модели регрессии {ui_tr.comboBox_test_analysis.currentText().split(" id")[0]}')
+        nr, nc = 0, 0
+        for model in all_models:
             list_param = json.loads(model.list_params)
             list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
@@ -606,6 +619,21 @@ def regression_test():
                     f' predict {round(summ_pred/total, 2)} | target {round(working_data.loc[index, "target_value"], 2)} '
                     f'| погрешность: {round(working_data.loc[index, "target_value"] - summ_pred/total, 2)}\n')
                 index += 1
+            data_graph = pd.DataFrame({
+                'y_test': working_data['target_value'].values.tolist(),
+                'y_pred': working_data['y_pred'].values.tolist(),
+            })
+
+
+            axes[nc, nr].set_title(f'Модель {model.title}:\n точность: {round(accuracy, 2)}')
+            sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[nc, nr])
+            sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[nc, nr])
+            nr += 1
+            if nr > grid_cell - 1:
+                nc += 1
+                nr = 0
+        fig.tight_layout()
+        fig.show()
 
     ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
     ui_tr.pushButton_test.clicked.connect(test_regress_model)
