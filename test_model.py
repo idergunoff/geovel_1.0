@@ -553,7 +553,7 @@ def regression_test():
         curr_list_param, current_data_table = [], pd.DataFrame()
         all_models = session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
         cell_grid = math.sqrt(len(all_models))
-        cell_grid = cell_grid if cell_grid.is_integer() else int(cell_grid) + 1
+        cell_grid = int(cell_grid) if cell_grid.is_integer() else int(cell_grid) + 1
         fig, axes = plt.subplots(nrows=cell_grid, ncols=cell_grid)
         fig.set_size_inches(cell_grid * 3.5, cell_grid * 3.5)
         fig.suptitle(f'Тестирование модели регрессии {ui_tr.comboBox_test_analysis.currentText().split(" id")[0]}')
