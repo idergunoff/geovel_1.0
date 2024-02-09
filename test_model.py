@@ -618,15 +618,17 @@ def regression_test():
                 well = session.query(Well).filter(
                     Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
 
-                diff_list = sorted(list(map(math.fabs, diff_list)), reverse=False)
-                min_list, max_list = min(diff_list), max(diff_list)
+                min_target, max_target = working_data['target_value'].min(), working_data['target_value'].max()
+                lin_target = np.linspace(0, max_target - min_target, working_data['target_value'].size)
+                percentile_20 = np.percentile(lin_target, 20)
+                percentile_50 = np.percentile(lin_target, 50)
                 mistake = math.fabs(round(working_data.loc[index, "target_value"] - sum(list_y) / total, 2))
                 mean_pred = round(sum(list_y) / total, 2)
-                array = np.linspace(min_list, max_list, total)
+
                 color_text = Qt.black
-                if len(array) and array[len(array) // 4] <= mistake < array[len(array) // 2]:
+                if percentile_20 <= mistake < percentile_50:
                     color_text = Qt.darkYellow
-                if len(array) and mistake >= array[len(array) // 2]:
+                if mistake >= percentile_50:
                     color_text = Qt.red
                 ui_tr.textEdit_test_result.setTextColor(color_text)
                 ui_tr.textEdit_test_result.insertPlainText(
