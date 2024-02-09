@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pandas as pd
 from func import *
 from decimal import *
@@ -478,34 +479,39 @@ def regression_test():
         index = 0
         while index + 1 < len(working_data):
             comp, total = 0, 0
-            summ, summ_pred = 0, 0
+            diff_list, list_y = [], []
             while index + 1 < len(working_data) and \
                     working_data.loc[index, 'prof_well_index'].split('_')[0] == \
                     working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
                     working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                     working_data.loc[index + 1, 'prof_well_index'].split('_')[1]:
-                summ += working_data.loc[index, 'diff']
+                diff_list.append(working_data.loc[index, 'diff'])
+                list_y.append(working_data.loc[index, 'y_pred'])
                 total += 1
                 index += 1
             if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                     working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
-                summ += working_data.loc[index, 'diff']
-                summ_pred += working_data.loc[index, 'y_pred']
                 total += 1
             if total == 0: total = 1
             profile = session.query(Profile).filter(
                 Profile.id == working_data.loc[index, 'prof_well_index'].split('_')[0]).first()
             well = session.query(Well).filter(Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
+
+            diff_list = sorted(list(map(math.fabs, diff_list)), reverse=False)
+            min_list, max_list = min(diff_list), max(diff_list)
+            mistake = math.fabs(round(working_data.loc[index, "target_value"] - sum(list_y)/total, 2))
+            mean_pred = round(sum(list_y)/total, 2)
+            array = np.linspace(min_list, max_list, total)
             color_text = Qt.black
-            if math.fabs(summ/total) >= 50:
-                 color_text = Qt.red
-            if 50 > math.fabs(summ/total) > 10:
-                 color_text = Qt.darkYellow
+            if len(array) and array[len(array) // 4] <= mistake < array[len(array) // 2]:
+                color_text = Qt.darkYellow
+            if len(array) and mistake >= array[len(array) // 2]:
+                color_text = Qt.red
             ui_tr.textEdit_test_result.setTextColor(color_text)
             ui_tr.textEdit_test_result.insertPlainText(
                 f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
-                f' predict {round(summ_pred/total, 2)} | target {round(working_data.loc[index, "target_value"], 2)} '
-                f'| погрешность: {round(working_data.loc[index, "target_value"] - summ_pred/total, 2)}\n')
+                f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
+                f'| погрешность: {mistake}\n')
             index += 1
 
         def regress_test_graphs():
@@ -576,35 +582,40 @@ def regression_test():
             index = 0
             while index + 1 < len(working_data):
                 comp, total = 0, 0
-                summ, summ_pred = 0, 0
+                diff_list, list_y = [], []
                 while index + 1 < len(working_data) and \
                         working_data.loc[index, 'prof_well_index'].split('_')[0] == \
                         working_data.loc[index + 1, 'prof_well_index'].split('_')[0] and \
                         working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                         working_data.loc[index + 1, 'prof_well_index'].split('_')[1]:
-                    summ += working_data.loc[index, 'diff']
-                    summ_pred += working_data.loc[index, 'y_pred']
+                    list_y.append(working_data.loc[index, 'y_pred'])
+                    diff_list.append(working_data.loc[index, 'diff'])
                     total += 1
                     index += 1
                 if working_data.loc[index, 'prof_well_index'].split('_')[1] == \
                         working_data.loc[index - 1, 'prof_well_index'].split('_')[1]:
-                    summ += working_data.loc[index, 'diff']
                     total += 1
                 if total == 0: total = 1
                 profile = session.query(Profile).filter(
                     Profile.id == working_data.loc[index, 'prof_well_index'].split('_')[0]).first()
                 well = session.query(Well).filter(
                     Well.id == working_data.loc[index, 'prof_well_index'].split('_')[1]).first()
+
+                diff_list = sorted(list(map(math.fabs, diff_list)), reverse=False)
+                min_list, max_list = min(diff_list), max(diff_list)
+                mistake = math.fabs(round(working_data.loc[index, "target_value"] - sum(list_y) / total, 2))
+                mean_pred = round(sum(list_y) / total, 2)
+                array = np.linspace(min_list, max_list, total)
                 color_text = Qt.black
-                if math.fabs(summ / total) >= 50:
-                    color_text = Qt.red
-                if 50 > math.fabs(summ / total) > 10:
+                if len(array) and array[len(array) // 4] <= mistake < array[len(array) // 2]:
                     color_text = Qt.darkYellow
+                if len(array) and mistake >= array[len(array) // 2]:
+                    color_text = Qt.red
                 ui_tr.textEdit_test_result.setTextColor(color_text)
                 ui_tr.textEdit_test_result.insertPlainText(
                     f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
-                    f' predict {round(summ_pred/total, 2)} | target {round(working_data.loc[index, "target_value"], 2)} '
-                    f'| погрешность: {round(working_data.loc[index, "target_value"] - summ_pred/total, 2)}\n')
+                    f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
+                    f'| погрешность: {mistake}\n')
                 index += 1
 
     ui_tr.comboBox_test_analysis.activated.connect(update_test_reg_list_well)
