@@ -89,6 +89,8 @@ from skgstat import Variogram, OrdinaryKriging
 from screeninfo import get_monitors
 from numpy.linalg import LinAlgError
 import pickle
+from scipy.signal import butter, filtfilt
+
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()

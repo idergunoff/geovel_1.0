@@ -54,9 +54,17 @@
 # print(parse_range("512,/1,3,3-8,10,22"))
 import pyqtgraph
 import pyqtgraph.examples
-pyqtgraph.examples.run()
+# pyqtgraph.examples.run()
 
 from func import *
 
-# session.query(TrainedModelClass).update({"except_signal": "", "except_crl": ""}, synchronize_session='fetch')
-# session.commit()
+
+
+
+
+
+
+
+
+
+

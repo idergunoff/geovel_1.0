@@ -108,6 +108,7 @@ ui.pushButton_dct.clicked.connect(calc_dctn)
 ui.pushButton_idct.clicked.connect(calc_idctn)
 ui.pushButton_log.clicked.connect(calc_log)
 ui.pushButton_rang.clicked.connect(calc_rang)
+ui.pushButton_butter.clicked.connect(butterworth_filter)
 ui.pushButton_add_window.clicked.connect(add_window)
 ui.pushButton_add_layer.clicked.connect(add_layer)
 ui.pushButton_add_formation.clicked.connect(add_formation)
@@ -126,7 +127,7 @@ ui.pushButton_color.clicked.connect(change_color)
 ui.pushButton_set_scale.clicked.connect(set_scale)
 ui.checkBox_grid.clicked.connect(show_grid)
 ui.pushButton_save_img.clicked.connect(save_image)
-
+ui.pushButton_slide.clicked.connect(slide_average)
 
 #   lda
 ui.pushButton_add_lda.clicked.connect(add_lda)
@@ -461,6 +462,11 @@ update_g_train_point_list()
 check_and_create_folders()
 update_list_binding()
 update_list_velocity_model()
+
+
+
+
+
 
 
 sys.excepthook = log_uncaught_exceptions

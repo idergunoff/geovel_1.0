@@ -2069,5 +2069,69 @@ def get_lists_vel_model(vel_mod_id: int) -> (list, list):
 
     return list_vel_bord, list_vel_form
 
+# def try_filter(radar):
+#     radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+#
+#     axes_fft = (0, 1)
+#     fourier = rfft(radar)
+#     m = fourier.size
+#     treshold_frequency = 0.5
+#     print(fourier)
+#     print(m)
+#     low_freq = irfft(np.arange(m) > treshold_frequency, 0, fourier)
+#
+#
+#     clear_current_profile()
+#     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(low_freq.tolist()))
+#     session.add(new_current)
+#     session.commit()
+#     draw_image(low_freq)
+#     updatePlot()
 
 
+def butterworth_filter():
+    def butter_lowpass(cutoff, fs, order=5):
+        nyquist = 0.5 * fs
+        normal_cutoff = cutoff / nyquist
+        b, a = butter(order, normal_cutoff, btype='low', analog=False)
+        return b, a
+
+    def butter_lowpass_filter(data, cutoff, fs, order=5):
+        b, a = butter_lowpass(cutoff, fs, order=order)
+        y = filtfilt(b, a, data)
+        return y
+
+    # fs - частота дискретизации, cutoff - частота среза фильтра
+    data = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+    fs = len(data)
+    cutoff = ui.spinBox_cutoff.value()
+    order = ui.spinBox_order.value()
+
+    # Фильтрация сигнала низкочастотным фильтром
+    filtered_data = butter_lowpass_filter(data, cutoff, fs, order)
+    print(filtered_data)
+
+
+    clear_current_profile()
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(filtered_data.tolist()))
+    session.add(new_current)
+    save_max_min(filtered_data)
+    session.commit()
+    draw_image(filtered_data)
+    updatePlot()
+
+def slide_average():
+    data = np.array(json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0]))
+    window_size = ui.spinBox_window.value()
+    kernel = np.ones(window_size)/window_size
+    smoothed_signal = np.array([np.convolve(row, kernel, mode='valid') for row in data])
+
+    print(smoothed_signal)
+
+    clear_current_profile()
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(smoothed_signal.tolist()))
+    session.add(new_current)
+    save_max_min(smoothed_signal)
+    session.commit()
+    draw_image(smoothed_signal)
+    updatePlot()
