@@ -445,7 +445,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if type_case == 'georadar':
             save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save)
         if type_case == 'geochem':
-            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save)
+            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save, data_train)
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
@@ -706,7 +706,7 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
     else:
         pass
 
-def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param):
+def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train):
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Сохранение модели',
@@ -721,6 +721,9 @@ def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_p
         with open(path_model, 'wb') as f:
             pickle.dump(pipe, f)
 
+        text_model += get_text_train_point_geochem(data_train)
+        text_model += get_text_train_param_geochem(list_param)
+
         new_trained_model = GeochemTrainedModel(
             maket_id = get_maket_id(),
             title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
@@ -733,3 +736,45 @@ def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_p
         update_g_model_list()
     else:
         pass
+
+
+def get_text_train_point_geochem(data):
+    text = '\nМодель обучалась на точках:\n'
+    list_cat = data['category'].unique().tolist()
+    for cat in list_cat:
+        text += f'Категория "{cat}":\n'
+        for t in data.loc[data['category'] == cat, 'title']:
+            if t != data.loc[data['category'] == cat, 'title'].iloc[-1]:
+                text += f'{t}, '
+            else:
+                text += f'{t}\n'
+    return text
+
+
+def get_text_train_param_geochem(list_param):
+    text = '\nПараметры модели:\n'
+    text += ", ".join(list_param)
+    return text
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
