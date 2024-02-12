@@ -1342,3 +1342,33 @@ def draw_point_graph():
 #
 def try_func():
     ui.label_31.setText("Enter Pressed")
+
+
+
+
+def update_trained_model_geochem_comment():
+    """ Изменить комментарий обученной модели """
+    try:
+        g_model = session.query(GeochemTrainedModel).filter_by(id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    FormComment = QtWidgets.QDialog()
+    ui_cmt = Ui_Form_comment()
+    ui_cmt.setupUi(FormComment)
+    FormComment.show()
+    FormComment.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    ui_cmt.textEdit.setText(g_model.comment)
+
+    def update_comment():
+        g_model.comment = ui_cmt.textEdit.toPlainText()
+        session.commit()
+        update_g_model_list()
+        FormComment.close()
+
+    ui_cmt.buttonBox.accepted.connect(update_comment)
+
+    FormComment.exec_()

@@ -77,7 +77,7 @@ def draw_image(radar):
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
         (255, 0, 0),
-        (0, 0, 0),
+        (255, 255, 255),
         (0, 0, 255)
     ]
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
@@ -99,7 +99,7 @@ def draw_image_deep_prof(radar, scale):
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
         (255, 0, 0),
-        (0, 0, 0),
+        (255, 255, 255),
         (0, 0, 255)
     ]
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
@@ -1933,6 +1933,7 @@ def update_g_model_list():
         item_text = (f'{i.title} id{i.id}')
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, i.id)
+        item.setToolTip(i.comment)
         ui.listWidget_g_trained_model.addItem(item)
     session.commit()
     ui.label_28.setText(f'Models: {ui.listWidget_g_trained_model.count()}')

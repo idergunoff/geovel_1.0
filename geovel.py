@@ -157,7 +157,7 @@ ui.pushButton_updata_lda.clicked.connect(update_list_param_lda)
 ui.pushButton_anova_lda.clicked.connect(anova_lda)
 ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
 ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda_db)
-ui.pushButton_test.clicked.connect(test)
+ui.pushButton_test.clicked.connect(draw_max_min)
 
 #   mlp
 ui.pushButton_add_mlp.clicked.connect(add_mlp)
@@ -411,6 +411,7 @@ ui.pushButton_calc_g_class.clicked.connect(calc_geochem_classification)
 ui.pushButton_g_drop_fake.clicked.connect(drop_fake_geochem)
 ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
 ui.pushButton_g_graph.clicked.connect(draw_point_graph)
+ui.pushButton_g_comment.clicked.connect(update_trained_model_geochem_comment)
 
 # radarogramma.getViewBox().sigRangeChanged.connect(draw_axis)
 
