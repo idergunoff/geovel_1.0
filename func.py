@@ -77,7 +77,7 @@ def draw_image(radar):
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
         (255, 0, 0),
-        (255, 255, 255),
+        (0, 0, 0),
         (0, 0, 255)
     ]
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
@@ -99,7 +99,7 @@ def draw_image_deep_prof(radar, scale):
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     colors = [
         (255, 0, 0),
-        (255, 255, 255),
+        (0, 0, 0),
         (0, 0, 255)
     ]
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)

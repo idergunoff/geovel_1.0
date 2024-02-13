@@ -1372,3 +1372,55 @@ def update_trained_model_geochem_comment():
     ui_cmt.buttonBox.accepted.connect(update_comment)
 
     FormComment.exec_()
+
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """
+    Computes the cosine similarity between two vectors a and b.
+    """
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def calc_vector():
+    data_train, list_param = build_geochem_table()
+    data_test, _ = build_geochem_table_field()
+
+    data_vector_train = data_train[list_param]
+    data_vector_test = data_test[list_param]
+    list_cos_mean = []
+    for i in data_vector_test.index:
+        list_cos = []
+        vector = data_vector_test.loc[i].to_numpy()
+        for j in data_vector_train.index:
+            list_cos.append(cosine_similarity(data_vector_train.loc[j], vector))
+            # list_cos.append(np.)
+        list_cos_mean.append(np.median(list_cos))
+
+    data_test['cos_mean'] = list_cos_mean
+    x, y, z = data_test['X'], data_test['Y'], data_test['cos_mean']
+
+    draw_map(x, y, z, f'Geochem vector', False)
+
+
+    result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
+                                   QMessageBox.No)
+    if result1 == QMessageBox.Yes:
+        result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
+                                       QMessageBox.No)
+        if result2 == QMessageBox.Yes:
+            list_col = ['title', 'X', 'Y', 'cos_mean']
+            data_test = data_test[list_col]
+        else:
+            pass
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(
+                caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
+                directory=file_name,
+                filter="Excel Files (*.xlsx)")
+            data_test.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+    else:
+        pass

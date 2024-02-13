@@ -26,7 +26,7 @@
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout_2" rowstretch="0,0" columnstretch="7,1" columnminimumwidth="7,1">
         <item row="1" column="0">
-         <layout class="QGridLayout" name="gridLayout" rowstretch="7,0" columnstretch="7,0">
+         <layout class="QGridLayout" name="gridLayout" rowstretch="7,2" columnstretch="7,2">
           <item row="0" column="1">
            <widget class="PlotWidget" name="signal"/>
           </item>
@@ -73,7 +73,7 @@
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
               <item row="13" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_10" stretch=""/>
+               <layout class="QHBoxLayout" name="horizontalLayout_10"/>
               </item>
               <item row="12" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -1024,8 +1024,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4806,12 +4806,12 @@ Therm</string>
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QPushButton" name="pushButton_del_point_2">
+                 <widget class="QPushButton" name="pushButton_vector">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                   <string notr="true">background-color: rgb(205, 171, 143);</string>
                   </property>
                   <property name="text">
-                   <string/>
+                   <string>VECTOR</string>
                   </property>
                  </widget>
                 </item>
@@ -4981,7 +4981,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
