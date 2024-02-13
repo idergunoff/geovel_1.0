@@ -1426,7 +1426,11 @@ def calc_vector():
     data_test['cos_mean'] = list_cos_mean
     x, y, z = data_test['X'], data_test['Y'], data_test['cos_mean']
 
-    draw_map(x, y, z, f'Geochem vector {ui.comboBox_geochem_maket.currentText().split(" id")[0]}', False)
+    text_method = '\nMethod correlation' if ui.checkBox_geochem_vector_corr.isChecked() else 'Method cosine'
+    text_method += ' - StandardScaler' if ui.checkBox_std_sc.isChecked() else ''
+    text_method += ' - softmax' if ui.checkBox_softmax.isChecked() else ''
+
+    draw_map(x, y, z, f'Geochem vector {ui.comboBox_geochem_maket.currentText().split(" id")[0]} {text_method}', False)
 
 
     result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
