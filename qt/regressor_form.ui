@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>880</width>
+    <width>908</width>
     <height>580</height>
    </rect>
   </property>
@@ -851,45 +851,7 @@
    </item>
    <item row="0" column="1">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="2" column="0">
-      <widget class="QGroupBox" name="groupBox_9">
-       <property name="title">
-        <string>Cross Validate</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_9">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_cross_val">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="spinBox_n_cross_val">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QSplitter" name="splitter">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <widget class="QCheckBox" name="checkBox_save_model">
-        <property name="text">
-         <string>save</string>
-        </property>
-       </widget>
-      </widget>
-     </item>
-     <item row="0" column="0">
+     <item row="0" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_12">
        <property name="title">
         <string>Выбросы</string>
@@ -918,7 +880,7 @@
        </layout>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="1" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_5">
        <property name="title">
         <string>Stacking/Voting Regressor</string>
@@ -1111,7 +1073,62 @@
        </layout>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item row="2" column="0">
+      <widget class="QGroupBox" name="groupBox_9">
+       <property name="title">
+        <string>Cross Validate</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_cross_val">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_n_cross_val">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QGroupBox" name="groupBox_16">
+       <property name="title">
+        <string>Bagging</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_32">
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_baggig">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinBox_bagging">
+          <property name="minimum">
+           <number>5</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>10</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox_11">
        <property name="title">
         <string>PCA</string>
@@ -1139,6 +1156,18 @@
          </widget>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <widget class="QCheckBox" name="checkBox_save_model">
+        <property name="text">
+         <string>save</string>
+        </property>
+       </widget>
       </widget>
      </item>
      <item row="5" column="0">

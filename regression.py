@@ -701,7 +701,13 @@ def train_regression_model():
             model_name = ui_r.buttonGroup.checkedButton().text()
             model_class, text_model = choice_model_regressor(model_name)
 
+        if ui_r.checkBox_baggig.isChecked():
+            model_class = BaggingRegressor(base_estimator=model_class, n_estimators=ui_r.spinBox_bagging.value(),
+                                            random_state=0, n_jobs=-1)
+        bagging_text = f'\nBagging: n_estimators={ui_r.spinBox_bagging.value()}' if ui_r.checkBox_baggig.isChecked() else ''
+
         text_model += text_pca
+        text_model += bagging_text
 
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
