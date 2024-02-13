@@ -1392,7 +1392,7 @@ def softmax_new(x):
 def norm_akhmet(x):
     new_x = []
     for i in x:
-        new_x.append((i - np.min(x) / (np.max(x) - np.min(x))))
+        new_x.append((i - np.min(x)) / (np.max(x) - np.min(x)))
     return new_x
 
 def calc_vector():
