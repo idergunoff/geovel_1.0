@@ -4816,7 +4816,7 @@ Therm</string>
                </layout>
               </item>
               <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_144" rowstretch="0,0,0" columnstretch="1,1,0">
+               <layout class="QGridLayout" name="gridLayout_144" rowstretch="0,0,0" columnstretch="1,1,0,0">
                 <item row="2" column="0">
                  <widget class="QPushButton" name="pushButton_g_drop_fake">
                   <property name="styleSheet">
@@ -4857,7 +4857,14 @@ Therm</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="2">
+                <item row="1" column="3">
+                 <widget class="QCheckBox" name="checkBox_softmax">
+                  <property name="text">
+                   <string>softmax</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="3">
                  <widget class="QCheckBox" name="checkBox_std_sc">
                   <property name="text">
                    <string>StdSc</string>
@@ -4865,9 +4872,9 @@ Therm</string>
                  </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QCheckBox" name="checkBox_softmax">
+                 <widget class="QCheckBox" name="checkBox_geochem_vector_corr">
                   <property name="text">
-                   <string>softmax</string>
+                   <string>corr</string>
                   </property>
                  </widget>
                 </item>

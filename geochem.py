@@ -1414,7 +1414,10 @@ def calc_vector():
         list_cos = []
         vector = data_vector_test.loc[i].to_numpy()
         for j in data_vector_train.index:
-            list_cos.append(cosine_similarity(data_vector_train.loc[j], vector))
+            if ui.checkBox_geochem_vector_corr.isChecked():
+                list_cos.append(np.corrcoef(data_vector_train.loc[j], vector)[0][1])
+            else:
+                list_cos.append(cosine_similarity(data_vector_train.loc[j], vector))
             # list_cos.append(np.linalg.norm(data_vector_train.loc[j] - vector))
         list_cos_mean.append(np.median(list_cos))
     if ui.checkBox_softmax.isChecked():
