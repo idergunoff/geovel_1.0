@@ -1382,6 +1382,19 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
+def softmax_new(x):
+    new_x = []
+    for i in x:
+        new_x.append((np.pi - np.arccos(i)) / np.pi)
+    return new_x
+
+
+def norm_akhmet(x):
+    new_x = []
+    for i in x:
+        new_x.append((i - np.min(x) / (np.max(x) - np.min(x))))
+    return new_x
+
 def calc_vector():
     data_train, list_param = build_geochem_table()
     data_test, _ = build_geochem_table_field()
@@ -1405,7 +1418,8 @@ def calc_vector():
             # list_cos.append(np.linalg.norm(data_vector_train.loc[j] - vector))
         list_cos_mean.append(np.median(list_cos))
     if ui.checkBox_softmax.isChecked():
-        list_cos_mean = softmax(np.array(list_cos_mean))
+        list_cos_mean = softmax_new(list_cos_mean)
+        list_cos_mean = norm_akhmet(list_cos_mean)
     data_test['cos_mean'] = list_cos_mean
     x, y, z = data_test['X'], data_test['Y'], data_test['cos_mean']
 
