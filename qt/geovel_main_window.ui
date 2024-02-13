@@ -21,6 +21,28 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_4">
+    <item row="0" column="1">
+     <widget class="QProgressBar" name="progressBar">
+      <property name="value">
+       <number>100</number>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+      </property>
+      <property name="textVisible">
+       <bool>true</bool>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="invertedAppearance">
+       <bool>false</bool>
+      </property>
+      <property name="textDirection">
+       <enum>QProgressBar::TopToBottom</enum>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_3" columnstretch="5">
       <item row="0" column="0">
@@ -1024,8 +1046,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4728,9 +4750,6 @@ Therm</string>
                 </item>
                 <item row="1" column="1">
                  <layout class="QGridLayout" name="gridLayout_142">
-                  <item row="0" column="0">
-                   <widget class="QListWidget" name="listWidget_g_trained_model"/>
-                  </item>
                   <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_143">
                     <item row="1" column="1">
@@ -4775,6 +4794,9 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
+                  <item row="0" column="0">
+                   <widget class="QListWidget" name="listWidget_g_trained_model"/>
+                  </item>
                  </layout>
                 </item>
                 <item row="0" column="0">
@@ -4794,7 +4816,27 @@ Therm</string>
                </layout>
               </item>
               <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_144">
+               <layout class="QGridLayout" name="gridLayout_144" rowstretch="0,0,0" columnstretch="1,1,0">
+                <item row="2" column="0">
+                 <widget class="QPushButton" name="pushButton_g_drop_fake">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(249, 240, 107);</string>
+                  </property>
+                  <property name="text">
+                   <string>clear fake</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_calc_g_class">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 255, 243);</string>
+                  </property>
+                  <property name="text">
+                   <string>Calc Object</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="1" column="0">
                  <widget class="QPushButton" name="pushButton_geochem_train_model">
                   <property name="styleSheet">
@@ -4815,23 +4857,17 @@ Therm</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_calc_g_class">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 255, 243);</string>
-                  </property>
+                <item row="2" column="2">
+                 <widget class="QCheckBox" name="checkBox_std_sc">
                   <property name="text">
-                   <string>Calc Object</string>
+                   <string>StdSc</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="0">
-                 <widget class="QPushButton" name="pushButton_g_drop_fake">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(249, 240, 107);</string>
-                  </property>
+                <item row="1" column="2">
+                 <widget class="QCheckBox" name="checkBox_softmax">
                   <property name="text">
-                   <string>clear fake</string>
+                   <string>softmax</string>
                   </property>
                  </widget>
                 </item>
@@ -4950,28 +4986,6 @@ Therm</string>
        </layout>
       </item>
      </layout>
-    </item>
-    <item row="0" column="1">
-     <widget class="QProgressBar" name="progressBar">
-      <property name="value">
-       <number>100</number>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-      </property>
-      <property name="textVisible">
-       <bool>true</bool>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="invertedAppearance">
-       <bool>false</bool>
-      </property>
-      <property name="textDirection">
-       <enum>QProgressBar::TopToBottom</enum>
-      </property>
-     </widget>
     </item>
    </layout>
   </widget>

@@ -3,6 +3,7 @@ import pdb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy.special
 from scipy import stats
 
 from func import *
@@ -1388,11 +1389,12 @@ def calc_vector():
     data_vector_train = data_train[list_param]
     data_vector_test = data_test[list_param]
 
-    scaler = StandardScaler()
-    data_vector_train = scaler.fit_transform(data_vector_train)
-    data_vector_train = pd.DataFrame(data_vector_train, columns=list_param)
-    data_vector_test = scaler.transform(data_vector_test)
-    data_vector_test = pd.DataFrame(data_vector_test, columns=list_param)
+    if ui.checkBox_std_sc.isChecked():
+        scaler = StandardScaler()
+        data_vector_train = scaler.fit_transform(data_vector_train)
+        data_vector_train = pd.DataFrame(data_vector_train, columns=list_param)
+        data_vector_test = scaler.transform(data_vector_test)
+        data_vector_test = pd.DataFrame(data_vector_test, columns=list_param)
 
     list_cos_mean = []
     for i in data_vector_test.index:
@@ -1402,7 +1404,8 @@ def calc_vector():
             list_cos.append(cosine_similarity(data_vector_train.loc[j], vector))
             # list_cos.append(np.linalg.norm(data_vector_train.loc[j] - vector))
         list_cos_mean.append(np.median(list_cos))
-
+    if ui.checkBox_softmax.isChecked():
+        list_cos_mean = softmax(np.array(list_cos_mean))
     data_test['cos_mean'] = list_cos_mean
     x, y, z = data_test['X'], data_test['Y'], data_test['cos_mean']
 

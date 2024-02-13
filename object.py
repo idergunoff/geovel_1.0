@@ -44,6 +44,7 @@ from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, fil
 from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
+from scipy.special import softmax
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import normalize
