@@ -1259,7 +1259,9 @@ def update_list_trained_models_regmod():
         item_text = model.title
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, model.id)
-        item.setToolTip(model.comment)
+        item.setToolTip(f'{model.comment}\n'
+                        f'Количество параметров: '
+                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}')
         ui.listWidget_trained_model_reg.addItem(item)
     ui.listWidget_trained_model_reg.setCurrentRow(0)
 
