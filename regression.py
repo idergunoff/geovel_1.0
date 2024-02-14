@@ -672,6 +672,48 @@ def train_regression_model():
             model_name = 'STACK'
         return model_class, text_model, model_name
 
+    def add_model_reg_to_lineup():
+        scaler = StandardScaler()
+
+        pipe_steps = []
+        pipe_steps.append(('scaler', scaler))
+
+        if ui_r.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0)
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+        if ui_r.checkBox_stack_vote.isChecked():
+            model_class, text_model, model_name = build_stacking_voting_model()
+        else:
+            model_name = ui_r.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_regressor(model_name)
+
+        if ui_r.checkBox_baggig.isChecked():
+            model_class = BaggingRegressor(base_estimator=model_class, n_estimators=ui_r.spinBox_bagging.value(),
+                                           random_state=0, n_jobs=-1)
+        bagging_text = f'\nBagging: n_estimators={ui_r.spinBox_bagging.value()}' if ui_r.checkBox_baggig.isChecked() else ''
+
+        text_model += text_pca
+        text_model += bagging_text
+
+        pipe_steps.append(('model', model_class))
+        pipe = Pipeline(pipe_steps)
+
+
+        new_lineup = LineupTrain(
+            type_ml = 'reg',
+            analysis_id = get_regmod_id(),
+            list_param = json.dumps(list_param_reg),
+            text_model=text_model,
+            over_sampling = 'none',
+            pipe = pickle.dumps(pipe)
+        )
+        session.add(new_lineup)
+        session.commit()
+
+        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
 
     def calc_model_reg():
         """ Создание и тренировка модели """
@@ -759,7 +801,6 @@ def train_regression_model():
                 if i >= np.mean(pipe['model'].feature_importances_):
                     ipm_name_params.append(list_param_reg[n])
                     imp_params.append(i)
-            print(imp_params)
 
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
@@ -1031,6 +1072,7 @@ def train_regression_model():
 
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
+    ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     Regressor.exec_()
