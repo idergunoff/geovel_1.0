@@ -454,7 +454,6 @@ def set_color_button_updata_regmod():
 def train_regression_model():
     """ Расчет регрессионной модели """
     data_train, list_param_name = build_table_train(True, 'regmod')
-    print(list_param_name)
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
     list_nan_param, count_nan = [], 0
     for i in data_train.index:
@@ -802,7 +801,6 @@ def train_regression_model():
                 if i >= np.mean(pipe['model'].feature_importances_):
                     ipm_name_params.append(list_param_reg[n])
                     imp_params.append(i)
-            print(imp_params)
 
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
