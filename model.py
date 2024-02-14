@@ -597,6 +597,7 @@ class LineupTrain(Base):
     analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
     list_param = Column(Text)
     text_model = Column(Text)
+    model_name = Column(String)
     pipe = Column(LargeBinary)
     over_sampling = Column(String)
 

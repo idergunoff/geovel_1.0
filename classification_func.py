@@ -230,9 +230,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         final_model, final_text_model = choice_model_classifier(ui_cls.buttonGroup.checkedButton().text())
         list_model_text = ', '.join(list_model)
         if ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting':
-            hard_voting = 'hard' if ui_cls.checkBox_voting_hard.isChecked() else 'soft'
-            model_class = VotingClassifier(estimators=estimators, voting=hard_voting, n_jobs=-1)
-            text_model = f'**Voting**: -{hard_voting}-\n({list_model_text})\n'
+            # hard_voting = 'hard' if ui_cls.checkBox_voting_hard.isChecked() else 'soft'
+            model_class = VotingClassifier(estimators=estimators, voting='soft', n_jobs=-1)
+            text_model = f'**Voting**: -soft-\n({list_model_text})\n'
             model_name = 'VOT'
         else:
             model_class = StackingClassifier(estimators=estimators, final_estimator=final_model, n_jobs=-1)
@@ -293,6 +293,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             analysis_id = get_MLP_id(),
             list_param = json.dumps(list_param),
             text_model=text_model,
+            model_name = model_name,
             over_sampling = over_sampling,
             pipe = pickle.dumps(pipe)
         )
@@ -382,24 +383,24 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
 
-        if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
-                and ui_cls.checkBox_voting_hard.isChecked()):
-            hard_flag = True
-        else:
-            hard_flag = False
+        # if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
+        #         and ui_cls.checkBox_voting_hard.isChecked()):
+        #     hard_flag = True
+        # else:
+        #     hard_flag = False
 
-        if not hard_flag:
-            preds_proba_train = pipe.predict_proba(training_sample)
-            try:
-                tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-                train_tsne = tsne.fit_transform(preds_proba_train)
-                data_tsne = pd.DataFrame(train_tsne)
-                data_tsne[mark] = preds_train
-            except ValueError:
-                tsne = TSNE(n_components=2, perplexity=len(data_train.index) - 1, learning_rate=200, random_state=42)
-                train_tsne = tsne.fit_transform(preds_proba_train)
-                data_tsne = pd.DataFrame(train_tsne)
-                data_tsne[mark] = preds_train
+        # if not hard_flag:
+        preds_proba_train = pipe.predict_proba(training_sample)
+        try:
+            tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
+            train_tsne = tsne.fit_transform(preds_proba_train)
+            data_tsne = pd.DataFrame(train_tsne)
+            data_tsne[mark] = preds_train
+        except ValueError:
+            tsne = TSNE(n_components=2, perplexity=len(data_train.index) - 1, learning_rate=200, random_state=42)
+            train_tsne = tsne.fit_transform(preds_proba_train)
+            data_tsne = pd.DataFrame(train_tsne)
+            data_tsne[mark] = preds_train
 
         if ui_cls.checkBox_cross_val.isChecked():
             kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
@@ -432,27 +433,27 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
         fig_train.set_size_inches(25, 10)
 
-        if not hard_flag:
-            sns.scatterplot(data=data_tsne, x=0, y=1, hue=mark, s=200, palette=colors, ax=axes[0])
-            axes[0].grid()
-            axes[0].xaxis.grid(True, "minor", linewidth=.25)
-            axes[0].yaxis.grid(True, "minor", linewidth=.25)
-            axes[0].set_title(f'Диаграмма рассеяния для канонических значений {model_name}\nдля обучающей выборки и тестовой выборки')
-            if len(list_marker) == 2:
-                # Вычисляем ROC-кривую и AUC
-                preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-                fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
-                roc_auc = auc(fpr, tpr)
+        # if not hard_flag:
+        sns.scatterplot(data=data_tsne, x=0, y=1, hue=mark, s=200, palette=colors, ax=axes[0])
+        axes[0].grid()
+        axes[0].xaxis.grid(True, "minor", linewidth=.25)
+        axes[0].yaxis.grid(True, "minor", linewidth=.25)
+        axes[0].set_title(f'Диаграмма рассеяния для канонических значений {model_name}\nдля обучающей выборки и тестовой выборки')
+        if len(list_marker) == 2:
+            # Вычисляем ROC-кривую и AUC
+            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
 
-                # Строим ROC-кривую
-                axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-                axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-                axes[1].set_xlim([0.0, 1.0])
-                axes[1].set_ylim([0.0, 1.05])
-                axes[1].set_xlabel('False Positive Rate')
-                axes[1].set_ylabel('True Positive Rate')
-                axes[1].set_title('ROC-кривая')
-                axes[1].legend(loc="lower right")
+            # Строим ROC-кривую
+            axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            axes[1].set_xlim([0.0, 1.0])
+            axes[1].set_ylim([0.0, 1.05])
+            axes[1].set_xlabel('False Positive Rate')
+            axes[1].set_ylabel('True Positive Rate')
+            axes[1].set_title('ROC-кривая')
+            axes[1].legend(loc="lower right")
 
         title_graph = text_model
         if model_name == 'RFC' or model_name == 'ETC':

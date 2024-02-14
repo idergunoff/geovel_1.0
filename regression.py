@@ -707,6 +707,7 @@ def train_regression_model():
             analysis_id = get_regmod_id(),
             list_param = json.dumps(list_param_reg),
             text_model=text_model,
+            model_name=model_name,
             over_sampling = 'none',
             pipe = pickle.dumps(pipe)
         )
