@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Date, Text, text, literal_column, or_, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey, Date, Text, text, literal_column, or_, func
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -587,6 +587,20 @@ class TrainedModelReg(Base):
     comment = Column(Text)
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')
+
+
+class StackTrain(Base):
+    __tablename__ = 'stack_train'
+
+    id = Column(Integer, primary_key=True)
+    type_ml = Column(String)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    list_param = Column(Text)
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
+    text_model = Column(Text)
+    pipe = Column(LargeBinary)
+    over_sampling = Column(String)
 
 
 #####################################################

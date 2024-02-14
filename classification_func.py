@@ -1,4 +1,4 @@
-import pandas as pd
+import pickle
 
 from func import *
 from random_search import push_random_search
@@ -16,7 +16,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
     """
-    print(data_train)
 
     list_nan_param, count_nan = [], 0
     for i in data_train.index:
@@ -307,6 +306,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             )
             text_model += f'\nCalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
 
+        # a = pickle.dumps(pipe)
+        # pipe = pickle.loads(a)
+
         pipe.fit(training_sample_train, markup_train)
 
         # Оценка точности на всей обучающей выборке
@@ -355,6 +357,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if not ui_cls.checkBox_baggig.isChecked():
                 imp_name_params, imp_params = [], []
                 if not ui_cls.checkBox_calibr.isChecked():
+                    # model_class = pipe.named_steps['model']
                     for n, i in enumerate(model_class.feature_importances_):
                         if ui_cls.checkBox_all_imp.isChecked():
                             imp_name_params.append(list_param[n])
