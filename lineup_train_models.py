@@ -7,6 +7,9 @@ def model_lineup():
     lineupModel.show()
     lineupModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+    m_width, m_height = get_width_height_monitor()
+    lineupModel.resize(int(m_width/3), int(m_height/3))
+
     def update_lineup_list():
         ui_l.listWidget_lineup.clear()
         for i in session.query(LineupTrain).all():
