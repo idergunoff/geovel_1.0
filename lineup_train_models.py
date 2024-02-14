@@ -25,7 +25,8 @@ def model_lineup():
     def update_lineup_info():
         ui_l.plainTextEdit_info.clear()
         model = session.query(LineupTrain).filter_by(id=ui_l.listWidget_lineup.currentItem().data(Qt.UserRole)).first()
-        ui_l.plainTextEdit_info.insertPlainText(model.text_model)
+        ui_l.plainTextEdit_info.insertPlainText(f'{model.text_model} \n\n {model.list_param}')
+        # ui_l.plainTextEdit_info.insertPlainText(model.list_param)
 
     def remove_lineup_model():
         model = session.query(LineupTrain).filter_by(id=ui_l.listWidget_lineup.currentItem().data(Qt.UserRole)).first()
