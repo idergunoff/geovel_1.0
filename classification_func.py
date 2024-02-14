@@ -1,3 +1,4 @@
+import json
 import pickle
 
 from func import *
@@ -239,6 +240,69 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             model_name = 'STACK'
         return model_class, text_model, model_name
 
+
+    def add_model_class_to_lineup():
+        """ Добавление модели в лайнап """
+
+        scaler = StandardScaler()
+        pipe_steps = []
+        pipe_steps.append(('scaler', scaler))
+        over_sampling, text_over_sample = 'none', ''
+        if ui_cls.checkBox_smote.isChecked():
+            over_sampling, text_over_sample = 'smote', '\nSMOTE'
+        if ui_cls.checkBox_adasyn.isChecked():
+            over_sampling, text_over_sample = 'adasyn', '\nADASYN'
+
+        if ui_cls.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
+
+        if ui_cls.checkBox_stack_vote.isChecked():
+            model_class, text_model, model_name = build_stacking_voting_model()
+        else:
+            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_classifier(model_name)
+
+        if ui_cls.checkBox_baggig.isChecked():
+            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
+                                            random_state=0, n_jobs=-1)
+        bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
+
+        text_model += text_pca
+        text_model += text_over_sample
+        text_model += bagging_text
+
+        pipe_steps.append(('model', model_class))
+        pipe = Pipeline(pipe_steps)
+
+        if ui_cls.checkBox_calibr.isChecked():
+            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+
+            pipe = CalibratedClassifierCV(
+                estimator=pipe,
+                cv=kf,
+                method=ui_cls.comboBox_calibr_method.currentText(),
+                n_jobs=-1
+            )
+            text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
+
+        new_lineup = LineupTrain(
+            type_ml = 'cls',
+            analysis_id = get_MLP_id(),
+            list_param = json.dumps(list_param),
+            text_model=text_model,
+            over_sampling = over_sampling,
+            pipe = pickle.dumps(pipe)
+        )
+        session.add(new_lineup)
+        session.commit()
+
+        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
+
+
+
     def calc_model_class():
         """ Создание и тренировка модели """
         # global training_sample, markup
@@ -304,10 +368,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 method=ui_cls.comboBox_calibr_method.currentText(),
                 n_jobs=-1
             )
-            text_model += f'\nCalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
-
-        # a = pickle.dumps(pipe)
-        # pipe = pickle.loads(a)
+            text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
 
         pipe.fit(training_sample_train, markup_train)
 
@@ -357,7 +418,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if not ui_cls.checkBox_baggig.isChecked():
                 imp_name_params, imp_params = [], []
                 if not ui_cls.checkBox_calibr.isChecked():
-                    # model_class = pipe.named_steps['model']
                     for n, i in enumerate(model_class.feature_importances_):
                         if ui_cls.checkBox_all_imp.isChecked():
                             imp_name_params.append(list_param[n])
@@ -676,6 +736,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
+    ui_cls.pushButton_add_to_lineup.clicked.connect(add_model_class_to_lineup)
     Classifier.exec_()
 
 

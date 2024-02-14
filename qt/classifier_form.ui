@@ -1042,6 +1042,116 @@
        </layout>
       </widget>
      </item>
+     <item row="3" column="0" colspan="2">
+      <layout class="QGridLayout" name="gridLayout_34">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_14">
+         <property name="title">
+          <string>Over Sampling</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_31">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_smote">
+            <property name="text">
+             <string>SMOTE</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_adasyn">
+            <property name="text">
+             <string>ADASYN</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QGroupBox" name="groupBox_16">
+         <property name="title">
+          <string>Bagging</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_32">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_baggig">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_bagging">
+            <property name="minimum">
+             <number>5</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="6" column="0" colspan="2">
+      <layout class="QGridLayout" name="gridLayout_10">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="pushButton_calc">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 204, 121);</string>
+         </property>
+         <property name="text">
+          <string>CALC</string>
+         </property>
+         <property name="autoRepeatInterval">
+          <number>100</number>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="pushButton_random_search">
+         <property name="toolTip">
+          <string>Подбор гиперпараметров</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(220, 138, 221);</string>
+         </property>
+         <property name="text">
+          <string>RndSrcCV</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="1">
+      <layout class="QGridLayout" name="gridLayout_33">
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="checkBox_save_model">
+         <property name="text">
+          <string>save</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="checkBox_save_table">
+         <property name="text">
+          <string>table</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
      <item row="2" column="0" colspan="2">
       <layout class="QGridLayout" name="gridLayout_18">
        <item row="0" column="0">
@@ -1102,79 +1212,23 @@
        </item>
       </layout>
      </item>
-     <item row="3" column="0" colspan="2">
-      <layout class="QGridLayout" name="gridLayout_34">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_14">
-         <property name="title">
-          <string>Over Sampling</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_31">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_smote">
-            <property name="text">
-             <string>SMOTE</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_adasyn">
-            <property name="text">
-             <string>ADASYN</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QGroupBox" name="groupBox_16">
-         <property name="title">
-          <string>Bagging</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_32">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_baggig">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_bagging">
-            <property name="minimum">
-             <number>5</number>
-            </property>
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="value">
-             <number>10</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </item>
      <item row="4" column="0">
       <widget class="QGroupBox" name="groupBox_11">
        <property name="title">
         <string>PCA</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_8">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_pca">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="1">
          <widget class="QSpinBox" name="spinBox_pca">
           <property name="maximum">
            <number>1000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="checkBox_pca">
+          <property name="text">
+           <string/>
           </property>
          </widget>
         </item>
@@ -1188,59 +1242,15 @@
        </layout>
       </widget>
      </item>
-     <item row="4" column="1">
-      <layout class="QGridLayout" name="gridLayout_33">
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="checkBox_save_model">
-         <property name="text">
-          <string>save</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QCheckBox" name="checkBox_save_table">
-         <property name="text">
-          <string>table</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="5" column="0" colspan="2">
-      <layout class="QGridLayout" name="gridLayout_10">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="pushButton_calc">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 204, 121);</string>
-         </property>
-         <property name="text">
-          <string>CALC</string>
-         </property>
-         <property name="autoRepeatInterval">
-          <number>100</number>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="pushButton_random_search">
-         <property name="toolTip">
-          <string>Подбор гиперпараметров</string>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(220, 138, 221);</string>
-         </property>
-         <property name="text">
-          <string>RndSrcCV</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+     <item row="5" column="0">
+      <widget class="QPushButton" name="pushButton_add_to_lineup">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(252, 204, 165);</string>
+       </property>
+       <property name="text">
+        <string>ADD TO LINEUP</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

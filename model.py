@@ -596,8 +596,6 @@ class LineupTrain(Base):
     type_ml = Column(String)
     analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
     list_param = Column(Text)
-    except_signal = Column(String, default="")
-    except_crl = Column(String, default="")
     text_model = Column(Text)
     pipe = Column(LargeBinary)
     over_sampling = Column(String)

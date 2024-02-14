@@ -15,6 +15,7 @@ from exploration import *
 from geochem import *
 from velocity_model import *
 from test_model import *
+from lineup_train_models import *
 
 MainWindow.show()
 
