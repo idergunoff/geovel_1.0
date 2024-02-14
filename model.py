@@ -589,8 +589,8 @@ class TrainedModelReg(Base):
     analysis = relationship('AnalysisReg', back_populates='trained_models')
 
 
-class StackTrain(Base):
-    __tablename__ = 'stack_train'
+class LineupTrain(Base):
+    __tablename__ = 'lineup_train'
 
     id = Column(Integer, primary_key=True)
     type_ml = Column(String)
