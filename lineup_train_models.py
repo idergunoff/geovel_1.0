@@ -1,4 +1,6 @@
 from func import *
+from regression import update_list_trained_models_regmod
+
 
 def model_lineup():
     lineupModel = QtWidgets.QDialog()
@@ -54,6 +56,8 @@ def model_lineup():
             session.commit()
             update_lineup_list()
             ui.progressBar.setValue(n + 1)
+        update_list_trained_models_class()
+        update_list_trained_models_regmod()
 
 
     update_lineup_list()
@@ -180,16 +184,88 @@ def train_cls_model(model):
         analysis_id=get_MLP_id(),
         title=f'{model.model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
         path_model=path_model,
-        list_params=json.dumps(list_param),
-        except_signal=ui.lineEdit_signal_except.text(),
-        except_crl=ui.lineEdit_crl_except.text(),
+        list_params=model.list_param_short,
+        except_signal=model.except_signal,
+        except_crl=model.except_crl,
         comment=text_model
     )
     session.add(new_trained_model)
     session.commit()
 
 def train_reg_model(model):
-    pass
+    start_time = datetime.datetime.now()
+    # Нормализация данных
+    analysis_reg = session.query(AnalysisReg).filter_by(id=model.analysis_id).first()
+
+    ui.comboBox_mlp_analysis.setCurrentText(f'{analysis_reg.title} id{analysis_reg.id}')
+
+    data_train, _ = build_table_train(True, 'regmod')
+    list_param = json.loads(model.list_param)
+
+    training_sample = np.array(data_train[list_param].values.tolist())
+    target = np.array(sum(data_train[['target_value']].values.tolist(), []))
+
+    # Разделение данных на обучающую и тестовую выборки
+    x_train, x_test, y_train, y_test = train_test_split(
+        training_sample, target, test_size=0.2, random_state=42
+    )
+    pipe = pickle.loads(model.pipe)
+
+    pipe.fit(x_train, y_train)
+    y_pred = pipe.predict(x_test)
+
+    accuracy = round(pipe.score(x_test, y_test), 5)
+    mse = round(mean_squared_error(y_test, y_pred), 5)
+
+    train_time = datetime.datetime.now() - start_time
+
+    set_info(f'Модель {model.model_name}:\n точность: {accuracy} '
+             f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
+
+    y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
+
+    data_graph = pd.DataFrame({
+        'y_test': y_test,
+        'y_pred': y_pred,
+        'y_remain': y_remain
+    })
+
+    fig, axes = plt.subplots(nrows=1, ncols=3)
+    fig.set_size_inches(25, 10)
+    fig.suptitle(f'Модель {model.model_name}:\n точность: {accuracy} '
+                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}')
+    sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0])
+    sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0])
+    sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1])
+    sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1])
+
+    try:
+        sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[2])
+    except MemoryError:
+        pass
+    fig.tight_layout()
+    fig.savefig(f'lineup_pictures/{model.model_name}_{accuracy}.png', dpi=300)
+
+
+    # Сохранение модели в файл с помощью pickle
+    path_model = f'models/regression/{model.model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+    if os.path.exists(path_model):
+        path_model = f'models/regression/{model.model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
+    with open(path_model, 'wb') as f:
+        pickle.dump(pipe, f)
+
+    new_trained_model = TrainedModelReg(
+        analysis_id=get_regmod_id(),
+        title=f'{model.model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
+        path_model=path_model,
+        list_params=model.list_param_short,
+        except_signal=model.except_signal,
+        except_crl=model.except_crl,
+        comment=model.text_model
+    )
+    session.add(new_trained_model)
+    session.commit()
+
 
 
 

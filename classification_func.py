@@ -288,10 +288,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             )
             text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
 
+        except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+
         new_lineup = LineupTrain(
             type_ml = 'cls',
             analysis_id = get_MLP_id(),
             list_param = json.dumps(list_param),
+            list_param_short = json.dumps(list_param_save),
+            except_signal = except_mlp.except_signal,
+            except_crl = except_mlp.except_crl,
             text_model=text_model,
             model_name = model_name,
             over_sampling = over_sampling,

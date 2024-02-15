@@ -701,11 +701,15 @@ def train_regression_model():
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
 
+        except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
 
         new_lineup = LineupTrain(
             type_ml = 'reg',
             analysis_id = get_regmod_id(),
             list_param = json.dumps(list_param_reg),
+            list_param_short = json.dumps(list_param_name),
+            except_signal = except_reg.except_signal,
+            except_crl = except_reg.except_crl,
             text_model=text_model,
             model_name=model_name,
             over_sampling = 'none',
