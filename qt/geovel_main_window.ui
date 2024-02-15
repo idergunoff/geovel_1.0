@@ -319,7 +319,7 @@
                </widget>
               </item>
               <item row="5" column="0">
-               <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0,0,0,0">
+               <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0,0,0">
                 <item row="0" column="0">
                  <widget class="QPushButton" name="pushButton_filtfilt">
                   <property name="text">
@@ -4469,47 +4469,6 @@ Therm</string>
               <string>Geochem</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_133">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_126" columnstretch="3,0,0">
-                <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_geochem"/>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_del_geochem">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>delete</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_load_geochem">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(148, 255, 232);</string>
-                  </property>
-                  <property name="text">
-                   <string>LOAD</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <layout class="QGridLayout" name="gridLayout_127" columnstretch="0,0">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_22">
-                  <property name="text">
-                   <string>Well:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QComboBox" name="comboBox_geochem_well"/>
-                </item>
-               </layout>
-              </item>
               <item row="2" column="0">
                <layout class="QGridLayout" name="gridLayout_125">
                 <item row="0" column="0">
@@ -4590,40 +4549,6 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
-               <layout class="QGridLayout" name="gridLayout_135">
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_geochem_tsne">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 190, 111);</string>
-                  </property>
-                  <property name="text">
-                   <string>T-SNE</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_geochem_anova">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 190, 111);</string>
-                  </property>
-                  <property name="text">
-                   <string>ANOVA</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_g_graph">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 190, 111);</string>
-                  </property>
-                  <property name="text">
-                   <string>GRAPH</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item row="4" column="0">
                <layout class="QGridLayout" name="gridLayout_132">
                 <item row="0" column="0">
@@ -4690,28 +4615,35 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="5" column="0">
-               <layout class="QGridLayout" name="gridLayout_139" columnstretch="4,1,1">
-                <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_geochem_maket"/>
-                </item>
+              <item row="3" column="0">
+               <layout class="QGridLayout" name="gridLayout_135">
                 <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_add_g_maket">
+                 <widget class="QPushButton" name="pushButton_geochem_tsne">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                   <string notr="true">background-color: rgb(255, 190, 111);</string>
                   </property>
                   <property name="text">
-                   <string>add maket</string>
+                   <string>T-SNE</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_geochem_anova">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 190, 111);</string>
+                  </property>
+                  <property name="text">
+                   <string>ANOVA</string>
                   </property>
                  </widget>
                 </item>
                 <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_rem_g_maket">
+                 <widget class="QPushButton" name="pushButton_g_graph">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                   <string notr="true">background-color: rgb(255, 190, 111);</string>
                   </property>
                   <property name="text">
-                   <string>rm maket</string>
+                   <string>GRAPH</string>
                   </property>
                  </widget>
                 </item>
@@ -4739,6 +4671,164 @@ Therm</string>
                   </property>
                   <property name="text">
                    <string>rm cat</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <layout class="QGridLayout" name="gridLayout_127" columnstretch="0,0">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_22">
+                  <property name="text">
+                   <string>Well:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="comboBox_geochem_well"/>
+                </item>
+               </layout>
+              </item>
+              <item row="8" column="0">
+               <layout class="QGridLayout" name="gridLayout_144" rowstretch="0,0,0,0" columnstretch="1,1,0,0">
+                <item row="2" column="1">
+                 <widget class="QPushButton" name="pushButton_vector">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(205, 171, 143);</string>
+                  </property>
+                  <property name="text">
+                   <string>VECTOR</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QCheckBox" name="checkBox_softmax">
+                  <property name="text">
+                   <string>softmax</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="3">
+                 <widget class="QCheckBox" name="checkBox_std_sc">
+                  <property name="text">
+                   <string>StdSc</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_geochem_train_model">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>TRAIN MODEL</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_calc_g_class">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 255, 243);</string>
+                  </property>
+                  <property name="text">
+                   <string>Calc Object</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QCheckBox" name="checkBox_geochem_vector_corr">
+                  <property name="text">
+                   <string>corr</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QPushButton" name="pushButton_g_drop_fake">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(249, 240, 107);</string>
+                  </property>
+                  <property name="text">
+                   <string>clear fake</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="3">
+                 <widget class="QSpinBox" name="spinBox_isoforest_n_est">
+                  <property name="toolTip">
+                   <string>n_est количество деревьев</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>10000</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>10</number>
+                  </property>
+                  <property name="value">
+                   <number>100</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="2">
+                 <widget class="QDoubleSpinBox" name="doubleSpinBox_isoforest_cont">
+                  <property name="toolTip">
+                   <string>contamination - Уровень аномамилии</string>
+                  </property>
+                  <property name="maximum">
+                   <double>0.500000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.010000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>0.100000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QPushButton" name="pushButton_isoforest">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 190, 111);</string>
+                  </property>
+                  <property name="text">
+                   <string>IsolationForest</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QCheckBox" name="checkBox_isoforest_auto">
+                  <property name="text">
+                   <string>auto</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_126" columnstretch="3,0,0">
+                <item row="0" column="0">
+                 <widget class="QComboBox" name="comboBox_geochem"/>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_del_geochem">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>delete</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_load_geochem">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(148, 255, 232);</string>
+                  </property>
+                  <property name="text">
+                   <string>LOAD</string>
                   </property>
                  </widget>
                 </item>
@@ -4816,66 +4906,28 @@ Therm</string>
                 </item>
                </layout>
               </item>
-              <item row="8" column="0">
-               <layout class="QGridLayout" name="gridLayout_144" rowstretch="0,0,0" columnstretch="1,1,0,0">
-                <item row="2" column="0">
-                 <widget class="QPushButton" name="pushButton_g_drop_fake">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(249, 240, 107);</string>
-                  </property>
-                  <property name="text">
-                   <string>clear fake</string>
-                  </property>
-                 </widget>
+              <item row="5" column="0">
+               <layout class="QGridLayout" name="gridLayout_139" columnstretch="4,1,1">
+                <item row="0" column="0">
+                 <widget class="QComboBox" name="comboBox_geochem_maket"/>
                 </item>
-                <item row="1" column="1">
-                 <widget class="QPushButton" name="pushButton_calc_g_class">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 255, 243);</string>
-                  </property>
-                  <property name="text">
-                   <string>Calc Object</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_geochem_train_model">
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_add_g_maket">
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
                   <property name="text">
-                   <string>TRAIN MODEL</string>
+                   <string>add maket</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="1">
-                 <widget class="QPushButton" name="pushButton_vector">
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_rem_g_maket">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(205, 171, 143);</string>
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
                   </property>
                   <property name="text">
-                   <string>VECTOR</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QCheckBox" name="checkBox_softmax">
-                  <property name="text">
-                   <string>softmax</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="3">
-                 <widget class="QCheckBox" name="checkBox_std_sc">
-                  <property name="text">
-                   <string>StdSc</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QCheckBox" name="checkBox_geochem_vector_corr">
-                  <property name="text">
-                   <string>corr</string>
+                   <string>rm maket</string>
                   </property>
                  </widget>
                 </item>

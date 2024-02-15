@@ -1455,3 +1455,56 @@ def calc_vector():
             pass
     else:
         pass
+
+
+def calc_isolation_forest():
+    data_train, list_param = build_geochem_table()
+
+
+    training_sample = np.array(data_train[list_param].values.tolist())
+
+    data_test, _ = build_geochem_table_field()
+    test_sample = np.array(data_test[list_param].values.tolist())
+
+    if ui.checkBox_std_sc.isChecked():
+        scaler = StandardScaler()
+        training_sample = scaler.fit_transform(training_sample)
+        test_sample = scaler.transform(test_sample)
+    contamin = 'auto' if ui.checkBox_isoforest_auto.isChecked() else ui.doubleSpinBox_isoforest_cont.value()
+    isolation_forest = IsolationForest(
+        n_jobs=-1,
+        n_estimators=ui.spinBox_isoforest_n_est.value(),
+        contamination=contamin,
+        random_state=0
+    )
+    isolation_forest.fit(training_sample)
+
+    data_test['isolation_forest'] = norm_akhmet(isolation_forest.decision_function(test_sample))
+
+
+    x, y, z = data_test['X'], data_test['Y'], data_test['isolation_forest']
+    draw_map(x, y, z, f'Geochem isolation forest {ui.comboBox_geochem_maket.currentText().split(" id")[0]}', False)
+
+    result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
+    if result1 == QMessageBox.Yes:
+        data_train['isolation_forest'] = norm_akhmet(isolation_forest.decision_function(training_sample))
+        data_test = pd.concat([data_train, data_test])
+        result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
+                                       QMessageBox.No)
+        if result2 == QMessageBox.Yes:
+            list_col = ['title', 'X', 'Y', 'isolation_forest']
+            data_test = data_test[list_col]
+        else:
+            pass
+        try:
+            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
+            fn = QFileDialog.getSaveFileName(
+                caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
+                directory=file_name,
+                filter="Excel Files (*.xlsx)")
+            data_test.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+    else:
+        pass

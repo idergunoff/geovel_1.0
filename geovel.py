@@ -415,6 +415,7 @@ ui.pushButton_rem_trained_g_model.clicked.connect(remove_g_model)
 ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 ui.pushButton_g_comment.clicked.connect(update_trained_model_geochem_comment)
 ui.pushButton_vector.clicked.connect(calc_vector)
+ui.pushButton_isoforest.clicked.connect(calc_isolation_forest)
 
 # radarogramma.getViewBox().sigRangeChanged.connect(draw_axis)
 
