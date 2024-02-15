@@ -1460,39 +1460,67 @@ def calc_vector():
 def calc_isolation_forest():
     data_train, list_param = build_geochem_table()
 
-
-    training_sample = np.array(data_train[list_param].values.tolist())
+    X_train = np.array(data_train[list_param].values.tolist())
 
     data_test, _ = build_geochem_table_field()
-    test_sample = np.array(data_test[list_param].values.tolist())
+    X_test = np.array(data_test[list_param].values.tolist())
 
     if ui.checkBox_std_sc.isChecked():
         scaler = StandardScaler()
-        training_sample = scaler.fit_transform(training_sample)
-        test_sample = scaler.transform(test_sample)
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
     contamin = 'auto' if ui.checkBox_isoforest_auto.isChecked() else ui.doubleSpinBox_isoforest_cont.value()
-    isolation_forest = IsolationForest(
+    clf = IsolationForest(
         n_jobs=-1,
         n_estimators=ui.spinBox_isoforest_n_est.value(),
         contamination=contamin,
         random_state=0
     )
-    isolation_forest.fit(training_sample)
+    clf.fit(X_train)
 
-    data_test['isolation_forest'] = norm_akhmet(isolation_forest.decision_function(test_sample))
+    # Предсказание на основе обученной модели
+    y_pred_train = clf.predict(X_train)
+    y_pred_test = clf.predict(X_test)
+
+    # Получение оценок аномалий
+    scores_train = clf.decision_function(X_train)
+    scores_test = clf.decision_function(X_test)
+
+    # Преобразование оценок аномалий в "вероятности"
+    scaler_inliers = MinMaxScaler((0.5, 1))
+    scaler_outliers = MinMaxScaler((0, 0.5))
+
+    # Повторение процесса для тестовых данных
+    scores_inliers_scaled = scaler_inliers.fit_transform(scores_test[y_pred_test == 1].reshape(-1, 1))
+    scores_outliers_scaled = scaler_outliers.fit_transform(scores_test[y_pred_test == -1].reshape(-1, 1))
+    data_test['Prediction'] = y_pred_test
+    data_test.loc[y_pred_test == 1, 'Probability'] = scores_inliers_scaled
+    data_test.loc[y_pred_test == -1, 'Probability'] = scores_outliers_scaled
+    data_test['Anomaly Score'] = scores_test
+
+    scores_inliers_scaled = scaler_inliers.transform(scores_train[y_pred_train == 1].reshape(-1, 1))
+    scores_outliers_scaled = scaler_outliers.transform(scores_train[y_pred_train == -1].reshape(-1, 1))
+
+    # Добавление предсказаний и "вероятностей" в исходные датафреймы
+    data_train['Prediction'] = y_pred_train
+    data_train.loc[y_pred_train == 1, 'Probability'] = scores_inliers_scaled
+    data_train.loc[y_pred_train == -1, 'Probability'] = scores_outliers_scaled
+    data_train['Anomaly Score'] = scores_train
 
 
-    x, y, z = data_test['X'], data_test['Y'], data_test['isolation_forest']
+
+
+    x, y, z = data_test['X'], data_test['Y'], data_test['Probability']
     draw_map(x, y, z, f'Geochem isolation forest {ui.comboBox_geochem_maket.currentText().split(" id")[0]}', False)
 
     result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
     if result1 == QMessageBox.Yes:
-        data_train['isolation_forest'] = norm_akhmet(isolation_forest.decision_function(training_sample))
         data_test = pd.concat([data_train, data_test])
         result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
                                        QMessageBox.No)
         if result2 == QMessageBox.Yes:
-            list_col = ['title', 'X', 'Y', 'isolation_forest']
+            list_col = ['title', 'X', 'Y','Prediction', 'Probability', 'Anomaly Score']
             data_test = data_test[list_col]
         else:
             pass
