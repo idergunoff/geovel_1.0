@@ -351,7 +351,7 @@ def test_start():
                 ui_tm.textEdit_test_result.setTextColor(color_text)
                 ui_tm.textEdit_test_result.append(
                     f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                    f'  {list_cat[1]} {ones / total:.3f} | {list_cat[0]} {nulls / total:.3f} | {comp}/{total}')
+                    f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}')
 
                 index += 1
             percent = correct_matches / len(result_df) * 100
