@@ -45,7 +45,10 @@ def update_listwidget_param_geochem():
 def update_listwidget_geochem_point():
     ui.listWidget_g_point.clear()
     for i in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).order_by(GeochemPoint.title).all():
-        ui.listWidget_g_point.addItem(f'{i.title} id{i.id}')
+        item = QListWidgetItem(f'{i.title} id{i.id}')
+        if i.fake:
+            item.setBackground(QBrush(QColor('red')))
+        ui.listWidget_g_point.addItem(item)
     update_maket_combobox()
     ui.label_point_expl_3.setText(f'Field Points: {ui.listWidget_g_point.count()}')
 
@@ -773,6 +776,26 @@ def tsne_geochem():
         session.commit()
         update_g_train_point_list()
 
+    def set_point_field_fake():
+        for i in range(ui_tsne.listWidget_check_point.count()):
+            checkbox = ui_tsne.listWidget_check_point.itemWidget(ui_tsne.listWidget_check_point.item(i))
+            fake = False if checkbox.isChecked() else True
+            point = session.query(GeochemPoint).filter(
+                GeochemPoint.title == checkbox.text(),
+                GeochemPoint.geochem_id == get_geochem_id()
+            ).first()
+            if point:
+                if fake:
+                    if not point.fake:
+                        session.add(GeochemPointFake(geochem_point_id=point.id))
+                else:
+                    if point.fake:
+                        session.query(GeochemPointFake).filter_by(geochem_point_id=point.id).delete()
+        session.commit()
+        update_listwidget_geochem_point()
+
+
+
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_anova)
     # ui_tsne.radioButton_tsne.clicked.connect(draw_graph_tsne)
@@ -796,6 +819,7 @@ def tsne_geochem():
     ui_tsne.toolButton_lof_all.clicked.connect(set_list_check_point)
     ui_tsne.pushButton_to_maket.clicked.connect(set_param_maket)
     ui_tsne.pushButton_point_to_fake.clicked.connect(set_point_fake)
+    ui_tsne.pushButton_point_to_field.clicked.connect(set_point_field_fake)
 
     for i in range(ui_tsne.listWidget_checkbox_well.count()):
         ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(set_list_check_point)
@@ -1037,6 +1061,8 @@ def build_geochem_table_field():
     data = pd.DataFrame(columns=['title', 'X', 'Y'] + list_param)
 
     for point in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
+        if point.fake:
+            continue
         dict_point = {'title': point.title, 'X': point.x_coord, 'Y': point.y_coord}
         for p in parameters:
             dict_point[p.title] = session.query(GeochemPointValue).filter_by(g_point_id=point.id, g_param_id=p.id).first().value
@@ -1536,3 +1562,34 @@ def calc_isolation_forest():
             pass
     else:
         pass
+
+
+def add_geochem_point_fake():
+    p = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
+    if p.fake:
+        session.query(GeochemPointFake).filter_by(geochem_point_id=p.id).delete()
+    else:
+        fake = GeochemPointFake(geochem_point_id=p.id)
+        session.add(fake)
+    session.commit()
+    update_listwidget_geochem_point()
+
+
+def clear_fake_point():
+    for p in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
+        session.query(GeochemPointFake).filter_by(geochem_point_id=p.id).delete()
+    session.commit()
+    update_listwidget_geochem_point()
+
+
+
+
+
+
+
+
+
+
+
+
+

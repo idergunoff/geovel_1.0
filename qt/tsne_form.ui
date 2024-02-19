@@ -128,9 +128,6 @@
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_6">
-        <item row="2" column="0">
-         <widget class="QListWidget" name="listWidget_check_point"/>
-        </item>
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_7">
           <item row="0" column="3">
@@ -178,15 +175,32 @@
           </item>
          </layout>
         </item>
+        <item row="2" column="0">
+         <widget class="QListWidget" name="listWidget_check_point"/>
+        </item>
         <item row="1" column="0">
-         <widget class="QPushButton" name="pushButton_point_to_fake">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(172, 244, 166);</string>
-          </property>
-          <property name="text">
-           <string>TO MAKET</string>
-          </property>
-         </widget>
+         <layout class="QGridLayout" name="gridLayout_9">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_point_to_fake">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(172, 244, 166);</string>
+            </property>
+            <property name="text">
+             <string>TO MAKET</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_point_to_field">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(172, 244, 166);</string>
+            </property>
+            <property name="text">
+             <string>TO FIELD</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>

@@ -418,6 +418,8 @@ ui.pushButton_g_graph.clicked.connect(draw_point_graph)
 ui.pushButton_g_comment.clicked.connect(update_trained_model_geochem_comment)
 ui.pushButton_vector.clicked.connect(calc_vector)
 ui.pushButton_isoforest.clicked.connect(calc_isolation_forest)
+ui.listWidget_g_point.doubleClicked.connect(add_geochem_point_fake)
+ui.pushButton_clear_fake_point.clicked.connect(clear_fake_point)
 
 # radarogramma.getViewBox().sigRangeChanged.connect(draw_axis)
 
