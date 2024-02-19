@@ -473,6 +473,21 @@ def add_param_crl_mlp():
         set_info(f'Параметр CRL уже добавлен', 'red')
 
 
+def add_param_crl_nf_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    if session.query(ParameterMLP).filter_by(
+            analysis_id=get_MLP_id(),
+            parameter='CRL_NF'
+    ).count() == 0:
+        add_param_mlp('CRL_NF')
+        # update_list_param_mlp()
+        set_color_button_updata()
+        set_info(f'Параметр CRL_NF добавлен', 'green')
+    else:
+        set_info(f'Параметр CRL_NF уже добавлен', 'red')
+
+
 def add_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()

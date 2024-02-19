@@ -1066,6 +1066,10 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                 if not str(markup.profile.id) + '_CRL' in locals():
                     locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+            elif param == 'CRL_NF':
+                if not str(markup.profile.id) + '_CRL_NF' in locals():
+                    locals()[str(markup.profile.id) + '_CRL_NF'] = calc_CRL(json.loads(
+                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
             # Если параметр сохранён в базе
             else:
                 # Загрузка значений параметра из формации
@@ -1097,6 +1101,11 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                             dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
                 elif param == 'CRL':
                     sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                    for i_sig in range(len(sig_measure)):
+                        if i_sig + 1 not in list_except_crl:
+                            dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+                elif param == 'CRL_NF':
+                    sig_measure = locals()[str(markup.profile.id) + '_CRL_NF'][measure]
                     for i_sig in range(len(sig_measure)):
                         if i_sig + 1 not in list_except_crl:
                             dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
@@ -1165,9 +1174,13 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_signal' in locals():
                 locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
-        elif param.startswith('CRL'):
+        elif param.startswith('CRL') and not param.startswith('CRL_NF'):
             if not str(curr_form.profile.id) + '_CRL' in locals():
                 locals()[str(curr_form.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
+                    session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
+        elif param.startswith('CRL_NF'):
+            if not str(curr_form.profile.id) + '_CRL_NF' in locals():
+                locals()[str(curr_form.profile.id) + '_CRL_NF'] = calc_CRL_filter(json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
         else:
             locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
@@ -1185,8 +1198,13 @@ def build_table_test(analisis='lda'):
                 for i_sig in range(len(sig_measure)):
                     if i_sig + 1 not in list_except_signal:
                         dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
-            elif param.startswith('CRL'):
+            elif param.startswith('CRL') and not param.startswith('CRL_NF'):
                 sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
+                for i_sig in range(len(sig_measure)):
+                    if i_sig + 1 not in list_except_crl:
+                        dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+            elif param.startswith('CRL_NF'):
+                sig_measure = locals()[str(curr_form.profile.id) + '_CRL_NF'][i]
                 for i_sig in range(len(sig_measure)):
                     if i_sig + 1 not in list_except_crl:
                         dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
@@ -1329,7 +1347,7 @@ def get_list_param_numerical_for_train(list_param):
             for i_sig in range(n_i):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
-        elif param.startswith('CRL'):
+        elif param.startswith('CRL') and not param.startswith('CRL_NF'):
             if except_reg:
                 if except_reg.except_crl:
                     list_except = parse_range_exception(except_reg.except_crl)
@@ -1341,6 +1359,18 @@ def get_list_param_numerical_for_train(list_param):
             for i_sig in range(512):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'CRL_{i_sig + 1}')
+        elif param.startswith('CRL_NF'):
+            if except_reg:
+                if except_reg.except_crl:
+                    list_except = parse_range_exception(except_reg.except_crl)
+                    list_except = [] if list_except == -1 else list_except
+                else:
+                    list_except = []
+            else:
+                list_except = []
+            for i_sig in range(512):
+                if i_sig + 1 not in list_except:
+                    new_list_param.append(f'CRL_NF_{i_sig + 1}')
         else:
             new_list_param.append(param)
     return new_list_param
@@ -1992,6 +2022,15 @@ def calc_CRL_filter(radar):
     radar_median2 = medfilt2d(radar_median1, [19, 19])
     radar_median3 = medfilt2d(radar_median2, [1, 19])
     return radar_median3
+
+
+def calc_CRL(radar):
+    radar_dct = dctn(radar, type=2, norm='ortho', axes=1)
+    radar_rang = rankdata(radar_dct, axis=1)
+    radar_log = np.log(radar_rang)
+    radar_idct = idctn(radar_log, type=2, norm='ortho', axes=1)
+    radar_rang2 = rankdata(radar_idct, axis=1)
+    return radar_rang2
 
 
 def parse_range_exception(input_str):

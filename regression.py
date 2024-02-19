@@ -245,6 +245,21 @@ def add_param_crl_reg():
         set_info(f'Параметр CRL уже добавлен', 'red')
 
 
+def add_param_crl_nf_reg():
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    if session.query(ParameterReg).filter_by(
+            analysis_id=get_regmod_id(),
+            parameter='CRL_NF'
+    ).count() == 0:
+        add_param_regmod('CRL_NF')
+        # update_list_param_mlp()
+        set_color_button_updata_regmod()
+        set_info(f'Параметр CRL_NF добавлен', 'green')
+    else:
+        set_info(f'Параметр CRL_NF уже добавлен', 'red')
+
+
 def add_all_param_signal_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -403,7 +418,8 @@ def remove_param_geovel_reg():
         set_info('Выберите параметр', 'red')
         return
     if param:
-        if param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+        if (param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or
+                param.startswith('Signal') or param.startswith('CRL')):
             for p in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
                 if p.parameter.startswith('_'.join(param.split('_')[:-1])):
                     session.query(ParameterReg).filter_by(id=p.id).delete()
