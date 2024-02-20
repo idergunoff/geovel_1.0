@@ -7,6 +7,7 @@ Create Date: 2024-02-20 11:02:22.095112
 """
 from typing import Sequence, Union
 
+import sqlalchemy.exc
 from alembic import op
 import sqlalchemy as sa
 
@@ -36,7 +37,10 @@ def upgrade() -> None:
 
     op.rename_table('temp_geochem_point', 'geochem_point')
 
-    op.drop_table('geochem_point_fake')
+    try:
+        op.drop_table('geochem_point_fake')
+    except sqlalchemy.exc.OperationalError:
+        pass
 
 
 def downgrade() -> None:
