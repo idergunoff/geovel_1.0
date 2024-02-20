@@ -252,6 +252,7 @@ def update_profile_combobox():
         ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
 
     check_coordinates_profile()
+    check_grid_relief()
 
 
 def update_object():
@@ -629,6 +630,19 @@ def check_coordinates_profile():
     else:
         ui.label_5.setStyleSheet('background: #F7B9B9')
 
+
+def check_grid_relief():
+    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    if not grid:
+        return
+    list_x, list_y = [], []
+    for pr in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
+        list_x += json.loads(pr.x_pulc)
+        list_y += json.loads(pr.y_pulc)
+    pd_relief = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'z'])
+    if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and pd_relief['y'].max() > max(list_y) > pd_relief['y'].min()
+       and pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
+        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
 
 
 def check_coordinates_research():
