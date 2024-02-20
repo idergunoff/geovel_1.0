@@ -50,4 +50,5 @@ def upgrade():
 
 def downgrade():
     # This is a destructive operation, downgrade won't restore the dropped foreign key constraint
-    raise NotImplementedError("Downgrade not supported for this migration.")
+    op.drop_column('profile', 'abs_relief')
+    op.drop_column('profile', 'depth_relief')
