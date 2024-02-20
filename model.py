@@ -893,20 +893,12 @@ class GeochemPoint(Base):
     title = Column(String)
     x_coord = Column(Float)
     y_coord = Column(Float)
+    fake = Column(Boolean, default=False)
 
     geochem = relationship("Geochem", back_populates="g_points")
     g_point_values = relationship("GeochemPointValue", back_populates="g_point")
     train_points = relationship("GeochemTrainPoint", back_populates="point")
-    fake = relationship("GeochemPointFake", back_populates="geochem_point")
 
-
-class GeochemPointFake(Base):
-    __tablename__ = 'geochem_point_fake'
-
-    id = Column(Integer, primary_key=True)
-    geochem_point_id = Column(Integer, ForeignKey('geochem_point.id'))
-
-    geochem_point = relationship("GeochemPoint", back_populates="fake")
 
 
 class GeochemWell(Base):

@@ -2,6 +2,8 @@ import json
 from math import sqrt
 
 import matplotlib.pyplot as plt
+import pandas as pd
+
 from func import *
 
 
@@ -30,17 +32,29 @@ def interpolate(grid, x, y):
 
 
 
+def interpolate_pandas(pd_grid, x, y):
+    # Find the four nearest points in the grid
+    pd_grid['dist'] = ((pd_grid['x'] - x) ** 2 + (pd_grid['y'] - y) ** 2) ** 0.5
+    near_grid = pd_grid.sort_values('dist', ascending=True)[:20]
+    near_grid['weight'] = 1 / near_grid['dist']
+    value = (near_grid['value'] * near_grid['weight']).sum() / near_grid['weight'].sum()
+
+    return value
+
+
+
 grid = session.query(Grid).filter_by(id=1).first()
 grid_relief = json.loads(grid.grid_table_r)
+pd_grid = pd.DataFrame(grid_relief, columns=['x', 'y', 'value'])
 
-pr = session.query(Profile).filter_by(id=1).first()
+pr = session.query(Profile).filter_by(id=2).first()
 list_x = json.loads(pr.x_pulc)
 list_y = json.loads(pr.y_pulc)
 
 list_relief = []
 
 for i in range(len(list_x)):
-    list_relief.append(interpolate(grid_relief, list_x[i], list_y[i]))
+    list_relief.append(interpolate_pandas(pd_grid, list_x[i], list_y[i]))
 
 
 plt.plot(list_relief)

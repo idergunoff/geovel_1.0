@@ -785,12 +785,7 @@ def tsne_geochem():
                 GeochemPoint.geochem_id == get_geochem_id()
             ).first()
             if point:
-                if fake:
-                    if not point.fake:
-                        session.add(GeochemPointFake(geochem_point_id=point.id))
-                else:
-                    if point.fake:
-                        session.query(GeochemPointFake).filter_by(geochem_point_id=point.id).delete()
+                point.fake = fake
         session.commit()
         update_listwidget_geochem_point()
 
@@ -1567,17 +1562,15 @@ def calc_isolation_forest():
 def add_geochem_point_fake():
     p = session.query(GeochemPoint).filter_by(id=ui.listWidget_g_point.currentItem().text().split(' id')[-1]).first()
     if p.fake:
-        session.query(GeochemPointFake).filter_by(geochem_point_id=p.id).delete()
+        p.fake = False
     else:
-        fake = GeochemPointFake(geochem_point_id=p.id)
-        session.add(fake)
+        p.fake = True
     session.commit()
     update_listwidget_geochem_point()
 
 
 def clear_fake_point():
-    for p in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
-        session.query(GeochemPointFake).filter_by(geochem_point_id=p.id).delete()
+    session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).update({'fake': False}, synchronize_session='fetch')
     session.commit()
     update_listwidget_geochem_point()
 
