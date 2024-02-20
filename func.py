@@ -1912,6 +1912,15 @@ def get_list_check_checkbox(list_widget, is_checked=True):
     return selected_checkboxes
 
 
+def get_dict_check_checkbox(list_widget):
+    # словарь положения чекбоксов в списке
+    dict_checkbox = {}
+    for i in range(list_widget.count()):
+        checkbox = list_widget.itemWidget(list_widget.item(i))
+        dict_checkbox[checkbox.text()] = checkbox.isChecked()
+    return dict_checkbox
+
+
 def clear_layout(layout):
     while layout.count():
         item = layout.takeAt(0)

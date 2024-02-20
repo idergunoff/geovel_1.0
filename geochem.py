@@ -543,13 +543,16 @@ def tsne_geochem():
             print('AttributeError_anova')
 
     def set_list_check_point():
+        dict_check_point = get_dict_check_checkbox(ui_tsne.listWidget_check_point)
         ui_tsne.listWidget_check_point.clear()
         list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
         data_plot_point = data_plot.loc[data_plot['well'].isin(list_well)]
         for point_name in data_plot_point['point']:
             check_box_widget = QCheckBox(point_name)
-            check_box_widget.setChecked(True)
-            # check_box_widget.stateChanged.connect(draw_graph_tsne)
+            try:
+                check_box_widget.setChecked(dict_check_point[point_name])
+            except KeyError:
+                check_box_widget.setChecked(True)
             list_item = QListWidgetItem()
             ui_tsne.listWidget_check_point.addItem(list_item)
             ui_tsne.listWidget_check_point.setItemWidget(list_item, check_box_widget)
