@@ -51,6 +51,8 @@ class Profile(Base):
     y_wgs = Column(Text)
     x_pulc = Column(Text)
     y_pulc = Column(Text)
+    abs_relief = Column(Text)
+    depth_relief = Column(Text)
 
     research = relationship('Research', back_populates='profiles')
     current = relationship('CurrentProfile', back_populates='profile')

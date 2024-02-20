@@ -1,66 +1,50 @@
-# def create_grid_points(x, y):
-#     x_new = []
-#     y_new = []
-#
-#     for i in range(len(x)):
-#         x_point = x[i]
-#         y_point = y[i]
-#
-#         # Создаем новые точки сетки вокруг заданных координат
-#         for x_grid in range(x_point - 25, x_point + 26, 5):
-#             for y_grid in range(y_point - 25, y_point + 26, 5):
-#                 x_new.append(x_grid)
-#                 y_new.append(y_grid)
-#
-#     return x_new, y_new
-#
-# list_x, list_y = [25], [125]
-#
-# x_new, y_new = create_grid_points(list_x, list_y)
-# print(len(x_new))
-# print(len(y_new))
-#
-#
-# target_train = [1, 2, 3]
-#
-# target_train_new = [[i] * 5 for i in target_train]
-# target_train = []
-# for i in target_train_new:
-#     target_train.extend(i)
-#
-# print(target_train)
-#
-#
-# def parse_range(input_str):
-#     result = set()
-#
-#     ranges = input_str.split(',')
-#     for i in ranges:
-#         try:
-#             if '-' in i:
-#                 start, end = map(int, i.split('-'))
-#                 if 1 <= start <= 512 and 1 <= end <= 512:
-#                     result.update(range(start, end + 1))
-#             else:
-#                 num = int(i)
-#                 if 1 <= num <= 512:
-#                     result.add(num)
-#         except:
-#             print("Incorrect input")
-#             return
-#     res_list = list(result)
-#     return res_list
-#
-# print(parse_range("512,/1,3,3-8,10,22"))
-import pyqtgraph
-import pyqtgraph.examples
-# pyqtgraph.examples.run()
+import json
+from math import sqrt
 
+import matplotlib.pyplot as plt
 from func import *
 
 
+def interpolate(grid, x, y):
+    # Find the four nearest points in the grid
+    nearest_points = sorted(grid, key=lambda point: (point[0] - x) ** 2 + (point[1] - y) ** 2)[:4]
+
+    # If the point is exactly on one of the grid points, return its value
+    for point in nearest_points:
+        if point[0] == x and point[1] == y:
+            return point[2]
+
+    # Otherwise, perform linear interpolation
+    total_value = 0
+    total_weight = 0
+
+    for point in nearest_points:
+        distance = ((point[0] - x) ** 2 + (point[1] - y) ** 2) ** 0.5
+        weight = 1 / distance
+        total_value += point[2] * weight
+        total_weight += weight
+
+    value = total_value / total_weight
+
+    return value
 
 
+
+grid = session.query(Grid).filter_by(id=1).first()
+grid_relief = json.loads(grid.grid_table_r)
+
+pr = session.query(Profile).filter_by(id=1).first()
+list_x = json.loads(pr.x_pulc)
+list_y = json.loads(pr.y_pulc)
+
+list_relief = []
+
+for i in range(len(list_x)):
+    list_relief.append(interpolate(grid_relief, list_x[i], list_y[i]))
+
+
+plt.plot(list_relief)
+plt.show()
 
 
 
