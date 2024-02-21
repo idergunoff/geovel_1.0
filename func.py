@@ -172,8 +172,6 @@ def change_color():
     ui.pushButton_color.setText(color.name())
 
 
-
-
 def changeSpinBox():
     """Изменить размер выделенной области"""
     roi.setSize([ui.spinBox_roi.value(), 512])
