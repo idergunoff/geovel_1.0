@@ -1,3 +1,5 @@
+import json
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -631,6 +633,57 @@ def check_coordinates_profile():
         ui.label_5.setStyleSheet('background: #F7B9B9')
 
 
+
+def interpolate_relief_pd(pd_grid: pd.DataFrame, x: float, y: float) -> float:
+    """
+    calculate relief value by coordinates
+    :param pd_grid: pd.DataFrame grid.grid_table_r
+    :param x: float x_pulc
+    :param y: float y_pulc
+    :return: float
+    """
+    pd_grid['dist'] = ((pd_grid['x'] - x) ** 2 + (pd_grid['y'] - y) ** 2) ** 0.5
+    near_grid = pd_grid.sort_values('dist', ascending=True)[:20]
+    near_grid['weight'] = 1 / near_grid['dist']
+    value = (near_grid['value'] * near_grid['weight']).sum() / near_grid['weight'].sum()
+
+    return value
+
+
+def calc_relief_profile(profile: Profile) -> None:
+    """
+    calculate relief for profile and save to db
+    :param profile: Profile
+    :return: None
+    """
+    if profile.abs_relief:
+        return
+
+    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    if not grid:
+        return
+
+    set_info('Расчёт рельейфа для профиля...', 'blue')
+    pd_grid = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'value'])
+
+    list_x = json.loads(profile.x_pulc)
+    list_y = json.loads(profile.y_pulc)
+
+    list_abs_relief = []
+
+    ui.progressBar.setMaximum(len(list_x))
+    for i in range(len(list_x)):
+        ui.progressBar.setValue(i)
+        list_abs_relief.append(interpolate_relief_pd(pd_grid, list_x[i], list_y[i]))
+
+    list_depth_relief = [max(list_abs_relief) - i for i in list_abs_relief]
+    profile.abs_relief = json.dumps(list_abs_relief)
+    profile.depth_relief = json.dumps(list_depth_relief)
+    session.commit()
+    set_info('Рельеф для профиля сохранён в БД', 'green')
+
+
+
 def check_grid_relief():
     grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
     if not grid:
@@ -640,8 +693,10 @@ def check_grid_relief():
         list_x += json.loads(pr.x_pulc)
         list_y += json.loads(pr.y_pulc)
     pd_relief = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'z'])
-    if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and pd_relief['y'].max() > max(list_y) > pd_relief['y'].min()
-       and pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
+    if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and
+            pd_relief['y'].max() > max(list_y) > pd_relief['y'].min() and
+            pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and
+            pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
         ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
 
 

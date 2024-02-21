@@ -17,7 +17,8 @@ def draw_radarogram():
     ui.info.clear()
     clear_current_velocity_model()
     clear_current_profile()
-    rad = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
+    prof = session.query(Profile).filter(Profile.id == get_profile_id()).first()
+    rad = json.loads(prof.signal)
     ui.progressBar.setMaximum(len(rad))
     radar = calc_atrib(rad, ui.comboBox_atrib.currentText())
     clear_current_profile()
@@ -27,6 +28,8 @@ def draw_radarogram():
     save_max_min(radar)
     ui.checkBox_minmax.setCheckState(0)
     draw_image(radar)
+
+    calc_relief_profile(prof)
 
     set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
     updatePlot()
