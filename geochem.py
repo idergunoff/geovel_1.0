@@ -566,6 +566,13 @@ def tsne_geochem():
         ui_tsne.listWidget_checkbox_well.addItem(list_item)
         ui_tsne.listWidget_checkbox_well.setItemWidget(list_item, check_box_widget)
 
+
+    def set_check_point_all():
+        for i in range(ui_tsne.listWidget_check_point.count()):
+            checkbox = ui_tsne.listWidget_check_point.itemWidget(ui_tsne.listWidget_check_point.item(i))
+            checkbox.setChecked(True)
+
+
     def find_best_param():
         list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
         list_param = get_list_check_checkbox(ui_tsne.listWidget_check_param)
@@ -814,7 +821,7 @@ def tsne_geochem():
     ui_tsne.pushButton_best_param.clicked.connect(find_best_param)
     ui_tsne.pushButton_lof.clicked.connect(calc_lof)
     ui_tsne.toolButton_lof_clean.clicked.connect(clear_lof)
-    ui_tsne.toolButton_lof_all.clicked.connect(set_list_check_point)
+    ui_tsne.toolButton_lof_all.clicked.connect(set_check_point_all)
     ui_tsne.pushButton_to_maket.clicked.connect(set_param_maket)
     ui_tsne.pushButton_point_to_fake.clicked.connect(set_point_fake)
     ui_tsne.pushButton_point_to_field.clicked.connect(set_point_field_fake)
