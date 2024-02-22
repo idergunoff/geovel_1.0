@@ -434,10 +434,10 @@ ui.listWidget_vel_model.itemClicked.connect(draw_vel_model_point)
 ui.checkBox_vel_color.clicked.connect(draw_vel_model_point)
 ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
 ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
-ui.checkBox_relief.clicked.connect(draw_relief)
-
-
 ui.pushButton_lineup.clicked.connect(model_lineup)
+
+
+time = datetime.datetime.now()
 
 check_trained_model()
 update_object()
@@ -452,8 +452,11 @@ update_list_well()
 set_info('Старт...', 'green')
 set_random_color(ui.pushButton_color)
 update_list_lda(True)
+print(f'update_list_lda: {datetime.datetime.now() - time}')
 update_list_mlp(True)
+print(f'update_list_mlp: {datetime.datetime.now() - time}')
 update_list_reg()
+print(f'update_list_reg: {datetime.datetime.now() - time}')
 set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
 set_param_regmod_to_combobox()
@@ -475,9 +478,8 @@ check_and_create_folders()
 update_list_binding()
 update_list_velocity_model()
 
-
-
-
+time2 = datetime.datetime.now() - time
+print(time2)
 
 
 

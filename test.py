@@ -7,6 +7,7 @@ import pandas as pd
 from func import *
 
 
+
 def interpolate(grid, x, y):
     # Find the four nearest points in the grid
     nearest_points = sorted(grid, key=lambda point: (point[0] - x) ** 2 + (point[1] - y) ** 2)[:4]
@@ -39,10 +40,11 @@ def interpolate_pandas(pd_grid, x, y):
     near_grid['weight'] = 1 / near_grid['dist']
     value = (near_grid['value'] * near_grid['weight']).sum() / near_grid['weight'].sum()
 
-    return value
+    yield value
 
 
 
+time = datetime.datetime.now()
 grid = session.query(Grid).filter_by(id=1).first()
 grid_relief = json.loads(grid.grid_table_r)
 pd_grid = pd.DataFrame(grid_relief, columns=['x', 'y', 'value'])
@@ -54,11 +56,12 @@ list_y = json.loads(pr.y_pulc)
 list_relief = []
 
 for i in range(len(list_x)):
-    list_relief.append(interpolate_pandas(pd_grid, list_x[i], list_y[i]))
+    list_relief.append(next(interpolate_pandas(pd_grid, list_x[i], list_y[i])))
 
-
+print(datetime.datetime.now() - time)
 plt.plot(list_relief)
 plt.show()
+
 
 
 
