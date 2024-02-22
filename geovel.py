@@ -435,6 +435,7 @@ ui.checkBox_vel_color.clicked.connect(draw_vel_model_point)
 ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
 ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
 ui.pushButton_lineup.clicked.connect(model_lineup)
+ui.checkBox_relief.clicked.connect(draw_relief)
 
 
 time = datetime.datetime.now()
