@@ -74,7 +74,6 @@ def query_to_list(query):
 
 
 # Функция отображения радарограммы
-@lru_cache()
 def draw_image(radar):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
@@ -96,7 +95,6 @@ def draw_image(radar):
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
 
-@lru_cache()
 def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
@@ -309,7 +307,6 @@ def update_param_combobox():
     draw_param()  # отрисовываем параметр
     update_layers()  # обновляем список слоев в соответствии с выбранным параметром
 
-@lru_cache()
 def draw_param():
     # Очищаем график
     ui.graph.clear()
@@ -373,7 +370,6 @@ def draw_param():
         ui.graph.getAxis('bottom').setLabel('Профиль, м')
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
 
-@lru_cache()
 def save_max_min(radar):
     radar_max_min = []
     ui.progressBar.setMaximum(len(radar))
@@ -1304,7 +1300,6 @@ def build_table_test(analisis='lda'):
 
     return test_data, curr_form
 
-@lru_cache()
 def update_list_well_markup_mlp():
     """Обновление списка обучающих скважин MLP"""
     ui.listWidget_well_mlp.clear()

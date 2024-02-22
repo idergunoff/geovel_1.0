@@ -146,7 +146,7 @@ def remove_mlp():
     elif result == QtWidgets.QMessageBox.No:
         pass
 
-@lru_cache()
+
 def update_list_mlp(db=False):
     """Обновить список анализов MLP"""
     time = datetime.datetime.now()
@@ -220,7 +220,6 @@ def update_list_marker_mlp():
     update_list_well_markup_mlp()
     update_list_param_mlp(False)
 
-@lru_cache()
 def update_list_marker_mlp_db():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()
@@ -653,7 +652,6 @@ def remove_all_param_geovel_mlp():
     session.commit()
     update_list_param_mlp()
 
-@lru_cache()
 def update_list_param_mlp(db=False):
     data_train, list_param = build_table_train(db, 'mlp')
     list_marker = get_list_marker_mlp('georadar')
