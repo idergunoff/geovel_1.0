@@ -93,6 +93,8 @@ from numpy.linalg import LinAlgError
 import pickle
 from scipy.signal import butter, filtfilt
 
+from functools import lru_cache
+
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()

@@ -96,7 +96,7 @@ def remove_lda():
     elif result == QtWidgets.QMessageBox.No:
         pass
 
-
+@lru_cache
 def update_list_lda(db=False):
     """Обновить список анализов LDA"""
     ui.comboBox_lda_analysis.clear()

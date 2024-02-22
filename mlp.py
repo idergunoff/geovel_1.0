@@ -146,9 +146,10 @@ def remove_mlp():
     elif result == QtWidgets.QMessageBox.No:
         pass
 
-
+@lru_cache()
 def update_list_mlp(db=False):
     """Обновить список анализов MLP"""
+    time = datetime.datetime.now()
     ui.comboBox_mlp_analysis.clear()
     for i in session.query(AnalysisMLP).order_by(AnalysisMLP.title).all():
         ui.comboBox_mlp_analysis.addItem(f'{i.title} id{i.id}')
@@ -156,7 +157,9 @@ def update_list_mlp(db=False):
         update_list_marker_mlp_db()
     else:
         update_list_marker_mlp()
+    print(f'    list mlp 1: {datetime.datetime.now() - time}')
     update_list_trained_models_class()
+    print(f'    list mlp 2: {datetime.datetime.now() - time}')
 
 
 def add_marker_mlp():
@@ -217,17 +220,20 @@ def update_list_marker_mlp():
     update_list_well_markup_mlp()
     update_list_param_mlp(False)
 
-
+@lru_cache()
 def update_list_marker_mlp_db():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()
+    time = datetime.datetime.now()
     for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).all():
         item = f'{i.title} id{i.id}'
         ui.comboBox_mark_mlp.addItem(f'{i.title} id{i.id}')
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
                                          Qt.BackgroundRole)
     update_list_well_markup_mlp()
+    print(f'        update_list_well-markup_mlp: {datetime.datetime.now() - time}')
     update_list_param_mlp(True)
+    print(f'        update_list_param_mlp: {datetime.datetime.now() - time}')
 
 
 def add_well_markup_mlp():
@@ -647,7 +653,7 @@ def remove_all_param_geovel_mlp():
     session.commit()
     update_list_param_mlp()
 
-
+@lru_cache()
 def update_list_param_mlp(db=False):
     data_train, list_param = build_table_train(db, 'mlp')
     list_marker = get_list_marker_mlp('georadar')

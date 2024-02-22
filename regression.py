@@ -41,7 +41,7 @@ def remove_reg():
     elif result == QtWidgets.QMessageBox.No:
         pass
 
-
+@lru_cache
 def update_list_reg():
     """Обновить список наборов для обучения регрессионной модели"""
     ui.comboBox_regmod.clear()
