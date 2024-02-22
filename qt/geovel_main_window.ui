@@ -5043,7 +5043,7 @@ Therm</string>
          </layout>
         </item>
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,2,1">
+         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,0,2,1">
           <item row="0" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
@@ -5051,13 +5051,20 @@ Therm</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEdit_string"/>
-          </item>
-          <item row="0" column="2">
+          <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_color">
             <property name="text">
              <string>color</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="lineEdit_string"/>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_relief">
+            <property name="text">
+             <string>relief</string>
             </property>
            </widget>
           </item>

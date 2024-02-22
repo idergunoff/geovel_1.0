@@ -1300,7 +1300,6 @@ def build_table_test(analisis='lda'):
         ui.progressBar.setValue(i + 1)
     test_data['x_pulc'] = x_pulc
     test_data['y_pulc'] = y_pulc
-
     return test_data, curr_form
 
 
@@ -1385,7 +1384,7 @@ def get_list_param_numerical(list_param, train_model):
                 list_except = []
             for i_sig in range(512):
                 if i_sig + 1 not in list_except:
-                    new_list_param.append(f'CRL_{i_sig + 1}')
+                    new_list_param.append(f'{param}_{i_sig + 1}')
         else:
             new_list_param.append(param)
     return new_list_param
