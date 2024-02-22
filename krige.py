@@ -197,7 +197,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         plt.xlabel('X')
         plt.ylabel('Y')
 
-        plt.title(f'{get_object_name()} {get_research_name()} {param}\n{legend}\nМодель интерполяции: {var_model}'
+        if ui.tabWidget_2.currentWidget().objectName() == 'tab_10':
+            object_title = ui.comboBox_geochem.currentText().split(' id')[0]
+        else:
+            object_title = f'{get_object_name()} {get_research_name()}'
+
+        plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
                   # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
                   f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
