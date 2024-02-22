@@ -1,3 +1,5 @@
+import datetime
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 from krige import draw_map
@@ -653,15 +655,21 @@ def remove_all_param_geovel_mlp():
     update_list_param_mlp()
 
 def update_list_param_mlp(db=False):
+    start_time = datetime.datetime.now()
     data_train, list_param = build_table_train(db, 'mlp')
+    print('1', datetime.datetime.now() - start_time)
     list_marker = get_list_marker_mlp('georadar')
+    print('2', datetime.datetime.now() - start_time)
     ui.listWidget_param_mlp.clear()
+    print('3', datetime.datetime.now() - start_time)
     list_param_mlp = data_train.columns.tolist()[2:]
+    print('4', datetime.datetime.now() - start_time)
     for param in list_param_mlp:
         if ui.checkBox_kf.isChecked():
             groups = []
             for mark in list_marker:
                 groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+                print('5', datetime.datetime.now() - start_time)
             F, p = f_oneway(*groups)
             if np.isnan(F) or np.isnan(p):
                 # if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
@@ -677,12 +685,18 @@ def update_list_param_mlp(db=False):
             if F < 1 or p > 0.05:
                 i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
                 i_item.setBackground(QBrush(QColor('red')))
+            print('6', datetime.datetime.now() - start_time)
         else:
             ui.listWidget_param_mlp.addItem(param)
+            print('7', datetime.datetime.now() - start_time)
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
+    print('8', datetime.datetime.now() - start_time)
     set_color_button_updata()
+    print('9', datetime.datetime.now() - start_time)
     update_list_trained_models_class()
+    print('10', datetime.datetime.now() - start_time)
     update_line_edit_exception_mlp()
+    print('update_list_param_mlp', datetime.datetime.now() - start_time)
 
 
 def update_line_edit_exception_mlp():
