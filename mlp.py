@@ -1,3 +1,5 @@
+import datetime
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
 from krige import draw_map
@@ -653,6 +655,7 @@ def remove_all_param_geovel_mlp():
     update_list_param_mlp()
 
 def update_list_param_mlp(db=False):
+    start_time = datetime.datetime.now()
     data_train, list_param = build_table_train(db, 'mlp')
     list_marker = get_list_marker_mlp('georadar')
     ui.listWidget_param_mlp.clear()
@@ -683,6 +686,7 @@ def update_list_param_mlp(db=False):
     set_color_button_updata()
     update_list_trained_models_class()
     update_line_edit_exception_mlp()
+    print('update_list_param_mlp', datetime.datetime.now() - start_time)
 
 
 def update_line_edit_exception_mlp():
