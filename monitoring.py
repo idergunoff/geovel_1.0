@@ -4,15 +4,18 @@ from krige import draw_map
 
 def update_list_object_monitor():
     """Обновить список объектов"""
+    start_time = datetime.datetime.now()
     ui.comboBox_object_monitor.clear()
     for i in session.query(GeoradarObject).order_by(GeoradarObject.title).all():
         if len(i.researches) > 1:
             ui.comboBox_object_monitor.addItem(f'{i.title}')
             ui.comboBox_object_monitor.setItemData(ui.comboBox_object_monitor.count() - 1, {'id': i.id})
     update_list_h_well()
+    print(f'    list object monitor: {datetime.datetime.now() - start_time}')
 
 
 def update_list_h_well():
+    start_time = datetime.datetime.now()
     """Обновить список горизонтальных скважин"""
     ui.listWidget_h_well.clear()
     for h_well in session.query(GeoradarObject).filter_by(id=get_obj_monitor_id()).first().h_wells:
@@ -31,7 +34,9 @@ def update_list_h_well():
                 item.setBackground(QBrush(QColor('#FBD59E')))
         item.setData(Qt.UserRole, h_well.id)
         ui.listWidget_h_well.addItem(item)
+        print(f'            list h_well - for: {datetime.datetime.now() - start_time}')
     ui.listWidget_h_well.sortItems()
+    print(f'    list h_well: {datetime.datetime.now() - start_time}')
 
 
 def update_list_param_h_well():
