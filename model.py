@@ -1,7 +1,8 @@
 import datetime
 import json
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey, Date, Text, text, literal_column, or_, func
+from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
+                        Date, Text, text, literal_column, or_, func, Index)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -25,6 +26,7 @@ class GeoradarObject(Base):
     h_wells = relationship('HorizontalWell', back_populates='object')
     explorations = relationship('Exploration', back_populates='object')
     set_points = relationship('SetPointsTrain', back_populates='object')
+
 
 
 class Research(Base):
@@ -649,6 +651,9 @@ class Thermogram(Base):
     h_well = relationship("HorizontalWell", back_populates="thermograms")
     intersections = relationship('Intersection', back_populates='thermogram')
 
+# Создаем индекс на столбец "id"
+index_id = Index('idx_id', Thermogram.id)
+# index_id.create(engine)
 
 class Intersection(Base):
     """ Точки пересечения термограмм с профилями """
