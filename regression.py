@@ -2,6 +2,7 @@ import shutil
 import time
 
 import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score, precision_score, recall_score, f1_score
 
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
@@ -775,8 +776,9 @@ def train_regression_model():
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
 
+        kf = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
         if ui_r.checkBox_cross_val.isChecked():
-            kf = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+            # kf = KFold(n_splits=ui_r.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
             list_train, list_test, n_cross = [], [], 1
             for train_index, test_index in kf.split(training_sample):
                 list_train.append(train_index.tolist())
@@ -792,21 +794,23 @@ def train_regression_model():
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
 
-        cv_text = (
-            f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
-            f'\nСредн.: {round(scores_cv.mean(), 2)} '
-            f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_r.checkBox_cross_val.isChecked() else ''
-
         pipe.fit(x_train, y_train)
         y_pred = pipe.predict(x_test)
 
+        r2 = r2_score(y_test, y_pred)
         accuracy = round(pipe.score(x_test, y_test), 5)
         mse = round(mean_squared_error(y_test, y_pred), 5)
+
+        cv_text = (
+            f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
+            f'\nСредн.: {round(scores_cv.mean(), 2)} '
+            f'\nR2: {round(r2, 2)} '
+            f'Станд. откл.: {round(scores_cv.std(), 2)}') if ui_r.checkBox_cross_val.isChecked() else ''
 
         train_time = datetime.datetime.now() - start_time
 
         set_info(f'Модель {model_name}:\n точность: {accuracy} '
-                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
+                 f' Mean Squared Error:\n {mse}, \n R2: {r2}\n время обучения: {train_time}', 'blue')
         y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
 
 
@@ -826,7 +830,7 @@ def train_regression_model():
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
             fig.suptitle(f'Модель {model_name}:\n точность: {accuracy} '
-                 f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
+                 f' Mean Squared Error:\n {mse}, \n R2: {round(r2, 2)} \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
@@ -847,7 +851,7 @@ def train_regression_model():
             fig, axes = plt.subplots(nrows=2, ncols=2)
             fig.set_size_inches(15, 10)
             fig.suptitle(f'Модель {model_name}:\n точность: {accuracy} '
-                          f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}' + cv_text)
+                          f' Mean Squared Error:\n {mse}, R2: {round(r2, 2)} \n время обучения: {train_time}' + cv_text)
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
             sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
