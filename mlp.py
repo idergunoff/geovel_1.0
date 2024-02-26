@@ -378,6 +378,7 @@ def remove_well_markup_mlp():
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
         return
+    n_widget = ui.listWidget_well_mlp.currentRow()
     skv_name = 'profile markup' if markup.type_markup == 'profile' else session.query(Well.name).filter(Well.id == markup.well_id).first()[0]
     prof_name = session.query(Profile.title).filter(Profile.id == markup.profile_id).first()[0]
     mlp_name = session.query(AnalysisMLP.title).filter(AnalysisMLP.id == markup.analysis_id).first()[0]
@@ -390,6 +391,7 @@ def remove_well_markup_mlp():
         session.commit()
         set_info(f'Удалена обучающая скважина для MLP - "{ui.listWidget_well_mlp.currentItem().text()}"', 'green')
         update_list_well_markup_mlp()
+        ui.listWidget_well_mlp.setCurrentRow(n_widget)
     elif result == QtWidgets.QMessageBox.No:
         pass
 
