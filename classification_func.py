@@ -1,8 +1,5 @@
 import json
 import pickle
-
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
-
 from func import *
 from random_search import push_random_search
 

@@ -2,8 +2,6 @@ import shutil
 import time
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score, precision_score, recall_score, f1_score
-
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
