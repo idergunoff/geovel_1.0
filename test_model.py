@@ -177,7 +177,8 @@ def test_start():
         # pd.set_option('display.max_columns', None)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
         ui_tm.textEdit_test_result.setTextColor(Qt.darkGreen)
-        ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n")
+        ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
+                                          f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}")
         index = 0
         while index + 1 < len(result_df):
             comp, total = 0, 0
@@ -316,7 +317,8 @@ def test_start():
             correct_matches = result_df['совпадение'].sum()
 
             ui_tm.textEdit_test_result.setTextColor(QColor("darkgreen"))
-            ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n")
+            ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
+                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}")
             index = 0
             while index + 1 < len(result_df):
                 comp, total = 0, 0
