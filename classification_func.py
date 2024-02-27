@@ -1,6 +1,5 @@
 import json
 import pickle
-
 from func import *
 from random_search import push_random_search
 
@@ -387,7 +386,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)}, \nвремя обучения: {train_time}'
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
-
+        preds_t = pipe.predict(training_sample_test)
+        print("accuracy", accuracy_score(markup_test, preds_t, normalize=True))
+        print("precision", precision_score(markup_test, preds_t, average='binary', pos_label='bitum'))
+        print("recall", recall_score(markup_test, preds_t, average='binary', pos_label='bitum'))
+        print("f1", f1_score(markup_test, preds_t, average='binary', pos_label='bitum'))
         # if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
         #         and ui_cls.checkBox_voting_hard.isChecked()):
         #     hard_flag = True

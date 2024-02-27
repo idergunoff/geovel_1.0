@@ -74,6 +74,7 @@ from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, Categor
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import mean_squared_error, roc_curve, auc
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+from sklearn.metrics import r2_score, precision_score, recall_score, f1_score, accuracy_score
 from imblearn.over_sampling import SMOTE, ADASYN
 
 from matplotlib.animation import FuncAnimation
