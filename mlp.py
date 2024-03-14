@@ -222,6 +222,7 @@ def update_list_marker_mlp():
     update_list_well_markup_mlp()
     update_list_param_mlp(False)
 
+
 def update_list_marker_mlp_db():
     """Обновить список маркеров MLP"""
     ui.comboBox_mark_mlp.clear()

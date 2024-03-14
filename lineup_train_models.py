@@ -127,6 +127,7 @@ def train_cls_model(model):
     text_model = model.text_model
     text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)}, \nвремя обучения: {train_time}'
     set_info(text_model, 'blue')
+    print(text_model)
 
     preds_train = pipe.predict(training_sample)
 
@@ -221,6 +222,8 @@ def train_reg_model(model):
 
     set_info(f'Модель {model.model_name}:\n точность: {accuracy} '
              f' Mean Squared Error:\n {mse}, \n время обучения: {train_time}', 'blue')
+    print(f'Модель {model.model_name}:\n точность: {accuracy} '
+             f' Mean Squared Error: {mse}, \n время обучения: {train_time}')
 
     y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
 

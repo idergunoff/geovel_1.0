@@ -5015,6 +5015,32 @@ Therm</string>
            </widget>
           </item>
           <item>
+           <widget class="QLabel" name="label_32">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(237, 216, 253);</string>
+            </property>
+            <property name="text">
+             <string>seed:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBox_seed">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(237, 216, 253);</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999</number>
+            </property>
+            <property name="value">
+             <number>42</number>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>

@@ -1,4 +1,5 @@
 import json
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -2248,3 +2249,16 @@ def slide_average():
     session.commit()
     draw_image(smoothed_signal)
     updatePlot()
+
+
+def split_list_cvw(l: list, n: int) -> list:
+    # разбивает список на n списков
+    random.seed(ui.spinBox_seed.value())
+    if len(l) < n:
+        l.extend([random.choice(l) for _ in range(n - len(l))])
+    random.shuffle(l)
+    quotient = len(l) // n
+    remainder = len(l) % n
+    result = [l[i * quotient + min(i, remainder):(i + 1) * quotient + min(i + 1, remainder)] for i in range(n)]
+    return result
+

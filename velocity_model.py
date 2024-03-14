@@ -396,4 +396,4 @@ def draw_relief():
         relief_signal = [interpolate_list(i, 512) for i in relief_signal]
         draw_image(relief_signal)
     else:
-        draw_image(json.loads(session.query(CurrentProfileMinMax).first().signal))
+        draw_image(json.loads(session.query(CurrentProfile).first().signal))

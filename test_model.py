@@ -114,18 +114,14 @@ def test_start():
             def update_markers():
                 global list_cat
                 mark1 = ui_tm.comboBox_mark.currentText()
-                print(mark1)
                 list_cat = get_test_list_marker_mlp()
                 list_cat.remove(mark1)
                 list_cat.insert(0, mark1)
-                print(list_cat)
 
                 ChooseMark.close()
 
             ui_cm.pushButton_calc_model.clicked.connect(update_markers)
             ChooseMark.exec()
-
-        # print('list marks: ', list_cat, get_test_list_marker_mlp())
 
         data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(), list_param)
         data_test = data_table.copy()
@@ -173,7 +169,6 @@ def test_start():
 
         result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
         correct_matches = result_df['совпадение'].sum()
-        # print('\nMarked')
         # pd.set_option('display.max_columns', None)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
         ui_tm.textEdit_test_result.setTextColor(Qt.darkGreen)
@@ -474,9 +469,6 @@ def regression_test():
 
         accuracy = reg_model.score(working_sample, working_data['target_value'].values.tolist())
         mse = round(mean_squared_error(working_data['target_value'].values.tolist(), working_data['y_pred'].values.tolist()), 5)
-        # print(accuracy)
-        #
-        # print(working_data['prof_well_index'])
 
         ui_tr.textEdit_test_result.setTextColor(Qt.black)
         ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")

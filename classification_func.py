@@ -243,9 +243,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     def add_model_class_to_lineup():
         """ Добавление модели в лайнап """
 
-        scaler = StandardScaler()
         pipe_steps = []
-        pipe_steps.append(('scaler', scaler))
+        text_scaler = ''
+        if ui_cls.checkBox_stdscaler.isChecked():
+            std_scaler = StandardScaler()
+            pipe_steps.append(('std_scaler', std_scaler))
+            text_scaler += '\nStandardScaler'
+        if ui_cls.checkBox_robscaler.isChecked():
+            robust_scaler = RobustScaler()
+            pipe_steps.append(('robust_scaler', robust_scaler))
+            text_scaler += '\nRobustScaler'
+        if ui_cls.checkBox_mnmxscaler.isChecked():
+            minmax_scaler = MinMaxScaler()
+            pipe_steps.append(('minmax_scaler', minmax_scaler))
+            text_scaler += '\nMinMaxScaler'
+        if ui_cls.checkBox_mxabsscaler.isChecked():
+            maxabs_scaler = MaxAbsScaler()
+            pipe_steps.append(('maxabs_scaler', maxabs_scaler))
+            text_scaler += '\nMaxAbsScaler'
+
         over_sampling, text_over_sample = 'none', ''
         if ui_cls.checkBox_smote.isChecked():
             over_sampling, text_over_sample = 'smote', '\nSMOTE'
@@ -269,6 +285,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                                             random_state=0, n_jobs=-1)
         bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
 
+        text_model += text_scaler
         text_model += text_pca
         text_model += text_over_sample
         text_model += bagging_text
@@ -307,73 +324,99 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
 
 
+    def calc_model_class_by_cvw():
+        """ Кросс-валидация по скважинам """
+
+        start_time = datetime.datetime.now()
+
+        list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
+        data_train_by_well = data_train.copy()
+        data_train_by_well['well_id'] = list_well
+
+        list_marker = get_list_marker_mlp(type_case)
+        data_train_m1 = data_train_by_well[data_train_by_well[mark] == list_marker[0]]
+        data_train_m2 = data_train_by_well[data_train_by_well[mark] == list_marker[1]]
+
+        list_well_m1 = list(set(data_train_m1['well_id'].values.tolist()))
+        list_well_m2 = list(set(data_train_m2['well_id'].values.tolist()))
+
+
+        if '0' in list_well_m1:
+            list_well_m1.remove('0')
+        if '0' in list_well_m2:
+            list_well_m2.remove('0')
+
+        list_cvw_m1 = split_list_cvw(list_well_m1, 5)
+        list_cvw_m2 = split_list_cvw(list_well_m2, 5)
+
+        list_cvw = [list_cvw_m1[i] + list_cvw_m2[i] for i in range(5)]
+
+        print([len(i) for i in list_cvw])
+        print(list_cvw)
+
+        (fig_cvw, axes_cvw) = plt.subplots(nrows=2, ncols=3)
+        fig_cvw.set_size_inches(25, 15)
+        list_accuracy = []
+
+        ui.progressBar.setMaximum(len(list_cvw))
+        for n_cv, lcvw in enumerate(list_cvw):
+            ui.progressBar.setValue(n_cv + 1)
+
+            cvw_row, cvw_col = n_cv // 3, n_cv % 3
+
+            data_test_well = data_train_by_well[data_train_by_well['well_id'].isin(lcvw)]
+            data_train_well = data_train_by_well[~data_train_by_well['well_id'].isin(lcvw)]
+
+            training_sample_train = np.array(data_train_well[list_param].values.tolist())
+            training_sample_test = np.array(data_test_well[list_param].values.tolist())
+            markup_train = np.array(sum(data_train_well[[mark]].values.tolist(), []))
+            markup_test = np.array(sum(data_test_well[[mark]].values.tolist(), []))
+
+            (markup_train, model_class, model_name, pipe,
+             text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
+
+            pipe.fit(training_sample_train, markup_train)
+
+            # Оценка точности на всей обучающей выборке
+            train_accuracy = pipe.score(training_sample, markup)
+            test_accuracy = pipe.score(training_sample_test, markup_test)
+
+            list_accuracy.append(test_accuracy)
+
+            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            roc_auc = auc(fpr, tpr)
+
+            # Строим ROC-кривую
+            axes_cvw[cvw_row, cvw_col].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            axes_cvw[cvw_row, cvw_col].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            axes_cvw[cvw_row, cvw_col].set_xlim([0.0, 1.0])
+            axes_cvw[cvw_row, cvw_col].set_ylim([0.0, 1.05])
+            axes_cvw[cvw_row, cvw_col].set_xlabel('False Positive Rate')
+            axes_cvw[cvw_row, cvw_col].set_ylabel('True Positive Rate')
+            axes_cvw[cvw_row, cvw_col].set_title('ROC-кривая')
+            axes_cvw[cvw_row, cvw_col].legend(loc="lower right")
+
+        train_time = datetime.datetime.now() - start_time
+
+        axes_cvw[1, 2].bar(range(5), list_accuracy)
+
+        fig_cvw.tight_layout()
+        plt.show()
+
 
     def calc_model_class():
         """ Создание и тренировка модели """
+
         # global training_sample, markup
-
         start_time = datetime.datetime.now()
-        # Нормализация данных
-        scaler = StandardScaler()
-
-        pipe_steps = []
-        pipe_steps.append(('scaler', scaler))
 
         # Разделение данных на обучающую и тестовую выборки
         training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
             training_sample, markup, test_size=0.20, random_state=1, stratify=markup)
 
-        text_over_sample = ''
-
-        if ui_cls.checkBox_smote.isChecked():
-            smote = SMOTE(random_state=0)
-            training_sample_train, markup_train = smote.fit_resample(training_sample_train, markup_train)
-            text_over_sample = '\nSMOTE'
-
-        if ui_cls.checkBox_adasyn.isChecked():
-            try:
-                adasyn = ADASYN(random_state=0)
-                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
-            except ValueError:
-                set_info('Невозможно применить ADASYN c n_neighbors=5, значение уменьшено до n_neighbors=3', 'red')
-                adasyn = ADASYN(random_state=0, n_neighbors=3)
-                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
-            text_over_sample = '\nADASYN'
-
-        if ui_cls.checkBox_pca.isChecked():
-            n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
-            pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
-            pipe_steps.append(('pca', pca))
-        text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
-
-        if ui_cls.checkBox_stack_vote.isChecked():
-            model_class, text_model, model_name = build_stacking_voting_model()
-        else:
-            model_name = ui_cls.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_classifier(model_name)
-
-        if ui_cls.checkBox_baggig.isChecked():
-            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
-                                            random_state=0, n_jobs=-1)
-        bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
-
-        text_model += text_pca
-        text_model += text_over_sample
-        text_model += bagging_text
-
-        pipe_steps.append(('model', model_class))
-        pipe = Pipeline(pipe_steps)
-
-        if ui_cls.checkBox_calibr.isChecked():
-            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
-
-            pipe = CalibratedClassifierCV(
-                estimator=pipe,
-                cv=kf,
-                method=ui_cls.comboBox_calibr_method.currentText(),
-                n_jobs=-1
-            )
-            text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
+        (markup_train, model_class, model_name, pipe,
+         text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
 
         pipe.fit(training_sample_train, markup_train)
 
@@ -518,6 +561,73 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save)
         if type_case == 'geochem':
             save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save, data_train)
+
+    def build_pipeline(markup_train, training_sample_train):
+        pipe_steps = []
+        text_scaler = ''
+
+        # Нормализация данных
+        if ui_cls.checkBox_stdscaler.isChecked():
+            std_scaler = StandardScaler()
+            pipe_steps.append(('std_scaler', std_scaler))
+            text_scaler += '\nStandardScaler'
+        if ui_cls.checkBox_robscaler.isChecked():
+            robust_scaler = RobustScaler()
+            pipe_steps.append(('robust_scaler', robust_scaler))
+            text_scaler += '\nRobustScaler'
+        if ui_cls.checkBox_mnmxscaler.isChecked():
+            minmax_scaler = MinMaxScaler()
+            pipe_steps.append(('minmax_scaler', minmax_scaler))
+            text_scaler += '\nMinMaxScaler'
+        if ui_cls.checkBox_mxabsscaler.isChecked():
+            maxabs_scaler = MaxAbsScaler()
+            pipe_steps.append(('maxabs_scaler', maxabs_scaler))
+            text_scaler += '\nMaxAbsScaler'
+        text_over_sample = ''
+        if ui_cls.checkBox_smote.isChecked():
+            smote = SMOTE(random_state=0)
+            training_sample_train, markup_train = smote.fit_resample(training_sample_train, markup_train)
+            text_over_sample = '\nSMOTE'
+        if ui_cls.checkBox_adasyn.isChecked():
+            try:
+                adasyn = ADASYN(random_state=0)
+                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
+            except ValueError:
+                set_info('Невозможно применить ADASYN c n_neighbors=5, значение уменьшено до n_neighbors=3', 'red')
+                adasyn = ADASYN(random_state=0, n_neighbors=3)
+                training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
+            text_over_sample = '\nADASYN'
+        if ui_cls.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
+        if ui_cls.checkBox_stack_vote.isChecked():
+            model_class, text_model, model_name = build_stacking_voting_model()
+        else:
+            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_classifier(model_name)
+        if ui_cls.checkBox_baggig.isChecked():
+            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
+                                            random_state=0, n_jobs=-1)
+        bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
+        text_model += text_scaler
+        text_model += text_pca
+        text_model += text_over_sample
+        text_model += bagging_text
+        pipe_steps.append(('model', model_class))
+        pipe = Pipeline(pipe_steps)
+        if ui_cls.checkBox_calibr.isChecked():
+            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
+
+            pipe = CalibratedClassifierCV(
+                estimator=pipe,
+                cv=kf,
+                method=ui_cls.comboBox_calibr_method.currentText(),
+                n_jobs=-1
+            )
+            text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
+        return markup_train, model_class, model_name, pipe, text_model, training_sample_train
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
@@ -746,6 +856,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     ui_cls.pushButton_add_to_lineup.clicked.connect(add_model_class_to_lineup)
+    ui_cls.pushButton_cvw.clicked.connect(calc_model_class_by_cvw)
     Classifier.exec_()
 
 

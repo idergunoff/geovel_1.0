@@ -11,7 +11,6 @@ def update_list_object_monitor():
             ui.comboBox_object_monitor.addItem(f'{i.title}')
             ui.comboBox_object_monitor.setItemData(ui.comboBox_object_monitor.count() - 1, {'id': i.id})
     update_list_h_well()
-    print(f'    list object monitor: {datetime.datetime.now() - start_time}')
 
 
 def update_list_h_well():
@@ -34,9 +33,7 @@ def update_list_h_well():
                 item.setBackground(QBrush(QColor('#FBD59E')))
         item.setData(Qt.UserRole, h_well.id)
         ui.listWidget_h_well.addItem(item)
-        print(f'            list h_well - for: {datetime.datetime.now() - start_time}')
     ui.listWidget_h_well.sortItems()
-    print(f'    list h_well: {datetime.datetime.now() - start_time}')
 
 
 def update_list_param_h_well():
@@ -81,7 +78,6 @@ def remove_parameter():
         QtWidgets.QMessageBox.No)
     if result == QtWidgets.QMessageBox.Yes:
         id_param = ui.listWidget_param_h_well.currentItem().data(Qt.UserRole)
-        # print(id_param)
         session.query(ParameterHWell).filter_by(id=id_param).delete()
         session.commit()
         update_list_param_h_well()
@@ -261,7 +257,6 @@ def  load_param_h_well():
         #     if isinstance(col_name, str):
         #         if col_name not in ['Дата', 'Время работы']:
         #             list_param.append(f"{i}. {col_name}")
-        # # print(list_param)
 
 
 def get_obj_monitor_id():
@@ -361,10 +356,8 @@ def load_thermogram_h_well():
                 except ValueError:
                     pass
             pd_therm = pd.read_excel(os.path.join(file_dir, file), header=date_row)
-            print(pd_therm)
             list_index = [0]
             date = pd_therm.iloc[i, 0]
-            print(date)
             for i in pd_therm.index:
                 if pd_therm.iloc[i, 0] != date:
                     list_index.append(i)
@@ -1221,7 +1214,6 @@ def show_therms_animation_sep():
             yi = [l[3] for l in t_date if len(l) > 4][:count_therm]
             zi = [l[4] for l in t_date if len(l) > 4][:count_therm]
             ti = [l[1] for l in t_date if len(l) > 4][:count_therm]
-            # print(t)
             lbl = f'Термограмма {frame + 1} из {len(therms)}: {therms[frame].date_time.strftime("%Y-%m-%d %H:%M:%S")}'
             sc._offset3d = (xi, yi, zi)
             sc.set_array(ti)
@@ -1383,7 +1375,6 @@ def add_intersection():
                     ys_hwell = [coord[1] for coord in coord_inc]
 
                     int_p_hw = find_intersection_points(xs_prof, ys_prof, xs_hwell, ys_hwell)
-                    print(int_p_hw)
                     if len(int_p_hw) > 0:
 
                         therm1 = session.query(Thermogram).filter(
@@ -1399,7 +1390,6 @@ def add_intersection():
                         therm1_diff = (therm1.date_time - target_datetime).total_seconds() if therm1 else math.inf
                         therm2_diff = (target_datetime - therm2.date_time).total_seconds() if therm2 else math.inf
 
-                        print(therm1_diff/86400, therm2_diff/86400)
 
                         result_therm = therm1 if therm1_diff < therm2_diff else therm2
                         result_therm_diff = (abs(result_therm.date_time - target_datetime).total_seconds()) / 86400
@@ -1411,11 +1401,9 @@ def add_intersection():
                         ts_therm = [t[1] for t in json.loads(result_therm.therm_data) if len(t) > 2]
 
                         int_p_th = find_intersection_points(xs_prof, ys_prof, xs_therm, ys_therm)
-                        print(int_p_th)
 
                         for intersect in int_p_th:
                             name_int = f'{incl.h_well.title}_{prof.id}_{result_therm.id}_{intersect[2]}_{intersect[3]}'
-                            print(name_int)
                             if session.query(Intersection).filter_by(name=name_int).count() > 0:
                                 set_info(f'Пересечение {name_int} уже есть в БД', 'red')
                             else:
