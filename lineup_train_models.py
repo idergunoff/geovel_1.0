@@ -79,6 +79,7 @@ def train_cls_model(model):
 
     start_time = datetime.datetime.now()
     analysis_cls = session.query(AnalysisMLP).filter_by(id=model.analysis_id).first()
+    list_marker = [m.title for m in session.query(MarkerMLP).filter_by(analysis_id=analysis_cls.id).all()]
 
     ui.comboBox_mlp_analysis.setCurrentText(f'{analysis_cls.title} id{analysis_cls.id}')
 
@@ -99,21 +100,26 @@ def train_cls_model(model):
     training_sample = np.array(data_train[list_param].values.tolist())
     markup = np.array(sum(data_train[['mark']].values.tolist(), []))
 
-    # Разделение данных на обучающую и тестовую выборки
-    training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-        training_sample, markup, test_size=0.20, random_state=1, stratify=markup)
+    if model.cvw:
+        training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(
+            data_train, list_marker, 'mark', list_param, model.random_seed, test_size=0.20
+        )
+    else:
+        # Разделение данных на обучающую и тестовую выборки
+        training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+            training_sample, markup, test_size=0.20, random_state=model.random_seed, stratify=markup)
 
     if model.over_sampling == 'smote':
-        smote = SMOTE(random_state=0)
+        smote = SMOTE(random_state=model.random_seed, n_jobs=-1)
         training_sample_train, markup_train = smote.fit_resample(training_sample_train, markup_train)
 
     if model.over_sampling == 'adasyn':
         try:
-            adasyn = ADASYN(random_state=0)
+            adasyn = ADASYN(random_state=model.random_seed)
             training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
         except ValueError:
             set_info('Невозможно применить ADASYN c n_neighbors=5, значение уменьшено до n_neighbors=3', 'red')
-            adasyn = ADASYN(random_state=0, n_neighbors=3)
+            adasyn = ADASYN(random_state=model.random_seed, n_neighbors=3)
             training_sample_train, markup_train = adasyn.fit_resample(training_sample_train, markup_train)
 
     pipe = pickle.loads(model.pipe)

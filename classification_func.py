@@ -289,6 +289,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         text_model += text_pca
         text_model += text_over_sample
         text_model += bagging_text
+        text_model += f'\nrandom_seed={ui.spinBox_seed.value()}'
+        if ui_cls.checkBox_cvw.isChecked():
+            text_model += '\nCVW (separate by well)'
 
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
@@ -316,7 +319,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             text_model=text_model,
             model_name = model_name,
             over_sampling = over_sampling,
-            pipe = pickle.dumps(pipe)
+            pipe = pickle.dumps(pipe),
+            random_seed = ui.spinBox_seed.value(),
+            cvw = ui_cls.checkBox_cvw.isChecked()
         )
         session.add(new_lineup)
         session.commit()
@@ -404,6 +409,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         fig_cvw.tight_layout()
         plt.show()
 
+        # visualizer = DiscriminationThreshold(pipe)
+
 
     def calc_model_class():
         """ Создание и тренировка модели """
@@ -412,8 +419,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         start_time = datetime.datetime.now()
 
         # Разделение данных на обучающую и тестовую выборки
-        training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-            training_sample, markup, test_size=0.20, random_state=1, stratify=markup)
+        if ui_cls.checkBox_cvw.isChecked():
+            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(data_train,
+                list_marker, mark, list_param, random_seed=ui.spinBox_seed.value(), test_size=0.2)
+        else:
+            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+                training_sample, markup, test_size=0.20, random_state=ui.spinBox_seed.value(), stratify=markup)
 
         (markup_train, model_class, model_name, pipe,
          text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)

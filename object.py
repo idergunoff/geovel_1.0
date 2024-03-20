@@ -77,6 +77,8 @@ from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.metrics import r2_score, precision_score, recall_score, f1_score, accuracy_score
 from imblearn.over_sampling import SMOTE, ADASYN
 
+from yellowbrick.classifier import DiscriminationThreshold
+
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 from matplotlib.colors import ListedColormap

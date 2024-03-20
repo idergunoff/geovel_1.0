@@ -607,6 +607,8 @@ class LineupTrain(Base):
     model_name = Column(String)
     pipe = Column(LargeBinary)
     over_sampling = Column(String)
+    random_seed = Column(Integer, default=0)
+    cvw = Column(Boolean, default=False)
 
 
 #####################################################
@@ -652,7 +654,7 @@ class Thermogram(Base):
     intersections = relationship('Intersection', back_populates='thermogram')
 
 # Создаем индекс на столбец "id"
-index_id = Index('idx_id', Thermogram.id)
+# index_id = Index('idx_id', Thermogram.id)
 # index_id.create(engine)
 
 class Intersection(Base):

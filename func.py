@@ -2262,3 +2262,67 @@ def split_list_cvw(l: list, n: int) -> list:
     result = [l[i * quotient + min(i, remainder):(i + 1) * quotient + min(i + 1, remainder)] for i in range(n)]
     return result
 
+
+def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_size=0.2):
+    # разбивает данные на обучающую и тестовую выборки
+    random.seed(random_seed)
+    list_well = [i.split('_')[1] for i in data['prof_well_index'].values.tolist()]
+    data_train_by_well = data.copy()
+    data_train_by_well['well_id'] = list_well
+
+    data_train_m1 = data_train_by_well[data_train_by_well[mark] == list_marker[0]]
+    data_train_m2 = data_train_by_well[data_train_by_well[mark] == list_marker[1]]
+
+    list_well_m1 = list(set(data_train_m1['well_id'].values.tolist()))
+    list_well_m2 = list(set(data_train_m2['well_id'].values.tolist()))
+
+    list_prof_m1 = list(set(data_train_m1['prof_well_index'][data_train_m1['well_id'] == '0'].values.tolist()))
+    list_prof_m2 = list(set(data_train_m2['prof_well_index'][data_train_m2['well_id'] == '0'].values.tolist()))
+
+    data_train_prof = data_train_by_well[data_train_by_well['well_id'] == '0']
+    data_train_well = data_train_by_well[data_train_by_well['well_id'] != '0']
+
+    if '0' in list_well_m1:
+        list_well_m1.remove('0')
+    if '0' in list_well_m2:
+        list_well_m2.remove('0')
+
+    random.seed(ui.spinBox_seed.value())
+    random.shuffle(list_well_m1)
+    random.shuffle(list_well_m2)
+    random.shuffle(list_prof_m1)
+    random.shuffle(list_prof_m2)
+
+    list_test_well_m1 = list_well_m1[:int(len(list_well_m1) * test_size)]
+    list_test_well_m2 = list_well_m2[:int(len(list_well_m2) * test_size)]
+    list_test_prof_m1 = list_prof_m1[:int(len(list_prof_m1) * test_size)]
+    list_test_prof_m2 = list_prof_m2[:int(len(list_prof_m2) * test_size)]
+
+    print(len(list_well_m1), list_well_m1)
+    print(len(list_well_m2), list_well_m2)
+    print(len(list_prof_m1), list_prof_m1)
+    print(len(list_prof_m2), list_prof_m2)
+    print(len(list_test_well_m1), list_test_well_m1)
+    print(len(list_test_well_m2), list_test_well_m2)
+    print(len(list_test_prof_m1), list_test_prof_m1)
+    print(len(list_test_prof_m2), list_test_prof_m2)
+
+    list_test_well = list_test_well_m1 + list_test_well_m2
+    list_test_prof = list_test_prof_m1 + list_test_prof_m2
+
+    data_test_well = data_train_well[data_train_well['well_id'].isin(list_test_well)]
+    data_test_prof = data_train_prof[data_train_prof['prof_well_index'].isin(list_test_prof)]
+    data_train_well = data_train_well[~data_train_well['well_id'].isin(list_test_well)]
+    data_train_prof = data_train_prof[~data_train_prof['prof_well_index'].isin(list_test_prof)]
+
+    data_test = pd.concat([data_test_well, data_test_prof], axis=0)
+    data_train = pd.concat([data_train_well, data_train_prof], axis=0)
+
+    training_sample_train = np.array(data_train[list_param].values.tolist())
+    training_sample_test = np.array(data_test[list_param].values.tolist())
+    markup_train = np.array(sum(data_train[[mark]].values.tolist(), []))
+    markup_test = np.array(sum(data_test[[mark]].values.tolist(), []))
+
+    return training_sample_train, training_sample_test, markup_train, markup_test
+
+
