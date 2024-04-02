@@ -2298,15 +2298,6 @@ def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_
     list_test_prof_m1 = list_prof_m1[:int(len(list_prof_m1) * test_size)]
     list_test_prof_m2 = list_prof_m2[:int(len(list_prof_m2) * test_size)]
 
-    print(len(list_well_m1), list_well_m1)
-    print(len(list_well_m2), list_well_m2)
-    print(len(list_prof_m1), list_prof_m1)
-    print(len(list_prof_m2), list_prof_m2)
-    print(len(list_test_well_m1), list_test_well_m1)
-    print(len(list_test_well_m2), list_test_well_m2)
-    print(len(list_test_prof_m1), list_test_prof_m1)
-    print(len(list_test_prof_m2), list_test_prof_m2)
-
     list_test_well = list_test_well_m1 + list_test_well_m2
     list_test_prof = list_test_prof_m1 + list_test_prof_m2
 

@@ -12,6 +12,18 @@ def push_random_search():
     RandomSearch.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data_train, list_param = build_table_train(True, 'mlp')
+
+    # list_nan_param, count_nan = [], 0
+    # for i in data_train.index:
+    #     for param in list_param:
+    #         if pd.isna(data_train[param][i]):
+    #             count_nan += 1
+    #             list_nan_param.append(param)
+    # if count_nan > 0:
+    list_col = data_train.columns.tolist()
+    data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
+        # set_info(f'Заполнены пропуски в {count_nan} образцах в параметрах {", ".join(list_nan_param)}', 'red')
+
     list_param_mlp = data_train.columns.tolist()[2:]
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
@@ -684,6 +696,7 @@ def push_random_search():
             n_iter=ui_rs.spinBox_n_iter.value(),
             cv=kf,
             scoring='accuracy',
+            # error_score='raise',
             verbose=6,
             random_state=0,
             n_jobs=-1)

@@ -329,6 +329,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
 
 
+    def draw_yellow_brick():
+        # if ui_cls.checkBox_cvw.isChecked():
+        #     training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(data_train,
+        #         list_marker, mark, list_param, random_seed=ui.spinBox_seed.value(), test_size=0.2)
+        # else:
+        #     training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
+        #         training_sample, markup, test_size=0.20, random_state=ui.spinBox_seed.value(), stratify=markup)
+
+        training_sample = np.array(data_train[list_param].values.tolist())
+        markup = np.array(sum(data_train[[mark]].values.tolist(), []))
+        list_marker = get_list_marker_mlp(type_case)
+
+        (markup_train, model_class, model_name, pipe,
+             text_model, training_sample_train) = build_pipeline(markup, training_sample)
+        markup = np.array([0 if i == list_marker[0] else 1 for i in markup])
+        visualizer = DiscriminationThreshold(pipe)
+        visualizer.fit(training_sample, markup)
+        visualizer.show()
+
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
 
@@ -355,9 +374,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         list_cvw_m2 = split_list_cvw(list_well_m2, 5)
 
         list_cvw = [list_cvw_m1[i] + list_cvw_m2[i] for i in range(5)]
-
-        print([len(i) for i in list_cvw])
-        print(list_cvw)
 
         (fig_cvw, axes_cvw) = plt.subplots(nrows=2, ncols=3)
         fig_cvw.set_size_inches(25, 15)
@@ -407,9 +423,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         axes_cvw[1, 2].bar(range(5), list_accuracy)
 
         fig_cvw.tight_layout()
-        plt.show()
-
-        # visualizer = DiscriminationThreshold(pipe)
+        fig_cvw.show()
 
 
     def calc_model_class():
@@ -868,6 +882,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
     ui_cls.pushButton_add_to_lineup.clicked.connect(add_model_class_to_lineup)
     ui_cls.pushButton_cvw.clicked.connect(calc_model_class_by_cvw)
+    ui_cls.pushButton_yellow_brick.clicked.connect(draw_yellow_brick)
     Classifier.exec_()
 
 
