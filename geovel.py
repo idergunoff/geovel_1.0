@@ -16,7 +16,7 @@ from geochem import *
 from velocity_model import *
 from test_model import *
 from lineup_train_models import *
-
+from nn_torch_classifier import *
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()
@@ -203,6 +203,11 @@ ui.lineEdit_signal_except.returnPressed.connect(add_signal_except_mlp)
 ui.lineEdit_crl_except.returnPressed.connect(add_crl_except_mlp)
 ui.pushButton_test_model_class.clicked.connect(test_start)
 ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
+
+
+# torch
+ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
+
 
 #   regression
 ui.pushButton_add_regmod.clicked.connect(add_regression_model)
