@@ -736,7 +736,10 @@ def prep_data_train(data):
 def draw_MLP():
     """ Тренировка моделей классификаторов """
     data_train, list_param = build_table_train(True, 'mlp')
+    print(data_train)
+    print("list_param ", list_param)
     list_param_mlp = data_train.columns.tolist()[2:]
+    print("list_param_mlp ", list_param_mlp)
 
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():

@@ -1491,6 +1491,7 @@ def calc_vector():
 def calc_isolation_forest():
     data_train, list_param = build_geochem_table()
 
+
     X_train = np.array(data_train[list_param].values.tolist())
 
     data_test, _ = build_geochem_table_field()

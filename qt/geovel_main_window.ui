@@ -1037,8 +1037,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>354</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3240,16 +3240,6 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_30">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_60">
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_calc_obj_mlp">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>Calc Object</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_draw_mlp">
                         <property name="styleSheet">
@@ -3260,7 +3250,7 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
+                      <item row="0" column="2">
                        <widget class="QPushButton" name="pushButton_calc_mlp">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 204, 121);</string>
@@ -3270,13 +3260,33 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="2">
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_calc_obj_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Object</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
                        <widget class="QCheckBox" name="checkBox_save_prof_mlp">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(175, 255, 243);</string>
                         </property>
                         <property name="text">
                          <string>save profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_torch">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(235, 234, 129);</string>
+                        </property>
+                        <property name="text">
+                         <string>PyTorch</string>
                         </property>
                        </widget>
                       </item>
@@ -5108,7 +5118,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
