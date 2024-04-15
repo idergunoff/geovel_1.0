@@ -1,7 +1,10 @@
 import datetime
 
+import numpy as np
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
+from nn_torch_classifier import *
 from krige import draw_map
 from qt.choose_formation_lda import *
 from random_search import push_random_search
@@ -159,9 +162,7 @@ def update_list_mlp(db=False):
         update_list_marker_mlp_db()
     else:
         update_list_marker_mlp()
-    print(f'    list mlp 1: {datetime.datetime.now() - time}')
     update_list_trained_models_class()
-    print(f'    list mlp 2: {datetime.datetime.now() - time}')
 
 
 def add_marker_mlp():
@@ -233,9 +234,7 @@ def update_list_marker_mlp_db():
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
                                          Qt.BackgroundRole)
     update_list_well_markup_mlp()
-    print(f'        update_list_well-markup_mlp: {datetime.datetime.now() - time}')
     update_list_param_mlp(True)
-    print(f'        update_list_param_mlp: {datetime.datetime.now() - time}')
 
 
 def add_well_markup_mlp():
@@ -660,19 +659,14 @@ def remove_all_param_geovel_mlp():
 def update_list_param_mlp(db=False):
     start_time = datetime.datetime.now()
     data_train, list_param = build_table_train(db, 'mlp')
-    print('1', datetime.datetime.now() - start_time)
     list_marker = get_list_marker_mlp('georadar')
-    print('2', datetime.datetime.now() - start_time)
     ui.listWidget_param_mlp.clear()
-    print('3', datetime.datetime.now() - start_time)
     list_param_mlp = data_train.columns.tolist()[2:]
-    print('4', datetime.datetime.now() - start_time)
     for param in list_param_mlp:
         if ui.checkBox_kf.isChecked():
             groups = []
             for mark in list_marker:
                 groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
-                print('5', datetime.datetime.now() - start_time)
             F, p = f_oneway(*groups)
             if np.isnan(F) or np.isnan(p):
                 # if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
@@ -688,18 +682,12 @@ def update_list_param_mlp(db=False):
             if F < 1 or p > 0.05:
                 i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
                 i_item.setBackground(QBrush(QColor('red')))
-            print('6', datetime.datetime.now() - start_time)
         else:
             ui.listWidget_param_mlp.addItem(param)
-            print('7', datetime.datetime.now() - start_time)
     ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
-    print('8', datetime.datetime.now() - start_time)
     set_color_button_updata()
-    print('9', datetime.datetime.now() - start_time)
     update_list_trained_models_class()
-    print('10', datetime.datetime.now() - start_time)
     update_line_edit_exception_mlp()
-    print('update_list_param_mlp', datetime.datetime.now() - start_time)
 
 
 def update_line_edit_exception_mlp():
@@ -758,6 +746,28 @@ def remove_trained_model_class():
     set_info(f'Модель {model.title} удалена', 'blue')
 
 
+# def torch_predict_proba(model, data):
+#     scaler = StandardScaler()
+#     working_data = scaler.fit_transform(data)
+#     data_tensor = torch.tensor(working_data).float()
+#     print('data_tensor ', data_tensor)
+#     dataset = TensorDataset(data_tensor)
+#     data = DataLoader(dataset, batch_size=20, shuffle=False)
+#     model.eval()
+#     predictions = []
+#     mark_pred = []
+#     with torch.no_grad():
+#         for batch in data:
+#             xb = batch[0].float()
+#             pred_batch = model(xb)
+#             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+#             mark_pred.extend([pred.numpy() for pred in pred_batch])
+#     mark = [item for m in mark_pred for item in m]
+#     print('proba predictions ', predictions)
+#     print('proba mark ', mark)
+#     return predictions, mark
+
+
 def calc_class_profile():
     """  Расчет профиля по выбранной модели классификатора """
     working_data, curr_form = build_table_test('mlp')
@@ -774,9 +784,14 @@ def calc_class_profile():
         model = session.query(TrainedModelClass).filter_by(
             id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
 
-        with open(model.path_model, 'rb') as f:
-            class_model = pickle.load(f)
-
+        if model.title.startswith('torch_NN'):
+            with open(model.path_model, 'rb') as f:
+                class_model = pickle.load(f)
+            list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        else:
+            with open(model.path_model, 'rb') as f:
+                class_model = pickle.load(f)
+            list_cat = list(class_model.classes_)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_class[list_param_num].values.tolist()
@@ -786,23 +801,39 @@ def calc_class_profile():
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
             return
 
-        list_cat = list(class_model.classes_)
-
         try:
-            mark = class_model.predict(working_sample)
-            probability = class_model.predict_proba(working_sample)
+            if model.title.startswith('torch_NN'):
+                probability, mark = class_model.predict(working_sample)
+                print(
+                    f'probability: {probability}, \nmark: {mark}')
+
+                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+                print('MARK ', mark)
+            else:
+                mark = class_model.predict(working_sample)
+                probability = class_model.predict_proba(working_sample)
+                print(probability)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
-
             data = imputer.fit_transform(working_sample)
-            try:
-                mark = class_model.predict(data)
-            except ValueError:
-                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                         'рассчитайте заново', 'red')
-                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                return
-            probability = class_model.predict_proba(data)
+            if model.title.startswith('torch_NN'):
+                try:
+                    probability, mark = class_model.predict(working_sample)
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+            else:
+                try:
+                    mark = class_model.predict(data)
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+                probability = class_model.predict_proba(data)
 
             for i in working_data_class.index:
                 p_nan = [working_data_class.columns[ic + 3] for ic, v in enumerate(working_data_class.iloc[i, 3:].tolist()) if
@@ -812,18 +843,15 @@ def calc_class_profile():
                              f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
-        print(pd.DataFrame(probability, columns=list_cat))
+        print(pd.DataFrame(probability))
         print(working_data_class)
-        working_data_result = pd.concat([working_data_class, pd.DataFrame(probability, columns=list_cat)], axis=1)
-
-        print(working_data_result)
+        working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
+        print(working_data_result)
 
         draw_result_mlp(working_data_result, curr_form)
 
-
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
-
     Choose_RegModel.exec_()
 
 
@@ -862,7 +890,7 @@ def draw_result_mlp(working_data, curr_form):
     curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(working_data[col].tolist(), 31, 3),
                                     pen=pg.mkPen(color='red', width=2.4))
     # Добавляем кривую и отфильтрованную кривую на график для всех пластов
-    text = pg.TextItem(col, anchor=(0, 1))
+    text = pg.TextItem(str(col), anchor=(0, 1))
     ui.graph.addItem(curve)
     ui.graph.addItem(curve_filter)
     ui.graph.addItem(text)
@@ -877,6 +905,7 @@ def draw_result_mlp(working_data, curr_form):
             set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
         except ValueError:
             pass
+
 
 def calc_object_class():
     """ Расчет объекта по модели """
@@ -960,6 +989,10 @@ def calc_object_class():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
+        if model.title.startswith('torch_NN'):
+            list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        else:
+            list_cat = list(class_model.classes_)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()
@@ -969,22 +1002,34 @@ def calc_object_class():
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
             return
 
-        list_cat = list(class_model.classes_)
-
         try:
-            mark = class_model.predict(working_sample)
-            probability = class_model.predict_proba(working_sample)
+            if model.title.startswith('torch_NN'):
+                probability, mark = class_model.predict(working_sample)
+                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            else:
+                mark = class_model.predict(working_sample)
+                probability = class_model.predict_proba(working_sample)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            try:
-                mark = class_model.predict(data)
-            except ValueError:
-                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                         'рассчитайте заново', 'red')
-                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                return
-            probability = class_model.predict_proba(data)
+            if model.title.startswith('torch_NN'):
+                try:
+                    probability, mark = class_model.predict(working_sample)
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+            else:
+                try:
+                    mark = class_model.predict(data)
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+                probability = class_model.predict_proba(data)
 
             for i in working_data_result_copy.index:
                 p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in

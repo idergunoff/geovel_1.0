@@ -3,6 +3,9 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import time
 import torch
 import torch.nn as nn
+from sklearn.pipeline import FeatureUnion
+from sklearn.preprocessing import FunctionTransformer
+from torch import optim, randperm
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
 from geochem import *
 from func import *
@@ -97,27 +100,37 @@ class Model(torch.nn.Module):
         return out
 
 
-def calculate_metrics(ui_tch, model, val_dl, threshold=0.5):
+def calculate_metrics(ui_tch, model, val_dl, threshold=False):
     model.eval()
     all_targets = []
     all_predictions = []
+    predictions = []
     if ui_tch.comboBox_dataset.currentText() == 'shuffle':
         with torch.no_grad():
             for xb, yb in val_dl:
-                pred = model(xb)
-                all_targets.extend(yb.numpy())
-                all_predictions.extend(pred.numpy())
+                pred_batch = model(xb)
+                print('XB: ', xb)
+                all_targets.extend([y.numpy() for y in yb])
+                all_predictions.extend([pred.numpy() for pred in pred_batch])
+                predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+
     elif ui_tch.comboBox_dataset.currentText() == 'well split':
         with torch.no_grad():
             for batch in val_dl:
                 xb, yb = batch['data'], batch['label'].unsqueeze(1)
                 pred = model(xb)
+                comp = 1 - pred
+                pred_array = np.array([comp.numpy(), pred.numpy()])
                 all_targets.extend(yb.numpy())
-                all_predictions.extend(pred.numpy())
-
+                all_predictions.append(pred_array)
+    print('predictions ', predictions)
     # Применяем порог к предсказаниям, если это необходимо
-    if threshold is not None:
-        all_predictions = [1 if p >= threshold else 0 for p in all_predictions]
+    if threshold is True:
+        fpr, tpr, thresholds = roc_curve(all_targets, all_predictions)
+        opt_threshold = thresholds[np.argmax(tpr - fpr)]
+    else:
+        opt_threshold = 0.5
+    all_predictions = [1 if p >= opt_threshold else 0 for p in all_predictions]
 
     accuracy = accuracy_score(all_targets, all_predictions)
     precision = precision_score(all_targets, all_predictions)
@@ -565,7 +578,7 @@ def torch_save_model(model, accuracy, list_params, text_model):
         path_model = f'models/classifier/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pth'
         if os.path.exists(path_model):
             path_model = f'models/classifier/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pth'
-        torch.save(model.state_dict(), path_model)
+        torch.save(model, path_model)
 
         new_trained_model = TrainedModelClass(
             analysis_id=get_MLP_id(),
@@ -582,7 +595,8 @@ def torch_save_model(model, accuracy, list_params, text_model):
     else:
         pass
 
-def nn_choose_params(ui_tch, data):
+
+def nn_choose_params(ui_tch, data, list_param):
     if ui_tch.comboBox_dataset.currentText() == 'well split':
         batch_size = 50
         list_param = data.columns[2:].to_list()
@@ -601,13 +615,11 @@ def nn_choose_params(ui_tch, data):
         output_dim = 1
     elif ui_tch.comboBox_dataset.currentText() == 'shuffle':
         input_cols = list(data.columns[2:])
-        print('INPUT COLS: ', input_cols)
         output_cols = ['mark']
 
         def dataframe_to_arrays(data):
             df = data.copy(deep=True)
             input_array = df[input_cols].to_numpy()
-            print("input_array: ", input_array)
             input_scaler = StandardScaler()
             input_array = input_scaler.fit_transform(input_array)
             target_array = df[output_cols].to_numpy()
@@ -704,8 +716,7 @@ def nn_choose_params(ui_tch, data):
                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
                     + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                      '\nregularization: ' + str(regularization) + '\n'
-        list_params = data.columns[2:].to_list()
-        torch_save_model(model, accuracy, list_params, text_model)
+        torch_save_model(model, accuracy, list_param, text_model)
         print("model saved")
 
 
@@ -714,10 +725,10 @@ def str_to_interval(string):
     result = [float(part.replace(",", ".")) for part in parts]
     return result
 
-def nn_tune_params(ui_tch, data):
+def nn_tune_params(ui_tch, data, list_param):
     if ui_tch.comboBox_dataset.currentText() == 'well split':
         batch_size = 50
-        list_param = data.columns[2:].to_list()
+        # list_param = data.columns[2:].to_list()
         training_sample_train, training_sample_test, \
             markup_train, markup_test = train_test_split_cvw(data,
                                                              [0, 1], 'mark', list_param,
@@ -841,7 +852,7 @@ def nn_tune_params(ui_tch, data):
         losses, val_losses= fit_best_model_shuffle(epochs, final_model, loss_function,
                                                             optimizer, best_regularization, train_dl, val_dl, trial,
                                                             ui_tch, early_stopping=early_stopping)
-    accuracy, precision, recall, f1 = calculate_metrics(ui_tch, final_model, val_dl, threshold=threshold)
+    accuracy, precision, recall, f1 = calculate_metrics(ui_tch, final_model, val_dl, threshold)
     print(f'Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-score: {f1:.4f}')
     end_time = datetime.datetime.now() - start_time
 
@@ -872,8 +883,7 @@ def nn_tune_params(ui_tch, data):
                      + str(end_time) + '\nParams: \n'
         for key, value in trial.params.items():
             text_model += str(f"    {key}: {value}\n")
-        list_params = data.columns[2:].to_list()
-        torch_save_model(final_model, accuracy, list_params, text_model)
+        torch_save_model(final_model, accuracy, list_param, text_model)
         print("model saved")
 
 
@@ -898,7 +908,7 @@ def cross_validation_shuffle(dataset, epochs, model, optimizer, loss_function,
                                          train_loader, valid_loader, ui_tch)
         loss_list.append(val_losses)
 
-        accuracy, precision, recall, f1 = calculate_metrics(ui_tch, model, valid_loader, threshold=threshold)
+        accuracy, precision, recall, f1 = calculate_metrics(ui_tch, model, valid_loader, threshold)
         print(f'Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-score: {f1:.4f}')
         accuracy_list.append(accuracy)
 
@@ -939,7 +949,7 @@ def cross_validation_split(train_dataset, val_dataset, epochs, model, optimizer,
                                        train_dl, val_dl, ui_tch)
         loss_list.append(val_losses)
 
-        accuracy, precision, recall, f1 = calculate_metrics(ui_tch, model, val_dl, threshold=threshold)
+        accuracy, precision, recall, f1 = calculate_metrics(ui_tch, model, val_dl, threshold)
         print(f'Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-score: {f1:.4f}')
         accuracy_list.append(accuracy)
 
@@ -1041,6 +1051,224 @@ def nn_cross_val(ui_tch, data):
         # cross_validation_split(train_dataset, val_dataset, epochs, model, optimizer,
         #                          loss_function, regularization, ui_tch, threshold=threshold)
 
+def torch_save_classifier(pipeline, accuracy, list_params, text_model):
+    model_name = 'torch_NN'
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Сохранение модели',
+        f'Сохранить модель {model_name}?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+    if result == QtWidgets.QMessageBox.Yes:
+        # Сохранение модели в файл с помощью pickle
+        path_model = f'models/classifier/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+        if os.path.exists(path_model):
+            path_model = f'models/classifier/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
+        with open(path_model, 'wb') as f:
+            pickle.dump(pipeline, f)
+
+        new_trained_model = TrainedModelClass(
+            analysis_id=get_MLP_id(),
+            title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
+            path_model=path_model,
+            list_params=json.dumps(list_params),
+            except_signal=ui.lineEdit_signal_except.text(),
+            except_crl=ui.lineEdit_crl_except.text(),
+            comment=text_model
+        )
+        session.add(new_trained_model)
+        session.commit()
+        update_list_trained_models_class()
+    else:
+        pass
+
+def draw_results_graphs(pipeline, X_test, y_test):
+    # Построение графиков
+    # plot_roc_curve(ui_tch, model, val_dl)
+    val_losses = pipeline.named_steps['classifier'].losses(X_test, y_test)
+    accuracy, precision, recall, f1 = pipeline.named_steps['classifier'].metrics(X_test, y_test)
+
+    val_epoch = range(1, len(val_losses) + 1)
+    fig, axs = plt.subplots(1, 1, figsize=(16, 8))
+
+    print('val-losses: ', val_losses)
+    print('len_val_losses: ', len(val_losses))
+    axs.plot(val_epoch, val_losses, marker='o', linestyle='-', label='Val Loss')
+    axs.set_xlabel('Epochs')
+    axs.set_ylabel('Val Loss')
+    axs.set_title('Val Loss vs Epochs')
+    axs.legend()
+
+    fig.suptitle(f'Accuracy: {accuracy:.4f}\n Precision: {precision:.4f}\n Recall: {recall:.4f}\n F1-Score: {f1:.4f}')
+    plt.subplots_adjust(top=0.8)
+    plt.show()
+
+
+class PyTorchClassifier:
+    def __init__(self, model, input_dim, output_dim, hidden_units,
+                            dropout_rate, activation_function,
+                            loss_function, optimizer, learning_rate, weight_decay,
+                            epochs, regular, batch_size=20):
+        self.model = model(input_dim, output_dim, hidden_units,
+                           dropout_rate, activation_function)
+        self.criterion = loss_function
+        self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        self.epochs = epochs
+        self.regular = regular
+        self.batch_size = batch_size
+
+    def fit(self, X_train, y_train):
+        X_train = torch.from_numpy(X_train).float()
+        y_train = torch.from_numpy(y_train).float()
+
+        for epoch in range(self.epochs):
+            running_loss = 0
+            indices = torch.arange(X_train.shape[0])
+            indices = torch.randperm(len(indices))
+            batch_size = 32
+            for i in range(0, len(X_train), batch_size):
+                start_idx = i
+                end_idx = min(start_idx + batch_size, len(X_train))
+                inputs = X_train[start_idx:end_idx]
+                labels = y_train[start_idx:end_idx].unsqueeze(1)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.criterion(outputs, labels)
+                l2_lambda = self.regular
+                l2_reg = torch.tensor(0.)
+                for param in self.model.parameters():
+                    l2_reg += torch.norm(param)
+                loss += l2_lambda * l2_reg
+                loss.backward()
+                self.optimizer.step()
+                running_loss += loss.item()
+
+            if epoch % 10 == 0:
+                print(f'Epoch {epoch}, Loss: {running_loss / (X_train.shape[0] / self.batch_size)}')
+
+    def predict(self, X):
+        predictions = []
+        mark_pred = []
+        X = torch.from_numpy(X).float()
+        with torch.no_grad():
+            pred_batch = self.model(X) # вероятность
+            predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+            mark_pred.extend([pred.numpy() for pred in pred_batch])
+        mark = [item for m in mark_pred for item in m]
+        print('proba predictions ', predictions)
+        print('proba mark ', mark)
+        return predictions, mark
+
+    def losses(self, X_val, y_val):
+        X_val = torch.from_numpy(X_val).float()
+        dataset = TensorDataset(X_val, y_val)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+
+        self.model.eval()
+        epoch_val_loss = []
+        val_losses = []
+        with torch.no_grad():
+            for xb, yb in dataloader:
+                outputs = self.model(xb)
+                val_loss = self.criterion(outputs, yb.unsqueeze(1))
+                print('val_loss: ', val_loss)
+                epoch_val_loss.append(val_loss.item())
+            # val_losses.append(epoch_val_loss / len(dataset))
+        return epoch_val_loss
+
+    def metrics(self, X_val, y_val, opt_threshold=0.5):
+        all_targets = []
+        all_predictions = []
+        predictions = []
+        X = torch.from_numpy(X_val).float()
+        self.model.eval()
+        with torch.no_grad():
+            val_dl = DataLoader(TensorDataset(X, y_val), batch_size=20, shuffle=False)
+            for xb, yb in val_dl:
+                pred_batch = self.model(xb)
+                all_targets.extend([y.numpy() for y in yb])
+                all_predictions.extend([pred.numpy() for pred in pred_batch])
+                predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+
+        all_predictions = [1 if p >= opt_threshold else 0 for p in all_predictions]
+        accuracy = accuracy_score(all_targets, all_predictions)
+        precision = precision_score(all_targets, all_predictions)
+        recall = recall_score(all_targets, all_predictions)
+        f1 = f1_score(all_targets, all_predictions)
+
+        return accuracy, precision, recall, f1
+
+
+
+def nn_torch(ui_tch, data, list_param):
+    X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
+    y_train = y_train.values
+    X = X_train.astype(np.float64)
+    y = y_train.astype(np.float64)
+    X_val = X_test.values
+    y_val = torch.from_numpy(y_test.values).float()
+
+    input_dim = X_train.shape[1]
+    output_dim = 1
+
+    epochs = ui_tch.spinBox_epochs.value()
+    learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+    hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+    dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+    weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+    regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+    if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+        activation_function = nn.ReLU()
+    elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+        activation_function = nn.Sigmoid()
+    elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+        activation_function = nn.Tanh()
+
+    if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+        optimizer = torch.optim.Adam
+    elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+        optimizer = torch.optim.SGD
+
+    if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
+        loss_function = nn.CrossEntropyLoss()
+    elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
+        loss_function = nn.BCEWithLogitsLoss()
+    elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
+        loss_function = nn.BCELoss()
+
+    pipeline = Pipeline([
+        ('features', FeatureUnion([
+            ('scaler', StandardScaler())
+        ])),
+        ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+                            dropout_rate, activation_function,
+                            loss_function, optimizer, learning_rate, weight_decay,
+                            epochs, regular, batch_size=20))
+    ])
+
+    start_time = datetime.datetime.now()
+    print('X: ', X)
+    pipeline.fit(X, y)
+    _, y_pred = pipeline.predict(X_val)
+    y_pred = np.where(np.array(y_pred) > 0.5, 1, 0)
+    print('y_pred: ', y_pred.shape)
+    print('x_val^ ', X_val)
+    accuracy = accuracy_score(y_val, y_pred)
+    end_time = datetime.datetime.now() - start_time
+    print('Accuracy: ', accuracy)
+    print(end_time)
+
+    draw_results_graphs(pipeline, X_val, y_val)
+
+    if ui_tch.checkBox_save_model.isChecked():
+        text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+                     + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
+                     + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                     '\nregularization: ' + str(regular) + '\n'
+        torch_save_classifier(pipeline, accuracy, list_param, text_model)
+        print('Model saved')
+
 def torch_classifier_train():
     TorchClassifier = QtWidgets.QDialog()
     ui_tch = Ui_TorchClassifierForm()
@@ -1048,19 +1276,20 @@ def torch_classifier_train():
     TorchClassifier.show()
     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    data_js = json.loads(session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first().data)
-    data = pd.DataFrame(data_js)
+    data, list_param = build_table_train(True, 'mlp')
+    ## todo Переделать в функцию
     data['mark'] = data['mark'].replace({'empty': 0, 'bitum': 1})
     data['mark'] = data['mark'].replace({'пусто': 0, 'нефть': 1})
     data['mark'] = data['mark'].replace({'cold': 0, 'hot': 1})
     data = data.fillna(0)
 
     def train():
-        if ui_tch.checkBox_choose_param.isChecked():
-            nn_choose_params(ui_tch, data)
-
-        if ui_tch.checkBox_tune_param.isChecked():
-            nn_tune_params(ui_tch, data)
+        # if ui_tch.checkBox_choose_param.isChecked():
+        #     nn_choose_params(ui_tch, data, list_param)
+        #
+        # if ui_tch.checkBox_tune_param.isChecked():
+        nn_torch(ui_tch, data, list_param)
+            # nn_tune_params(ui_tch, data, list_param)
     def cv():
         nn_cross_val(ui_tch, data)
 

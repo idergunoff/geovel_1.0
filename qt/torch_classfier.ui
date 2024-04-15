@@ -240,6 +240,9 @@
       <height>16</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string extracomment="0,001-0,1"/>
+    </property>
     <property name="text">
      <string extracomment="0.1-0.0001">learning rate</string>
     </property>
