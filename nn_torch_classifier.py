@@ -1097,7 +1097,6 @@ def draw_results_graphs(loss, epochs):
     plt.show()
 
 
-
 class PyTorchClassifier:
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
@@ -1169,21 +1168,6 @@ class PyTorchClassifier:
         return predictions
 
 
-    def losses(self, X_val, y_val):
-        X_val = torch.from_numpy(X_val).float()
-        dataset = TensorDataset(X_val, y_val)
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
-
-        self.model.eval()
-        epoch_val_loss = []
-        val_losses = []
-        with torch.no_grad():
-            for xb, yb in dataloader:
-                outputs = self.model(xb)
-                val_loss = self.criterion(outputs, yb.unsqueeze(1))
-                epoch_val_loss.append(val_loss.item())
-        return epoch_val_loss
-
     def metrics(self, X_val, y_val, opt_threshold=0.5):
         all_targets = []
         all_predictions = []
@@ -1197,34 +1181,27 @@ class PyTorchClassifier:
                 all_targets.extend([y.numpy() for y in yb])
                 all_predictions.extend([pred.numpy() for pred in pred_batch])
                 predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
-
-        print('METRICS predictions: ', predictions, '\nMETRICS all_predictions: ', all_predictions)
         all_predictions = [1 if p >= opt_threshold else 0 for p in all_predictions]
         accuracy = accuracy_score(all_targets, all_predictions)
         precision = precision_score(all_targets, all_predictions)
         recall = recall_score(all_targets, all_predictions)
         f1 = f1_score(all_targets, all_predictions)
-        # predictions = []
-        # mark_pred = []
-        # X = torch.from_numpy(X_val).float()
-        #
-        # # self.model.eval()
-        # with torch.no_grad():
-        #     pred_batch = self.model(X)  # вероятность
-        #     print('metrics pred_butch: ', pred_batch)
-        #     predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
-        #     mark_pred.extend([pred.numpy() for pred in pred_batch])
-        # mark = [item for m in mark_pred for item in m]
-        # # mark = np.where(np.array(mark) > 0.5, 1, 0)
-        # print('y_val ', y_val, '\nmark ', mark)
-        # accuracy = accuracy_score(y_val, mark)
-        # print('accuracy: ', accuracy)
-        # precision = precision_score(y_val, mark)
-        # recall = recall_score(y_val, mark)
-        # f1 = f1_score(y_val, mark)
-
         return accuracy, precision, recall, f1
 
+def draw_roc_curve(y_val, y_mark):
+    fpr, tpr, thresholds = roc_curve(y_val, y_mark)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure()
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    plt.show()
 
 
 def nn_torch(ui_tch, data, list_param):
@@ -1276,15 +1253,15 @@ def nn_torch(ui_tch, data, list_param):
 
     start_time = datetime.datetime.now()
     pipeline.fit(X, y)
+    # y_mark = pipeline.named_steps['classifier'].predict_graphs(X_val, y_val)
     y_mark = pipeline.predict(X_val)
-    y_mark = np.where(np.array(y_mark) > 0.5, 1, 0)
-    accuracy = accuracy_score(y_val, y_mark)
+    mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+    accuracy = accuracy_score(y_val, mark)
     end_time = datetime.datetime.now() - start_time
     print('Accuracy: ', accuracy)
     print(end_time)
+    draw_roc_curve(y_val, y_mark)
 
-    # draw_results_graphs(pipeline, X_val, y_val, accuracy)
-    # draw_results_graphs(loss, epochs, accuracy)
     if ui_tch.checkBox_save_model.isChecked():
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
