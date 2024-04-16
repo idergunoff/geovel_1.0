@@ -1090,9 +1090,6 @@ def draw_results_graphs(pipeline, X_test, y_test):
 
     val_epoch = range(1, len(val_losses) + 1)
     fig, axs = plt.subplots(1, 1, figsize=(16, 8))
-
-    print('val-losses: ', val_losses)
-    print('len_val_losses: ', len(val_losses))
     axs.plot(val_epoch, val_losses, marker='o', linestyle='-', label='Val Loss')
     axs.set_xlabel('Epochs')
     axs.set_ylabel('Val Loss')
@@ -1150,14 +1147,27 @@ class PyTorchClassifier:
         predictions = []
         mark_pred = []
         X = torch.from_numpy(X).float()
+        print('X: ', X)
         with torch.no_grad():
             pred_batch = self.model(X) # вероятность
+            print('pred_batch: ', pred_batch)
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
             mark_pred.extend([pred.numpy() for pred in pred_batch])
         mark = [item for m in mark_pred for item in m]
-        print('proba predictions ', predictions)
-        print('proba mark ', mark)
-        return predictions, mark
+        return mark
+
+    def predict_proba(self, X):
+        predictions = []
+        mark_pred = []
+        X = torch.from_numpy(X).float()
+        print('X: ', X)
+        with torch.no_grad():
+            pred_batch = self.model(X)  # вероятность
+            predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+            mark_pred.extend([pred.numpy() for pred in pred_batch])
+        mark = [item for m in mark_pred for item in m]
+        return predictions
+
 
     def losses(self, X_val, y_val):
         X_val = torch.from_numpy(X_val).float()
@@ -1171,9 +1181,7 @@ class PyTorchClassifier:
             for xb, yb in dataloader:
                 outputs = self.model(xb)
                 val_loss = self.criterion(outputs, yb.unsqueeze(1))
-                print('val_loss: ', val_loss)
                 epoch_val_loss.append(val_loss.item())
-            # val_losses.append(epoch_val_loss / len(dataset))
         return epoch_val_loss
 
     def metrics(self, X_val, y_val, opt_threshold=0.5):
@@ -1248,13 +1256,11 @@ def nn_torch(ui_tch, data, list_param):
     ])
 
     start_time = datetime.datetime.now()
-    print('X: ', X)
     pipeline.fit(X, y)
-    _, y_pred = pipeline.predict(X_val)
-    y_pred = np.where(np.array(y_pred) > 0.5, 1, 0)
-    print('y_pred: ', y_pred.shape)
-    print('x_val^ ', X_val)
-    accuracy = accuracy_score(y_val, y_pred)
+    y_mark = pipeline.predict(X_val)
+    y_pred = pipeline.predict_proba(X_val)
+    y_mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+    accuracy = accuracy_score(y_val, y_mark)
     end_time = datetime.datetime.now() - start_time
     print('Accuracy: ', accuracy)
     print(end_time)

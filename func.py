@@ -1253,7 +1253,7 @@ def build_table_test(analisis='lda'):
     ui.progressBar.setMaximum(len(list_up))
     set_info(f'Процесс сбора параметров {analisis_title} по профилю {curr_form.profile.title}',
              'blue')
-    for i in range(len(list_up)):
+    for i in tqdm(range(len(list_up))):
         dict_value = {}
         for param in list_param:
             if param.startswith('Signal'):

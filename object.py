@@ -2,6 +2,7 @@ import sys, os
 import random, math
 from sqlite3 import connect
 
+import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
 from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog
@@ -38,6 +39,7 @@ import pandas as pd
 import json
 import zipfile
 import shutil
+from tqdm import tqdm
 
 from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr
 

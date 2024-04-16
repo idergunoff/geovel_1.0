@@ -802,38 +802,42 @@ def calc_class_profile():
             return
 
         try:
+            mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
             if model.title.startswith('torch_NN'):
-                probability, mark = class_model.predict(working_sample)
-                print(
-                    f'probability: {probability}, \nmark: {mark}')
-
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-                print('MARK ', mark)
-            else:
-                mark = class_model.predict(working_sample)
-                probability = class_model.predict_proba(working_sample)
-                print(probability)
+            # if model.title.startswith('torch_NN'):
+            #     probability, mark = class_model.predict(working_sample)
+            #     print(
+            #         f'probability: {probability}, \nmark: {mark}')
+            #
+            #     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     print('MARK ', mark)
+            # else:
+            #     mark = class_model.predict(working_sample)
+            #     probability = class_model.predict_proba(working_sample)
+            #     print(probability)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            if model.title.startswith('torch_NN'):
-                try:
-                    probability, mark = class_model.predict(working_sample)
-                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-                except ValueError:
-                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                             'рассчитайте заново', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                    return
-            else:
-                try:
-                    mark = class_model.predict(data)
-                except ValueError:
-                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                             'рассчитайте заново', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                    return
-                probability = class_model.predict_proba(data)
+            # if model.title.startswith('torch_NN'):
+            #     try:
+            #         probability, mark = class_model.predict(working_sample)
+            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     except ValueError:
+            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+            #                  'рассчитайте заново', 'red')
+            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            #         return
+            # else:
+            try:
+                mark = class_model.predict(data)
+            except ValueError:
+                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                         'рассчитайте заново', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                return
+            probability = class_model.predict_proba(data)
 
             for i in working_data_class.index:
                 p_nan = [working_data_class.columns[ic + 3] for ic, v in enumerate(working_data_class.iloc[i, 3:].tolist()) if
@@ -1003,33 +1007,33 @@ def calc_object_class():
             return
 
         try:
-            if model.title.startswith('torch_NN'):
-                probability, mark = class_model.predict(working_sample)
-                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            else:
-                mark = class_model.predict(working_sample)
-                probability = class_model.predict_proba(working_sample)
+            # if model.title.startswith('torch_NN'):
+            #     probability, mark = class_model.predict(working_sample)
+            #     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            # else:
+            mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            if model.title.startswith('torch_NN'):
-                try:
-                    probability, mark = class_model.predict(working_sample)
-                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-                except ValueError:
-                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                             'рассчитайте заново', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                    return
-            else:
-                try:
-                    mark = class_model.predict(data)
-                except ValueError:
-                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-                             'рассчитайте заново', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-                    return
-                probability = class_model.predict_proba(data)
+            # if model.title.startswith('torch_NN'):
+            #     try:
+            #         probability, mark = class_model.predict(working_sample)
+            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     except ValueError:
+            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+            #                  'рассчитайте заново', 'red')
+            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            #         return
+            # else:
+            try:
+                mark = class_model.predict(data)
+            except ValueError:
+                set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                         'рассчитайте заново', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                return
+            probability = class_model.predict_proba(data)
 
             for i in working_data_result_copy.index:
                 p_nan = [working_data_result_copy.columns[ic + 3] for ic, v in
