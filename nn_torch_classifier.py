@@ -1147,10 +1147,8 @@ class PyTorchClassifier:
         predictions = []
         mark_pred = []
         X = torch.from_numpy(X).float()
-        print('X: ', X)
         with torch.no_grad():
             pred_batch = self.model(X) # вероятность
-            print('pred_batch: ', pred_batch)
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
             mark_pred.extend([pred.numpy() for pred in pred_batch])
         mark = [item for m in mark_pred for item in m]
@@ -1160,7 +1158,6 @@ class PyTorchClassifier:
         predictions = []
         mark_pred = []
         X = torch.from_numpy(X).float()
-        print('X: ', X)
         with torch.no_grad():
             pred_batch = self.model(X)  # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
