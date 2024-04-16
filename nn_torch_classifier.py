@@ -1082,23 +1082,20 @@ def torch_save_classifier(pipeline, accuracy, list_params, text_model):
     else:
         pass
 
-def draw_results_graphs(pipeline, X_test, y_test):
-    # Построение графиков
-    # plot_roc_curve(ui_tch, model, val_dl)
-    val_losses = pipeline.named_steps['classifier'].losses(X_test, y_test)
-    accuracy, precision, recall, f1 = pipeline.named_steps['classifier'].metrics(X_test, y_test)
 
-    val_epoch = range(1, len(val_losses) + 1)
+def draw_results_graphs(loss, epochs):
     fig, axs = plt.subplots(1, 1, figsize=(16, 8))
-    axs.plot(val_epoch, val_losses, marker='o', linestyle='-', label='Val Loss')
+    epoch = list(range(1, epochs + 1))
+    axs.plot(epoch, loss, marker='o', linestyle='-', label='Val Loss')
     axs.set_xlabel('Epochs')
-    axs.set_ylabel('Val Loss')
-    axs.set_title('Val Loss vs Epochs')
+    axs.set_ylabel('Loss')
+    axs.set_title('Loss vs Epochs')
     axs.legend()
 
-    fig.suptitle(f'Accuracy: {accuracy:.4f}\n Precision: {precision:.4f}\n Recall: {recall:.4f}\n F1-Score: {f1:.4f}')
+    fig.suptitle(f'\nTrain Loss Plot: ')
     plt.subplots_adjust(top=0.8)
     plt.show()
+
 
 
 class PyTorchClassifier:
@@ -1117,7 +1114,9 @@ class PyTorchClassifier:
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
         y_train = torch.from_numpy(y_train).float()
+        losses = []
 
+        self.model.train()
         for epoch in range(self.epochs):
             running_loss = 0
             indices = torch.arange(X_train.shape[0])
@@ -1140,13 +1139,17 @@ class PyTorchClassifier:
                 self.optimizer.step()
                 running_loss += loss.item()
 
+            losses.append(running_loss / (X_train.shape[0] / self.batch_size))
             if epoch % 10 == 0:
                 print(f'Epoch {epoch}, Loss: {running_loss / (X_train.shape[0] / self.batch_size)}')
+        draw_results_graphs(losses, self.epochs)
 
     def predict(self, X):
         predictions = []
         mark_pred = []
         X = torch.from_numpy(X).float()
+
+        self.model.eval()
         with torch.no_grad():
             pred_batch = self.model(X) # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
@@ -1195,11 +1198,30 @@ class PyTorchClassifier:
                 all_predictions.extend([pred.numpy() for pred in pred_batch])
                 predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
 
+        print('METRICS predictions: ', predictions, '\nMETRICS all_predictions: ', all_predictions)
         all_predictions = [1 if p >= opt_threshold else 0 for p in all_predictions]
         accuracy = accuracy_score(all_targets, all_predictions)
         precision = precision_score(all_targets, all_predictions)
         recall = recall_score(all_targets, all_predictions)
         f1 = f1_score(all_targets, all_predictions)
+        # predictions = []
+        # mark_pred = []
+        # X = torch.from_numpy(X_val).float()
+        #
+        # # self.model.eval()
+        # with torch.no_grad():
+        #     pred_batch = self.model(X)  # вероятность
+        #     print('metrics pred_butch: ', pred_batch)
+        #     predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
+        #     mark_pred.extend([pred.numpy() for pred in pred_batch])
+        # mark = [item for m in mark_pred for item in m]
+        # # mark = np.where(np.array(mark) > 0.5, 1, 0)
+        # print('y_val ', y_val, '\nmark ', mark)
+        # accuracy = accuracy_score(y_val, mark)
+        # print('accuracy: ', accuracy)
+        # precision = precision_score(y_val, mark)
+        # recall = recall_score(y_val, mark)
+        # f1 = f1_score(y_val, mark)
 
         return accuracy, precision, recall, f1
 
@@ -1255,15 +1277,14 @@ def nn_torch(ui_tch, data, list_param):
     start_time = datetime.datetime.now()
     pipeline.fit(X, y)
     y_mark = pipeline.predict(X_val)
-    y_pred = pipeline.predict_proba(X_val)
     y_mark = np.where(np.array(y_mark) > 0.5, 1, 0)
     accuracy = accuracy_score(y_val, y_mark)
     end_time = datetime.datetime.now() - start_time
     print('Accuracy: ', accuracy)
     print(end_time)
 
-    draw_results_graphs(pipeline, X_val, y_val)
-
+    # draw_results_graphs(pipeline, X_val, y_val, accuracy)
+    # draw_results_graphs(loss, epochs, accuracy)
     if ui_tch.checkBox_save_model.isChecked():
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \

@@ -49,7 +49,7 @@
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>0.010000000000000</double>
+         <double>0.000100000000000</double>
         </property>
        </widget>
       </item>
@@ -89,7 +89,7 @@
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>0.010000000000000</double>
+         <double>0.001000000000000</double>
         </property>
        </widget>
       </item>
@@ -109,7 +109,7 @@
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>0.010000000000000</double>
+         <double>0.000100000000000</double>
         </property>
        </widget>
       </item>
@@ -121,7 +121,11 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QLineEdit" name="lineEdit_choose_layers"/>
+       <widget class="QLineEdit" name="lineEdit_choose_layers">
+        <property name="text">
+         <string>50 100 150 50</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -241,6 +245,9 @@
       <widget class="QSpinBox" name="spinBox_epochs">
        <property name="maximum">
         <number>10000</number>
+       </property>
+       <property name="value">
+        <number>100</number>
        </property>
       </widget>
      </item>
