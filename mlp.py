@@ -832,6 +832,8 @@ def calc_class_profile():
             # else:
             try:
                 mark = class_model.predict(data)
+                if model.title.startswith('torch_NN'):
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                          'рассчитайте заново', 'red')
@@ -1007,11 +1009,9 @@ def calc_object_class():
             return
 
         try:
-            # if model.title.startswith('torch_NN'):
-            #     probability, mark = class_model.predict(working_sample)
-            #     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            # else:
             mark = class_model.predict(working_sample)
+            if model.title.startswith('torch_NN'):
+                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             probability = class_model.predict_proba(working_sample)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
@@ -1028,6 +1028,8 @@ def calc_object_class():
             # else:
             try:
                 mark = class_model.predict(data)
+                if model.title.startswith('torch_NN'):
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                          'рассчитайте заново', 'red')
