@@ -1204,7 +1204,7 @@ def draw_roc_curve(y_val, y_mark):
     plt.show()
 
 
-def nn_torch(ui_tch, data, list_param):
+def nn_torch(ui_tch, data, list_param, labels, labels_mark):
     X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
     y_train = y_train.values
     X = X_train.astype(np.float64)
@@ -1278,10 +1278,13 @@ def torch_classifier_train():
     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data, list_param = build_table_train(True, 'mlp')
+    labels = {'empty': 0, 'bitum': 1, 'пусто': 0, 'нефть': 1, 'cold': 0, 'hot': 1}
+    labels_dict = {value: key for key, value in labels.items()}
     ## todo Переделать в функцию
-    data['mark'] = data['mark'].replace({'empty': 0, 'bitum': 1})
-    data['mark'] = data['mark'].replace({'пусто': 0, 'нефть': 1})
-    data['mark'] = data['mark'].replace({'cold': 0, 'hot': 1})
+    # data['mark'] = data['mark'].replace({'empty': 0, 'bitum': 1})
+    # data['mark'] = data['mark'].replace({'пусто': 0, 'нефть': 1})
+    # data['mark'] = data['mark'].replace({'cold': 0, 'hot': 1})
+    data['mark'] = data['mark'].replace(labels)
     data = data.fillna(0)
 
     def train():
@@ -1289,12 +1292,11 @@ def torch_classifier_train():
         #     nn_choose_params(ui_tch, data, list_param)
         #
         # if ui_tch.checkBox_tune_param.isChecked():
-        nn_torch(ui_tch, data, list_param)
+        nn_torch(ui_tch, data, list_param, labels_dict, labels)
             # nn_tune_params(ui_tch, data, list_param)
     def cv():
         nn_cross_val(ui_tch, data)
 
-    # train()
     ui_tch.pushButton_train.clicked.connect(train)
     ui_tch.pushButton_cross_val.clicked.connect(cv)
     TorchClassifier.exec()

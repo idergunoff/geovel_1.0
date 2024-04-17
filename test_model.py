@@ -97,7 +97,10 @@ def test_start():
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
             return
 
-        list_cat = list(class_model.classes_)
+        if model.title.startswith('torch_NN'):
+            list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        else:
+            list_cat = list(class_model.classes_)
         if set(get_test_list_marker_mlp()) != set(list_cat):
             set_info('Не совпадают названия меток для данной модели.', 'red')
 
@@ -137,12 +140,16 @@ def test_start():
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
+            if model.title.startswith('torch_NN'):
+                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
 
             data = imputer.fit_transform(working_sample)
             try:
                 mark = class_model.predict(data)
+                if model.title.startswith('torch_NN'):
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                          'рассчитайте заново', 'red')
@@ -160,8 +167,10 @@ def test_start():
 
         result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
-
-        new_list_cat = list(class_model.classes_)
+        if model.title.startswith('torch_NN'):
+            new_list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        else:
+            new_list_cat = list(class_model.classes_)
         result_df['mark_probability'] = mark
         result_df['mark_probability'] = result_df['mark_probability'].replace(
             {new_list_cat[0]: list_cat[0], new_list_cat[1]: list_cat[1]})
@@ -191,7 +200,6 @@ def test_start():
                 if result_df.loc[index, 'совпадение'] == 1:
                     comp += 1
                 total += 1
-            print('total comp:', total, comp)
             profile = session.query(Profile).filter(Profile.id == result_df.loc[index, 'prof_well_index'].split('_')[0]).first()
             well = session.query(Well).filter(Well.id == result_df.loc[index, 'prof_well_index'].split('_')[1]).first()
 
@@ -281,12 +289,16 @@ def test_start():
             try:
                 mark = class_model.predict(working_sample)
                 probability = class_model.predict_proba(working_sample)
+                if model.title.startswith('torch_NN'):
+                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
 
                 data = imputer.fit_transform(working_sample)
                 try:
                     mark = class_model.predict(data)
+                    if model.title.startswith('torch_NN'):
+                        mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
                 except ValueError:
                     set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                              'рассчитайте заново', 'red')
@@ -303,7 +315,11 @@ def test_start():
 
             result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
-            new_list_cat = list(class_model.classes_)
+            if model.title.startswith('torch_NN'):
+                new_list_cat = [i.title for i in
+                            session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+            else:
+                new_list_cat = list(class_model.classes_)
             result_df['mark_probability'] = mark
             result_df['mark_probability'] = result_df['mark_probability'].replace(
                 {new_list_cat[0]: list_cat[0], new_list_cat[1]: list_cat[1]})

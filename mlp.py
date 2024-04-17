@@ -806,30 +806,9 @@ def calc_class_profile():
             probability = class_model.predict_proba(working_sample)
             if model.title.startswith('torch_NN'):
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            # if model.title.startswith('torch_NN'):
-            #     probability, mark = class_model.predict(working_sample)
-            #     print(
-            #         f'probability: {probability}, \nmark: {mark}')
-            #
-            #     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            #     print('MARK ', mark)
-            # else:
-            #     mark = class_model.predict(working_sample)
-            #     probability = class_model.predict_proba(working_sample)
-            #     print(probability)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            # if model.title.startswith('torch_NN'):
-            #     try:
-            #         probability, mark = class_model.predict(working_sample)
-            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            #     except ValueError:
-            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-            #                  'рассчитайте заново', 'red')
-            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-            #         return
-            # else:
             try:
                 mark = class_model.predict(data)
                 if model.title.startswith('torch_NN'):
@@ -849,8 +828,6 @@ def calc_class_profile():
                              f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
-        print(pd.DataFrame(probability))
-        print(working_data_class)
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
         print(working_data_result)
@@ -1010,22 +987,12 @@ def calc_object_class():
 
         try:
             mark = class_model.predict(working_sample)
+            probability = class_model.predict_proba(working_sample)
             if model.title.startswith('torch_NN'):
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            probability = class_model.predict_proba(working_sample)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
-            # if model.title.startswith('torch_NN'):
-            #     try:
-            #         probability, mark = class_model.predict(working_sample)
-            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
-            #     except ValueError:
-            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
-            #                  'рассчитайте заново', 'red')
-            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
-            #         return
-            # else:
             try:
                 mark = class_model.predict(data)
                 if model.title.startswith('torch_NN'):
