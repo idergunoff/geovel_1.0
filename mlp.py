@@ -784,7 +784,7 @@ def calc_class_profile():
         model = session.query(TrainedModelClass).filter_by(
             id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
 
-        if model.title.startswith('torch_NN'):
+        if 'torch' in model.title:
             with open(model.path_model, 'rb') as f:
                 class_model = pickle.load(f)
             list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
@@ -804,14 +804,35 @@ def calc_class_profile():
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
-            if model.title.startswith('torch_NN'):
+            if 'torch' in model.title:
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            # if model.title.startswith('torch_NN'):
+            #     probability, mark = class_model.predict(working_sample)
+            #     print(
+            #         f'probability: {probability}, \nmark: {mark}')
+            #
+            #     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     print('MARK ', mark)
+            # else:
+            #     mark = class_model.predict(working_sample)
+            #     probability = class_model.predict_proba(working_sample)
+            #     print(probability)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
+            # if model.title.startswith('torch_NN'):
+            #     try:
+            #         probability, mark = class_model.predict(working_sample)
+            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     except ValueError:
+            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+            #                  'рассчитайте заново', 'red')
+            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            #         return
+            # else:
             try:
                 mark = class_model.predict(data)
-                if model.title.startswith('torch_NN'):
+                if 'torch' in model.title:
                     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
@@ -828,6 +849,8 @@ def calc_class_profile():
                              f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
+        print(pd.DataFrame(probability))
+        print(working_data_class)
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
         print(working_data_result)
@@ -972,7 +995,7 @@ def calc_object_class():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        if model.title.startswith('torch_NN'):
+        if 'torch' in model.title:
             list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
         else:
             list_cat = list(class_model.classes_)
@@ -987,15 +1010,25 @@ def calc_object_class():
 
         try:
             mark = class_model.predict(working_sample)
-            probability = class_model.predict_proba(working_sample)
-            if model.title.startswith('torch_NN'):
+            if 'torch' in model.title:
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            probability = class_model.predict_proba(working_sample)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
+            # if model.title.startswith('torch_NN'):
+            #     try:
+            #         probability, mark = class_model.predict(working_sample)
+            #         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
+            #     except ValueError:
+            #         set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+            #                  'рассчитайте заново', 'red')
+            #         QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+            #         return
+            # else:
             try:
                 mark = class_model.predict(data)
-                if model.title.startswith('torch_NN'):
+                if 'torch' in model.title:
                     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
@@ -1342,3 +1375,26 @@ def add_crl_except_mlp():
     session.commit()
     set_color_button_updata()
     set_info('Исключения добавлены', 'green')
+
+
+def rename_model_class():
+    """Переименовать модель"""
+    model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
+        Qt.UserRole)).first()
+    RenameModel = QtWidgets.QDialog()
+    ui_rnm = Ui_FormRenameModel()
+    ui_rnm.setupUi(RenameModel)
+    RenameModel.show()
+    RenameModel.setAttribute(Qt.WA_DeleteOnClose)
+    ui_rnm.lineEdit.setText(model.title)
+
+    def rename_model():
+        model.title = ui_rnm.lineEdit.text()
+        session.commit()
+        update_list_trained_models_class()
+        RenameModel.close()
+
+    ui_rnm.buttonBox.accepted.connect(rename_model)
+    ui_rnm.buttonBox.rejected.connect(RenameModel.close)
+
+    RenameModel.exec_()

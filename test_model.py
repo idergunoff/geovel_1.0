@@ -97,7 +97,7 @@ def test_start():
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
             return
 
-        if model.title.startswith('torch_NN'):
+        if 'torch' in model.title:
             list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
         else:
             list_cat = list(class_model.classes_)
@@ -140,7 +140,7 @@ def test_start():
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
-            if model.title.startswith('torch_NN'):
+            if 'torch' in model.title:
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
@@ -148,7 +148,7 @@ def test_start():
             data = imputer.fit_transform(working_sample)
             try:
                 mark = class_model.predict(data)
-                if model.title.startswith('torch_NN'):
+                if 'torch' in model.title:
                     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
@@ -166,8 +166,7 @@ def test_start():
 
 
         result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
-
-        if model.title.startswith('torch_NN'):
+        if 'torch' in model.title:
             new_list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
         else:
             new_list_cat = list(class_model.classes_)
@@ -289,7 +288,7 @@ def test_start():
             try:
                 mark = class_model.predict(working_sample)
                 probability = class_model.predict_proba(working_sample)
-                if model.title.startswith('torch_NN'):
+                if 'torch' in model.title:
                     mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
@@ -297,7 +296,7 @@ def test_start():
                 data = imputer.fit_transform(working_sample)
                 try:
                     mark = class_model.predict(data)
-                    if model.title.startswith('torch_NN'):
+                    if 'torch' in model.title:
                         mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
                 except ValueError:
                     set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
@@ -315,7 +314,7 @@ def test_start():
 
             result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
-            if model.title.startswith('torch_NN'):
+            if 'torch' in model.title:
                 new_list_cat = [i.title for i in
                             session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
             else:

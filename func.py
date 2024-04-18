@@ -1112,7 +1112,7 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
 
     ui.progressBar.setMaximum(len(markups))
 
-    for nm, markup in enumerate(markups):
+    for nm, markup in enumerate(tqdm(markups)):
         # Получение списка фиктивных меток и границ слоев из разметки
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
         list_up = json.loads(markup.formation.layer_up.layer_line)

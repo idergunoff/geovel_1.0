@@ -203,6 +203,8 @@ ui.lineEdit_signal_except.returnPressed.connect(add_signal_except_mlp)
 ui.lineEdit_crl_except.returnPressed.connect(add_crl_except_mlp)
 ui.pushButton_test_model_class.clicked.connect(test_start)
 ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
+ui.listWidget_trained_model_class.setContextMenuPolicy(Qt.CustomContextMenu)
+ui.listWidget_trained_model_class.customContextMenuRequested.connect(rename_model_class)
 
 
 # torch
