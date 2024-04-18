@@ -17,6 +17,7 @@ from velocity_model import *
 from test_model import *
 from lineup_train_models import *
 from nn_torch_classifier import *
+from nn_torch_regression import *
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()
@@ -207,6 +208,7 @@ ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
+ui.pushButton_torch.clicked.connect(torch_regressor_train)
 
 
 #   regression
@@ -238,6 +240,7 @@ ui.pushButton_rem_trained_model_reg.clicked.connect(remove_trained_model_regmod)
 ui.pushButton_corr_regmod.clicked.connect(calc_corr_regmod)
 ui.pushButton_updata_regmod.clicked.connect(update_list_param_regmod)
 ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
+
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.doubleClicked.connect(choose_markup_regmod)
 ui.pushButton_reg_clear_fake.clicked.connect(clear_fake_reg)

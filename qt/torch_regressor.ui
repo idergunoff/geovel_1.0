@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TorchNNRegressor</class>
+ <widget class="QWidget" name="TorchNNRegressor">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>579</width>
+    <height>387</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>TorchNNRegressor</string>
+  </property>
+  <widget class="QGroupBox" name="groupBox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>10</y>
+     <width>325</width>
+     <height>219</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0" colspan="2">
+     <widget class="QCheckBox" name="checkBox_choose_param">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(252, 204, 165);</string>
+      </property>
+      <property name="text">
+       <string>Choose parameters</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label">
+      <property name="toolTip">
+       <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+      </property>
+      <property name="text">
+       <string>learning rate</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_choose_lr">
+      <property name="toolTip">
+       <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+      </property>
+      <property name="decimals">
+       <number>6</number>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.000100000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_2">
+      <property name="toolTip">
+       <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+      </property>
+      <property name="text">
+       <string>dropout</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_choose_dropout">
+      <property name="toolTip">
+       <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+      </property>
+      <property name="decimals">
+       <number>6</number>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.010000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_3">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>weight decay</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_choose_decay">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация, это добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="decimals">
+       <number>6</number>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.001000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="toolTip">
+       <string>Этот гиперпараметр контролирует силу регуляризации, применяемой к весам модели, помогая предотвратить переобучение.</string>
+      </property>
+      <property name="text">
+       <string>regularization</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_choose_reagular">
+      <property name="toolTip">
+       <string>Этот гиперпараметр контролирует силу регуляризации, применяемой к весам модели, помогая предотвратить переобучение.</string>
+      </property>
+      <property name="decimals">
+       <number>6</number>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.000100000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_5">
+      <property name="toolTip">
+       <string>количество и размер скрытых слоев в нейронной сети.</string>
+      </property>
+      <property name="text">
+       <string extracomment="50 100 50">hidden layers</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="lineEdit_choose_layers">
+      <property name="toolTip">
+       <string>количество и размер скрытых слоев в нейронной сети.</string>
+      </property>
+      <property name="text">
+       <string>50 100 150 50</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>230</y>
+     <width>321</width>
+     <height>141</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_5">
+    <item row="0" column="0">
+     <widget class="QLabel" name="label_11">
+      <property name="toolTip">
+       <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+      </property>
+      <property name="text">
+       <string>epochs</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QSpinBox" name="spinBox_epochs">
+      <property name="toolTip">
+       <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+      </property>
+      <property name="maximum">
+       <number>10000</number>
+      </property>
+      <property name="value">
+       <number>100</number>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_12">
+      <property name="toolTip">
+       <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+      </property>
+      <property name="text">
+       <string>optimizer</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QComboBox" name="comboBox_optimizer">
+      <property name="toolTip">
+       <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>Adam</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>SGD</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_13">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; font-weight:600; color:#000000; background-color:#ffffff;&quot;&gt;MSE (средняя квадратическая ошибка) &lt;/span&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; color:#000000; background-color:#ffffff;&quot;&gt;— это оценка среднего значения квадрата ошибок, различие между предсказанием и фактическим значением. Эту метрику удобно использовать для выявления аномалий.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; font-weight:600; color:#000000; background-color:#ffffff;&quot;&gt;MAE (средняя абсолютная ошибка)&lt;/span&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; color:#000000; background-color:#ffffff;&quot;&gt; — это оценка того, насколько близки предсказания к фактическим значениями. Эта метрика менее чувствительна к выбросам и может дать общее представление о качестве модели.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; font-weight:696; color:#202122; background-color:#ffffff;&quot;&gt;Функция потерь Хьюбера&lt;/span&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt; — &lt;/span&gt;&lt;a href=&quot;https://ru.wikipedia.org/wiki/%D0%A4%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D1%8F_%D0%BF%D0%BE%D1%82%D0%B5%D1%80%D1%8C&quot;&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#0645ad; background-color:#ffffff;&quot;&gt;функция потерь&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt;, используемая в устойчивой &lt;/span&gt;&lt;a href=&quot;https://ru.wikipedia.org/wiki/%D0%A0%D0%B5%D0%B3%D1%80%D0%B5%D1%81%D1%81%D0%B8%D1%8F_(%D0%BC%D0%B0%D1%82%D0%B5%D0%BC%D0%B0%D1%82%D0%B8%D0%BA%D0%B0)&quot;&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#0645ad; background-color:#ffffff;&quot;&gt;регрессии&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt;, которая менее чувствительна к выбросам, чем квадратичная ошибка. И&lt;/span&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; color:#6b6b6b; background-color:#ffffff;&quot;&gt;спользует L2 для малых ошибок и L1 — для больших.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; font-weight:600; color:#6b6b6b; background-color:#ffffff;&quot;&gt;Сглаженная L1-потеря&lt;/span&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; color:#6b6b6b; background-color:#ffffff;&quot;&gt; практически эквивалентна потере Хьюбера с дополнительным бета-параметром. &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>loss function</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QComboBox" name="comboBox_loss">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>MSE</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>MAE</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>HuberLoss</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>SmoothL1Loss</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_17">
+      <property name="toolTip">
+       <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+      </property>
+      <property name="text">
+       <string>activation func</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QComboBox" name="comboBox_activation_func">
+      <property name="toolTip">
+       <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>ReLU</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget_3">
+   <property name="geometry">
+    <rect>
+     <x>420</x>
+     <y>280</y>
+     <width>140</width>
+     <height>87</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_7">
+    <item row="0" column="0" colspan="2">
+     <widget class="QGroupBox" name="groupBox_9">
+      <property name="toolTip">
+       <string>Cross Validate by Well</string>
+      </property>
+      <property name="title">
+       <string>Cross Validate</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QPushButton" name="pushButton_cross_val">
+         <property name="toolTip">
+          <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
+         </property>
+         <property name="text">
+          <string>CV</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="spinBox_cross_val">
+         <property name="toolTip">
+          <string>Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.</string>
+         </property>
+         <property name="minimum">
+          <number>2</number>
+         </property>
+         <property name="value">
+          <number>5</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="pushButton_train">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(252, 204, 165);</string>
+      </property>
+      <property name="text">
+       <string>TRAIN</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QCheckBox" name="checkBox_save_model">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>save</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>10</y>
+     <width>201</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>dataset:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="comboBox_dataset">
+        <item>
+         <property name="text">
+          <string>shuffle</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>well split</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QCheckBox" name="checkBox_early_stop">
+      <property name="toolTip">
+       <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
+      </property>
+      <property name="text">
+       <string>Early stopping</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QCheckBox" name="checkBox_threshold">
+      <property name="toolTip">
+       <string>Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.</string>
+      </property>
+      <property name="text">
+       <string>Threshold</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

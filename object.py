@@ -30,6 +30,7 @@ from qt.point_param_graph_form import *
 from qt.form_test_model import *
 from qt.model_lineup import *
 from qt.torch_classfier import *
+from qt.torch_regressor import *
 
 from model import *
 import numpy as np
