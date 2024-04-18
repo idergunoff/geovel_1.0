@@ -3818,6 +3818,36 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_75">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_76">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_calc_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QCheckBox" name="checkBox_save_prof_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>save profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_calc_obj_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(175, 255, 243);</string>
+                        </property>
+                        <property name="text">
+                         <string>Calc Object</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_train_regmod">
                         <property name="styleSheet">
@@ -3829,32 +3859,12 @@ Therm</string>
                        </widget>
                       </item>
                       <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_calc_reg">
+                       <widget class="QPushButton" name="pushButton_torch">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
-                         <string>Calc Profile</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="2">
-                       <widget class="QCheckBox" name="checkBox_save_prof_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>save profile</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_calc_obj_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(175, 255, 243);</string>
-                        </property>
-                        <property name="text">
-                         <string>Calc Object</string>
+                         <string>PyTorch</string>
                         </property>
                        </widget>
                       </item>

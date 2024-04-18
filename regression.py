@@ -1365,6 +1365,7 @@ def calc_profile_model_regmod():
 
         try:
             y_pred = reg_model.predict(working_sample)
+            print('REGR PREDICT', y_pred)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             # working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
