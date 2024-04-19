@@ -36,7 +36,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label">
         <property name="toolTip">
-         <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. &lt;/p&gt;&lt;p&gt;Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>learning rate</string>
@@ -62,7 +62,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_2">
         <property name="toolTip">
-         <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Это техника регуляризации, используемая для предотвращения переобучения. &lt;/p&gt;&lt;p&gt;Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>dropout</string>
@@ -426,6 +426,16 @@
    </item>
    <item row="1" column="1">
     <layout class="QGridLayout" name="gridLayout_6">
+     <item row="2" column="0">
+      <widget class="QSpinBox" name="spinBox_stop_patience">
+       <property name="maximum">
+        <number>100</number>
+       </property>
+       <property name="value">
+        <number>20</number>
+       </property>
+      </widget>
+     </item>
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
@@ -461,14 +471,36 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="3" column="0">
       <widget class="QCheckBox" name="checkBox_threshold">
        <property name="toolTip">
-        <string>Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. &lt;/p&gt;&lt;p&gt;Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Threshold</string>
        </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QComboBox" name="comboBox_threshold">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Accuracy&lt;/span&gt;: Найти индекс порога, максимизирующего точность (TPR + TNR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sensitivity&lt;/span&gt;: Найти индекс порога, максимизирующего чувствительность (TPR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specificity:&lt;/span&gt; Найти индекс порога, максимизирующего специфичность (TNR)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>accuracy</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sensitivity</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>specificity</string>
+        </property>
+       </item>
       </widget>
      </item>
     </layout>

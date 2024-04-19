@@ -1101,19 +1101,23 @@ class PyTorchClassifier:
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, batch_size=20):
+                            epochs, regular, early_stopping, patience, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
         self.criterion = loss_function
         self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.epochs = epochs
         self.regular = regular
+        self.early_stopping = early_stopping
+        self.patience = patience
         self.batch_size = batch_size
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
         y_train = torch.from_numpy(y_train).float()
         losses = []
+        best_loss = float('inf')
+        patience = self.patience
 
         self.model.train()
         for epoch in range(self.epochs):
@@ -1138,9 +1142,20 @@ class PyTorchClassifier:
                 self.optimizer.step()
                 running_loss += loss.item()
 
-            losses.append(running_loss / (X_train.shape[0] / self.batch_size))
             if epoch % 10 == 0:
                 print(f'Epoch {epoch}, Loss: {running_loss / (X_train.shape[0] / self.batch_size)}')
+
+            if self.early_stopping:
+                if loss < best_loss:
+                    best_loss = loss
+                    patience = self.patience
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        print(f"     Epoch [{epoch}/{self.epochs}] Early stopping")
+                        self.epochs = epoch
+                        break
+            losses.append(running_loss / (X_train.shape[0] / self.batch_size))
         draw_results_graphs(losses, self.epochs)
 
     def predict(self, X):
@@ -1203,6 +1218,27 @@ def draw_roc_curve(y_val, y_mark):
     plt.legend(loc="lower right")
     plt.show()
 
+def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
+    fpr, tpr, thresholds = roc_curve(y_val, y_mark)
+    # Выбор оптимального порога на основе заданной стратегии
+    if threshold_strategy == "accuracy":
+        # Найти индекс порога, максимизирующего точность (TPR + TNR)
+        accuracy = tpr + (1 - fpr)
+        opt_idx = np.argmax(accuracy)
+    elif threshold_strategy == "sensitivity":
+        # Найти индекс порога, максимизирующего чувствительность (TPR)
+        opt_idx = np.argmax(tpr)
+    elif threshold_strategy == "specificity":
+        # Найти индекс порога, максимизирующего специфичность (TNR)
+        tnr = 1 - fpr
+        opt_idx = np.argmax(tnr)
+
+    opt_threshold = thresholds[opt_idx]
+    mark = np.where(np.array(y_mark) > opt_threshold, 1, 0)
+    return mark
+
+
+
 
 def nn_torch(ui_tch, data, list_param, labels, labels_mark):
     X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
@@ -1241,6 +1277,15 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
     elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
         loss_function = nn.BCELoss()
 
+    early_stopping = False
+    threshold = False
+    patience = 0
+    if ui_tch.checkBox_early_stop.isChecked():
+        early_stopping = True
+        patience = ui_tch.spinBox_stop_patience.value()
+    if ui_tch.checkBox_threshold.isChecked():
+        threshold = True
+
     pipeline = Pipeline([
         ('features', FeatureUnion([
             ('scaler', StandardScaler())
@@ -1248,19 +1293,24 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
         ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, batch_size=20))
+                            epochs, regular, early_stopping, patience, batch_size=20))
     ])
 
     start_time = datetime.datetime.now()
     pipeline.fit(X, y)
-    # y_mark = pipeline.named_steps['classifier'].predict_graphs(X_val, y_val)
     y_mark = pipeline.predict(X_val)
-    mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+
+    if threshold:
+        threshold_strategy = ui_tch.comboBox_threshold.currentText()
+        mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
+    else:
+        mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+
     accuracy = accuracy_score(y_val, mark)
-    end_time = datetime.datetime.now() - start_time
     print('Accuracy: ', accuracy)
-    print(end_time)
     draw_roc_curve(y_val, y_mark)
+    end_time = datetime.datetime.now() - start_time
+    print(end_time)
 
     if ui_tch.checkBox_save_model.isChecked():
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \

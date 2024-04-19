@@ -83,19 +83,23 @@ class PyTorchRegressor:
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, batch_size=20):
+                            epochs, regular, early_stopping, patience, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
         self.criterion = loss_function
         self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.epochs = epochs
         self.regular = regular
+        self.early_stopping = early_stopping
+        self.patience = patience
         self.batch_size = batch_size
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
         y_train = torch.from_numpy(y_train).float()
         losses = []
+        best_loss = float('inf')
+        patience = self.patience
 
         self.model.train()
         for epoch in range(self.epochs):
@@ -120,9 +124,19 @@ class PyTorchRegressor:
                 self.optimizer.step()
                 running_loss += loss.item()
 
-            losses.append(running_loss / (X_train.shape[0] / self.batch_size))
             if epoch % 10 == 0:
                 print(f'Epoch {epoch}, Loss: {running_loss / (X_train.shape[0] / self.batch_size)}')
+            if self.early_stopping:
+                if loss < best_loss:
+                    best_loss = loss
+                    patience = self.patience
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        print(f"     Epoch [{epoch}/{self.epochs}] Early stopping")
+                        self.epochs = epoch
+                        break
+            losses.append(running_loss / (X_train.shape[0] / self.batch_size))
         draw_results_graphs(losses, self.epochs)
 
     def predict(self, X):
@@ -170,10 +184,8 @@ def torch_save_regressor(pipeline, r2, list_params, text_model):
 def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
     x_train, x_test, y_train, y_test = train_test_split(
         training_sample, target, test_size=0.2, random_state=42)
-    x_train = np.array(x_train)
-    y_train = np.array(y_train)
-    x_test = np.array(x_test)
-    y_test = np.array(y_test)
+    x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train),\
+        np.array(x_test), np.array(y_test)
 
     input_dim = x_train.shape[1]
     output_dim = 1
@@ -202,6 +214,12 @@ def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
     elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
         loss_function = nn.SmoothL1Loss()
 
+    early_stopping = False
+    patience = 0
+    if ui_tch.checkBox_early_stop.isChecked():
+        early_stopping = True
+        patience = ui_tch.spinBox_stop_patience.value()
+
     pipeline = Pipeline(
         [('features', FeatureUnion([
             ('scaler', StandardScaler())
@@ -209,7 +227,7 @@ def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
         ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, batch_size=20))
+                            epochs, regular, early_stopping, patience, batch_size=20))
     ])
 
     start_time = datetime.datetime.now()

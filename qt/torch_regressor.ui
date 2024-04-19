@@ -231,7 +231,7 @@
     <item row="2" column="0">
      <widget class="QLabel" name="label_13">
       <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; font-weight:600; color:#000000; background-color:#ffffff;&quot;&gt;MSE (средняя квадратическая ошибка) &lt;/span&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; color:#000000; background-color:#ffffff;&quot;&gt;— это оценка среднего значения квадрата ошибок, различие между предсказанием и фактическим значением. Эту метрику удобно использовать для выявления аномалий.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; font-weight:600; color:#000000; background-color:#ffffff;&quot;&gt;MAE (средняя абсолютная ошибка)&lt;/span&gt;&lt;span style=&quot; font-family:'YS Text,Arial,Helvetica,sans-serif'; font-size:18px; color:#000000; background-color:#ffffff;&quot;&gt; — это оценка того, насколько близки предсказания к фактическим значениями. Эта метрика менее чувствительна к выбросам и может дать общее представление о качестве модели.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; font-weight:696; color:#202122; background-color:#ffffff;&quot;&gt;Функция потерь Хьюбера&lt;/span&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt; — &lt;/span&gt;&lt;a href=&quot;https://ru.wikipedia.org/wiki/%D0%A4%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D1%8F_%D0%BF%D0%BE%D1%82%D0%B5%D1%80%D1%8C&quot;&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#0645ad; background-color:#ffffff;&quot;&gt;функция потерь&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt;, используемая в устойчивой &lt;/span&gt;&lt;a href=&quot;https://ru.wikipedia.org/wiki/%D0%A0%D0%B5%D0%B3%D1%80%D0%B5%D1%81%D1%81%D0%B8%D1%8F_(%D0%BC%D0%B0%D1%82%D0%B5%D0%BC%D0%B0%D1%82%D0%B8%D0%BA%D0%B0)&quot;&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#0645ad; background-color:#ffffff;&quot;&gt;регрессии&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'sans-serif'; font-size:14px; color:#202122; background-color:#ffffff;&quot;&gt;, которая менее чувствительна к выбросам, чем квадратичная ошибка. И&lt;/span&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; color:#6b6b6b; background-color:#ffffff;&quot;&gt;спользует L2 для малых ошибок и L1 — для больших.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; font-weight:600; color:#6b6b6b; background-color:#ffffff;&quot;&gt;Сглаженная L1-потеря&lt;/span&gt;&lt;span style=&quot; font-family:'sohne,Helvetica Neue,Helvetica,Arial,sans-serif'; font-size:14px; color:#6b6b6b; background-color:#ffffff;&quot;&gt; практически эквивалентна потере Хьюбера с дополнительным бета-параметром. &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;MSE (средняя квадратическая ошибка)&lt;/span&gt; — это оценка среднего значения квадрата ошибок, различие между предсказанием и фактическим значением. Эту метрику удобно использовать для выявления аномалий.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;MAE (средняя абсолютная ошибка) &lt;/span&gt;— это оценка того, насколько близки предсказания к фактическим значениями. Эта метрика менее чувствительна к выбросам и может дать общее представление о качестве модели.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Функция потерь Хьюбера&lt;/span&gt; — функция потерь, используемая в устойчивой регрессии, которая менее чувствительна к выбросам, чем квадратичная ошибка. Использует L2 для малых ошибок и L1 — для больших.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Сглаженная L1-потеря &lt;/span&gt;практически эквивалентна потере Хьюбера с дополнительным бета-параметром. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
        <string>loss function</string>
@@ -362,7 +362,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>360</x>
@@ -372,7 +372,17 @@
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
+    <item row="1" column="0">
+     <widget class="QCheckBox" name="checkBox_early_stop">
+      <property name="toolTip">
+       <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
+      </property>
+      <property name="text">
+       <string>Early stopping</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="2">
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="0">
        <widget class="QLabel" name="label_14">
@@ -396,26 +406,6 @@
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="1" column="0">
-     <widget class="QCheckBox" name="checkBox_early_stop">
-      <property name="toolTip">
-       <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
-      </property>
-      <property name="text">
-       <string>Early stopping</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QCheckBox" name="checkBox_threshold">
-      <property name="toolTip">
-       <string>Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.</string>
-      </property>
-      <property name="text">
-       <string>Threshold</string>
-      </property>
-     </widget>
     </item>
    </layout>
   </widget>
