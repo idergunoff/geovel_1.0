@@ -1037,8 +1037,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5061,6 +5061,13 @@ Therm</string>
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBox_seismic">
+            <property name="text">
+             <string>seismic</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -5128,7 +5135,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

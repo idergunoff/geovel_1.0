@@ -78,12 +78,27 @@ def query_to_list(query):
 def draw_image(radar):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
-    colors = [
-        (255, 0, 0),
-        (0, 0, 0),
-        (0, 0, 255)
-    ]
-    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
+    if ui.checkBox_seismic.isChecked():
+        colors = [
+            '#0000FF',  # Синий,
+            '#000000', # Черный
+            '#FF0000'  # Ярко-красный
+        ]
+    else:
+        colors = [
+            "#FF0000", # Ярко-красный
+            "#FF8C00", # Темно-оранжевый
+            "#FFD700", # Золотой
+            "#00FF00", # Ярко-зеленый
+            "#008000", # Зеленый
+            "#00FFFF", # Голубой
+            "#000080", # Темно-синий
+            "#8B008B", # Темно-фиолетовый
+            "#FF00FF", # Фуксия
+            "#A52A2A"  # Коричневый
+        ]
+
+    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
     img.setImage(np.array(radar))
@@ -99,12 +114,26 @@ def draw_image(radar):
 def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
-    colors = [
-        (255, 0, 0),
-        (0, 0, 0),
-        (0, 0, 255)
-    ]
-    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 3), color=colors)
+    if ui.checkBox_seismic.isChecked():
+        colors = [
+            '#0000FF',  # Синий,
+            '#000000', # Черный
+            '#FF0000'  # Ярко-красный
+        ]
+    else:
+        colors = [
+            "#FF0000", # Ярко-красный
+            "#FF8C00", # Темно-оранжевый
+            "#FFD700", # Золотой
+            "#00FF00", # Ярко-зеленый
+            "#008000", # Зеленый
+            "#00FFFF", # Голубой
+            "#000080", # Темно-синий
+            "#8B008B", # Темно-фиолетовый
+            "#FF00FF", # Фуксия
+            "#A52A2A"  # Коричневый
+        ]
+    cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
     img.setImage(np.array(radar))
