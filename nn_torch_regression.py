@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 
+from regression import update_list_trained_models_regmod
+
 
 class CustomDataset(Dataset):
     def __init__(self, data, labels):
@@ -170,13 +172,13 @@ def torch_save_regressor(pipeline, r2, list_params, text_model):
             title=f'{model_name}_{round(r2, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
             path_model=path_model,
             list_params=json.dumps(list_params),
-            except_signal=ui.lineEdit_signal_except.text(),
-            except_crl=ui.lineEdit_crl_except.text(),
+            except_signal=ui.lineEdit_signal_except_reg.text(),
+            except_crl=ui.lineEdit_crl_except_reg.text(),
             comment=text_model
         )
         session.add(new_trained_model)
         session.commit()
-        update_list_trained_models_class()
+        update_list_trained_models_regmod()
     else:
         pass
 
@@ -270,6 +272,7 @@ def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                      '\nregularization: ' + str(regular) + '\n'
         torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+        print('list param len : ', len(list_param_name))
         print('Model saved')
 
 def torch_regressor_train():
@@ -281,6 +284,7 @@ def torch_regressor_train():
 
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
+
     list_nan_param, count_nan = [], 0
     for i in data_train.index:
         for param in list_param_reg:
@@ -293,6 +297,7 @@ def torch_regressor_train():
         set_info(f'Заполнены пропуски в {count_nan} параметрах {", ".join(list_nan_param)}', 'red')
 
     training_sample = data_train[list_param_reg].values.tolist()
+    print('list param reg : ', len(list_param_reg))
     target = sum(data_train[['target_value']].values.tolist(), [])
 
     def train():

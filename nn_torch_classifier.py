@@ -1235,9 +1235,7 @@ def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
 
     opt_threshold = thresholds[opt_idx]
     mark = np.where(np.array(y_mark) > opt_threshold, 1, 0)
-    return mark
-
-
+    return opt_threshold, mark
 
 
 def nn_torch(ui_tch, data, list_param, labels, labels_mark):
@@ -1302,9 +1300,10 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
 
     if threshold:
         threshold_strategy = ui_tch.comboBox_threshold.currentText()
-        mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
+        opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
     else:
         mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+        opt_threshold = 0.5
 
     accuracy = accuracy_score(y_val, mark)
     print('Accuracy: ', accuracy)
@@ -1316,7 +1315,7 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
-                     '\nregularization: ' + str(regular) + '\n'
+                     '\nregularization: ' + str(regular) + '\nthreshold: ' + threshold_strategy + ' ' + str(opt_threshold) + '\n'
         torch_save_classifier(pipeline, accuracy, list_param, text_model)
         print('Model saved')
 
