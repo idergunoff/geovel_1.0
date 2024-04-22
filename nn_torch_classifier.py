@@ -1101,7 +1101,7 @@ class PyTorchClassifier:
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, early_stopping, patience, batch_size=20):
+                            epochs, regular, early_stopping, patience, labels, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
         self.criterion = loss_function
@@ -1110,6 +1110,7 @@ class PyTorchClassifier:
         self.regular = regular
         self.early_stopping = early_stopping
         self.patience = patience
+        self.labels = labels
         self.batch_size = batch_size
 
     def fit(self, X_train, y_train):
@@ -1169,7 +1170,11 @@ class PyTorchClassifier:
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
             mark_pred.extend([pred.numpy() for pred in pred_batch])
         mark = [item for m in mark_pred for item in m]
-        return mark
+        mark = np.where(np.array(mark) > 0.5, 1, 0)
+        labels = self.labels
+        label_mark = []
+        label_mark.extend([labels[m] for m in mark if m in labels])
+        return label_mark
 
     def predict_proba(self, X):
         predictions = []
@@ -1178,8 +1183,6 @@ class PyTorchClassifier:
         with torch.no_grad():
             pred_batch = self.model(X)  # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
-            mark_pred.extend([pred.numpy() for pred in pred_batch])
-        mark = [item for m in mark_pred for item in m]
         return predictions
 
 
@@ -1291,23 +1294,25 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
         ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, early_stopping, patience, batch_size=20))
+                            epochs, regular, early_stopping, patience, labels, batch_size=20))
     ])
 
     start_time = datetime.datetime.now()
     pipeline.fit(X, y)
     y_mark = pipeline.predict(X_val)
-
-    if threshold:
-        threshold_strategy = ui_tch.comboBox_threshold.currentText()
-        opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
-    else:
-        mark = np.where(np.array(y_mark) > 0.5, 1, 0)
-        opt_threshold = 0.5
+    mark = []
+    mark.extend([labels_mark[m] for m in y_mark if m in labels_mark])
+    print('changed mark; ', mark)
+    # threshold_strategy = ui_tch.comboBox_threshold.currentText()
+    # if threshold:
+    #     opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
+    # else:
+    #     mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+    #     opt_threshold = 0.5
 
     accuracy = accuracy_score(y_val, mark)
     print('Accuracy: ', accuracy)
-    draw_roc_curve(y_val, y_mark)
+    draw_roc_curve(y_val, mark)
     end_time = datetime.datetime.now() - start_time
     print(end_time)
 
@@ -1315,9 +1320,20 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
-                     '\nregularization: ' + str(regular) + '\nthreshold: ' + threshold_strategy + ' ' + str(opt_threshold) + '\n'
+                     '\nregularization: ' + str(regular)
         torch_save_classifier(pipeline, accuracy, list_param, text_model)
         print('Model saved')
+
+def set_marks():
+    list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+    labels = {}
+    labels[list_cat[0]] = 1
+    labels[list_cat[1]] = 0
+    if len(list_cat) > 2:
+        for index, i in enumerate(list_cat[2:]):
+            labels[i] = index
+    return labels
+
 
 def torch_classifier_train():
     TorchClassifier = QtWidgets.QDialog()
@@ -1327,13 +1343,8 @@ def torch_classifier_train():
     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data, list_param = build_table_train(True, 'mlp')
-    list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-    labels = {'empty': 0, 'bitum': 1, 'пусто': 0, 'нефть': 1, 'cold': 0, 'hot': 1}
+    labels = set_marks()
     labels_dict = {value: key for key, value in labels.items()}
-    ## todo Переделать в функцию
-    # data['mark'] = data['mark'].replace({'empty': 0, 'bitum': 1})
-    # data['mark'] = data['mark'].replace({'пусто': 0, 'нефть': 1})
-    # data['mark'] = data['mark'].replace({'cold': 0, 'hot': 1})
     data['mark'] = data['mark'].replace(labels)
     data = data.fillna(0)
 
