@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_TorchClassifierForm(object):
     def setupUi(self, TorchClassifierForm):
         TorchClassifierForm.setObjectName("TorchClassifierForm")
-        TorchClassifierForm.resize(612, 415)
+        TorchClassifierForm.resize(612, 426)
         TorchClassifierForm.setStyleSheet("")
         self.gridLayout_8 = QtWidgets.QGridLayout(TorchClassifierForm)
         self.gridLayout_8.setObjectName("gridLayout_8")
@@ -226,10 +226,10 @@ class Ui_TorchClassifierForm(object):
         _translate = QtCore.QCoreApplication.translate
         TorchClassifierForm.setWindowTitle(_translate("TorchClassifierForm", "TorchNNClassifier"))
         self.checkBox_choose_param.setText(_translate("TorchClassifierForm", "Choose parameters"))
-        self.label.setToolTip(_translate("TorchClassifierForm", "<html><head/><body><p>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. </p><p>Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</p></body></html>"))
+        self.label.setToolTip(_translate("TorchClassifierForm", "Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение."))
         self.label.setText(_translate("TorchClassifierForm", "learning rate"))
         self.doubleSpinBox_choose_lr.setToolTip(_translate("TorchClassifierForm", "Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение."))
-        self.label_2.setToolTip(_translate("TorchClassifierForm", "<html><head/><body><p>Это техника регуляризации, используемая для предотвращения переобучения. </p><p>Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</p></body></html>"))
+        self.label_2.setToolTip(_translate("TorchClassifierForm", "Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой."))
         self.label_2.setText(_translate("TorchClassifierForm", "dropout"))
         self.doubleSpinBox_choose_dropout.setToolTip(_translate("TorchClassifierForm", "Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой."))
         self.label_3.setToolTip(_translate("TorchClassifierForm", "<html><head/><body><p>L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.</p></body></html>"))
