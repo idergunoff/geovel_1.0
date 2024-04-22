@@ -803,7 +803,9 @@ def calc_class_profile():
 
         try:
             mark = class_model.predict(working_sample)
+            print('MARK: ', mark)
             probability = class_model.predict_proba(working_sample)
+            print('PRIBABILITY: ', probability)
             if 'torch' in model.title:
                 mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             # if model.title.startswith('torch_NN'):

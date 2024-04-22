@@ -272,7 +272,6 @@ def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                      '\nregularization: ' + str(regular) + '\n'
         torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
-        print('list param len : ', len(list_param_name))
         print('Model saved')
 
 def torch_regressor_train():
@@ -297,7 +296,6 @@ def torch_regressor_train():
         set_info(f'Заполнены пропуски в {count_nan} параметрах {", ".join(list_nan_param)}', 'red')
 
     training_sample = data_train[list_param_reg].values.tolist()
-    print('list param reg : ', len(list_param_reg))
     target = sum(data_train[['target_value']].values.tolist(), [])
 
     def train():

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>612</width>
-    <height>415</height>
+    <height>426</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,7 +36,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. &lt;/p&gt;&lt;p&gt;Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
         </property>
         <property name="text">
          <string>learning rate</string>
@@ -62,7 +62,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_2">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Это техника регуляризации, используемая для предотвращения переобучения. &lt;/p&gt;&lt;p&gt;Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
         </property>
         <property name="text">
          <string>dropout</string>

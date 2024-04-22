@@ -1327,6 +1327,7 @@ def torch_classifier_train():
     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data, list_param = build_table_train(True, 'mlp')
+    list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
     labels = {'empty': 0, 'bitum': 1, 'пусто': 0, 'нефть': 1, 'cold': 0, 'hot': 1}
     labels_dict = {value: key for key, value in labels.items()}
     ## todo Переделать в функцию
@@ -1337,12 +1338,7 @@ def torch_classifier_train():
     data = data.fillna(0)
 
     def train():
-        # if ui_tch.checkBox_choose_param.isChecked():
-        #     nn_choose_params(ui_tch, data, list_param)
-        #
-        # if ui_tch.checkBox_tune_param.isChecked():
         nn_torch(ui_tch, data, list_param, labels_dict, labels)
-            # nn_tune_params(ui_tch, data, list_param)
     def cv():
         nn_cross_val(ui_tch, data)
 
