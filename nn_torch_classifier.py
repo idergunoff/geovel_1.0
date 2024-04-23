@@ -32,37 +32,6 @@ class CustomDataset(Dataset):
         return sample
 
 
-# def hidden_block(input_dim, output_dim, dropout_rate, activation_func):
-#     return torch.nn.Sequential(
-#         torch.nn.Linear(input_dim, output_dim),
-#         activation_func,
-#         torch.nn.BatchNorm1d(output_dim),
-#         torch.nn.Dropout(dropout_rate),
-#     )
-#
-#
-# class Model(torch.nn.Module):
-#     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_function):
-#         super(Model, self).__init__()
-#         self.input_layer = torch.nn.Linear(input_dim, hidden_units[0])
-#         self.batch_norm1 = nn.BatchNorm1d(hidden_units[0])
-#         self.hidden_layers = torch.nn.ModuleList(
-#             [hidden_block(hidden_units[i], hidden_units[i + 1], dropout_rate, activation_function) for i in range(len(hidden_units) - 1)]
-#         )
-#         self.output_layer = torch.nn.Linear(hidden_units[-1], output_dim)
-#         self.sigmoid = torch.nn.Sigmoid()
-#
-#     def forward(self, x):
-#         out = torch.relu(self.input_layer(x))
-#         out = self.batch_norm1(out)
-#         for layer in self.hidden_layers:
-#             out = self.activation(layer(out))
-#             out = self.dropout(out)
-#         out = self.output_layer(out)
-#         out = self.sigmoid(out)
-#         return out
-
-
 class HiddenBlock(torch.nn.Module):
     def __init__(self, input_dim, output_dim, dropout_rate, activation_func):
         super(HiddenBlock, self).__init__()
@@ -1178,13 +1147,23 @@ class PyTorchClassifier:
 
     def predict_proba(self, X):
         predictions = []
-        mark_pred = []
         X = torch.from_numpy(X).float()
         with torch.no_grad():
             pred_batch = self.model(X)  # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
         return predictions
 
+    def calc_probability(self, X):
+        mark_pred = []
+        X = torch.from_numpy(X).float()
+
+        self.model.eval()
+        with torch.no_grad():
+            pred_batch = self.model(X)
+            print('pred_batch ', pred_batch)
+            mark_pred.extend([pred.numpy() for pred in pred_batch])
+        mark = [item for m in mark_pred for item in m]
+        return mark
 
     def metrics(self, X_val, y_val, opt_threshold=0.5):
         all_targets = []
@@ -1223,16 +1202,12 @@ def draw_roc_curve(y_val, y_mark):
 
 def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
     fpr, tpr, thresholds = roc_curve(y_val, y_mark)
-    # Выбор оптимального порога на основе заданной стратегии
     if threshold_strategy == "accuracy":
-        # Найти индекс порога, максимизирующего точность (TPR + TNR)
         accuracy = tpr + (1 - fpr)
         opt_idx = np.argmax(accuracy)
     elif threshold_strategy == "sensitivity":
-        # Найти индекс порога, максимизирующего чувствительность (TPR)
         opt_idx = np.argmax(tpr)
     elif threshold_strategy == "specificity":
-        # Найти индекс порога, максимизирующего специфичность (TNR)
         tnr = 1 - fpr
         opt_idx = np.argmax(tnr)
 
@@ -1302,17 +1277,17 @@ def nn_torch(ui_tch, data, list_param, labels, labels_mark):
     y_mark = pipeline.predict(X_val)
     mark = []
     mark.extend([labels_mark[m] for m in y_mark if m in labels_mark])
-    print('changed mark; ', mark)
     # threshold_strategy = ui_tch.comboBox_threshold.currentText()
     # if threshold:
     #     opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
     # else:
     #     mark = np.where(np.array(y_mark) > 0.5, 1, 0)
     #     opt_threshold = 0.5
-
+    y_res = pipeline.predict_proba(X_val)
+    y_prob = [i[0] for i in y_res]
     accuracy = accuracy_score(y_val, mark)
     print('Accuracy: ', accuracy)
-    draw_roc_curve(y_val, mark)
+    draw_roc_curve(y_val, y_prob)
     end_time = datetime.datetime.now() - start_time
     print(end_time)
 

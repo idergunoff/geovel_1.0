@@ -407,6 +407,13 @@
       </item>
      </layout>
     </item>
+    <item row="1" column="1">
+     <widget class="QSpinBox" name="spinBox_stop_patience">
+      <property name="value">
+       <number>20</number>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
  </widget>

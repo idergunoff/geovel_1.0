@@ -60,12 +60,12 @@ class Model(nn.Module):
         self.output_layer = nn.Linear(hidden_units[-1], output_dim)
 
     def forward(self, x):
-        out = torch.relu(self.input_layer(x))  # Use ReLU for activation
+        out = torch.relu(self.input_layer(x))
         out = self.batch_norm1(out)
         for block in self.hidden_blocks:
             out = block(out)
         out = self.output_layer(out)
-        return out  # No sigmoid for regression
+        return out
 
 def draw_results_graphs(loss, epochs):
     fig, axs = plt.subplots(1, 1, figsize=(16, 8))
