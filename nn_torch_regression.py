@@ -29,7 +29,7 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         sample = {
             'data': torch.tensor(self.data[idx], dtype=torch.float),
-            'label': torch.tensor(self.labels[idx], dtype=torch.long)  # Предположим, что метки - целочисленные значения
+            'label': torch.tensor(self.labels[idx], dtype=torch.long)
         }
         return sample
 
@@ -188,97 +188,97 @@ def torch_save_regressor(pipeline, r2, list_params, text_model):
     else:
         pass
 
-
-def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
-    x_train, x_test, y_train, y_test = train_test_split(
-        training_sample, target, test_size=0.2, random_state=42)
-    x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train),\
-        np.array(x_test), np.array(y_test)
-
-    input_dim = x_train.shape[1]
-    output_dim = 1
-
-    epochs = ui_tch.spinBox_epochs.value()
-    learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
-    hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
-    dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
-    weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
-    regular = ui_tch.doubleSpinBox_choose_reagular.value()
-
-    if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
-        activation_function = nn.ReLU()
-
-    if ui_tch.comboBox_optimizer.currentText() == 'Adam':
-        optimizer = torch.optim.Adam
-    elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
-        optimizer = torch.optim.SGD
-
-    if ui_tch.comboBox_loss.currentText() == 'MSE':
-        loss_function = nn.MSELoss()
-    elif ui_tch.comboBox_loss.currentText() == 'MAE':
-        loss_function = nn.L1Loss()
-    elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
-        loss_function = nn.HuberLoss()
-    elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
-        loss_function = nn.SmoothL1Loss()
-
-    early_stopping = False
-    patience = 0
-    if ui_tch.checkBox_early_stop.isChecked():
-        early_stopping = True
-        patience = ui_tch.spinBox_stop_patience.value()
-
-    pipeline = Pipeline(
-        [('features', FeatureUnion([
-            ('scaler', StandardScaler())
-        ])),
-        ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
-                            dropout_rate, activation_function,
-                            loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, early_stopping, patience, batch_size=20))
-    ])
-
-    start_time = datetime.datetime.now()
-
-    pipeline.fit(x_train, y_train)
-    y_pred = pipeline.predict(x_test)
-
-    r_squared = r2_score(y_test, y_pred)
-    print('Коэффициент детерминации (R²):', r_squared)
-    mse = round(mean_squared_error(y_test, y_pred), 5)
-    print('MSE: ', mse)
-
-    train_time = datetime.datetime.now() - start_time
-    print(train_time)
-
-    y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
-    data_graph = pd.DataFrame({
-        'y_test': y_test,
-        'y_pred': y_pred,
-        'y_remain': y_remain
-    })
-    fig, axes = plt.subplots(nrows=2, ncols=2)
-    fig.set_size_inches(15, 10)
-    fig.suptitle(f'Модель TorchNNRegression:\n'
-                 f' Mean Squared Error:\n {mse}, R2: {round(r_squared, 2)} \n время обучения: {train_time}')
-    sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
-    sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
-    sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-    sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-    try:
-        sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
-    except MemoryError:
-        pass
-    fig.tight_layout()
-    fig.show()
-
-    if ui_tch.checkBox_save_model.isChecked():
-        text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
-                     + str(train_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
-                     + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
-                     '\nregularization: ' + str(regular) + '\n'
-        torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
-        print('Model saved')
+#
+# def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
+#     x_train, x_test, y_train, y_test = train_test_split(
+#         training_sample, target, test_size=0.2, random_state=42)
+#     x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train),\
+#         np.array(x_test), np.array(y_test)
+#
+#     input_dim = x_train.shape[1]
+#     output_dim = 1
+#
+#     epochs = ui_tch.spinBox_epochs.value()
+#     learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+#     hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+#     dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+#     weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+#     regular = ui_tch.doubleSpinBox_choose_reagular.value()
+#
+#     if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+#         activation_function = nn.ReLU()
+#
+#     if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+#         optimizer = torch.optim.Adam
+#     elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+#         optimizer = torch.optim.SGD
+#
+#     if ui_tch.comboBox_loss.currentText() == 'MSE':
+#         loss_function = nn.MSELoss()
+#     elif ui_tch.comboBox_loss.currentText() == 'MAE':
+#         loss_function = nn.L1Loss()
+#     elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+#         loss_function = nn.HuberLoss()
+#     elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+#         loss_function = nn.SmoothL1Loss()
+#
+#     early_stopping = False
+#     patience = 0
+#     if ui_tch.checkBox_early_stop.isChecked():
+#         early_stopping = True
+#         patience = ui_tch.spinBox_stop_patience.value()
+#
+#     pipeline = Pipeline(
+#         [('features', FeatureUnion([
+#             ('scaler', StandardScaler())
+#         ])),
+#         ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
+#                             dropout_rate, activation_function,
+#                             loss_function, optimizer, learning_rate, weight_decay,
+#                             epochs, regular, early_stopping, patience, batch_size=20))
+#     ])
+#
+#     start_time = datetime.datetime.now()
+#
+#     pipeline.fit(x_train, y_train)
+#     y_pred = pipeline.predict(x_test)
+#
+#     r_squared = r2_score(y_test, y_pred)
+#     print('Коэффициент детерминации (R²):', r_squared)
+#     mse = round(mean_squared_error(y_test, y_pred), 5)
+#     print('MSE: ', mse)
+#
+#     train_time = datetime.datetime.now() - start_time
+#     print(train_time)
+#
+#     y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
+#     data_graph = pd.DataFrame({
+#         'y_test': y_test,
+#         'y_pred': y_pred,
+#         'y_remain': y_remain
+#     })
+#     fig, axes = plt.subplots(nrows=2, ncols=2)
+#     fig.set_size_inches(15, 10)
+#     fig.suptitle(f'Модель TorchNNRegression:\n'
+#                  f' Mean Squared Error:\n {mse}, R2: {round(r_squared, 2)} \n время обучения: {train_time}')
+#     sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#     sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+#     sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#     sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+#     try:
+#         sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+#     except MemoryError:
+#         pass
+#     fig.tight_layout()
+#     fig.show()
+#
+#     if ui_tch.checkBox_save_model.isChecked():
+#         text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
+#                      + str(train_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
+#                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+#                      '\nregularization: ' + str(regular) + '\n'
+#         torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+#         print('Model saved')
 
 def torch_regressor_train():
     TorchRegressor = QtWidgets.QDialog()
@@ -304,8 +304,162 @@ def torch_regressor_train():
     training_sample = data_train[list_param_reg].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
 
+    x_train, x_test, y_train, y_test = train_test_split(
+        training_sample, target, test_size=0.2, random_state=42)
+    x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train), \
+        np.array(x_test), np.array(y_test)
+
+    input_dim = x_train.shape[1]
+    output_dim = 1
+
     def train():
-        nn_torch_reg(ui_tch, training_sample, target, list_param_name)
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+        hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+        dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+        weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+        regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'MSE':
+            loss_function = nn.MSELoss()
+        elif ui_tch.comboBox_loss.currentText() == 'MAE':
+            loss_function = nn.L1Loss()
+        elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss()
+
+        early_stopping = False
+        patience = 0
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+            patience = ui_tch.spinBox_stop_patience.value()
+
+        pipeline = Pipeline(
+            [('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+             ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
+                                            dropout_rate, activation_function,
+                                            loss_function, optimizer, learning_rate, weight_decay,
+                                            epochs, regular, early_stopping, patience, batch_size=20))
+             ])
+
+        start_time = datetime.datetime.now()
+
+        pipeline.fit(x_train, y_train)
+        y_pred = pipeline.predict(x_test)
+
+        r_squared = r2_score(y_test, y_pred)
+        print('Коэффициент детерминации (R²):', r_squared)
+        mse = round(mean_squared_error(y_test, y_pred), 5)
+        print('MSE: ', mse)
+
+        train_time = datetime.datetime.now() - start_time
+        print(train_time)
+
+        y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
+        data_graph = pd.DataFrame({
+            'y_test': y_test,
+            'y_pred': y_pred,
+            'y_remain': y_remain
+        })
+        fig, axes = plt.subplots(nrows=2, ncols=2)
+        fig.set_size_inches(15, 10)
+        fig.suptitle(f'Модель TorchNNRegression:\n'
+                     f' Mean Squared Error:\n {mse}, R2: {round(r_squared, 2)} \n время обучения: {train_time}')
+        sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+        sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+        sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+        sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+        try:
+            sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+        except MemoryError:
+            pass
+        fig.tight_layout()
+        fig.show()
+
+        if ui_tch.checkBox_save_model.isChecked():
+            text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
+                         + str(train_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+                hidden_units) \
+                         + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                         '\nregularization: ' + str(regular) + '\n'
+            torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+            print('Model saved')
+
+    def torch_regressor_lineup():
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+        hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+        dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+        weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+        regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'MSE':
+            loss_function = nn.MSELoss()
+        elif ui_tch.comboBox_loss.currentText() == 'MAE':
+            loss_function = nn.L1Loss()
+        elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss()
+
+        early_stopping = False
+        patience = 0
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+            patience = ui_tch.spinBox_stop_patience.value()
+
+        pipeline = Pipeline(
+            [('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+             ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
+                                            dropout_rate, activation_function,
+                                            loss_function, optimizer, learning_rate, weight_decay,
+                                            epochs, regular, early_stopping, patience, batch_size=20))
+             ])
+
+        model_name = 'torch_NN_reg'
+        text_model = model_name + ' StandardScaler'
+
+        except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
+
+        new_lineup = LineupTrain(
+            type_ml='reg',
+            analysis_id=get_regmod_id(),
+            list_param=json.dumps(list_param_reg),
+            list_param_short=json.dumps(list_param_name),
+            except_signal=except_reg.except_signal,
+            except_crl=except_reg.except_crl,
+            text_model=text_model,
+            model_name=model_name,
+            over_sampling='none',
+            pipe=pickle.dumps(pipeline)
+        )
+        session.add(new_lineup)
+        session.commit()
+
+        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
+        pass
 
     ui_tch.pushButton_train.clicked.connect(train)
+    ui_tch.pushButton_lineup.clicked.connect(torch_regressor_lineup)
     TorchRegressor.exec()

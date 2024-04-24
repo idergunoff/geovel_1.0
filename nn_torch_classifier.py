@@ -1310,7 +1310,7 @@ def torch_classifier_train():
                                              epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
         ])
 
-        model_name = 'torch_NN'
+        model_name = 'torch_NN_cls'
         text_model = model_name + ' StandardScaler'
 
         except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
