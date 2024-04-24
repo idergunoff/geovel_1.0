@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>612</width>
+    <width>630</width>
     <height>426</height>
    </rect>
   </property>
@@ -515,40 +515,50 @@
        <property name="title">
         <string>Cross Validate</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
-         <widget class="QPushButton" name="pushButton_cross_val">
-          <property name="toolTip">
-           <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
-          </property>
-          <property name="text">
-           <string>CV</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="spinBox_cross_val">
-          <property name="toolTip">
-           <string>Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.</string>
-          </property>
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="value">
-           <number>5</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QPushButton" name="pushButton_cross_val">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>71</y>
+          <width>75</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
+        </property>
+        <property name="text">
+         <string>CV</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="spinBox_cross_val">
+        <property name="geometry">
+         <rect>
+          <x>91</x>
+          <y>72</y>
+          <width>37</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.</string>
+        </property>
+        <property name="minimum">
+         <number>2</number>
+        </property>
+        <property name="value">
+         <number>5</number>
+        </property>
+       </widget>
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QPushButton" name="pushButton_train">
+      <widget class="QPushButton" name="pushButton_lineup">
        <property name="styleSheet">
         <string notr="true">background-color: rgb(252, 204, 165);</string>
        </property>
        <property name="text">
-        <string>TRAIN</string>
+        <string>ADD TO LINEUP</string>
        </property>
       </widget>
      </item>
@@ -559,6 +569,16 @@
        </property>
        <property name="text">
         <string>save</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="QPushButton" name="pushButton_train">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(252, 204, 165);</string>
+       </property>
+       <property name="text">
+        <string>TRAIN</string>
        </property>
       </widget>
      </item>

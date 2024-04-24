@@ -152,6 +152,12 @@ class PyTorchRegressor:
         mark = [item for m in mark_pred for item in m]
         return mark
 
+    def score(self, X, y):
+        y = np.array(y)
+        y = torch.from_numpy(y).float()
+        y_pred = self.predict(X)
+        return r2_score(y, y_pred)
+
 def torch_save_regressor(pipeline, r2, list_params, text_model):
     model_name = 'torch_NN'
     result = QtWidgets.QMessageBox.question(

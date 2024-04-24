@@ -157,7 +157,10 @@ def train_cls_model(model):
     axes[0].xaxis.grid(True, "minor", linewidth=.25)
     axes[0].yaxis.grid(True, "minor", linewidth=.25)
     axes[0].set_title(f'Диаграмма рассеяния для канонических значений {model.model_name}\nдля обучающей выборки и тестовой выборки')
-    list_marker = list(pipe.classes_)
+    if 'torch' in model.text_model:
+        list_marker = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+    else:
+        list_marker = list(pipe.classes_)
     if len(list_marker) == 2:
         # Вычисляем ROC-кривую и AUC
         preds_test = pipe.predict_proba(training_sample_test)[:, 0]

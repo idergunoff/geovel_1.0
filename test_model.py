@@ -513,11 +513,8 @@ def regression_test():
 
             min_target, max_target = working_data['target_value'].min(), working_data['target_value'].max()
             lin_target = np.linspace(0, max_target - min_target, working_data['target_value'].size)
-            print('lin_target: ', lin_target)
             percentile_20 = np.percentile(lin_target, 20)
             percentile_50 = np.percentile(lin_target, 50)
-            print('20%: ', percentile_20)
-            print('50%: ', percentile_50)
             mistake = math.fabs(round(working_data.loc[index, "target_value"] - sum(list_y)/total, 2))
             mean_pred = round(sum(list_y)/total, 2)
 

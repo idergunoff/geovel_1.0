@@ -1084,6 +1084,9 @@ class PyTorchClassifier:
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
+        if np.issubdtype(y_train.dtype, np.str_):
+            labels_dict = {value: key for key, value in self.labels.items()}
+            y_train = np.array([labels_dict[m] for m in y_train if m in labels_dict])
         y_train = torch.from_numpy(y_train).float()
         losses = []
         best_loss = float('inf')
@@ -1151,7 +1154,17 @@ class PyTorchClassifier:
         with torch.no_grad():
             pred_batch = self.model(X)  # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
-        return predictions
+        return np.array(predictions)
+
+    def score(self, X, y):
+        labels_dict = {value: key for key, value in self.labels.items()}
+        y = np.array([labels_dict[m] for m in y if m in labels_dict])
+        y = torch.from_numpy(y).float()
+        y_pred = self.predict(X)
+        mark = []
+        mark.extend([labels_dict[m] for m in y_pred if m in labels_dict])
+        return accuracy_score(y, mark)
+
 
     def calc_probability(self, X):
         mark_pred = []
@@ -1160,7 +1173,6 @@ class PyTorchClassifier:
         self.model.eval()
         with torch.no_grad():
             pred_batch = self.model(X)
-            print('pred_batch ', pred_batch)
             mark_pred.extend([pred.numpy() for pred in pred_batch])
         mark = [item for m in mark_pred for item in m]
         return mark
@@ -1216,88 +1228,6 @@ def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
     return opt_threshold, mark
 
 
-def nn_torch(ui_tch, data, list_param, labels, labels_mark):
-    X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
-    y_train = y_train.values
-    X = X_train.astype(np.float64)
-    y = y_train.astype(np.float64)
-    X_val = X_test.values
-    y_val = torch.from_numpy(y_test.values).float()
-
-    input_dim = X_train.shape[1]
-    output_dim = 1
-
-    epochs = ui_tch.spinBox_epochs.value()
-    learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
-    hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
-    dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
-    weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
-    regular = ui_tch.doubleSpinBox_choose_reagular.value()
-
-    if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
-        activation_function = nn.ReLU()
-    elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
-        activation_function = nn.Sigmoid()
-    elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
-        activation_function = nn.Tanh()
-
-    if ui_tch.comboBox_optimizer.currentText() == 'Adam':
-        optimizer = torch.optim.Adam
-    elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
-        optimizer = torch.optim.SGD
-
-    if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
-        loss_function = nn.CrossEntropyLoss()
-    elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
-        loss_function = nn.BCEWithLogitsLoss()
-    elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
-        loss_function = nn.BCELoss()
-
-    early_stopping = False
-    threshold = False
-    patience = 0
-    if ui_tch.checkBox_early_stop.isChecked():
-        early_stopping = True
-        patience = ui_tch.spinBox_stop_patience.value()
-    if ui_tch.checkBox_threshold.isChecked():
-        threshold = True
-
-    pipeline = Pipeline([
-        ('features', FeatureUnion([
-            ('scaler', StandardScaler())
-        ])),
-        ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
-                            dropout_rate, activation_function,
-                            loss_function, optimizer, learning_rate, weight_decay,
-                            epochs, regular, early_stopping, patience, labels, batch_size=20))
-    ])
-
-    start_time = datetime.datetime.now()
-    pipeline.fit(X, y)
-    y_mark = pipeline.predict(X_val)
-    mark = []
-    mark.extend([labels_mark[m] for m in y_mark if m in labels_mark])
-    # threshold_strategy = ui_tch.comboBox_threshold.currentText()
-    # if threshold:
-    #     opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
-    # else:
-    #     mark = np.where(np.array(y_mark) > 0.5, 1, 0)
-    #     opt_threshold = 0.5
-    y_res = pipeline.predict_proba(X_val)
-    y_prob = [i[0] for i in y_res]
-    accuracy = accuracy_score(y_val, mark)
-    print('Accuracy: ', accuracy)
-    draw_roc_curve(y_val, y_prob)
-    end_time = datetime.datetime.now() - start_time
-    print(end_time)
-
-    if ui_tch.checkBox_save_model.isChecked():
-        text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
-                     + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
-                     + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
-                     '\nregularization: ' + str(regular)
-        torch_save_classifier(pipeline, accuracy, list_param, text_model)
-        print('Model saved')
 
 def set_marks():
     list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
@@ -1318,16 +1248,322 @@ def torch_classifier_train():
     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data, list_param = build_table_train(True, 'mlp')
+    list_param_mlp = data.columns.tolist()[2:]
     labels = set_marks()
     labels_dict = {value: key for key, value in labels.items()}
     data['mark'] = data['mark'].replace(labels)
     data = data.fillna(0)
 
+    X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
+    y_train = y_train.values
+    X = X_train.astype(np.float64)
+    y = y_train.astype(np.float64)
+    X_val = X_test.values
+    y_val = torch.from_numpy(y_test.values).float()
+
+    def torch_classifier_lineup():
+        input_dim = X_train.shape[1]
+        output_dim = 1
+
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+        hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+        dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+        weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+        regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+            activation_function = nn.Sigmoid()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+            activation_function = nn.Tanh()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
+            loss_function = nn.CrossEntropyLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
+            loss_function = nn.BCEWithLogitsLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
+            loss_function = nn.BCELoss()
+
+        early_stopping = False
+        threshold = False
+        patience = 0
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+            patience = ui_tch.spinBox_stop_patience.value()
+        if ui_tch.checkBox_threshold.isChecked():
+            threshold = True
+
+        pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+            ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+                                             dropout_rate, activation_function,
+                                             loss_function, optimizer, learning_rate, weight_decay,
+                                             epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
+        ])
+
+        model_name = 'torch_NN'
+        text_model = model_name + ' StandardScaler'
+
+        except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+        new_lineup = LineupTrain(
+            type_ml='cls',
+            analysis_id=get_MLP_id(),
+            list_param=json.dumps(list_param_mlp),
+            list_param_short=json.dumps(list_param),
+            except_signal=except_mlp.except_signal,
+            except_crl=except_mlp.except_crl,
+            text_model=text_model,
+            model_name=model_name,
+            over_sampling='none',
+            pipe=pickle.dumps(pipeline),
+            random_seed=ui.spinBox_seed.value(),
+            cvw=False
+        )
+        session.add(new_lineup)
+        session.commit()
+
+        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
+
     def train():
-        nn_torch(ui_tch, data, list_param, labels_dict, labels)
+        input_dim = X_train.shape[1]
+        output_dim = 1
+
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+        hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+        dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+        weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+        regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+            activation_function = nn.Sigmoid()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+            activation_function = nn.Tanh()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
+            loss_function = nn.CrossEntropyLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
+            loss_function = nn.BCEWithLogitsLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
+            loss_function = nn.BCELoss()
+
+        early_stopping = False
+        threshold = False
+        patience = 0
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+            patience = ui_tch.spinBox_stop_patience.value()
+        if ui_tch.checkBox_threshold.isChecked():
+            threshold = True
+
+        pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+            ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+                                             dropout_rate, activation_function,
+                                             loss_function, optimizer, learning_rate, weight_decay,
+                                             epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
+        ])
+        print('pipeline epoch ', pipeline.named_steps['classifier'].epochs)
+        # print('pipeline learning rate ', pipeline.named_steps['classifier'].learning_rate)
+        print('pipeline optimizer ', pipeline.named_steps['classifier'].optimizer)
+
+
+
+
+
+        start_time = datetime.datetime.now()
+        pipeline.fit(X, y)
+
+        y_mark = pipeline.predict(X_val)
+        mark = []
+        mark.extend([labels[m] for m in y_mark if m in labels])
+        y_res = pipeline.predict_proba(X_val)
+        y_prob = [i[0] for i in y_res]
+
+        accuracy = accuracy_score(y_val, mark)
+        print('Accuracy: ', accuracy)
+        draw_roc_curve(y_val, y_prob)
+        end_time = datetime.datetime.now() - start_time
+        print(end_time)
+
+        if ui_tch.checkBox_save_model.isChecked():
+            text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+                         + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+                hidden_units) \
+                         + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                         '\nregularization: ' + str(regular)
+            torch_save_classifier(pipeline, accuracy, list_param, text_model)
+            print('Model saved')
     def cv():
         nn_cross_val(ui_tch, data)
 
     ui_tch.pushButton_train.clicked.connect(train)
     ui_tch.pushButton_cross_val.clicked.connect(cv)
+    ui_tch.pushButton_lineup.clicked.connect(torch_classifier_lineup)
     TorchClassifier.exec()
+
+
+
+
+# def nn_torch(ui_tch, data, list_param, list_param_mlp, labels, labels_mark):
+#     X_train, X_test, y_train, y_test = train_test_split(data.iloc[:, 2:], data['mark'], test_size=0.2, random_state=42)
+#     y_train = y_train.values
+#     X = X_train.astype(np.float64)
+#     y = y_train.astype(np.float64)
+#     X_val = X_test.values
+#     y_val = torch.from_numpy(y_test.values).float()
+#
+#     input_dim = X_train.shape[1]
+#     output_dim = 1
+#
+#     epochs = ui_tch.spinBox_epochs.value()
+#     learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+#     hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+#     dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+#     weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+#     regular = ui_tch.doubleSpinBox_choose_reagular.value()
+#
+#     if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+#         activation_function = nn.ReLU()
+#     elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+#         activation_function = nn.Sigmoid()
+#     elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+#         activation_function = nn.Tanh()
+#
+#     if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+#         optimizer = torch.optim.Adam
+#     elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+#         optimizer = torch.optim.SGD
+#
+#     if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
+#         loss_function = nn.CrossEntropyLoss()
+#     elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
+#         loss_function = nn.BCEWithLogitsLoss()
+#     elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
+#         loss_function = nn.BCELoss()
+#
+#     early_stopping = False
+#     threshold = False
+#     patience = 0
+#     if ui_tch.checkBox_early_stop.isChecked():
+#         early_stopping = True
+#         patience = ui_tch.spinBox_stop_patience.value()
+#     if ui_tch.checkBox_threshold.isChecked():
+#         threshold = True
+#
+#     pipeline = Pipeline([
+#         ('features', FeatureUnion([
+#             ('scaler', StandardScaler())
+#         ])),
+#         ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+#                             dropout_rate, activation_function,
+#                             loss_function, optimizer, learning_rate, weight_decay,
+#                             epochs, regular, early_stopping, patience, labels, batch_size=20))
+#     ])
+#
+#     def torch_classifier_lineup():
+#         text_model = 'StandardScaler'
+#         model_name = 'TORCH_NN'
+#
+#         except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+#         new_lineup = LineupTrain(
+#             type_ml='cls',
+#             analysis_id=get_MLP_id(),
+#             list_param=json.dumps(list_param_mlp),
+#             list_param_short=json.dumps(list_param),
+#             except_signal=except_mlp.except_signal,
+#             except_crl=except_mlp.except_crl,
+#             text_model=text_model,
+#             model_name=model_name,
+#             over_sampling='none',
+#             pipe=pickle.dumps(pipeline),
+#             random_seed=ui.spinBox_seed.value(),
+#             cvw=False
+#         )
+#         session.add(new_lineup)
+#         session.commit()
+#
+#         set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
+#
+#
+#     start_time = datetime.datetime.now()
+#     pipeline.fit(X, y)
+#     y_mark = pipeline.predict(X_val)
+#     mark = []
+#     mark.extend([labels_mark[m] for m in y_mark if m in labels_mark])
+#     # threshold_strategy = ui_tch.comboBox_threshold.currentText()
+#     # if threshold:
+#     #     opt_threshold, mark = classify_based_on_roc(y_val, y_mark, threshold_strategy=threshold_strategy)
+#     # else:
+#     #     mark = np.where(np.array(y_mark) > 0.5, 1, 0)
+#     #     opt_threshold = 0.5
+#     y_res = pipeline.predict_proba(X_val)
+#     y_prob = [i[0] for i in y_res]
+#     accuracy = accuracy_score(y_val, mark)
+#     print('Accuracy: ', accuracy)
+#     draw_roc_curve(y_val, y_prob)
+#     end_time = datetime.datetime.now() - start_time
+#     print(end_time)
+#
+#     if ui_tch.checkBox_save_model.isChecked():
+#         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+#                      + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
+#                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+#                      '\nregularization: ' + str(regular)
+#         torch_save_classifier(pipeline, accuracy, list_param, text_model)
+#         print('Model saved')
+#
+#     ui_tch.pushButton_lineup.clicked.connect(torch_classifier_lineup)
+#
+#
+# def set_marks():
+#     list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+#     labels = {}
+#     labels[list_cat[0]] = 1
+#     labels[list_cat[1]] = 0
+#     if len(list_cat) > 2:
+#         for index, i in enumerate(list_cat[2:]):
+#             labels[i] = index
+#     return labels
+#
+#
+# def torch_classifier_train():
+#     TorchClassifier = QtWidgets.QDialog()
+#     ui_tch = Ui_TorchClassifierForm()
+#     ui_tch.setupUi(TorchClassifier)
+#     TorchClassifier.show()
+#     TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+#
+#     data, list_param = build_table_train(True, 'mlp')
+#     list_param_mlp = data.columns.tolist()[2:]
+#     labels = set_marks()
+#     labels_dict = {value: key for key, value in labels.items()}
+#     data['mark'] = data['mark'].replace(labels)
+#     data = data.fillna(0)
+#
+#     def train():
+#         nn_torch(ui_tch, data, list_param, list_param_mlp, labels_dict, labels)
+#     def cv():
+#         nn_cross_val(ui_tch, data)
+#
+#     ui_tch.pushButton_train.clicked.connect(train)
+#     ui_tch.pushButton_cross_val.clicked.connect(cv)
+#     TorchClassifier.exec()
