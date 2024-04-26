@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>579</width>
-    <height>387</height>
+    <width>769</width>
+    <height>406</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>50</x>
      <y>10</y>
      <width>325</width>
      <height>219</height>
@@ -166,7 +166,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>230</y>
+     <y>250</y>
      <width>321</width>
      <height>141</height>
     </rect>
@@ -298,8 +298,8 @@
   <widget class="QWidget" name="layoutWidget_3">
    <property name="geometry">
     <rect>
-     <x>400</x>
-     <y>250</y>
+     <x>580</x>
+     <y>270</y>
      <width>171</width>
      <height>116</height>
     </rect>
@@ -376,7 +376,7 @@
    <property name="geometry">
     <rect>
      <x>360</x>
-     <y>10</y>
+     <y>290</y>
      <width>201</width>
      <height>91</height>
     </rect>
@@ -421,6 +421,162 @@
      <widget class="QSpinBox" name="spinBox_stop_patience">
       <property name="value">
        <number>20</number>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>10</y>
+     <width>321</width>
+     <height>219</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <item row="0" column="0" colspan="2">
+     <widget class="QCheckBox" name="checkBox_tune_param">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(251, 228, 170);</string>
+      </property>
+      <property name="text">
+       <string>Tune parameters</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="toolTip">
+       <string extracomment="0,001-0,1">Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+      </property>
+      <property name="text">
+       <string extracomment="0.1-0.0001">learning rate</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="lineEdit_tune_lr">
+      <property name="toolTip">
+       <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+      </property>
+      <property name="text">
+       <string>0,0001-0,01</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_8">
+      <property name="toolTip">
+       <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+      </property>
+      <property name="text">
+       <string extracomment="0.1-0.0001">dropout</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="lineEdit_tune_dropout">
+      <property name="toolTip">
+       <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+      </property>
+      <property name="text">
+       <string>0,01-0,9</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_6">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string extracomment="0.1-0.0001">weight decay</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLineEdit" name="lineEdit_tune_decay">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>0,001-0,2</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_9">
+      <property name="toolTip">
+       <string>Этот гиперпараметр контролирует силу регуляризации, применяемой к весам модели, помогая предотвратить переобучение.</string>
+      </property>
+      <property name="text">
+       <string>regularization</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QDoubleSpinBox" name="doubleSpinBox_tune_regular">
+      <property name="toolTip">
+       <string>Этот гиперпараметр контролирует силу регуляризации, применяемой к весам модели, помогая предотвратить переобучение.</string>
+      </property>
+      <property name="decimals">
+       <number>6</number>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.010000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_10">
+      <property name="text">
+       <string extracomment="number of layers">hidden layers</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="lineEdit_tune_layers">
+      <property name="text">
+       <string>150-550</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QLabel" name="label_15">
+      <property name="text">
+       <string extracomment="number of layers">hidden layers num</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QSpinBox" name="spinBox_layers_num">
+      <property name="value">
+       <number>10</number>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="0">
+     <widget class="QLabel" name="label_16">
+      <property name="toolTip">
+       <string>Количество циклов обучения или итераций, которые необходимо выполнить.</string>
+      </property>
+      <property name="text">
+       <string extracomment="number of layers">num trials</string>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="1">
+     <widget class="QSpinBox" name="spinBox_trials">
+      <property name="value">
+       <number>10</number>
       </property>
      </widget>
     </item>

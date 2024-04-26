@@ -191,6 +191,9 @@
         <property name="toolTip">
          <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
         </property>
+        <property name="text">
+         <string>0,0001-0,01</string>
+        </property>
        </widget>
       </item>
       <item row="2" column="0">
@@ -208,6 +211,9 @@
         <property name="toolTip">
          <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
         </property>
+        <property name="text">
+         <string>0,01-0,9</string>
+        </property>
        </widget>
       </item>
       <item row="3" column="0">
@@ -224,6 +230,9 @@
        <widget class="QLineEdit" name="lineEdit_tune_decay">
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>0,001-0,2</string>
         </property>
        </widget>
       </item>
@@ -261,7 +270,11 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QLineEdit" name="lineEdit_tune_layers"/>
+       <widget class="QLineEdit" name="lineEdit_tune_layers">
+        <property name="text">
+         <string>150-550</string>
+        </property>
+       </widget>
       </item>
       <item row="6" column="0">
        <widget class="QLabel" name="label_15">
@@ -271,7 +284,11 @@
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QSpinBox" name="spinBox_layers_num"/>
+       <widget class="QSpinBox" name="spinBox_layers_num">
+        <property name="value">
+         <number>10</number>
+        </property>
+       </widget>
       </item>
       <item row="7" column="0">
        <widget class="QLabel" name="label_16">
@@ -284,7 +301,11 @@
        </widget>
       </item>
       <item row="7" column="1">
-       <widget class="QSpinBox" name="spinBox_trials"/>
+       <widget class="QSpinBox" name="spinBox_trials">
+        <property name="value">
+         <number>10</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

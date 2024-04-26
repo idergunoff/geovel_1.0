@@ -188,97 +188,10 @@ def torch_save_regressor(pipeline, r2, list_params, text_model):
     else:
         pass
 
-#
-# def nn_torch_reg(ui_tch, training_sample, target, list_param_name):
-#     x_train, x_test, y_train, y_test = train_test_split(
-#         training_sample, target, test_size=0.2, random_state=42)
-#     x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train),\
-#         np.array(x_test), np.array(y_test)
-#
-#     input_dim = x_train.shape[1]
-#     output_dim = 1
-#
-#     epochs = ui_tch.spinBox_epochs.value()
-#     learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
-#     hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
-#     dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
-#     weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
-#     regular = ui_tch.doubleSpinBox_choose_reagular.value()
-#
-#     if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
-#         activation_function = nn.ReLU()
-#
-#     if ui_tch.comboBox_optimizer.currentText() == 'Adam':
-#         optimizer = torch.optim.Adam
-#     elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
-#         optimizer = torch.optim.SGD
-#
-#     if ui_tch.comboBox_loss.currentText() == 'MSE':
-#         loss_function = nn.MSELoss()
-#     elif ui_tch.comboBox_loss.currentText() == 'MAE':
-#         loss_function = nn.L1Loss()
-#     elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
-#         loss_function = nn.HuberLoss()
-#     elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
-#         loss_function = nn.SmoothL1Loss()
-#
-#     early_stopping = False
-#     patience = 0
-#     if ui_tch.checkBox_early_stop.isChecked():
-#         early_stopping = True
-#         patience = ui_tch.spinBox_stop_patience.value()
-#
-#     pipeline = Pipeline(
-#         [('features', FeatureUnion([
-#             ('scaler', StandardScaler())
-#         ])),
-#         ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
-#                             dropout_rate, activation_function,
-#                             loss_function, optimizer, learning_rate, weight_decay,
-#                             epochs, regular, early_stopping, patience, batch_size=20))
-#     ])
-#
-#     start_time = datetime.datetime.now()
-#
-#     pipeline.fit(x_train, y_train)
-#     y_pred = pipeline.predict(x_test)
-#
-#     r_squared = r2_score(y_test, y_pred)
-#     print('Коэффициент детерминации (R²):', r_squared)
-#     mse = round(mean_squared_error(y_test, y_pred), 5)
-#     print('MSE: ', mse)
-#
-#     train_time = datetime.datetime.now() - start_time
-#     print(train_time)
-#
-#     y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
-#     data_graph = pd.DataFrame({
-#         'y_test': y_test,
-#         'y_pred': y_pred,
-#         'y_remain': y_remain
-#     })
-#     fig, axes = plt.subplots(nrows=2, ncols=2)
-#     fig.set_size_inches(15, 10)
-#     fig.suptitle(f'Модель TorchNNRegression:\n'
-#                  f' Mean Squared Error:\n {mse}, R2: {round(r_squared, 2)} \n время обучения: {train_time}')
-#     sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
-#     sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
-#     sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-#     sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
-#     try:
-#         sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
-#     except MemoryError:
-#         pass
-#     fig.tight_layout()
-#     fig.show()
-#
-#     if ui_tch.checkBox_save_model.isChecked():
-#         text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
-#                      + str(train_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
-#                      + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
-#                      '\nregularization: ' + str(regular) + '\n'
-#         torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
-#         print('Model saved')
+def str_to_interval(string):
+    parts = string.split("-")
+    result = [float(part.replace(",", ".")) for part in parts]
+    return result
 
 def torch_regressor_train():
     TorchRegressor = QtWidgets.QDialog()
@@ -312,7 +225,7 @@ def torch_regressor_train():
     input_dim = x_train.shape[1]
     output_dim = 1
 
-    def train():
+    def train_reg():
         epochs = ui_tch.spinBox_epochs.value()
         learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
         hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
@@ -460,6 +373,158 @@ def torch_regressor_train():
         set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
         pass
 
-    ui_tch.pushButton_train.clicked.connect(train)
+    def tune_params_reg():
+        start_time = datetime.datetime.now()
+
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = str_to_interval(ui_tch.lineEdit_tune_lr.text())
+        dropout_rate = str_to_interval(ui_tch.lineEdit_tune_dropout.text())
+        weight_decay = str_to_interval(ui_tch.lineEdit_tune_decay.text())
+        regularization = ui_tch.doubleSpinBox_choose_reagular.value()
+        hidden_units = str_to_interval(ui_tch.lineEdit_tune_layers.text())
+        layers_num = ui_tch.spinBox_layers_num.value()
+        patience = ui_tch.spinBox_stop_patience.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+            activation_function = nn.Sigmoid()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+            activation_function = nn.Tanh()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'MSE':
+            loss_function = nn.MSELoss()
+        elif ui_tch.comboBox_loss.currentText() == 'MAE':
+            loss_function = nn.L1Loss()
+        elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss()
+
+        early_stopping = False
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+
+        def objective(trial):
+            print("Trial number:", trial.number)
+            op_learning_rate = trial.suggest_float('learning_rate', learning_rate[0], learning_rate[1], log=True)
+            op_num_hidden_units = [trial.suggest_int(f'num_hidden_units_layer{i}',
+                                                     hidden_units[0], hidden_units[1]) for i in range(1, layers_num)]
+            op_dropout_rate = trial.suggest_float('dropout_rate', dropout_rate[0], dropout_rate[1], log=True)
+            op_weight_decay = trial.suggest_float('weight_decay', weight_decay[0], weight_decay[1], log=True)
+            op_regularization = trial.suggest_float('regularization', regularization, regularization + 0.1, log=True)
+
+            pipeline = Pipeline([
+                ('features', FeatureUnion([
+                    ('scaler', StandardScaler())
+                ])),
+                ('classifier', PyTorchRegressor(Model, input_dim, output_dim, op_num_hidden_units,
+                                                 op_dropout_rate, activation_function,
+                                                 loss_function, optimizer, op_learning_rate, op_weight_decay,
+                                                 epochs, op_regularization, early_stopping, patience,
+                                                 batch_size=20))
+            ])
+
+            pipeline.fit(x_train, y_train)
+            y_pred = pipeline.predict(x_test)
+            r_squared = r2_score(y_test, y_pred)
+            print('Коэффициент детерминации (R²):', r_squared)
+            mse = round(mean_squared_error(y_test, y_pred), 5)
+            print('MSE: ', mse)
+            return r_squared
+
+        num_trials = ui_tch.spinBox_trials.value()
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+        study = optuna.create_study(direction="maximize",
+                                    pruner=optuna.pruners.MedianPruner(
+                                        n_startup_trials=2, n_warmup_steps=20, interval_steps=1
+                                    ), sampler=optuna.samplers.RandomSampler(seed=10))
+        study.optimize(objective, n_trials=num_trials)
+
+        print("Number of finished trials:", len(study.trials))
+        print("Best trial:")
+        trial = study.best_trial
+
+        print("Value: ", trial.value)
+        print("Params: ")
+        for key, value in trial.params.items():
+            print(f"    {key}: {value}")
+
+        best_learning_rate = trial.params['learning_rate']
+        best_num_hidden_units = [trial.params[f'num_hidden_units_layer{i}'] for i in range(1, layers_num)]
+        best_dropout_rate = trial.params['dropout_rate']
+        best_weight_decay = trial.params['weight_decay']
+        best_regularization = trial.params['regularization']
+
+        epochs = ui_tch.spinBox_epochs.value()
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+            activation_function = nn.Sigmoid()
+        elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+            activation_function = nn.Tanh()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'MSE':
+            loss_function = nn.MSELoss()
+        elif ui_tch.comboBox_loss.currentText() == 'MAE':
+            loss_function = nn.L1Loss()
+        elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss()
+
+        early_stopping = False
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+
+        pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+            ('classifier', PyTorchRegressor(Model, input_dim, output_dim, best_num_hidden_units,
+                                             best_dropout_rate, activation_function,
+                                             loss_function, optimizer, best_learning_rate, best_weight_decay,
+                                             epochs, best_regularization, early_stopping, patience,
+                                            batch_size=20))
+        ])
+
+        pipeline.fit(x_train, y_train)
+        y_pred = pipeline.predict(x_test)
+
+        r_squared = r2_score(y_test, y_pred)
+        print('Коэффициент детерминации (R²):', r_squared)
+        mse = round(mean_squared_error(y_test, y_pred), 5)
+        print('MSE: ', mse)
+
+        end_time = datetime.datetime.now() - start_time
+        print(end_time)
+
+        if ui_tch.checkBox_save_model.isChecked():
+            text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
+                         + str(end_time) + '\nlearning_rate: ' + str(best_learning_rate) + '\nhidden units: ' + str(
+                best_num_hidden_units) \
+                         + '\nweight decay: ' + str(best_weight_decay) + '\ndropout rate: ' + str(best_dropout_rate) + \
+                         '\nregularization: ' + str(best_regularization) + '\n'
+            torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+            print('Model saved')
+
+    def choose():
+        if ui_tch.checkBox_choose_param.isChecked():
+            train_reg()
+
+        if ui_tch.checkBox_tune_param.isChecked():
+            tune_params_reg()
+
+    ui_tch.pushButton_train.clicked.connect(choose)
     ui_tch.pushButton_lineup.clicked.connect(torch_regressor_lineup)
     TorchRegressor.exec()
