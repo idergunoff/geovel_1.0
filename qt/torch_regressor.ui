@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>769</width>
-    <height>406</height>
+    <width>783</width>
+    <height>461</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,9 +16,9 @@
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
-     <x>50</x>
+     <x>14</x>
      <y>10</y>
-     <width>325</width>
+     <width>371</width>
      <height>219</height>
     </rect>
    </property>
@@ -166,9 +166,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>250</y>
-     <width>321</width>
-     <height>141</height>
+     <y>240</y>
+     <width>341</width>
+     <height>181</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout_5">
@@ -298,62 +298,22 @@
   <widget class="QWidget" name="layoutWidget_3">
    <property name="geometry">
     <rect>
-     <x>580</x>
-     <y>270</y>
-     <width>171</width>
-     <height>116</height>
+     <x>570</x>
+     <y>240</y>
+     <width>201</width>
+     <height>211</height>
     </rect>
    </property>
-   <layout class="QGridLayout" name="gridLayout_7">
-    <item row="1" column="0">
-     <widget class="QPushButton" name="pushButton_lineup">
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(252, 204, 165);</string>
-      </property>
-      <property name="text">
-       <string>ADD TO LINEUP</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QCheckBox" name="checkBox_save_model">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="text">
-       <string>save</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0" colspan="2">
-     <widget class="QPushButton" name="pushButton_train">
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(252, 204, 165);</string>
-      </property>
-      <property name="text">
-       <string>TRAIN</string>
-      </property>
-     </widget>
-    </item>
+   <layout class="QFormLayout" name="formLayout_2">
     <item row="0" column="0" colspan="2">
      <widget class="QGroupBox" name="groupBox_9">
       <property name="toolTip">
        <string>Cross Validate by Well</string>
       </property>
       <property name="title">
-       <string>Cross Validate</string>
+       <string>Cross validate</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="pushButton_cross_val">
-         <property name="toolTip">
-          <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
-         </property>
-         <property name="text">
-          <string>CV</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QSpinBox" name="spinBox_cross_val">
          <property name="toolTip">
@@ -367,7 +327,94 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="pushButton_cross_val">
+         <property name="toolTip">
+          <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
+         </property>
+         <property name="text">
+          <string>CV</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_11">
+         <property name="title">
+          <string>PCA</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_pca_3">
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_pca_3">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_pca_mle_3">
+            <property name="text">
+             <string>mle</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_14">
+         <property name="title">
+          <string>Over Sampling</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_31">
+          <item row="1" column="0">
+           <layout class="QFormLayout" name="formLayout_3">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_adasyn">
+              <property name="text">
+               <string>ADASYN</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="checkBox_smote">
+              <property name="text">
+               <string>SMOTE</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="pushButton_train">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(252, 204, 165);</string>
+      </property>
+      <property name="text">
+       <string>TRAIN</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="pushButton_lineup">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(252, 204, 165);</string>
+      </property>
+      <property name="text">
+       <string>ADD TO LINEUP</string>
+      </property>
      </widget>
     </item>
    </layout>
@@ -375,23 +422,13 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>360</x>
-     <y>290</y>
-     <width>201</width>
-     <height>91</height>
+     <x>370</x>
+     <y>240</y>
+     <width>191</width>
+     <height>171</height>
     </rect>
    </property>
-   <layout class="QGridLayout" name="gridLayout_2">
-    <item row="1" column="0">
-     <widget class="QCheckBox" name="checkBox_early_stop">
-      <property name="toolTip">
-       <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
-      </property>
-      <property name="text">
-       <string>Early stopping</string>
-      </property>
-     </widget>
-    </item>
+   <layout class="QFormLayout" name="formLayout">
     <item row="0" column="0" colspan="2">
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="0">
@@ -417,7 +454,61 @@
       </item>
      </layout>
     </item>
-    <item row="1" column="1">
+    <item row="1" column="0" colspan="2">
+     <widget class="QGroupBox" name="groupBox_17">
+      <property name="title">
+       <string>PreProcess</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_36">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_30">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="checkBox_stdscaler">
+           <property name="text">
+            <string>StandardScaler</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="checkBox_robscaler">
+           <property name="text">
+            <string>RobustScaler</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QCheckBox" name="checkBox_mnmxscaler">
+           <property name="text">
+            <string>MinMaxScaler</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="checkBox_mxabsscaler">
+           <property name="text">
+            <string>MaxAbsScaler</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QCheckBox" name="checkBox_early_stop">
+      <property name="toolTip">
+       <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
+      </property>
+      <property name="text">
+       <string>Early stopping</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
      <widget class="QSpinBox" name="spinBox_stop_patience">
       <property name="value">
        <number>20</number>
@@ -429,9 +520,9 @@
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
     <rect>
-     <x>400</x>
+     <x>390</x>
      <y>10</y>
-     <width>321</width>
+     <width>371</width>
      <height>219</height>
     </rect>
    </property>
@@ -581,6 +672,22 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_save_model">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>510</x>
+     <y>420</y>
+     <width>51</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>save</string>
+   </property>
   </widget>
  </widget>
  <resources/>

@@ -1160,39 +1160,6 @@ class PyTorchClassifier:
         mark.extend([labels_dict[m] for m in y_pred if m in labels_dict])
         return accuracy_score(y, mark)
 
-    #
-    # def calc_probability(self, X):
-    #     mark_pred = []
-    #     X = torch.from_numpy(X).float()
-    #
-    #     self.model.eval()
-    #     with torch.no_grad():
-    #         pred_batch = self.model(X)
-    #         mark_pred.extend([pred.numpy() for pred in pred_batch])
-    #     mark = [item for m in mark_pred for item in m]
-    #     return mark
-    #
-    # def metrics(self, X_val, y_val, opt_threshold=0.5):
-    #     all_targets = []
-    #     all_predictions = []
-    #     predictions = []
-    #     X = torch.from_numpy(X_val).float()
-    #     self.model.eval()
-    #     with torch.no_grad():
-    #         val_dl = DataLoader(TensorDataset(X, y_val), batch_size=20, shuffle=False)
-    #         for xb, yb in val_dl:
-    #             pred_batch = self.model(xb)
-    #             all_targets.extend([y.numpy() for y in yb])
-    #             all_predictions.extend([pred.numpy() for pred in pred_batch])
-    #             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
-    #     all_predictions = [1 if p >= opt_threshold else 0 for p in all_predictions]
-    #     accuracy = accuracy_score(all_targets, all_predictions)
-    #     precision = precision_score(all_targets, all_predictions)
-    #     recall = recall_score(all_targets, all_predictions)
-    #     f1 = f1_score(all_targets, all_predictions)
-    #     return accuracy, precision, recall, f1
-
-
 class PyTorchTuneClassifier:
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
@@ -1340,6 +1307,44 @@ def str_to_interval(string):
     result = [float(part.replace(",", ".")) for part in parts]
     return result
 
+def add_features(ui_tch, text_model):
+    pipe_steps = []
+    text_scaler = ''
+    if ui_tch.checkBox_stdscaler.isChecked():
+        std_scaler = StandardScaler()
+        pipe_steps.append(('std_scaler', std_scaler))
+        text_scaler += '\nStandardScaler'
+    if ui_tch.checkBox_robscaler.isChecked():
+        robust_scaler = RobustScaler()
+        pipe_steps.append(('robust_scaler', robust_scaler))
+        text_scaler += '\nRobustScaler'
+    if ui_tch.checkBox_mnmxscaler.isChecked():
+        minmax_scaler = MinMaxScaler()
+        pipe_steps.append(('minmax_scaler', minmax_scaler))
+        text_scaler += '\nMinMaxScaler'
+    if ui_tch.checkBox_mxabsscaler.isChecked():
+        maxabs_scaler = MaxAbsScaler()
+        pipe_steps.append(('maxabs_scaler', maxabs_scaler))
+        text_scaler += '\nMaxAbsScaler'
+
+    over_sampling, text_over_sample = 'none', ''
+    if ui_tch.checkBox_smote.isChecked():
+        over_sampling, text_over_sample = 'smote', '\nSMOTE'
+    if ui_tch.checkBox_adasyn.isChecked():
+        over_sampling, text_over_sample = 'adasyn', '\nADASYN'
+
+    if ui_tch.checkBox_pca.isChecked():
+        n_comp = ui_tch.spinBox_pca.value()
+        pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
+        pipe_steps.append(('pca', pca))
+    text_pca = f'\nPCA: n_components={n_comp}' if ui_tch.checkBox_pca.isChecked() else ''
+
+    text_model += text_scaler
+    text_model += text_over_sample
+    text_model += text_pca
+
+    return pipe_steps, text_model
+
 def torch_classifier_train():
     TorchClassifier = QtWidgets.QDialog()
     ui_tch = Ui_TorchClassifierForm()
@@ -1360,6 +1365,8 @@ def torch_classifier_train():
     y = y_train.astype(np.float64)
     X_val = X_test.values
     y_val = torch.from_numpy(y_test.values).float()
+
+    model_name = 'torch_NN_cls'
 
     def torch_classifier_lineup():
         input_dim = X_train.shape[1]
@@ -1400,18 +1407,20 @@ def torch_classifier_train():
         if ui_tch.checkBox_threshold.isChecked():
             threshold = True
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', FeatureUnion(feature_steps)),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                                              dropout_rate, activation_function,
                                              loss_function, optimizer, learning_rate, weight_decay,
                                              epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
         ])
-
-        model_name = 'torch_NN_cls'
-        text_model = model_name + ' StandardScaler'
 
         except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
         new_lineup = LineupTrain(
@@ -1472,10 +1481,15 @@ def torch_classifier_train():
         if ui_tch.checkBox_threshold.isChecked():
             threshold = True
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', FeatureUnion(feature_steps)),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                                              dropout_rate, activation_function,
                                              loss_function, optimizer, learning_rate, weight_decay,
@@ -1498,12 +1512,12 @@ def torch_classifier_train():
         print(end_time)
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                          + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
                 hidden_units) \
                          + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                          '\nregularization: ' + str(regular)
-            torch_save_classifier(pipeline, accuracy, list_param, text_model)
+            torch_save_classifier(pipeline, accuracy, list_param, text_model_final)
             print('Model saved')
 
     def tune_params():
@@ -1553,10 +1567,15 @@ def torch_classifier_train():
             op_weight_decay = trial.suggest_float('weight_decay', weight_decay[0], weight_decay[1], log=True)
             op_regularization = trial.suggest_float('regularization', regularization, regularization + 0.1, log=True)
 
+            text_model = model_name + ''
+            pipe_steps, text_model = add_features(ui_tch, text_model)
+
+            feature_steps = {}
+            for i, step in enumerate(pipe_steps):
+                feature_steps[f"step_{i}"] = step
+
             pipeline = Pipeline([
-                ('features', FeatureUnion([
-                    ('scaler', StandardScaler())
-                ])),
+                ('features', FeatureUnion(feature_steps)),
                 ('classifier', PyTorchClassifier(Model, input_dim, output_dim, op_num_hidden_units,
                                                  op_dropout_rate, activation_function,
                                                  loss_function, optimizer, op_learning_rate, op_weight_decay,
@@ -1620,10 +1639,15 @@ def torch_classifier_train():
         if ui_tch.checkBox_early_stop.isChecked():
             early_stopping = True
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', FeatureUnion(feature_steps)),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, best_num_hidden_units,
                                              best_dropout_rate, activation_function,
                                              loss_function, optimizer, best_learning_rate, best_weight_decay,
@@ -1641,12 +1665,12 @@ def torch_classifier_train():
         print(end_time)
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
                          + str(end_time) + '\nlearning_rate: ' + str(best_learning_rate) + '\nhidden units: ' + str(
                 best_num_hidden_units) \
                          + '\nweight decay: ' + str(best_weight_decay) + '\ndropout rate: ' + str(best_dropout_rate) + \
                          '\nregularization: ' + str(best_regularization)
-            torch_save_classifier(pipeline, accuracy, list_param, text_model)
+            torch_save_classifier(pipeline, accuracy, list_param, text_model_final)
             print('Model saved')
 
     def choose():

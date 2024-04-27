@@ -193,6 +193,46 @@ def str_to_interval(string):
     result = [float(part.replace(",", ".")) for part in parts]
     return result
 
+
+def add_features(ui_tch, text_model):
+    pipe_steps = []
+    text_scaler = ''
+    if ui_tch.checkBox_stdscaler.isChecked():
+        std_scaler = StandardScaler()
+        pipe_steps.append(('std_scaler', std_scaler))
+        text_scaler += '\nStandardScaler'
+    if ui_tch.checkBox_robscaler.isChecked():
+        robust_scaler = RobustScaler()
+        pipe_steps.append(('robust_scaler', robust_scaler))
+        text_scaler += '\nRobustScaler'
+    if ui_tch.checkBox_mnmxscaler.isChecked():
+        minmax_scaler = MinMaxScaler()
+        pipe_steps.append(('minmax_scaler', minmax_scaler))
+        text_scaler += '\nMinMaxScaler'
+    if ui_tch.checkBox_mxabsscaler.isChecked():
+        maxabs_scaler = MaxAbsScaler()
+        pipe_steps.append(('maxabs_scaler', maxabs_scaler))
+        text_scaler += '\nMaxAbsScaler'
+
+    over_sampling, text_over_sample = 'none', ''
+    if ui_tch.checkBox_smote.isChecked():
+        over_sampling, text_over_sample = 'smote', '\nSMOTE'
+    if ui_tch.checkBox_adasyn.isChecked():
+        over_sampling, text_over_sample = 'adasyn', '\nADASYN'
+
+    if ui_tch.checkBox_pca.isChecked():
+        n_comp = ui_tch.spinBox_pca.value()
+        pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
+        pipe_steps.append(('pca', pca))
+    text_pca = f'\nPCA: n_components={n_comp}' if ui_tch.checkBox_pca.isChecked() else ''
+
+    text_model += text_scaler
+    text_model += text_over_sample
+    text_model += text_pca
+
+    return pipe_steps, text_model
+
+
 def torch_regressor_train():
     TorchRegressor = QtWidgets.QDialog()
     ui_tch = Ui_TorchNNRegressor()
@@ -225,6 +265,8 @@ def torch_regressor_train():
     input_dim = x_train.shape[1]
     output_dim = 1
 
+    model_name = 'torch_NN_reg'
+
     def train_reg():
         epochs = ui_tch.spinBox_epochs.value()
         learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
@@ -256,10 +298,15 @@ def torch_regressor_train():
             early_stopping = True
             patience = ui_tch.spinBox_stop_patience.value()
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline(
-            [('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            [('features', FeatureUnion(feature_steps)),
              ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
                                             dropout_rate, activation_function,
                                             loss_function, optimizer, learning_rate, weight_decay,
@@ -301,12 +348,12 @@ def torch_regressor_train():
         fig.show()
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
                          + str(train_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
                 hidden_units) \
                          + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                          '\nregularization: ' + str(regular) + '\n'
-            torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+            torch_save_regressor(pipeline, r_squared, list_param_name, text_model_final)
             print('Model saved')
 
     def torch_regressor_lineup():
@@ -340,18 +387,20 @@ def torch_regressor_train():
             early_stopping = True
             patience = ui_tch.spinBox_stop_patience.value()
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline(
-            [('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            [('features', FeatureUnion(feature_steps)),
              ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
                                             dropout_rate, activation_function,
                                             loss_function, optimizer, learning_rate, weight_decay,
                                             epochs, regular, early_stopping, patience, batch_size=20))
              ])
-
-        model_name = 'torch_NN_reg'
-        text_model = model_name + ' StandardScaler'
 
         except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
 
@@ -419,10 +468,15 @@ def torch_regressor_train():
             op_weight_decay = trial.suggest_float('weight_decay', weight_decay[0], weight_decay[1], log=True)
             op_regularization = trial.suggest_float('regularization', regularization, regularization + 0.1, log=True)
 
+            text_model = model_name + ''
+            pipe_steps, text_model = add_features(ui_tch, text_model)
+
+            feature_steps = {}
+            for i, step in enumerate(pipe_steps):
+                feature_steps[f"step_{i}"] = step
+
             pipeline = Pipeline([
-                ('features', FeatureUnion([
-                    ('scaler', StandardScaler())
-                ])),
+                ('features', FeatureUnion(feature_steps)),
                 ('classifier', PyTorchRegressor(Model, input_dim, output_dim, op_num_hidden_units,
                                                  op_dropout_rate, activation_function,
                                                  loss_function, optimizer, op_learning_rate, op_weight_decay,
@@ -487,10 +541,15 @@ def torch_regressor_train():
         if ui_tch.checkBox_early_stop.isChecked():
             early_stopping = True
 
+        text_model = model_name + ''
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+
+        feature_steps = {}
+        for i, step in enumerate(pipe_steps):
+            feature_steps[f"step_{i}"] = step
+
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', FeatureUnion(feature_steps)),
             ('classifier', PyTorchRegressor(Model, input_dim, output_dim, best_num_hidden_units,
                                              best_dropout_rate, activation_function,
                                              loss_function, optimizer, best_learning_rate, best_weight_decay,
@@ -510,12 +569,12 @@ def torch_regressor_train():
         print(end_time)
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model = '*** TORCH NN *** \n' + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \
                          + str(end_time) + '\nlearning_rate: ' + str(best_learning_rate) + '\nhidden units: ' + str(
                 best_num_hidden_units) \
                          + '\nweight decay: ' + str(best_weight_decay) + '\ndropout rate: ' + str(best_dropout_rate) + \
                          '\nregularization: ' + str(best_regularization) + '\n'
-            torch_save_regressor(pipeline, r_squared, list_param_name, text_model)
+            torch_save_regressor(pipeline, r_squared, list_param_name, text_model_final)
             print('Model saved')
 
     def choose():
