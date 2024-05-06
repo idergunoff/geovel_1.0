@@ -300,13 +300,12 @@ def torch_regressor_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
-
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(x_train[:100])
+        input_dim = X_train_transformed.shape[1]
 
         pipeline = Pipeline(
-            [('features', FeatureUnion(feature_steps)),
+            [('features', feature_union),
              ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
                                             dropout_rate, activation_function,
                                             loss_function, optimizer, learning_rate, weight_decay,
@@ -389,13 +388,12 @@ def torch_regressor_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
-
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(x_train[:100])
+        input_dim = X_train_transformed.shape[1]
 
         pipeline = Pipeline(
-            [('features', FeatureUnion(feature_steps)),
+            [('features', feature_union),
              ('regressor', PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
                                             dropout_rate, activation_function,
                                             loss_function, optimizer, learning_rate, weight_decay,
@@ -470,13 +468,12 @@ def torch_regressor_train():
 
             text_model = model_name + ''
             pipe_steps, text_model = add_features(ui_tch, text_model)
-
-            feature_steps = {}
-            for i, step in enumerate(pipe_steps):
-                feature_steps[f"step_{i}"] = step
+            feature_union = FeatureUnion(pipe_steps)
+            X_train_transformed = feature_union.fit_transform(x_train[:100])
+            input_dim = X_train_transformed.shape[1]
 
             pipeline = Pipeline([
-                ('features', FeatureUnion(feature_steps)),
+                ('features', feature_union),
                 ('classifier', PyTorchRegressor(Model, input_dim, output_dim, op_num_hidden_units,
                                                  op_dropout_rate, activation_function,
                                                  loss_function, optimizer, op_learning_rate, op_weight_decay,
@@ -543,13 +540,12 @@ def torch_regressor_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
-
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(x_train[:100])
+        input_dim = X_train_transformed.shape[1]
 
         pipeline = Pipeline([
-            ('features', FeatureUnion(feature_steps)),
+            ('features', feature_union),
             ('classifier', PyTorchRegressor(Model, input_dim, output_dim, best_num_hidden_units,
                                              best_dropout_rate, activation_function,
                                              loss_function, optimizer, best_learning_rate, best_weight_decay,

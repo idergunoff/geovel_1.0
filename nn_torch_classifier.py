@@ -1451,16 +1451,6 @@ def final_model_build(ui_tch, input_dim, output_dim, labels_dict):
                                           dropout_rate, activation_function,
                                           loss_function, optimizer, learning_rate, weight_decay,
                                           epochs, regular, early_stopping, patience, labels_dict, batch_size=20)
-
-    # pipeline = Pipeline([
-    #     ('features', FeatureUnion([
-    #         ('scaler', StandardScaler())
-    #     ])),
-    #     ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
-    #                                      dropout_rate, activation_function,
-    #                                      loss_function, optimizer, learning_rate, weight_decay,
-    #                                      epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
-    # ])
     return final_model, text_model
 
 
@@ -1529,13 +1519,12 @@ def torch_classifier_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
-
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(X[:100])
+        input_dim = X_train_transformed.shape[1]
 
         pipeline = Pipeline([
-            ('features', FeatureUnion(feature_steps)),
+            ('features', feature_union),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                                              dropout_rate, activation_function,
                                              loss_function, optimizer, learning_rate, weight_decay,
@@ -1605,22 +1594,16 @@ def torch_classifier_train():
         pipe_steps, text_model = add_features(ui_tch, text_model)
         print('pipe_steps ', pipe_steps)
 
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
-        print('feature_steps ', feature_steps)
-
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(X[:100])
+        input_dim = X_train_transformed.shape[1]
         pipeline = Pipeline([
-            ('features', FeatureUnion(pipe_steps)),
+            ('features', feature_union),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                                              dropout_rate, activation_function,
                                              loss_function, optimizer, learning_rate, weight_decay,
                                              epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
         ])
-
-        classifier = pipeline.named_steps['classifier']
-        print('classifier ', classifier)
-        print('features, ', pipeline.named_steps['features'])
 
         start_time = datetime.datetime.now()
         pipeline.fit(X, y)
@@ -1695,15 +1678,12 @@ def torch_classifier_train():
 
             text_model = model_name + ''
             pipe_steps, text_model = add_features(ui_tch, text_model)
-
-            feature_steps = {}
-            for i, step in enumerate(pipe_steps):
-                feature_steps[f"step_{i}"] = step
+            feature_union = FeatureUnion(pipe_steps)
+            X_train_transformed = feature_union.fit_transform(X[:100])
+            input_dim = X_train_transformed.shape[1]
 
             pipeline = Pipeline([
-                ('features', FeatureUnion([
-                    ('scaler', StandardScaler())
-                ])),
+                ('features', feature_union),
                 ('classifier', PyTorchClassifier(Model, input_dim, output_dim, op_num_hidden_units,
                                                  op_dropout_rate, activation_function,
                                                  loss_function, optimizer, op_learning_rate, op_weight_decay,
@@ -1769,15 +1749,11 @@ def torch_classifier_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
-
-        feature_steps = {}
-        for i, step in enumerate(pipe_steps):
-            feature_steps[f"step_{i}"] = step
-
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(X[:100])
+        input_dim = X_train_transformed.shape[1]
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', feature_union),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, best_num_hidden_units,
                                              best_dropout_rate, activation_function,
                                              loss_function, optimizer, best_learning_rate, best_weight_decay,
@@ -1860,10 +1836,13 @@ def torch_classifier_train():
             model_name = 'STACK'
 
         text_model = model_name + text_model
+        pipe_steps, text_model = add_features(ui_tch, text_model)
+        feature_union = FeatureUnion(pipe_steps)
+        X_train_transformed = feature_union.fit_transform(X[:100])
+        input_dim = X_train_transformed.shape[1]
+
         pipeline = Pipeline([
-            ('features', FeatureUnion([
-                ('scaler', StandardScaler())
-            ])),
+            ('features', feature_union),
             ('classifier', model_class)])
 
         start_time = datetime.datetime.now()
