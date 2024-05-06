@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>630</width>
-    <height>483</height>
+    <height>502</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -310,141 +310,6 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
-    <layout class="QGridLayout" name="gridLayout_5">
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_11">
-       <property name="toolTip">
-        <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
-       </property>
-       <property name="text">
-        <string>epochs</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="spinBox_epochs">
-       <property name="toolTip">
-        <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
-       </property>
-       <property name="maximum">
-        <number>10000</number>
-       </property>
-       <property name="value">
-        <number>100</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_12">
-       <property name="toolTip">
-        <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
-&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
-&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
-&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
-       </property>
-       <property name="text">
-        <string>optimizer</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="comboBox_optimizer">
-       <property name="toolTip">
-        <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
-&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
-&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
-&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>Adam</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>SGD</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>LBFGS</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_13">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
-       </property>
-       <property name="text">
-        <string>loss function</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QComboBox" name="comboBox_loss">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>BCELoss</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>BCEWithLogitsLoss</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>CrossEntropy</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_17">
-       <property name="toolTip">
-        <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
-&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
-       </property>
-       <property name="text">
-        <string>activation func</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QComboBox" name="comboBox_activation_func">
-       <property name="toolTip">
-        <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
-&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>ReLU</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Sigmoid</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Tanh</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="1" column="1">
     <layout class="QGridLayout" name="gridLayout_6">
      <item row="5" column="0">
@@ -647,6 +512,189 @@
            <widget class="QCheckBox" name="checkBox_mxabsscaler">
             <property name="text">
              <string>MaxAbsScaler</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="3" column="1">
+        <widget class="QComboBox" name="comboBox_activation_func">
+         <property name="toolTip">
+          <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>ReLU</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Sigmoid</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Tanh</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="spinBox_epochs">
+         <property name="toolTip">
+          <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+         </property>
+         <property name="maximum">
+          <number>10000</number>
+         </property>
+         <property name="value">
+          <number>100</number>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="toolTip">
+          <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+         </property>
+         <property name="text">
+          <string>epochs</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
+         </property>
+         <property name="text">
+          <string>loss function</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="comboBox_loss">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>BCELoss</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>BCEWithLogitsLoss</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>CrossEntropy</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_17">
+         <property name="toolTip">
+          <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+         </property>
+         <property name="text">
+          <string>activation func</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="comboBox_optimizer">
+         <property name="toolTip">
+          <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Adam</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>SGD</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>LBFGS</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="toolTip">
+          <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+         </property>
+         <property name="text">
+          <string>optimizer</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="title">
+        <string>Ensemble</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="2">
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_stack_vote">
+            <property name="text">
+             <string>ON</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QRadioButton" name="radioButton_stacking">
+            <property name="text">
+             <string>Stacking</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QSpinBox" name="spinBox_models_num">
+            <property name="value">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="radioButton_voting">
+            <property name="text">
+             <string>Voting</string>
             </property>
            </widget>
           </item>

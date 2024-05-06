@@ -1,4 +1,5 @@
 import optuna
+from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import time
 import torch
@@ -1061,21 +1062,54 @@ def draw_results_graphs(loss, epochs):
     plt.show()
 
 
-class PyTorchClassifier:
+class PyTorchClassifier(BaseEstimator):
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
                             epochs, regular, early_stopping, patience, labels, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_units = hidden_units
+        self.dropout_rate = dropout_rate
+        self.activation_function = activation_function
         self.criterion = loss_function
+        self.weight_decay = weight_decay
         self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.epochs = epochs
+        self.learning_rate = learning_rate
         self.regular = regular
         self.early_stopping = early_stopping
         self.patience = patience
         self.labels = labels
         self.batch_size = batch_size
+
+    def get_params(self, deep=True):
+        return {
+            'model': self.model,
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+
+            'batch_size': self.batch_size,
+            'hidden_units': self.hidden_units,
+            'dropout_rate': self.dropout_rate,
+            'activation_function': self.activation_function,
+            'loss_function': self.criterion,
+            'optimizer': self.optimizer,
+            'learning_rate': self.learning_rate,
+            'weight_decay': self.weight_decay,
+            'epochs': self.epochs,
+            'regular': self.regular,
+            'early_stopping': self.early_stopping,
+            'patience': self.patience,
+            'labels': self.labels
+        }
+
+    def set_params(self, **params):
+        for parameter, value in params.items():
+            setattr(self, parameter, value)
+        return self
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
@@ -1160,21 +1194,54 @@ class PyTorchClassifier:
         mark.extend([labels_dict[m] for m in y_pred if m in labels_dict])
         return accuracy_score(y, mark)
 
-class PyTorchTuneClassifier:
+class PyTorchTuneClassifier(BaseEstimator):
     def __init__(self, model, input_dim, output_dim, hidden_units,
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
                             epochs, regular, early_stopping, patience, labels, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_units = hidden_units
+        self.dropout_rate = dropout_rate
+        self.activation_function = activation_function
         self.criterion = loss_function
+        self.weight_decay = weight_decay
         self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.epochs = epochs
+        self.learning_rate = learning_rate
         self.regular = regular
         self.early_stopping = early_stopping
         self.patience = patience
         self.labels = labels
         self.batch_size = batch_size
+
+    def get_params(self, deep=True):
+        return {
+            'model': self.model,
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+
+            'batch_size': self.batch_size,
+            'hidden_units': self.hidden_units,
+            'dropout_rate': self.dropout_rate,
+            'activation_function': self.activation_function,
+            'loss_function': self.criterion,
+            'optimizer': self.optimizer,
+            'learning_rate': self.learning_rate,
+            'weight_decay': self.weight_decay,
+            'epochs': self.epochs,
+            'regular': self.regular,
+            'early_stopping': self.early_stopping,
+            'patience': self.patience,
+            'labels': self.labels
+        }
+
+    def set_params(self, **params):
+        for parameter, value in params.items():
+            setattr(self, parameter, value)
+        return self
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
@@ -1345,6 +1412,59 @@ def add_features(ui_tch, text_model):
 
     return pipe_steps, text_model
 
+def final_model_build(ui_tch, input_dim, output_dim, labels_dict):
+    epochs = ui_tch.spinBox_epochs.value()
+    learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+    hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+    dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+    weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+    regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+    if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+        activation_function = nn.ReLU()
+    elif ui_tch.comboBox_activation_func.currentText() == 'Sigmoid':
+        activation_function = nn.Sigmoid()
+    elif ui_tch.comboBox_activation_func.currentText() == 'Tanh':
+        activation_function = nn.Tanh()
+
+    if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+        optimizer = torch.optim.Adam
+    elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+        optimizer = torch.optim.SGD
+
+    if ui_tch.comboBox_loss.currentText() == 'CrossEntropy':
+        loss_function = nn.CrossEntropyLoss()
+    elif ui_tch.comboBox_loss.currentText() == 'BCEWithLogitsLoss':
+        loss_function = nn.BCEWithLogitsLoss()
+    elif ui_tch.comboBox_loss.currentText() == 'BCELoss':
+        loss_function = nn.BCELoss()
+
+    early_stopping = False
+    patience = 0
+    if ui_tch.checkBox_early_stop.isChecked():
+        early_stopping = True
+
+    model_name = 'torch_NN_ENSEMBLE_META_MODEL'
+    text_model = model_name + ''
+
+    final_model = PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+                                          dropout_rate, activation_function,
+                                          loss_function, optimizer, learning_rate, weight_decay,
+                                          epochs, regular, early_stopping, patience, labels_dict, batch_size=20)
+
+    # pipeline = Pipeline([
+    #     ('features', FeatureUnion([
+    #         ('scaler', StandardScaler())
+    #     ])),
+    #     ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
+    #                                      dropout_rate, activation_function,
+    #                                      loss_function, optimizer, learning_rate, weight_decay,
+    #                                      epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
+    # ])
+    return final_model, text_model
+
+
+
 def torch_classifier_train():
     TorchClassifier = QtWidgets.QDialog()
     ui_tch = Ui_TorchClassifierForm()
@@ -1483,18 +1603,24 @@ def torch_classifier_train():
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
+        print('pipe_steps ', pipe_steps)
 
         feature_steps = {}
         for i, step in enumerate(pipe_steps):
             feature_steps[f"step_{i}"] = step
+        print('feature_steps ', feature_steps)
 
         pipeline = Pipeline([
-            ('features', FeatureUnion(feature_steps)),
+            ('features', FeatureUnion(pipe_steps)),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, hidden_units,
                                              dropout_rate, activation_function,
                                              loss_function, optimizer, learning_rate, weight_decay,
                                              epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
         ])
+
+        classifier = pipeline.named_steps['classifier']
+        print('classifier ', classifier)
+        print('features, ', pipeline.named_steps['features'])
 
         start_time = datetime.datetime.now()
         pipeline.fit(X, y)
@@ -1575,7 +1701,9 @@ def torch_classifier_train():
                 feature_steps[f"step_{i}"] = step
 
             pipeline = Pipeline([
-                ('features', FeatureUnion(feature_steps)),
+                ('features', FeatureUnion([
+                    ('scaler', StandardScaler())
+                ])),
                 ('classifier', PyTorchClassifier(Model, input_dim, output_dim, op_num_hidden_units,
                                                  op_dropout_rate, activation_function,
                                                  loss_function, optimizer, op_learning_rate, op_weight_decay,
@@ -1647,7 +1775,9 @@ def torch_classifier_train():
             feature_steps[f"step_{i}"] = step
 
         pipeline = Pipeline([
-            ('features', FeatureUnion(feature_steps)),
+            ('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
             ('classifier', PyTorchClassifier(Model, input_dim, output_dim, best_num_hidden_units,
                                              best_dropout_rate, activation_function,
                                              loss_function, optimizer, best_learning_rate, best_weight_decay,
@@ -1673,12 +1803,102 @@ def torch_classifier_train():
             torch_save_classifier(pipeline, accuracy, list_param, text_model_final)
             print('Model saved')
 
+    def train_stack_vote():
+        input_dim = X_train.shape[1]
+        output_dim = 1
+        # estimators -- base models
+        # final_model -- meta_model
+        # list_model -- names of models array
+
+        # ESTIMATORS
+        activation_func = [nn.ReLU(), nn.Sigmoid(), nn.Tanh()]
+        optimizer = [torch.optim.Adam, torch.optim.SGD]
+        loss_func = [torch.nn.BCEWithLogitsLoss(), torch.nn.CrossEntropyLoss(), torch.nn.BCELoss()]
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = str_to_interval(ui_tch.lineEdit_tune_lr.text())
+        dropout_rate = str_to_interval(ui_tch.lineEdit_tune_dropout.text())
+        weight_decay = str_to_interval(ui_tch.lineEdit_tune_decay.text())
+        regularization = ui_tch.doubleSpinBox_choose_reagular.value()
+        hidden_units = str_to_interval(ui_tch.lineEdit_tune_layers.text())
+        layers_num = ui_tch.spinBox_layers_num.value()
+        patience = ui_tch.spinBox_stop_patience.value()
+        early_stopping = False
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+
+        num_models = ui_tch.spinBox_models_num.value()
+        estimators, list_model = [], []
+        for i in range(num_models):
+            model = PyTorchClassifier(Model, input_dim, output_dim,
+                                      hidden_units=np.random.randint(hidden_units[0], hidden_units[1], layers_num),
+                                      dropout_rate=random.uniform(dropout_rate[0], dropout_rate[1]),
+                                      activation_function=activation_func[random.randint(0, len(activation_func) - 1)],
+                                      loss_function=loss_func[random.randint(0, len(loss_func) - 1)],
+                                      optimizer=optimizer[random.randint(0, len(optimizer) - 1)],
+                                      learning_rate=random.uniform(learning_rate[0], learning_rate[1]),
+                                      weight_decay=random.uniform(weight_decay[0], weight_decay[1]),
+                                      epochs=random.randint(49, epochs),
+                                      regular=random.uniform(0.000001, regularization),
+                                      early_stopping=early_stopping,
+                                      patience=patience,
+                                      labels=labels_dict,
+                                      batch_size=20)
+            X = X_train.values
+            model.fit(X, y)
+            estimators.append((f'model_{i}', model))
+            print(f'model_{i}')
+
+        final_model, final_text_model = final_model_build(ui_tch, input_dim, output_dim, labels_dict)
+        if ui_tch.radioButton_voting.isChecked():
+            # hard_voting = 'hard' if ui_cls.checkBox_voting_hard.isChecked() else 'soft'
+            model_class = VotingClassifier(estimators=estimators, voting='soft', n_jobs=-1)
+            text_model = f'**Voting**: -soft-\n({num_models} models)\n'
+            model_name = 'VOT'
+        elif ui_tch.radioButton_stacking.isChecked():
+            model_class = StackingClassifier(estimators=estimators, final_estimator=final_model, n_jobs=-1)
+            text_model = f'**Stacking**:\nFinal estimator: {final_text_model}\n + {num_models} Base models\n'
+            model_name = 'STACK'
+
+        text_model = model_name + text_model
+        pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('scaler', StandardScaler())
+            ])),
+            ('classifier', model_class)])
+
+        start_time = datetime.datetime.now()
+        print('Start time: ', start_time)
+
+        pipeline.fit(X, y)
+        y_mark = pipeline.predict(X_val)
+        mark = []
+        mark.extend([labels[m] for m in y_mark if m in labels])
+        y_res = pipeline.predict_proba(X_val)
+        y_prob = [i[0] for i in y_res]
+        accuracy = accuracy_score(y_val, mark)
+        print('Accuracy: ', accuracy)
+        draw_roc_curve(y_val, y_prob)
+
+        end_time = datetime.datetime.now() - start_time
+        print(end_time)
+
+        if ui_tch.checkBox_save_model.isChecked():
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(
+                round(accuracy, 3)) + '\nвремя обучения: ' \
+                               + str(end_time) + '\n'
+            torch_save_classifier(pipeline, accuracy, list_param, text_model_final)
+            print('Model saved')
+
+
     def choose():
         if ui_tch.checkBox_choose_param.isChecked():
             train()
 
-        if ui_tch.checkBox_tune_param.isChecked():
+        elif ui_tch.checkBox_tune_param.isChecked():
             tune_params()
+
+        elif ui_tch.checkBox_stack_vote.isChecked():
+            train_stack_vote()
 
     ui_tch.pushButton_lineup.clicked.connect(torch_classifier_lineup)
     ui_tch.pushButton_train.clicked.connect(choose)
