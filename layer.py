@@ -185,6 +185,7 @@ def add_param_in_new_formation(new_formation_id):
     layer_0, layer_1 = formation.layer_up.layer_line, formation.layer_down.layer_line
     signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
     layer_up, layer_down = json.loads(layer_0), json.loads(layer_1)
+    CRL_signal = calc_CRL_filter(signals)
     if len(signals) != len(layer_up) != len(layer_down):
         set_info(
             'ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в радарпограмме и в границах кровли/подошвы',
@@ -205,14 +206,16 @@ def add_param_in_new_formation(new_formation_id):
             pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
             pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
         T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
-            Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
-            Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
-            A_max_l, Vt_max_l, At_max_l, Pht_max_l, Wt_max_l, A_T_max_l, Vt_T_max_l, At_T_max_l, Pht_T_max_l, Wt_T_max_l, \
-            A_Sn_l, Vt_Sn_l, At_Sn_l, Pht_Sn_l, Wt_Sn_l, A_wmf_l, Vt_wmf_l, At_wmf_l, Pht_wmf_l, Wt_wmf_l, A_Qf_l, \
-            Vt_Qf_l, At_Qf_l, Pht_Qf_l, Wt_Qf_l, A_Sn_wmf_l, Vt_Sn_wmf_l, At_Sn_wmf_l, Pht_Sn_wmf_l, Wt_Sn_wmf_l, k_r_l = \
-            [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
-                [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
-                [], [], [], [], [], [], []
+        Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
+        Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
+        A_max_l, Vt_max_l, At_max_l, Pht_max_l, Wt_max_l, A_T_max_l, Vt_T_max_l, At_T_max_l, Pht_T_max_l, Wt_T_max_l, \
+        A_Sn_l, Vt_Sn_l, At_Sn_l, Pht_Sn_l, Wt_Sn_l, A_wmf_l, Vt_wmf_l, At_wmf_l, Pht_wmf_l, Wt_wmf_l, A_Qf_l, \
+        Vt_Qf_l, At_Qf_l, Pht_Qf_l, Wt_Qf_l, A_Sn_wmf_l, Vt_Sn_wmf_l, At_Sn_wmf_l, Pht_Sn_wmf_l, Wt_Sn_wmf_l, k_r_l, \
+        CRL_top_l, CRL_bottom_l, dCRL_l, CRL_sum_l, CRL_mean_l, CRL_max_l, CRL_T_max_l, CRL_Sn_l, CRL_wmf_l, \
+        CRL_Qf_l, CRL_Sn_wmf_l, CRL_skew_l, CRL_kurt_l, CRL_std_l, CRL_k_var_l = \
+        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
+        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
+        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
 
         list_param_1 = []
 
@@ -224,6 +227,7 @@ def add_param_in_new_formation(new_formation_id):
             Vt = np.imag(analytic_signal).tolist()
             Pht = np.angle(analytic_signal).tolist()
             Wt = np.diff(np.angle(analytic_signal)).tolist()
+            CRl_s = CRL_signal[i]
             nt = layer_up[i]
             nb = layer_down[i]
             T_top_l.append(layer_up[i] * 8)
@@ -300,6 +304,47 @@ def add_param_in_new_formation(new_formation_id):
             list_param_2.append(Pht_T_max_l[-1])
             Wt_T_max_l.append((Wt[nt:nb].index(max(Wt[nt:nb])) + nt) * 8)
             list_param_2.append(Wt_T_max_l[-1])
+
+            CRL_top_l.append(CRl_s[nt])
+            list_param_2.append(CRL_top_l[-1])
+            CRL_bottom_l.append(CRl_s[nb])
+            list_param_2.append(CRL_bottom_l[-1])
+            dCRL_l.append(CRl_s[nb] - CRl_s[nt])
+            list_param_2.append(dCRL_l[-1])
+            CRL_sum_l.append(float(np.sum(CRl_s[nt:nb])))
+            list_param_2.append(CRL_sum_l[-1])
+            CRL_mean_l.append(float(np.mean(CRl_s[nt:nb])))
+            list_param_2.append(CRL_mean_l[-1])
+            try:
+                CRL_max_l.append(max(CRl_s[nt:nb]))
+                CRL_T_max_l.append((CRl_s[nt:nb].tolist().index(max(CRl_s[nt:nb])) + nt) * 8)
+            except ValueError:
+                CRL_max_l.append(None)
+                CRL_T_max_l.append(None)
+
+            list_param_2.append(CRL_max_l[-1])
+            list_param_2.append(CRL_T_max_l[-1])
+
+            CRL_Sn, CRL_wmf, CRL_Qf, CRL_Sn_wmf = calc_fft_attributes(CRl_s[nt:nb])
+
+            CRL_Sn_l.append(CRL_Sn)
+            list_param_2.append(CRL_Sn_l[-1])
+            CRL_wmf_l.append(CRL_wmf)
+            list_param_2.append(CRL_wmf_l[-1])
+            CRL_Qf_l.append(CRL_Qf)
+            list_param_2.append(CRL_Qf_l[-1])
+            CRL_Sn_wmf_l.append(CRL_Sn_wmf)
+            list_param_2.append(CRL_Sn_wmf_l[-1])
+
+            CRL_skew_l.append(skew(CRl_s[nt:nb]))
+            list_param_2.append(CRL_skew_l[-1])
+            CRL_kurt_l.append(kurtosis(CRl_s[nt:nb]))
+            list_param_2.append(CRL_kurt_l[-1])
+            CRL_std_l.append(np.std(CRl_s[nt:nb]))
+            list_param_2.append(CRL_std_l[-1])
+            CRL_k_var_l.append(np.var(CRl_s[nt:nb]))
+            list_param_2.append(CRL_k_var_l[-1])
+
             A_Sn, A_wmf, A_Qf, A_Sn_wmf = calc_fft_attributes(signal[nt:nb])
             Vt_Sn, Vt_wmf, Vt_Qf, Vt_Sn_wmf = calc_fft_attributes(Vt[nt:nb])
             At_Sn, At_wmf, At_Qf, At_Sn_wmf = calc_fft_attributes(At[nt:nb])
@@ -432,6 +477,21 @@ def add_param_in_new_formation(new_formation_id):
                        'At_Sn_wmf': json.dumps(At_Sn_wmf_l),
                        'Pht_Sn_wmf': json.dumps(Pht_Sn_wmf_l),
                        'Wt_Sn_wmf': json.dumps(Wt_Sn_wmf_l),
+                       'CRL_top': json.dumps(CRL_top_l),
+                       'CRL_bottom': json.dumps(CRL_bottom_l),
+                       'dCRL': json.dumps(dCRL_l),
+                       'CRL_sum': json.dumps(CRL_sum_l),
+                       'CRL_mean': json.dumps(CRL_mean_l),
+                       'CRL_max': json.dumps(CRL_max_l),
+                       'CRL_T_max': json.dumps(CRL_T_max_l),
+                       'CRL_Sn': json.dumps(CRL_Sn_l),
+                       'CRL_wmf': json.dumps(CRL_wmf_l),
+                       'CRL_Qf': json.dumps(CRL_Qf_l),
+                       'CRL_Sn_wmf': json.dumps(CRL_Sn_wmf_l),
+                       'CRL_skew': json.dumps(CRL_skew_l),
+                       'CRL_kurt': json.dumps(CRL_kurt_l),
+                       'CRL_std': json.dumps(CRL_std_l),
+                       'CRL_k_var': json.dumps(CRL_k_var_l),
                        'k_r': json.dumps(k_r_l)}
 
         if grid_db:

@@ -13,7 +13,9 @@ list_param_geovel = [
     'width', 'top', 'land', 'speed', 'speed_cover', 'skew', 'kurt', 'std', 'k_var', 'A_max', 'Vt_max', 'At_max',
     'Pht_max', 'Wt_max', 'A_T_max', 'Vt_T_max', 'At_T_max', 'Pht_T_max', 'Wt_T_max', 'A_Sn', 'Vt_Sn', 'At_Sn',
     'Pht_Sn', 'Wt_Sn', 'A_wmf', 'Vt_wmf', 'At_wmf', 'Pht_wmf', 'Wt_wmf', 'A_Qf', 'Vt_Qf', 'At_Qf', 'Pht_Qf', 'Wt_Qf',
-    'A_Sn_wmf', 'Vt_Sn_wmf', 'At_Sn_wmf', 'Pht_Sn_wmf', 'Wt_Sn_wmf', 'k_r'
+    'A_Sn_wmf', 'Vt_Sn_wmf', 'At_Sn_wmf', 'Pht_Sn_wmf', 'Wt_Sn_wmf', 'CRL_top', 'CRL_bottom', 'dCRL', 'CRL_sum',
+    'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf', 'CRL_Qf', 'CRL_Sn_wmf', 'CRL_skew', 'CRL_kurt',
+    'CRL_std', 'CRL_k_var', 'k_r'
     ]
 
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
@@ -1156,6 +1158,10 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                     # Загрузка сигнала из профиля
                     locals()[str(markup.profile.id) + '_signal'] = json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+                if param.split('_')[1] == 'SigCRL':
+                    if not str(markup.profile.id) + '_CRL' in locals():
+                        locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
+                            session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
             elif param == 'CRL':
                 if not str(markup.profile.id) + '_CRL' in locals():
                     locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
@@ -1206,21 +1212,30 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                 elif param.startswith('distr'):
                     # Обработка параметра 'distr'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                    if atr == 'SigCRL':
+                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                    else:
+                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
                 elif param.startswith('sep'):
                     # Обработка параметра 'sep'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                    if atr == 'SigCRL':
+                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                    else:
+                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
                 elif param.startswith('mfcc'):
                     # Обработка параметра 'mfcc'
                     p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                    if atr == 'SigCRL':
+                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                    else:
+                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
                     mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
@@ -1268,7 +1283,11 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_signal' in locals():
                 locals()[str(curr_form.profile.id) + '_signal'] = json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0])
-        elif param.startswith('CRL') and not param.startswith('CRL_NF'):
+            if param.split('_')[1] == 'SigCRL':
+                if not str(curr_form.profile.id) + '_CRL' in locals():
+                    locals()[str(curr_form.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
+                        session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
+        elif param.startswith('CRL') and not param.startswith('CRL_NF') and param not in list_param_geovel:
             if not str(curr_form.profile.id) + '_CRL' in locals():
                 locals()[str(curr_form.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
@@ -1292,7 +1311,7 @@ def build_table_test(analisis='lda'):
                 for i_sig in range(len(sig_measure)):
                     if i_sig + 1 not in list_except_signal:
                         dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
-            elif param.startswith('CRL') and not param.startswith('CRL_NF'):
+            elif param.startswith('CRL') and not param.startswith('CRL_NF') and param not in list_param_geovel:
                 sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
                 for i_sig in range(len(sig_measure)):
                     if i_sig + 1 not in list_except_crl:
@@ -1304,19 +1323,28 @@ def build_table_test(analisis='lda'):
                         dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
             elif param.startswith('distr'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
+                if atr == 'SigCRL':
+                    sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
+                else:
+                    sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 distr = get_distribution(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
             elif param.startswith('sep'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
+                if atr == 'SigCRL':
+                    sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
+                else:
+                    sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 sep = get_mean_values(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
             elif param.startswith('mfcc'):
                 p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
+                if atr == 'SigCRL':
+                    sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
+                else:
+                    sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
                 mfcc = get_mfcc(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
@@ -1402,7 +1430,7 @@ def get_list_param_numerical(list_param, train_model):
             for i_sig in range(n_i):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
-        elif param.startswith('CRL'):
+        elif param.startswith('CRL') and not param in list_param_geovel:
             if train_model.except_crl:
                 list_except = parse_range_exception(train_model.except_crl)
                 list_except = [] if list_except == -1 else list_except
@@ -1439,7 +1467,7 @@ def get_list_param_numerical_for_train(list_param):
             for i_sig in range(n_i):
                 if i_sig + 1 not in list_except:
                     new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
-        elif param.startswith('CRL') and not param.startswith('CRL_NF'):
+        elif param.startswith('CRL') and not param.startswith('CRL_NF') and not param in list_param_geovel:
             if except_reg:
                 if except_reg.except_crl:
                     list_except = parse_range_exception(except_reg.except_crl)

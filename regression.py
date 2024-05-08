@@ -51,7 +51,6 @@ def update_list_reg():
     update_list_trained_models_regmod()
 
 
-
 def add_well_markup_reg():
     """Добавить новую обучающую скважину для обучения регрессионной модели"""
     analysis_id = get_regmod_id()
@@ -355,7 +354,8 @@ def add_param_sep_reg():
 
 
 def add_all_param_distr_reg():
-    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt']
+    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'distr_SigCRL',
+                  'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt', 'sep_SigCRL']
     count = ui.spinBox_count_distr_reg.value()
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
         if param.parameter.startswith('distr') or param.parameter.startswith('sep'):
@@ -393,7 +393,7 @@ def add_param_mfcc_reg():
 
 
 def add_all_param_mfcc_reg():
-    list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt']
+    list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt', 'mfcc_SigCRL']
     count = ui.spinBox_count_mfcc_reg.value()
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
         if param.parameter.startswith('mfcc'):

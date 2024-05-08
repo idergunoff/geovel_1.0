@@ -1037,8 +1037,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3681,6 +3681,11 @@ Therm</string>
                         <string>Wt</string>
                        </property>
                       </item>
+                      <item>
+                       <property name="text">
+                        <string>SigCRL</string>
+                       </property>
+                      </item>
                      </widget>
                     </item>
                     <item row="1" column="2">
@@ -3750,6 +3755,16 @@ Therm</string>
                       <item>
                        <property name="text">
                         <string>Wt</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>SigCRL</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string/>
                        </property>
                       </item>
                      </widget>
@@ -4021,6 +4036,11 @@ Therm</string>
                           <string>Wt</string>
                          </property>
                         </item>
+                        <item>
+                         <property name="text">
+                          <string>SigCRL</string>
+                         </property>
+                        </item>
                        </widget>
                       </item>
                       <item row="0" column="0">
@@ -4124,6 +4144,11 @@ Therm</string>
                         <item>
                          <property name="text">
                           <string>Wt</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>SigCRL</string>
                          </property>
                         </item>
                        </widget>

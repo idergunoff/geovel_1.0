@@ -309,6 +309,23 @@ class Formation(Base):
     Pht_Sn_wmf = Column(Text)
     Wt_Sn_wmf = Column(Text)
 
+    CRL_top = Column(Text)
+    CRL_bottom = Column(Text)
+    dCRL = Column(Text)
+    CRL_sum = Column(Text)
+    CRL_mean = Column(Text)
+    CRL_max = Column(Text)
+    CRL_T_max = Column(Text)
+    CRL_Sn = Column(Text)
+    CRL_wmf = Column(Text)
+    CRL_Qf = Column(Text)
+    CRL_Sn_wmf = Column(Text)
+
+    CRL_skew = Column(Text)
+    CRL_kurt = Column(Text)
+    CRL_std = Column(Text)
+    CRL_k_var = Column(Text)
+
     k_r = Column(Text)
 
     profile = relationship('Profile', back_populates='formations')
@@ -1026,3 +1043,5 @@ class GeochemTrainedModel(Base):
 
 
 Base.metadata.create_all(engine)
+
+

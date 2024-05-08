@@ -577,7 +577,7 @@ def add_param_sep_mlp():
 
 
 def add_all_param_distr_mlp():
-    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt']
+    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'distr_SigCRL', 'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt', 'sep_SigCRL']
     count = ui.spinBox_count_distr_mlp.value()
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith('distr') or param.parameter.startswith('sep'):
@@ -615,7 +615,7 @@ def add_param_mfcc_mlp():
 
 
 def add_all_param_mfcc_mlp():
-    list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt']
+    list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt', 'mfcc_SigCRL']
     count = ui.spinBox_count_mfcc_mlp.value()
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith('mfcc'):

@@ -887,6 +887,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
 def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param):
+    print(list_param)
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Сохранение модели',
