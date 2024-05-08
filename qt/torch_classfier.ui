@@ -312,48 +312,6 @@
    </item>
    <item row="1" column="1">
     <layout class="QGridLayout" name="gridLayout_6">
-     <item row="5" column="0">
-      <widget class="QComboBox" name="comboBox_threshold">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Accuracy&lt;/span&gt;: Найти индекс порога, максимизирующего точность (TPR + TNR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sensitivity&lt;/span&gt;: Найти индекс порога, максимизирующего чувствительность (TPR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specificity:&lt;/span&gt; Найти индекс порога, максимизирующего специфичность (TNR)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>accuracy</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>sensitivity</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>specificity</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QCheckBox" name="checkBox_early_stop">
-       <property name="toolTip">
-        <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
-       </property>
-       <property name="text">
-        <string>Early stopping</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QCheckBox" name="checkBox_threshold">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. &lt;/p&gt;&lt;p&gt;Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Threshold</string>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
@@ -379,7 +337,49 @@
        </item>
       </layout>
      </item>
+     <item row="5" column="0">
+      <widget class="QCheckBox" name="checkBox_threshold">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Этот параметр определяет порог, при котором прогнозы модели считаются положительными или отрицательными. &lt;/p&gt;&lt;p&gt;Например, если порог установлен на 0,5, то все прогнозы, превышающие 0,5, будут классифицированы как положительные, а остальные - как отрицательные.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Threshold</string>
+       </property>
+      </widget>
+     </item>
      <item row="3" column="0">
+      <widget class="QCheckBox" name="checkBox_early_stop">
+       <property name="toolTip">
+        <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
+       </property>
+       <property name="text">
+        <string>Early stopping</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QComboBox" name="comboBox_threshold">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Accuracy&lt;/span&gt;: Найти индекс порога, максимизирующего точность (TPR + TNR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Sensitivity&lt;/span&gt;: Найти индекс порога, максимизирующего чувствительность (TPR)&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Specificity:&lt;/span&gt; Найти индекс порога, максимизирующего специфичность (TNR)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>accuracy</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sensitivity</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>specificity</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="4" column="0">
       <widget class="QSpinBox" name="spinBox_stop_patience">
        <property name="maximum">
         <number>100</number>
@@ -389,7 +389,7 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <widget class="QGroupBox" name="groupBox_14">
        <property name="title">
         <string>Over Sampling</string>
@@ -699,6 +699,35 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item row="0" column="3">
+         <widget class="QGroupBox" name="groupBox_16">
+          <property name="title">
+           <string>Bagging</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_32">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_bagging">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinBox_bagging">
+             <property name="minimum">
+              <number>5</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="value">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </item>
        </layout>
       </widget>

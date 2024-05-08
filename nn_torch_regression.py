@@ -88,13 +88,45 @@ class PyTorchRegressor:
                             epochs, regular, early_stopping, patience, batch_size=20):
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_units = hidden_units
+        self.dropout_rate = dropout_rate
+        self.activation_function = activation_function
         self.criterion = loss_function
+        self.weight_decay = weight_decay
         self.optimizer = optimizer(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.epochs = epochs
+        self.learning_rate = learning_rate
         self.regular = regular
         self.early_stopping = early_stopping
         self.patience = patience
         self.batch_size = batch_size
+
+    def get_params(self, deep=True):
+        return {
+            'model': self.model,
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+
+            'batch_size': self.batch_size,
+            'hidden_units': self.hidden_units,
+            'dropout_rate': self.dropout_rate,
+            'activation_function': self.activation_function,
+            'loss_function': self.criterion,
+            'optimizer': self.optimizer,
+            'learning_rate': self.learning_rate,
+            'weight_decay': self.weight_decay,
+            'epochs': self.epochs,
+            'regular': self.regular,
+            'early_stopping': self.early_stopping,
+            'patience': self.patience
+        }
+
+    def set_params(self, **params):
+        for parameter, value in params.items():
+            setattr(self, parameter, value)
+        return self
 
     def fit(self, X_train, y_train):
         X_train = torch.from_numpy(X_train).float()
@@ -297,6 +329,18 @@ def torch_regressor_train():
         if ui_tch.checkBox_early_stop.isChecked():
             early_stopping = True
             patience = ui_tch.spinBox_stop_patience.value()
+
+        # if ui_tch.checkBox_smote.isChecked():
+        #     smote = SMOTE(random_state=0)
+        #     x_train, y_train = smote.fit_resample(x_train, y_train)
+        # if ui_tch.checkBox_adasyn.isChecked():
+        #     adasyn = ADASYN(random_state=0)
+        #     x_train, y_train = adasyn.fit_resample(x_train, y_train)
+
+        # Для применения SMOTE к данным регрессии, вам нужно решить, каким образом сгенерировать
+        # синтетические точки данных для целей регрессии.
+        # В регрессионной задаче нам нужно учитывать, что целевая переменная непрерывна,
+        # и сгенерированные данные также должны быть непрерывными.
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
@@ -573,12 +617,63 @@ def torch_regressor_train():
             torch_save_regressor(pipeline, r_squared, list_param_name, text_model_final)
             print('Model saved')
 
+    def reg_bagging():
+        input_dim = x_train.shape[1]
+        output_dim = 1
+
+        epochs = ui_tch.spinBox_epochs.value()
+        learning_rate = ui_tch.doubleSpinBox_choose_lr.value()
+        hidden_units = list(map(int, ui_tch.lineEdit_choose_layers.text().split()))
+        dropout_rate = ui_tch.doubleSpinBox_choose_dropout.value()
+        weight_decay = ui_tch.doubleSpinBox_choose_decay.value()
+        regular = ui_tch.doubleSpinBox_choose_reagular.value()
+
+        if ui_tch.comboBox_activation_func.currentText() == 'ReLU':
+            activation_function = nn.ReLU()
+
+        if ui_tch.comboBox_optimizer.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_tch.comboBox_optimizer.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_tch.comboBox_loss.currentText() == 'MSE':
+            loss_function = nn.MSELoss()
+        elif ui_tch.comboBox_loss.currentText() == 'MAE':
+            loss_function = nn.L1Loss()
+        elif ui_tch.comboBox_loss.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss()
+        elif ui_tch.comboBox_loss.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss()
+
+        early_stopping = False
+        patience = 0
+        if ui_tch.checkBox_early_stop.isChecked():
+            early_stopping = True
+            patience = ui_tch.spinBox_stop_patience.value()
+
+        num_estimators = ui_tch.spinBox_bagging.value()
+        base_model = PyTorchRegressor(Model, input_dim, output_dim, hidden_units,
+                                    dropout_rate, activation_function,
+                                    loss_function, optimizer, learning_rate, weight_decay,
+                                    epochs, regular, early_stopping, patience, batch_size=20)
+
+        base_model.fit(x_train, y_train)
+        print('base_regressor got fit')
+        meta_classifier = BaggingRegressor(base_estimator=base_model, n_estimators=num_estimators, n_jobs=-1)
+        print('meta_regressor created')
+        meta_classifier.fit(x_train, y_train)
+        score = meta_classifier.score(x_test, y_test)
+        print('r2: ', score)
+
     def choose():
         if ui_tch.checkBox_choose_param.isChecked():
             train_reg()
 
-        if ui_tch.checkBox_tune_param.isChecked():
+        elif ui_tch.checkBox_tune_param.isChecked():
             tune_params_reg()
+
+        # elif ui_tch.checkBox_bagging.isChecked():
+        #     reg_bagging()
 
     ui_tch.pushButton_train.clicked.connect(choose)
     ui_tch.pushButton_lineup.clicked.connect(torch_regressor_lineup)
