@@ -86,8 +86,8 @@ class PyTorchRegressor:
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
                             epochs, regular, early_stopping, patience, batch_size=20):
-        self.model = model(input_dim, output_dim, hidden_units,
-                           dropout_rate, activation_function)
+        # self.model = model(input_dim, output_dim, hidden_units, dropout_rate, activation_function)
+        self.model = Model(input_dim, output_dim, hidden_units, dropout_rate, activation_function)
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_units = hidden_units
@@ -246,20 +246,13 @@ def add_features(ui_tch, text_model):
         pipe_steps.append(('maxabs_scaler', maxabs_scaler))
         text_scaler += '\nMaxAbsScaler'
 
-    over_sampling, text_over_sample = 'none', ''
-    if ui_tch.checkBox_smote.isChecked():
-        over_sampling, text_over_sample = 'smote', '\nSMOTE'
-    if ui_tch.checkBox_adasyn.isChecked():
-        over_sampling, text_over_sample = 'adasyn', '\nADASYN'
-
-    if ui_tch.checkBox_pca.isChecked():
-        n_comp = ui_tch.spinBox_pca.value()
+    if ui_tch.checkBox_reg_pca.isChecked():
+        n_comp = ui_tch.spinBox_reg_pca.value()
         pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
         pipe_steps.append(('pca', pca))
-    text_pca = f'\nPCA: n_components={n_comp}' if ui_tch.checkBox_pca.isChecked() else ''
+    text_pca = f'\nPCA: n_components={n_comp}' if ui_tch.checkBox_reg_pca.isChecked() else ''
 
     text_model += text_scaler
-    text_model += text_over_sample
     text_model += text_pca
 
     return pipe_steps, text_model
@@ -330,17 +323,10 @@ def torch_regressor_train():
             early_stopping = True
             patience = ui_tch.spinBox_stop_patience.value()
 
-        # if ui_tch.checkBox_smote.isChecked():
-        #     smote = SMOTE(random_state=0)
-        #     x_train, y_train = smote.fit_resample(x_train, y_train)
-        # if ui_tch.checkBox_adasyn.isChecked():
-        #     adasyn = ADASYN(random_state=0)
-        #     x_train, y_train = adasyn.fit_resample(x_train, y_train)
-
-        # Для применения SMOTE к данным регрессии, вам нужно решить, каким образом сгенерировать
-        # синтетические точки данных для целей регрессии.
-        # В регрессионной задаче нам нужно учитывать, что целевая переменная непрерывна,
-        # и сгенерированные данные также должны быть непрерывными.
+        x_train, x_test, y_train, y_test = train_test_split(
+            training_sample, target, test_size=0.2, random_state=42)
+        x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train), \
+            np.array(x_test), np.array(y_test)
 
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
@@ -357,6 +343,25 @@ def torch_regressor_train():
              ])
 
         start_time = datetime.datetime.now()
+
+        kf = KFold(n_splits=ui_tch.spinBox_reg_cross_val.value(), shuffle=True, random_state=0)
+        if ui_tch.checkBox_reg_cross_val.isChecked():
+            # kf = KFold(n_splits=ui_r.spinBox_reg_cross_val.value(), shuffle=True, random_state=0)
+            list_train, list_test, n_cross = [], [], 1
+            for train_index, test_index in kf.split(training_sample):
+                list_train.append(train_index.tolist())
+                list_test.append(test_index.tolist())
+                n_cross += 1
+            scores_cv = cross_val_score(pipeline, training_sample, target, cv=kf, n_jobs=-1)
+            n_max = np.argmax(scores_cv)
+            train_index, test_index = list_train[n_max], list_test[n_max]
+
+            x_train = [training_sample[i] for i in train_index]
+            x_test = [training_sample[i] for i in test_index]
+
+            y_train = [target[i] for i in train_index]
+            y_test = [target[i] for i in test_index]
+
 
         pipeline.fit(x_train, y_train)
         y_pred = pipeline.predict(x_test)
@@ -510,6 +515,10 @@ def torch_regressor_train():
             op_weight_decay = trial.suggest_float('weight_decay', weight_decay[0], weight_decay[1], log=True)
             op_regularization = trial.suggest_float('regularization', regularization, regularization + 0.1, log=True)
 
+            x_train, x_test, y_train, y_test = train_test_split(
+                training_sample, target, test_size=0.2, random_state=42)
+            x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train), \
+                np.array(x_test), np.array(y_test)
             text_model = model_name + ''
             pipe_steps, text_model = add_features(ui_tch, text_model)
             feature_union = FeatureUnion(pipe_steps)
@@ -582,6 +591,11 @@ def torch_regressor_train():
         if ui_tch.checkBox_early_stop.isChecked():
             early_stopping = True
 
+        x_train, x_test, y_train, y_test = train_test_split(
+            training_sample, target, test_size=0.2, random_state=42)
+        x_train, y_train, x_test, y_test = np.array(x_train), np.array(y_train), \
+            np.array(x_test), np.array(y_test)
+
         text_model = model_name + ''
         pipe_steps, text_model = add_features(ui_tch, text_model)
         feature_union = FeatureUnion(pipe_steps)
@@ -597,6 +611,24 @@ def torch_regressor_train():
                                             batch_size=20))
         ])
 
+        kf = KFold(n_splits=ui_tch.spinBox_reg_cross_val.value(), shuffle=True, random_state=0)
+        if ui_tch.checkBox_reg_cross_val.isChecked():
+            # kf = KFold(n_splits=ui_r.spinBox_reg_cross_val.value(), shuffle=True, random_state=0)
+            list_train, list_test, n_cross = [], [], 1
+            for train_index, test_index in kf.split(training_sample):
+                list_train.append(train_index.tolist())
+                list_test.append(test_index.tolist())
+                n_cross += 1
+            scores_cv = cross_val_score(pipeline, training_sample, target, cv=kf, n_jobs=-1)
+            n_max = np.argmax(scores_cv)
+            train_index, test_index = list_train[n_max], list_test[n_max]
+
+            x_train = [training_sample[i] for i in train_index]
+            x_test = [training_sample[i] for i in test_index]
+
+            y_train = [target[i] for i in train_index]
+            y_test = [target[i] for i in test_index]
+
         pipeline.fit(x_train, y_train)
         y_pred = pipeline.predict(x_test)
 
@@ -607,6 +639,27 @@ def torch_regressor_train():
 
         end_time = datetime.datetime.now() - start_time
         print(end_time)
+
+        y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
+        data_graph = pd.DataFrame({
+            'y_test': y_test,
+            'y_pred': y_pred,
+            'y_remain': y_remain
+        })
+        fig, axes = plt.subplots(nrows=2, ncols=2)
+        fig.set_size_inches(15, 10)
+        fig.suptitle(f'Модель TorchNNRegression:\n'
+                     f' Mean Squared Error:\n {mse}, R2: {round(r_squared, 2)} \n время обучения: {end_time}')
+        sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+        sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[0, 0])
+        sns.scatterplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+        sns.regplot(data=data_graph, x='y_test', y='y_remain', ax=axes[1, 0])
+        try:
+            sns.histplot(data=data_graph, x='y_remain', kde=True, ax=axes[1, 1])
+        except MemoryError:
+            pass
+        fig.tight_layout()
+        fig.show()
 
         if ui_tch.checkBox_save_model.isChecked():
             text_model_final = '*** TORCH NN *** \n' + text_model + 'MSE: ' + str(round(mse, 3)) + '\nвремя обучения: ' \

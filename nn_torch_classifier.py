@@ -1067,6 +1067,8 @@ class PyTorchClassifier(BaseEstimator):
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
                             epochs, regular, early_stopping, patience, labels, batch_size=20):
+        # self.model = model(input_dim, output_dim, hidden_units,
+        #                    dropout_rate, activation_function)
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
         self.input_dim = input_dim
@@ -1953,11 +1955,11 @@ def torch_classifier_train():
         elif ui_tch.checkBox_tune_param.isChecked():
             tune_params()
 
-        # elif ui_tch.checkBox_stack_vote.isChecked():
-        #     train_stack_vote()
-        #
-        # elif ui_tch.checkBox_bagging.isChecked():
-        #     class_bagging()
+        elif ui_tch.checkBox_stack_vote.isChecked():
+            train_stack_vote()
+
+        elif ui_tch.checkBox_bagging.isChecked():
+            class_bagging()
 
     ui_tch.pushButton_lineup.clicked.connect(torch_classifier_lineup)
     ui_tch.pushButton_train.clicked.connect(choose)

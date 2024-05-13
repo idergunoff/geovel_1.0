@@ -128,7 +128,6 @@ def test_start():
 
         data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(), list_param)
         data_test = data_table.copy()
-
         try:
             working_sample = data_test[list_param_num].values.tolist()
         except KeyError:
@@ -136,20 +135,15 @@ def test_start():
                      'рассчитайте заново', 'red')
             QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
             return
-
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
-            if 'torch' in model.title:
-                mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
 
             data = imputer.fit_transform(working_sample)
             try:
                 mark = class_model.predict(data)
-                if 'torch' in model.title:
-                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                          'рассчитайте заново', 'red')
@@ -173,15 +167,18 @@ def test_start():
         result_df['mark_probability'] = mark
         result_df['mark_probability'] = result_df['mark_probability'].replace(
             {new_list_cat[0]: list_cat[0], new_list_cat[1]: list_cat[1]})
-        # result_df['mark'] = result_df['mark'].replace({'bitum': 'нефть', 'empty': 'пусто'})
-
         result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
         correct_matches = result_df['совпадение'].sum()
-        # pd.set_option('display.max_columns', None)
+
+        y_prob = np.array([i[0] for i in probability])
+        y_val = result_df['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
+        fpr, tpr, thresholds = roc_curve(y_val, y_prob)
+        roc_auc = auc(fpr, tpr)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
         ui_tm.textEdit_test_result.setTextColor(Qt.darkGreen)
         ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                                          f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}")
+                                          f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
+                                          f"ROC AUC: {roc_auc:.3f} \n\n")
         index = 0
         while index + 1 < len(result_df):
             comp, total = 0, 0
@@ -210,7 +207,8 @@ def test_start():
 
             ui_tm.textEdit_test_result.setTextColor(color_text)
             ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                                                       f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | {comp}/{total} \n')
+                                                       f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
+                                                       f'{comp}/{total}\n')
 
             index += 1
 
@@ -238,7 +236,11 @@ def test_start():
                 QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
                 return
             if set(curr_list_cat) != set(get_test_list_marker_mlp()):
-                list_cat = list(class_model.classes_)
+                if 'torch' in model.title:
+                    list_cat = [i.title for i in
+                                session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+                else:
+                    list_cat = list(class_model.classes_)
                 if set(get_test_list_marker_mlp()) != set(list_cat):
                     set_info('Не совпадают названия меток для данной модели.', 'red')
 
@@ -288,16 +290,12 @@ def test_start():
             try:
                 mark = class_model.predict(working_sample)
                 probability = class_model.predict_proba(working_sample)
-                if 'torch' in model.title:
-                    mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
             except ValueError:
                 working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
 
                 data = imputer.fit_transform(working_sample)
                 try:
                     mark = class_model.predict(data)
-                    if 'torch' in model.title:
-                        mark = [list_cat[0] if i > 0.5 else list_cat[1] for i in mark]
                 except ValueError:
                     set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
                              'рассчитайте заново', 'red')
@@ -326,9 +324,14 @@ def test_start():
             result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
             correct_matches = result_df['совпадение'].sum()
 
+            y_prob = np.array([i[0] for i in probability])
+            y_val = result_df['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
+            fpr, tpr, thresholds = roc_curve(y_val, y_prob)
+            roc_auc = auc(fpr, tpr)
             ui_tm.textEdit_test_result.setTextColor(QColor("darkgreen"))
             ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}")
+                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
+                                          f"ROC AUC: {roc_auc:.3f} \n\n")
             index = 0
             while index + 1 < len(result_df):
                 comp, total = 0, 0

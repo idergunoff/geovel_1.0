@@ -440,87 +440,6 @@
     <layout class="QGridLayout" name="gridLayout_9">
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_4">
-       <item row="2" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox_3">
-         <property name="title">
-          <string>Stacking/Voting</string>
-         </property>
-         <widget class="QWidget" name="layoutWidget">
-          <property name="geometry">
-           <rect>
-            <x>14</x>
-            <y>27</y>
-            <width>151</width>
-            <height>48</height>
-           </rect>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_12">
-           <item row="1" column="1">
-            <widget class="QRadioButton" name="radioButton_stacking">
-             <property name="text">
-              <string>Stacking</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QRadioButton" name="radioButton_voting">
-             <property name="text">
-              <string>Voting</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0" rowspan="2" colspan="2">
-            <widget class="QCheckBox" name="checkBox_stack_vote">
-             <property name="text">
-              <string>ON</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QSpinBox" name="spinBox_stop_patience">
-         <property name="value">
-          <number>20</number>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QCheckBox" name="checkBox_early_stop">
-         <property name="toolTip">
-          <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
-         </property>
-         <property name="text">
-          <string>Early stopping</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1" colspan="2">
-        <widget class="QComboBox" name="comboBox_dataset">
-         <item>
-          <property name="text">
-           <string>shuffle</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>well split</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_14">
-         <property name="text">
-          <string>dataset:</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0" colspan="3">
         <widget class="QGroupBox" name="groupBox_17">
          <property name="title">
@@ -569,13 +488,145 @@
            </item>
           </layout>
          </widget>
+         <widget class="QGroupBox" name="groupBox_12">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>190</y>
+            <width>141</width>
+            <height>53</height>
+           </rect>
+          </property>
+          <property name="title">
+           <string>PCA</string>
+          </property>
+          <widget class="QSpinBox" name="spinBox_reg_pca">
+           <property name="geometry">
+            <rect>
+             <x>29</x>
+             <y>23</y>
+             <width>49</width>
+             <height>20</height>
+            </rect>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
+          </widget>
+          <widget class="QCheckBox" name="checkBox_reg_pca">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>26</y>
+             <width>16</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+          <widget class="QCheckBox" name="checkBox_reg_pca_mle">
+           <property name="geometry">
+            <rect>
+             <x>84</x>
+             <y>24</y>
+             <width>39</width>
+             <height>17</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>mle</string>
+           </property>
+          </widget>
+         </widget>
+         <widget class="QGroupBox" name="groupBox_10">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>130</y>
+            <width>141</width>
+            <height>53</height>
+           </rect>
+          </property>
+          <property name="title">
+           <string>Cross Validate</string>
+          </property>
+          <widget class="QCheckBox" name="checkBox_reg_cross_val">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>20</y>
+             <width>16</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="spinBox_reg_cross_val">
+           <property name="geometry">
+            <rect>
+             <x>70</x>
+             <y>20</y>
+             <width>61</width>
+             <height>20</height>
+            </rect>
+           </property>
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </widget>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QCheckBox" name="checkBox_early_stop">
+         <property name="toolTip">
+          <string>&lt;p&gt;Эта опция позволяет автоматически останавливать обучение, когда производительность модели на проверочном наборе данных перестает улучшаться. Это помогает предотвратить переобучение.&lt;/p&gt;</string>
+         </property>
+         <property name="text">
+          <string>Early stopping</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1" colspan="2">
+        <widget class="QComboBox" name="comboBox_dataset">
+         <item>
+          <property name="text">
+           <string>shuffle</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>well split</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>dataset:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QSpinBox" name="spinBox_stop_patience">
+         <property name="value">
+          <number>20</number>
+         </property>
         </widget>
        </item>
       </layout>
      </item>
      <item row="1" column="0">
       <layout class="QGridLayout" name="gridLayout_7">
-       <item row="2" column="0">
+       <item row="1" column="0">
         <widget class="QCheckBox" name="checkBox_save_model">
          <property name="enabled">
           <bool>true</bool>
@@ -585,99 +636,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_9">
-         <property name="toolTip">
-          <string>Cross Validate by Well</string>
-         </property>
-         <property name="title">
-          <string>Cross validate</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="1" column="0" colspan="2">
-           <widget class="QGroupBox" name="groupBox_11">
-            <property name="title">
-             <string>PCA</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_10">
-             <item row="0" column="1">
-              <widget class="QSpinBox" name="spinBox_pca">
-               <property name="maximum">
-                <number>1000</number>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QCheckBox" name="checkBox_pca">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="2">
-              <widget class="QCheckBox" name="checkBox_pca_mle_3">
-               <property name="text">
-                <string>mle</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QGroupBox" name="groupBox_14">
-            <property name="title">
-             <string>Over Sampling</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_31">
-             <item row="1" column="0">
-              <layout class="QFormLayout" name="formLayout_3">
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_adasyn">
-                 <property name="text">
-                  <string>ADASYN</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QCheckBox" name="checkBox_smote">
-                 <property name="text">
-                  <string>SMOTE</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_cross_val">
-            <property name="toolTip">
-             <string>Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.</string>
-            </property>
-            <property name="minimum">
-             <number>2</number>
-            </property>
-            <property name="value">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QPushButton" name="pushButton_cross_val">
-            <property name="toolTip">
-             <string>&lt;p&gt;Количество фолдов для перекрестной проверки, используемых при оценке производительности модели.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>CV</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
+       <item row="2" column="0">
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
           <widget class="QPushButton" name="pushButton_train">
@@ -701,33 +660,82 @@
          </item>
         </layout>
        </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_16">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_3">
          <property name="title">
-          <string>Bagging</string>
+          <string>Stacking/Voting</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_37">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_bagging">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_bagging">
-            <property name="minimum">
-             <number>5</number>
-            </property>
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="value">
-             <number>10</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QWidget" name="layoutWidget_2">
+          <property name="geometry">
+           <rect>
+            <x>4</x>
+            <y>27</y>
+            <width>161</width>
+            <height>48</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_12">
+           <item row="1" column="1">
+            <widget class="QRadioButton" name="radioButton_stacking">
+             <property name="text">
+              <string>Stacking</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QRadioButton" name="radioButton_voting">
+             <property name="text">
+              <string>Voting</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" rowspan="2" colspan="2">
+            <widget class="QCheckBox" name="checkBox_stack_vote">
+             <property name="text">
+              <string>ON</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QGroupBox" name="groupBox_16">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>80</y>
+            <width>167</width>
+            <height>61</height>
+           </rect>
+          </property>
+          <property name="title">
+           <string>Bagging</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_37">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_bagging">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinBox_bagging">
+             <property name="minimum">
+              <number>5</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="value">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
