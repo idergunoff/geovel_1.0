@@ -82,8 +82,11 @@ def test_start():
     update_list_test_well()
 
     def test_classif_model():
+        filename, _ = QFileDialog.getSaveFileName(caption="Сохранить сигнал", filter="TXT (*.txt)")
+
         global list_cat
         ui_tm.textEdit_test_result.clear()
+        time_start = datetime.datetime.now()
         model = session.query(TrainedModelClass).filter_by(
             id=ui_tm.listWidget_test_model.currentItem().text().split(' id')[-1]).first()
         list_param = json.loads(model.list_params)
@@ -179,6 +182,10 @@ def test_start():
         ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
                                           f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
                                           f"ROC AUC: {roc_auc:.3f} \n\n")
+        with open(filename, 'w') as f:
+            print(f"Тестирование модели {model.title}:\n{model.comment}\n"
+                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
+                    f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
         index = 0
         while index + 1 < len(result_df):
             comp, total = 0, 0
@@ -209,9 +216,13 @@ def test_start():
             ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
                                                        f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
                                                        f'{comp}/{total}\n')
-
+            with open(filename, 'a') as f:
+                print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                        f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
+                        f'{comp}/{total}\n', file=f)
             index += 1
 
+        time_end = datetime.datetime.now() - time_start
         percent = correct_matches / len(result_df) * 100
         color_text = Qt.green
         if percent < 80:
@@ -220,6 +231,8 @@ def test_start():
             color_text = Qt.red
         ui_tm.textEdit_test_result.setTextColor(color_text)
         ui_tm.textEdit_test_result.insertPlainText(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
+        with open(filename, 'a') as f:
+            print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
 
     def test_all_classif_models():
         global list_cat
