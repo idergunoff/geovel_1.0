@@ -40,6 +40,13 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="2">
+          <widget class="QCheckBox" name="checkBox_save_test">
+           <property name="text">
+            <string>save</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item row="0" column="0">

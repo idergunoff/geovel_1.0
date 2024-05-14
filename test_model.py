@@ -82,7 +82,11 @@ def test_start():
     update_list_test_well()
 
     def test_classif_model():
-        filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
+        save = False
+        if ui_tm.checkBox_save_test.isChecked():
+            save = True
+        if save:
+            filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
 
         global list_cat
         ui_tm.textEdit_test_result.clear()
@@ -179,13 +183,16 @@ def test_start():
         roc_auc = auc(fpr, tpr)
         print(f'\n Cовпало: {correct_matches}/{len(result_df)}')
         ui_tm.textEdit_test_result.setTextColor(Qt.darkGreen)
-        ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                                          f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
-                                          f"ROC AUC: {roc_auc:.3f} \n\n")
-        with open(filename, 'w') as f:
-            print(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
-                    f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
+        ui_tm.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                                        f"Тестирование модели {model.title}:\n{model.comment}\n"
+                                        f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
+                                        f"ROC AUC: {roc_auc:.3f} \n\n")
+        if save:
+            with open(filename, 'w') as f:
+                print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                      f"Тестирование модели {model.title}:\n{model.comment}\n"
+                        f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
+                        f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
         index = 0
         while index + 1 < len(result_df):
             comp, total = 0, 0
@@ -216,10 +223,11 @@ def test_start():
             ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
                                                        f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
                                                        f'{comp}/{total}\n')
-            with open(filename, 'a') as f:
-                print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                        f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
-                        f'{comp}/{total}\n', file=f)
+            if save:
+                with open(filename, 'a') as f:
+                    print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                            f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
+                            f'{comp}/{total}\n', file=f)
             index += 1
 
         time_end = datetime.datetime.now() - time_start
@@ -231,15 +239,21 @@ def test_start():
             color_text = Qt.red
         ui_tm.textEdit_test_result.setTextColor(color_text)
         ui_tm.textEdit_test_result.insertPlainText(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
-        with open(filename, 'a') as f:
-            print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
+        if save:
+            with open(filename, 'a') as f:
+                print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
 
     def test_all_classif_models():
-        filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
+        save = False
+        if ui_tm.checkBox_save_test.isChecked():
+            save = True
+        if save:
+            filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
         global list_cat
         ui_tm.textEdit_test_result.clear()
         curr_list_cat, curr_list_param, curr_data_table = [], [], pd.DataFrame()
         for model in session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all():
+            time_start = datetime.datetime.now()
             list_param = json.loads(model.list_params)
             try:
                 with open(model.path_model, 'rb') as f:
@@ -343,13 +357,16 @@ def test_start():
             fpr, tpr, thresholds = roc_curve(y_val, y_prob)
             roc_auc = auc(fpr, tpr)
             ui_tm.textEdit_test_result.setTextColor(QColor("darkgreen"))
-            ui_tm.textEdit_test_result.append(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                    f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
-                                          f"ROC AUC: {roc_auc:.3f} \n\n")
-            with open(filename, 'a') as f:
-                print(f"Тестирование модели {model.title}:\n{model.comment}\n"
-                        f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
-                        f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
+            ui_tm.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                                f"Тестирование модели {model.title}:\n{model.comment}\n"
+                                f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
+                                f"ROC AUC: {roc_auc:.3f} \n\n")
+            if save:
+                with open(filename, 'a') as f:
+                    print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                            f"Тестирование модели {model.title}:\n{model.comment}\n"
+                            f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
+                            f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
 
             index = 0
             while index + 1 < len(result_df):
@@ -386,10 +403,11 @@ def test_start():
                 ui_tm.textEdit_test_result.append(
                     f'{profile.research.object.title} - {profile.title} | {well.name} |'
                     f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}')
-                with open(filename, 'a') as f:
-                    print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                            f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}',
-                            file=f)
+                if save:
+                    with open(filename, 'a') as f:
+                        print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                                f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}',
+                                file=f)
                 index += 1
             percent = correct_matches / len(result_df) * 100
             color_text = Qt.green
@@ -397,11 +415,13 @@ def test_start():
                 color_text = Qt.darkYellow
             if percent < 50:
                 color_text = Qt.red
+            time_end = datetime.datetime.now() - time_start
             ui_tm.textEdit_test_result.setTextColor(color_text)
             ui_tm.textEdit_test_result.append(
                 f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
-            with open(filename, 'a') as f:
-                print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n', file=f)
+            if save:
+                with open(filename, 'a') as f:
+                    print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
 
 
     ui_tm.pushButton_test.clicked.connect(test_classif_model)
@@ -478,6 +498,11 @@ def regression_test():
     update_test_reg_model_list()
 
     def test_regress_model():
+        save = False
+        if ui_tr.checkBox_save_test.isChecked():
+            save = True
+        if save:
+            filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
         ui_tr.textEdit_test_result.clear()
         model = session.query(TrainedModelReg).filter_by(
             id=ui_tr.listWidget_test_model.currentItem().data(Qt.UserRole)).first()
@@ -513,7 +538,12 @@ def regression_test():
 
         ui_tr.textEdit_test_result.setTextColor(Qt.black)
         ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
-        ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
+        ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)}\n Mean Squared Error: {round(mse, 2)}\n\n')
+        if save:
+            with open(filename, 'w') as f:
+                print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                    f"Тестирование модели {model.title}:"
+                      f'Точность: {round(accuracy, 2)} \nMean Squared Error: {round(mse, 2)}\n\n', file=f)
 
         index = 0
         while index + 1 < len(working_data):
@@ -554,6 +584,11 @@ def regression_test():
                 f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
                 f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
                 f'| погрешность: {mistake}\n')
+            if save:
+                with open(filename, 'a') as f:
+                    print(f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
+                    f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
+                    f'| погрешность: {mistake}\n', file=f)
             index += 1
 
         def regress_test_graphs():
@@ -581,6 +616,11 @@ def regression_test():
         regress_test_graphs()
 
     def test_all_regress_models():
+        save = False
+        if ui_tr.checkBox_save_test.isChecked():
+            save = True
+        if save:
+            filename, _ = QFileDialog.getSaveFileName(caption="Сохранить тест", filter="TXT (*.txt)")
         ui_tr.textEdit_test_result.clear()
         curr_list_param, current_data_table = [], pd.DataFrame()
         all_models = session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
@@ -628,6 +668,11 @@ def regression_test():
             ui_tr.textEdit_test_result.setTextColor(Qt.black)
             ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
             ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
+            if save:
+                with open(filename, 'a') as f:
+                    print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                          f"Тестирование модели {model.title}:"
+                          f'Точность: {round(accuracy, 2)} \nMean Squared Error: {round(mse, 2)}\n\n', file=f)
             index = 0
             while index + 1 < len(working_data):
                 comp, total = 0, 0
@@ -667,6 +712,11 @@ def regression_test():
                     f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
                     f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
                     f'| погрешность: {mistake}\n')
+                if save:
+                    with open(filename, 'a') as f:
+                        print(f'{profile.research.object.title} - {profile.title} | Скв. {well.name} |'
+                              f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
+                              f'| погрешность: {mistake}\n', file=f)
                 index += 1
 
             data_graph = pd.DataFrame({
