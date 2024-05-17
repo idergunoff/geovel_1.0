@@ -585,8 +585,12 @@ def push_random_param():
 
             list_param = build_list_param()
             data_train, list_param = build_table_random_param(get_MLP_id(), list_param)
+            list_col = data_train.columns.tolist()
+            data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
             y_train = data_train['mark'].values
             data_test, list_param = build_table_random_param(get_MLP_test_id(), list_param)
+            list_col = data_test.columns.tolist()
+            data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
