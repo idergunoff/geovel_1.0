@@ -880,6 +880,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     ui_cls.pushButton_random_search.clicked.connect(class_exit)
     ui_cls.pushButton_random_search.clicked.connect(push_random_search)
+    ui_cls.pushButton_random_param.clicked.connect(class_exit)
     ui_cls.pushButton_random_param.clicked.connect(push_random_param)
     ui_cls.pushButton_lof.clicked.connect(calc_lof)
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)

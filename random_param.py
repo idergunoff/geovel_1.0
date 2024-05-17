@@ -33,10 +33,112 @@ def push_random_param():
     RandomParam.show()
     RandomParam.setAttribute(Qt.WA_DeleteOnClose)
 
-    # def test():
-    #     print(inspect.currentframe().f_back.f_locals)
-    #
-    # ui_rp.pushButton.clicked.connect(test)
+    m_width, m_height = get_width_height_monitor()
+    RandomParam.resize(int(m_width / 1.5), int(m_height / 1.5))
+
+    Classifier = QtWidgets.QDialog()
+    ui_cls = Ui_ClassifierForm()
+    ui_cls.setupUi(Classifier)
+    Classifier.show()
+    Classifier.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+
+    def push_checkbutton_smote():
+        if ui_cls.checkBox_adasyn.isChecked():
+            ui_cls.checkBox_adasyn.setChecked(False)
+
+    def push_checkbutton_adasyn():
+        if ui_cls.checkBox_smote.isChecked():
+            ui_cls.checkBox_smote.setChecked(False)
+
+    def choice_model_classifier(model):
+        """ Выбор модели классификатора """
+        if model == 'MLPC':
+            model_class = MLPClassifier(
+                hidden_layer_sizes=tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split())),
+                activation=ui_cls.comboBox_activation_mlp.currentText(),
+                solver=ui_cls.comboBox_solvar_mlp.currentText(),
+                alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                max_iter=5000,
+                early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
+                validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
+                random_state=0
+            )
+            text_model = (f'**MLP**: \nhidden_layer_sizes: '
+                          f'({",".join(map(str, tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split()))))}), '
+                          f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
+                          f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
+                          f'\nalpha: {round(ui_cls.doubleSpinBox_alpha_mlp.value(), 2)}, '
+                          f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
+                          f'\nvalidation_fraction: {round(ui_cls.doubleSpinBox_valid_mlp.value(), 2)}, ')
+
+        elif model == 'KNNC':
+            n_knn = ui_cls.spinBox_neighbors.value()
+            weights_knn = 'distance' if ui_cls.checkBox_knn_weights.isChecked() else 'uniform'
+            model_class = KNeighborsClassifier(n_neighbors=n_knn, weights=weights_knn, algorithm='auto')
+            text_model = f'**KNN**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, '
+        elif model == 'GBC':
+            est = ui_cls.spinBox_n_estimators.value()
+            l_rate = ui_cls.doubleSpinBox_learning_rate.value()
+            model_class = GradientBoostingClassifier(n_estimators=est, learning_rate=l_rate, random_state=0)
+            text_model = f'**GBC**: \nn estimators: {round(est, 2)}, \nlearning rate: {round(l_rate, 2)}, '
+        elif model == 'G-NB':
+            model_class = GaussianNB(var_smoothing=10 ** (-ui_cls.spinBox_gnb_var_smooth.value()))
+            text_model = f'**G-NB**: \nvar smoothing: 1E-{str(ui_cls.spinBox_gnb_var_smooth.value())}, '
+            # model_class = CategoricalNB()
+            # text_model = f'**C-CB**:, '
+        elif model == 'DTC':
+            spl = 'random' if ui_cls.checkBox_splitter_rnd.isChecked() else 'best'
+            model_class = DecisionTreeClassifier(splitter=spl, random_state=0)
+            text_model = f'**DTC**: \nsplitter: {spl}, '
+        elif model == 'RFC':
+            model_class = RandomForestClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                                 bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**RFC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ABC':
+            model_class = AdaBoostClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), random_state=0)
+            text_model = f'**ABC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'ETC':
+            model_class = ExtraTreesClassifier(n_estimators=ui_cls.spinBox_rfc_n.value(), class_weight='balanced',
+                                               bootstrap=True, oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**ETC**: \nn estimators: {ui_cls.spinBox_rfc_n.value()}, '
+
+        elif model == 'GPC':
+            gpc_kernel_width = ui_cls.doubleSpinBox_gpc_wigth.value()
+            gpc_kernel_scale = ui_cls.doubleSpinBox_gpc_scale.value()
+            n_restart_optimization = ui_cls.spinBox_gpc_n_restart.value()
+            multi_class = ui_cls.comboBox_gpc_multi.currentText()
+            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            model_class = GaussianProcessClassifier(
+                kernel=kernel,
+                n_restarts_optimizer=n_restart_optimization,
+                random_state=0,
+                multi_class=multi_class,
+                n_jobs=-1
+            )
+            text_model = (
+                f'**GPC**: \nwidth kernal: {round(gpc_kernel_width, 2)}, \nscale kernal: {round(gpc_kernel_scale, 2)}, '
+                f'\nn restart: {n_restart_optimization}, \nmulti_class: {multi_class} ,')
+
+        elif model == 'QDA':
+            model_class = QuadraticDiscriminantAnalysis(reg_param=ui_cls.doubleSpinBox_qda_reg_param.value())
+            text_model = f'**QDA**: \nreg_param: {round(ui_cls.doubleSpinBox_qda_reg_param.value(), 2)}, '
+
+        elif model == 'SVC':
+            model_class = SVC(kernel=ui_cls.comboBox_svr_kernel.currentText(), probability=True,
+                              C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
+            text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
+                          f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
+
+        else:
+            model_class = QuadraticDiscriminantAnalysis()
+            text_model = ''
+
+        return model_class, text_model
+
+
 
     def check_checkbox_ts():
         push = True if ui_rp.checkBox_ts_all.isChecked() else False
@@ -63,6 +165,9 @@ def push_random_param():
         ui_rp.checkBox_stat.setChecked(push)
         ui_rp.checkBox_crl_stat.setChecked(push)
 
+
+    def get_MLP_test_id():
+        return ui_rp.comboBox_test_analysis.currentText().split(' id')[-1]
 
 
     def build_list_param():
@@ -322,9 +427,41 @@ def push_random_param():
 
     def start_random_param():
         for _ in range(ui_rp.spinBox_n_iter.value()):
+
+            pipe_steps = []
+            text_scaler = ''
+            if ui_cls.checkBox_stdscaler.isChecked():
+                std_scaler = StandardScaler()
+                pipe_steps.append(('std_scaler', std_scaler))
+                text_scaler += '\nStandardScaler'
+            if ui_cls.checkBox_robscaler.isChecked():
+                robust_scaler = RobustScaler()
+                pipe_steps.append(('robust_scaler', robust_scaler))
+                text_scaler += '\nRobustScaler'
+            if ui_cls.checkBox_mnmxscaler.isChecked():
+                minmax_scaler = MinMaxScaler()
+                pipe_steps.append(('minmax_scaler', minmax_scaler))
+                text_scaler += '\nMinMaxScaler'
+            if ui_cls.checkBox_mxabsscaler.isChecked():
+                maxabs_scaler = MaxAbsScaler()
+                pipe_steps.append(('maxabs_scaler', maxabs_scaler))
+                text_scaler += '\nMaxAbsScaler'
+
+            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_classifier(model_name)
+
+            text_model += text_scaler
+
+
+            pipe_steps.append(('model', model_class))
+            pipe = Pipeline(pipe_steps)
+
+
             list_param = build_list_param()
             data_train, list_param = build_table_random_param(get_MLP_id(), list_param)
+            data_test, list_param = build_table_random_param(get_MLP_test_id(), list_param)
             print(data_train)
+
 
 
     def get_test_MLP_id():
@@ -393,3 +530,8 @@ def push_random_param():
     ui_rp.spinBox_bot_skip_down.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
 
     RandomParam.exec_()
+
+    ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
+    ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
+
+    Classifier.exec_()
