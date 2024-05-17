@@ -1,6 +1,7 @@
 import inspect
 import random
 
+import numpy as np
 from scipy.stats import randint, uniform
 from sklearn.model_selection import cross_validate
 
@@ -433,7 +434,7 @@ def push_random_param():
             time_start = datetime.datetime.now()
             data_test = data_val.copy()
             working_sample = data_test.iloc[:, 2:].values.tolist()
-            list_cat = list(class_model.classes_)
+            list_cat = list(class_model['model'].classes_)
 
             try:
                 mark = class_model.predict(working_sample)
@@ -609,6 +610,9 @@ def push_random_param():
             percent = np.array(list_percent).mean()
             results_list = [roc, list_roc, percent, list_percent, [list_param]]
             results.append(results_list)
+
+            with open(filename, 'a') as f:
+                print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n', file=f)
 
         print('results \n', results)
         sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
