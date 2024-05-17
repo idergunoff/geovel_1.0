@@ -1037,8 +1037,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>354</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3214,7 +3214,7 @@ Therm</string>
                       </property>
                      </spacer>
                     </item>
-                    <item row="0" column="3">
+                    <item row="0" column="4">
                      <widget class="QPushButton" name="pushButton_clear_fake">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
@@ -3224,13 +3224,20 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QPushButton" name="pushButton_edit_marker_mlp">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 255, 191);</string>
                       </property>
                       <property name="text">
                        <string>edit marker</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_search_param">
+                      <property name="text">
+                       <string>search</string>
                       </property>
                      </widget>
                     </item>
@@ -5160,7 +5167,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

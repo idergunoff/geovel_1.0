@@ -2,6 +2,8 @@ import inspect
 import random
 
 from scipy.stats import randint, uniform
+from sklearn.model_selection import cross_validate
+
 from func import *
 
 
@@ -424,10 +426,136 @@ def push_random_param():
 
         return data_train, list_param
 
+    def test_classif_estimator(estimators, data_val, list_param, filename):
+        list_estimator_roc = []
+        list_estimator_percent = []
+        for class_model in estimators:
+            time_start = datetime.datetime.now()
+            data_test = data_val.copy()
+            working_sample = data_test.iloc[:, 2:].values.tolist()
+            list_cat = list(class_model.classes_)
+
+            try:
+                mark = class_model.predict(working_sample)
+                probability = class_model.predict_proba(working_sample)
+            except ValueError:
+                working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+
+                data = imputer.fit_transform(working_sample)
+                try:
+                    mark = class_model.predict(data)
+                except ValueError:
+                    set_info('Не совпадает количество признаков для данной модели. Выберите нужную модель и '
+                             'рассчитайте заново', 'red')
+                    QMessageBox.critical(MainWindow, 'Ошибка', 'Не совпадает количество признаков для данной модели.')
+                    return
+                probability = class_model.predict_proba(data)
+
+                for i in data_test.index:
+                    p_nan = [data_test.columns[ic + 3] for ic, v in enumerate(data_test.iloc[i, 3:].tolist()) if
+                             np.isnan(v)]
+                    if len(p_nan) > 0:
+                        set_info(
+                            f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                            f' этого измерения может быть не корректен', 'red')
+
+            predict_df = pd.DataFrame(probability.tolist(), columns=list_cat)
+            predict_df.index = data_test.index
+            data_test[list_cat[0]] = predict_df[list_cat[0]]
+            data_test[list_cat[1]] = predict_df[list_cat[1]]
+            data_test['mark_probability'] = mark
+            data_test['совпадение'] = data_test['mark'].eq(data_test['mark_probability']).astype(int)
+            correct_matches = data_test['совпадение'].sum()
+            y_prob = np.array([i[0] for i in probability])
+            y_val = data_test['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
+            fpr, tpr, thresholds = roc_curve(y_val, y_prob)
+            roc_auc = auc(fpr, tpr)
+            print('roc_auc ', roc_auc)
+            list_estimator_roc.append(roc_auc)
+
+            ui_rp.textEdit_test_result.setTextColor(Qt.darkGreen)
+            ui_rp.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                      f"Тестирование модели {class_model}\n"
+                      f"Количество параметров: {len(list_param)}\n"
+                      f"ROC AUC: {roc_auc:.3f}"
+                      f'\nВсего совпало: {correct_matches}/{len(data_test)}\n')
+
+            with open(filename, 'a') as f:
+                print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+                      f"Тестирование модели {class_model}\n"
+                      f"Количество параметров: {len(list_param)}\n"
+                      f"ROC AUC: {roc_auc:.3f}"
+                      f'\nВсего совпало: {correct_matches}/{len(data_test)}\n', file=f)
+
+            index = 0
+            while index + 1 < len(data_test):
+                comp, total = 0, 0
+                nulls, ones = 0, 0
+                while index + 1 < len(data_test) and \
+                        data_test.loc[index, 'prof_well_index'].split('_')[0] == \
+                        data_test.loc[index + 1, 'prof_well_index'].split('_')[0] and \
+                        data_test.loc[index, 'prof_well_index'].split('_')[1] == \
+                        data_test.loc[index + 1, 'prof_well_index'].split('_')[1]:
+                    if data_test.loc[index, 'совпадение'] == 1:
+                        comp += 1
+                    nulls = nulls + data_test.loc[index, list_cat[1]]
+                    ones = ones + data_test.loc[index, list_cat[0]]
+                    total += 1
+                    index += 1
+                if data_test.loc[index, 'prof_well_index'].split('_')[1] == \
+                        data_test.loc[index - 1, 'prof_well_index'].split('_')[1]:
+                    if data_test.loc[index, 'совпадение'] == 1:
+                        comp += 1
+                    total += 1
+
+                profile = session.query(Profile).filter(
+                    Profile.id == data_test.loc[index, 'prof_well_index'].split('_')[0]).first()
+                well = session.query(Well).filter(
+                    Well.id == data_test.loc[index, 'prof_well_index'].split('_')[1]).first()
+
+                color_text = Qt.black
+                if comp / total < 0.5:
+                    color_text = Qt.red
+                if 0.9 > comp / total >= 0.5:
+                    color_text = Qt.darkYellow
+
+                ui_rp.textEdit_test_result.setTextColor(color_text)
+                ui_rp.textEdit_test_result.insertPlainText(
+                    f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                    f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}')
+
+                with open(filename, 'a') as f:
+                    print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
+                          f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}',
+                          file=f)
+                index += 1
+
+            data_test.reset_index(drop=True, inplace=True)
+            percent = correct_matches / len(data_test) * 100
+            result_percent = correct_matches / len(data_test)
+            list_estimator_percent.append(result_percent)
+            time_end = datetime.datetime.now() - time_start
+
+            color_text = Qt.green
+            if percent < 80:
+                color_text = Qt.darkYellow
+            if percent < 50:
+                color_text = Qt.red
+            ui_rp.textEdit_test_result.setTextColor(color_text)
+            ui_rp.textEdit_test_result.insertPlainText(
+                f'Всего совпало: {correct_matches}/{len(data_test)} - {percent:.1f}%\nВремя выполнения: {time_end}\n')
+
+            with open(filename, 'a') as f:
+                print(
+                f'Всего совпало: {correct_matches}/{len(data_test)} - {percent:.1f}%\nВремя выполнения: {time_end}\n',
+                file=f)
+        return list_estimator_roc, list_estimator_percent, filename
 
     def start_random_param():
+        filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
+                                                  filter="TXT (*.txt)")
+        results = []
         for _ in range(ui_rp.spinBox_n_iter.value()):
-
             pipe_steps = []
             text_scaler = ''
             if ui_cls.checkBox_stdscaler.isChecked():
@@ -449,19 +577,43 @@ def push_random_param():
 
             model_name = ui_cls.buttonGroup.checkedButton().text()
             model_class, text_model = choice_model_classifier(model_name)
-
             text_model += text_scaler
-
-
             pipe_steps.append(('model', model_class))
             pipe = Pipeline(pipe_steps)
-
+            print('pipe \n', pipe)
 
             list_param = build_list_param()
             data_train, list_param = build_table_random_param(get_MLP_id(), list_param)
+            y_train = data_train['mark'].values
             data_test, list_param = build_table_random_param(get_MLP_test_id(), list_param)
-            print(data_train)
 
+            ui_rp.textEdit_test_result.setTextColor(Qt.black)
+            ui_rp.textEdit_test_result.insertPlainText(
+                f"Количество параметров: {len(list_param)}\n"
+                      f"Выбранные параметры: \n{list_param}\n")
+
+            with open(filename, 'a') as f:
+                print(f"Количество параметров: {len(list_param)}\n"
+                      f"Выбранные параметры: \n{list_param}\n", file=f)
+            print('data train \n',  data_train)
+            print('data test \n',  data_test)
+
+            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=5, scoring='accuracy',
+                                        return_estimator=True)
+            estimators = cv_results['estimator']
+            print('cv_results \n', cv_results)
+            print('estimators \n', estimators)
+            list_roc, list_percent, filename = test_classif_estimator(estimators, data_test,
+                                                                      list_param, filename)
+            roc = np.array(list_roc).mean()
+            percent = np.array(list_percent).mean()
+            results_list = [roc, list_roc, percent, list_percent, [list_param]]
+            results.append(results_list)
+
+        print('results \n', results)
+        sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
+        for item in sorted_result:
+            print(item)
 
 
     def get_test_MLP_id():

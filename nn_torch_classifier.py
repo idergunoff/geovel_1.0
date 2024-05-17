@@ -1086,6 +1086,7 @@ class PyTorchClassifier(BaseEstimator):
         self.patience = patience
         self.labels = labels
         self.batch_size = batch_size
+        self.classes_ = list(labels.values())
 
     def get_params(self, deep=True):
         return {
@@ -1116,7 +1117,6 @@ class PyTorchClassifier(BaseEstimator):
     def fit(self, X_train, y_train):
         if isinstance(X_train, pd.DataFrame):
             X_train = X_train.to_numpy()
-            # y_train = y_train.to_numpy()
         X_train = torch.from_numpy(X_train).float()
         if np.issubdtype(y_train.dtype, np.str_):
             labels_dict = {value: key for key, value in self.labels.items()}
@@ -1221,6 +1221,9 @@ class PyTorchTuneClassifier(BaseEstimator):
         self.patience = patience
         self.labels = labels
         self.batch_size = batch_size
+
+    def classes_(self):
+        return self.labels.values()
 
     def get_params(self, deep=True):
         return {
@@ -1613,6 +1616,9 @@ def torch_classifier_train():
 
         start_time = datetime.datetime.now()
         pipeline.fit(X, y)
+
+        print('list classes in pipeline: ', list(pipeline.classes_))
+
         y_mark = pipeline.predict(X_val)
         mark = []
         mark.extend([labels[m] for m in y_mark if m in labels])
@@ -1839,7 +1845,8 @@ def torch_classifier_train():
                                       patience=patience,
                                       labels=labels_dict,
                                       batch_size=20)
-            X = X_train.values
+            X = X_train.values.astype(np.float64)
+            y = y_train.astype(np.float64)
             model.fit(X, y)
             estimators.append((f'model_{i}', model))
             print(f'model_{i}')

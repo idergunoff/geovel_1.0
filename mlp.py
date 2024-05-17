@@ -724,10 +724,7 @@ def prep_data_train(data):
 def draw_MLP():
     """ Тренировка моделей классификаторов """
     data_train, list_param = build_table_train(True, 'mlp')
-    print(data_train)
-    print("list_param ", list_param)
     list_param_mlp = data_train.columns.tolist()[2:]
-    print("list_param_mlp ", list_param_mlp)
 
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
@@ -787,11 +784,14 @@ def calc_class_profile():
         if 'torch' in model.title:
             with open(model.path_model, 'rb') as f:
                 class_model = pickle.load(f)
-            list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+            # list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+            list_cat = list(class_model.classes_)
+            print('torch list_cat ', list_cat)
         else:
             with open(model.path_model, 'rb') as f:
                 class_model = pickle.load(f)
             list_cat = list(class_model.classes_)
+            print('sklearn list_cat ', list_cat)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_class[list_param_num].values.tolist()
@@ -803,9 +803,7 @@ def calc_class_profile():
 
         try:
             mark = class_model.predict(working_sample)
-            print('MARK: ', mark)
             probability = class_model.predict_proba(working_sample)
-            print('PRIBABILITY: ', probability)
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
@@ -826,11 +824,8 @@ def calc_class_profile():
                              f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
-        print(pd.DataFrame(probability))
-        print(working_data_class)
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
-        print(working_data_result)
 
         draw_result_mlp(working_data_result, curr_form)
 
@@ -947,7 +942,6 @@ def calc_object_class():
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
-    print(list_formation)
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
@@ -972,10 +966,7 @@ def calc_object_class():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        if 'torch' in model.title:
-            list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-        else:
-            list_cat = list(class_model.classes_)
+        list_cat = list(class_model.classes_)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()

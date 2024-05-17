@@ -232,6 +232,7 @@ def test_start():
 
         time_end = datetime.datetime.now() - time_start
         percent = correct_matches / len(result_df) * 100
+        result_percent = correct_matches / len(result_df)
         color_text = Qt.green
         if percent < 80:
             color_text = Qt.darkYellow
@@ -243,6 +244,7 @@ def test_start():
             with open(filename, 'a') as f:
                 print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
 
+
     def test_all_classif_models():
         save = False
         if ui_tm.checkBox_save_test.isChecked():
@@ -252,6 +254,9 @@ def test_start():
         global list_cat
         ui_tm.textEdit_test_result.clear()
         curr_list_cat, curr_list_param, curr_data_table = [], [], pd.DataFrame()
+
+        list_estimator_roc = []
+        list_estimator_percent = []
         for model in session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all():
             time_start = datetime.datetime.now()
             list_param = json.loads(model.list_params)
@@ -264,11 +269,7 @@ def test_start():
                 QMessageBox.critical(MainWindow, 'Ошибка', 'Не удалось загрузить модель.')
                 return
             if set(curr_list_cat) != set(get_test_list_marker_mlp()):
-                if 'torch' in model.title:
-                    list_cat = [i.title for i in
-                                session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-                else:
-                    list_cat = list(class_model.classes_)
+                list_cat = list(class_model.classes_)
                 if set(get_test_list_marker_mlp()) != set(list_cat):
                     set_info('Не совпадают названия меток для данной модели.', 'red')
 
@@ -340,15 +341,12 @@ def test_start():
 
             result_df = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
 
-            if 'torch' in model.title:
-                new_list_cat = [i.title for i in
-                            session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-            else:
-                new_list_cat = list(class_model.classes_)
+            new_list_cat = list(class_model.classes_)
             result_df['mark_probability'] = mark
+            print('1 mark_probability  ', result_df['mark_probability'])
             result_df['mark_probability'] = result_df['mark_probability'].replace(
                 {new_list_cat[0]: list_cat[0], new_list_cat[1]: list_cat[1]})
-
+            print('2 mark_probability  ', result_df['mark_probability'])
             result_df['совпадение'] = result_df['mark'].eq(result_df['mark_probability']).astype(int)
             correct_matches = result_df['совпадение'].sum()
 
@@ -356,6 +354,7 @@ def test_start():
             y_val = result_df['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
             fpr, tpr, thresholds = roc_curve(y_val, y_prob)
             roc_auc = auc(fpr, tpr)
+            list_estimator_roc.append(roc_auc)
             ui_tm.textEdit_test_result.setTextColor(QColor("darkgreen"))
             ui_tm.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                                 f"Тестирование модели {model.title}:\n{model.comment}\n"
@@ -410,6 +409,8 @@ def test_start():
                                 file=f)
                 index += 1
             percent = correct_matches / len(result_df) * 100
+            result_percent = correct_matches / len(result_df)
+            list_estimator_percent.append(result_percent)
             color_text = Qt.green
             if percent < 80:
                 color_text = Qt.darkYellow
