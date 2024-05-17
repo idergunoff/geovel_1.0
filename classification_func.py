@@ -1,7 +1,11 @@
 import json
 import pickle
+
+from sklearn.model_selection import cross_validate
+
 from func import *
 from random_search import push_random_search
+from random_param import push_random_param
 
 
 def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str):
@@ -876,6 +880,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     ui_cls.pushButton_random_search.clicked.connect(class_exit)
     ui_cls.pushButton_random_search.clicked.connect(push_random_search)
+    ui_cls.pushButton_random_param.clicked.connect(push_random_param)
     ui_cls.pushButton_lof.clicked.connect(calc_lof)
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)

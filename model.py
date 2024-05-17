@@ -246,18 +246,22 @@ class Formation(Base):
     dA = Column(Text)
     A_sum = Column(Text)
     A_mean = Column(Text)
+
     dVt = Column(Text)
     Vt_top = Column(Text)
     Vt_sum = Column(Text)
     Vt_mean = Column(Text)
+
     dAt = Column(Text)
     At_top = Column(Text)
     At_sum = Column(Text)
     At_mean = Column(Text)
+
     dPht = Column(Text)
     Pht_top = Column(Text)
     Pht_sum = Column(Text)
     Pht_mean = Column(Text)
+
     Wt_top = Column(Text)
     Wt_mean = Column(Text)
     Wt_sum = Column(Text)

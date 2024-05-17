@@ -1,6 +1,8 @@
 import sys, os
 import random, math
 from sqlite3 import connect
+from itertools import combinations
+
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
@@ -32,6 +34,7 @@ from qt.model_lineup import *
 from qt.torch_classfier import *
 from qt.torch_regressor import *
 from qt.rename_model import *
+from qt.random_param import *
 
 from model import *
 import numpy as np
