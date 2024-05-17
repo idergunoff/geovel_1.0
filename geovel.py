@@ -18,7 +18,6 @@ from test_model import *
 from lineup_train_models import *
 from nn_torch_classifier import *
 from nn_torch_regression import *
-from parameter_search_test import *
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()
@@ -208,7 +207,6 @@ ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
 ui.listWidget_trained_model_class.setContextMenuPolicy(Qt.CustomContextMenu)
 ui.listWidget_trained_model_class.customContextMenuRequested.connect(rename_model_class)
 
-ui.pushButton_search_param.clicked.connect(search_params)
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
 ui.pushButton_torch.clicked.connect(torch_regressor_train)
