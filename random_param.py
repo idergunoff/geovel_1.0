@@ -555,8 +555,10 @@ def push_random_param():
     def start_random_param():
         filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                   filter="TXT (*.txt)")
+        with open(filename, 'w') as f:
+            print(f"START SEARCH PARAMS\n{datetime.datetime.now()}\n\n", file=f)
         results = []
-        for _ in range(ui_rp.spinBox_n_iter.value()):
+        for i in range(ui_rp.spinBox_n_iter.value()):
             pipe_steps = []
             text_scaler = ''
             if ui_cls.checkBox_stdscaler.isChecked():
@@ -590,6 +592,7 @@ def push_random_param():
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
+                f"Итерация: #{i}\n"
                 f"Количество параметров: {len(list_param)}\n"
                       f"Выбранные параметры: \n{list_param}\n")
 
