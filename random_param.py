@@ -342,56 +342,66 @@ def push_random_param():
             list_up = json.loads(markup.formation.layer_up.layer_line)
             list_down = json.loads(markup.formation.layer_down.layer_line)
 
-            # Загрузка сигналов из профилей, необходимых для параметров 'distr', 'sep' и 'mfcc'
-            for param in list_param:
-                # Если параметр является расчётным
-                if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
-                    # Проверка, есть ли уже загруженный сигнал в локальных переменных
-                    if not str(markup.profile.id) + '_Abase' in locals_dict:
-                        # Загрузка сигнала из профиля
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_Abase':
-                                 json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])}
-                        )
-                    if not str(markup.profile.id) + '_diff' in locals_dict:
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_diff':
-                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'diff')}
-                        )
-                    if not str(markup.profile.id) + '_At' in locals_dict:
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_At':
-                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'At')}
-                        )
-                    if not str(markup.profile.id) + '_Vt' in locals_dict:
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_Vt':
-                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Vt')}
-                        )
-                    if not str(markup.profile.id) + '_Pht' in locals_dict:
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_Pht':
-                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Pht')}
-                        )
-                    if not str(markup.profile.id) + '_Wt' in locals_dict:
-                        locals_dict.update(
-                            {str(markup.profile.id) + '_Wt':
-                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Wt')}
-                        )
+            for measure in json.loads(markup.list_measure):
+                # Пропустить измерение, если оно является фиктивным
+
+
+
+                if measure in list_fake:
+                    continue
+                if not str(markup.profile.id) + '_Abase_' + str(measure) in locals_dict:
+                    if not str(markup.profile.id) + '_signal' in locals():
+                        locals()[str(markup.profile.id) + '_signal'] = json.loads(
+                            session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+                    # Загрузка сигнала из профиля
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_Abase_' + str(measure):
+                              locals()[str(markup.profile.id) + '_signal'][measure]}
+                    )
+                if not str(markup.profile.id) + '_diff_' + str(measure) in locals_dict:
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_diff_' + str(measure):
+                             calc_atrib_measure(locals_dict[str(markup.profile.id) + '_Abase_' + str(measure)], 'diff')}
+                    )
+                if not str(markup.profile.id) + '_At_' + str(measure) in locals_dict:
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_At_' + str(measure):
+                             calc_atrib_measure(locals_dict[str(markup.profile.id) + '_Abase_' + str(measure)], 'At')}
+                    )
+                if not str(markup.profile.id) + '_Vt_' + str(measure) in locals_dict:
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_Vt_' + str(measure):
+                             calc_atrib_measure(locals_dict[str(markup.profile.id) + '_Abase_' + str(measure)], 'Vt')}
+                    )
+                if not str(markup.profile.id) + '_Pht_' + str(measure) in locals_dict:
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_Pht_' + str(measure):
+                             calc_atrib_measure(locals_dict[str(markup.profile.id) + '_Abase_' + str(measure)], 'Pht')}
+                    )
+                if not str(markup.profile.id) + '_Wt_' + str(measure) in locals_dict:
+                    locals_dict.update(
+                        {str(markup.profile.id) + '_Wt_' + str(measure):
+                             calc_atrib_measure(locals_dict[str(markup.profile.id) + '_Abase_' + str(measure)], 'Wt')}
+                    )
 
                 if ui_rp.checkBox_ts_crl.isChecked():
-                    if not str(markup.profile.id) + '_CRL' in locals_dict:
+                    if not str(markup.profile.id) + '_CRL_' + str(measure) in locals_dict:
+                        if not str(markup.profile.id) + '_CRL' in locals():
+                            locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(
+                                locals()[str(markup.profile.id) + '_signal'])
+
                         locals_dict.update(
-                            {str(markup.profile.id) + '_CRL':
-                                calc_CRL_filter(json.loads(
-                                    session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))}
+                            {str(markup.profile.id) + '_CRL_' + str(measure):
+                                locals()[str(markup.profile.id) + '_CRL'][measure]}
                         )
                 if ui_rp.checkBox_ts_crlnf.isChecked():
-                    if not str(markup.profile.id) + '_CRL_NF' in locals_dict:
+                    if not str(markup.profile.id) + '_CRL_NF_' + str(measure) in locals_dict:
+                        if not str(markup.profile.id) + '_CRLNF' in locals():
+                            locals()[str(markup.profile.id) + '_CRLNF'] = calc_CRL(
+                                locals()[str(markup.profile.id) + '_signal'])
                         locals_dict.update(
-                            {str(markup.profile.id) + '_CRL_NF':
-                             calc_CRL(json.loads(
-                                 session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))}
+                            {str(markup.profile.id) + '_CRL_NF_' + str(measure):
+                                locals()[str(markup.profile.id) + '_CRLNF'][measure]}
                         )
                 # # Если параметр сохранён в базе
                 # else:
@@ -418,11 +428,11 @@ def push_random_param():
                             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
 
                         if atr == 'CRL':
-                            sig_measure = locals_dict[str(markup.profile.id) + '_CRL'][measure]
+                            sig_measure = locals_dict[str(markup.profile.id) + '_CRL_' + str(measure)]
                         elif atr == 'CRLNF':
-                            sig_measure = locals_dict[str(markup.profile.id) + '_CRL_NF'][measure]
+                            sig_measure = locals_dict[str(markup.profile.id) + '_CRL_NF_' + str(measure)]
                         else:
-                            sig_measure = locals_dict[str(markup.profile.id) + '_' + atr][measure]
+                            sig_measure = locals_dict[str(markup.profile.id) + '_' + atr + '_' + str(measure)]
 
                         if p == 'sig':
                             for i_sig in range(len(sig_measure[up:down])):
