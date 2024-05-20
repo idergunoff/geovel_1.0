@@ -88,8 +88,7 @@ def push_random_param():
         elif model == 'G-NB':
             model_class = GaussianNB(var_smoothing=10 ** (-ui_cls.spinBox_gnb_var_smooth.value()))
             text_model = f'**G-NB**: \nvar smoothing: 1E-{str(ui_cls.spinBox_gnb_var_smooth.value())}, '
-            # model_class = CategoricalNB()
-            # text_model = f'**C-CB**:, '
+
         elif model == 'DTC':
             spl = 'random' if ui_cls.checkBox_splitter_rnd.isChecked() else 'best'
             model_class = DecisionTreeClassifier(splitter=spl, random_state=0)
@@ -348,12 +347,38 @@ def push_random_param():
                 # Если параметр является расчётным
                 if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                     # Проверка, есть ли уже загруженный сигнал в локальных переменных
-                    if not str(markup.profile.id) + '_signal' in locals_dict:
+                    if not str(markup.profile.id) + '_Abase' in locals_dict:
                         # Загрузка сигнала из профиля
                         locals_dict.update(
-                            {str(markup.profile.id) + '_signal':
+                            {str(markup.profile.id) + '_Abase':
                                  json.loads(session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])}
                         )
+                    if not str(markup.profile.id) + '_diff' in locals_dict:
+                        locals_dict.update(
+                            {str(markup.profile.id) + '_diff':
+                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'diff')}
+                        )
+                    if not str(markup.profile.id) + '_At' in locals_dict:
+                        locals_dict.update(
+                            {str(markup.profile.id) + '_At':
+                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'At')}
+                        )
+                    if not str(markup.profile.id) + '_Vt' in locals_dict:
+                        locals_dict.update(
+                            {str(markup.profile.id) + '_Vt':
+                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Vt')}
+                        )
+                    if not str(markup.profile.id) + '_Pht' in locals_dict:
+                        locals_dict.update(
+                            {str(markup.profile.id) + '_Pht':
+                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Pht')}
+                        )
+                    if not str(markup.profile.id) + '_Wt' in locals_dict:
+                        locals_dict.update(
+                            {str(markup.profile.id) + '_Wt':
+                                 calc_atrib(locals_dict[str(markup.profile.id) + '_Abase'], 'Wt')}
+                        )
+
                 if ui_rp.checkBox_ts_crl.isChecked():
                     if not str(markup.profile.id) + '_CRL' in locals_dict:
                         locals_dict.update(
@@ -397,7 +422,7 @@ def push_random_param():
                         elif atr == 'CRLNF':
                             sig_measure = locals_dict[str(markup.profile.id) + '_CRL_NF'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals_dict[str(markup.profile.id) + '_signal'][measure], atr)
+                            sig_measure = locals_dict[str(markup.profile.id) + '_' + atr][measure]
 
                         if p == 'sig':
                             for i_sig in range(len(sig_measure[up:down])):
