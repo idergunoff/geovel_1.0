@@ -624,6 +624,7 @@ def push_random_param():
 
 
     def start_random_param():
+        start_time = datetime.datetime.now()
         filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                   filter="TXT (*.txt)")
         with open(filename, 'w') as f:
@@ -696,6 +697,14 @@ def push_random_param():
 
         print('results \n', results)
         result_analysis(results, filename)
+        end_time = datetime.datetime.now() - start_time
+        with open(filename, 'a') as f:
+            print(f'\nВремя выполнения: {end_time}', file=f)
+
+        ui_rp.textEdit_test_result.setTextColor(Qt.red)
+        ui_rp.textEdit_test_result.insertPlainText(f'Время выполнения: {end_time}\n')
+
+        print(f'Время выполнения: {end_time}')
 
 
     def get_test_MLP_id():
