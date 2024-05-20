@@ -1,10 +1,10 @@
 import inspect
 import random
-
+from collections import Counter
 import numpy as np
 from scipy.stats import randint, uniform
 from sklearn.model_selection import cross_validate
-
+import re
 from func import *
 
 
@@ -577,6 +577,42 @@ def push_random_param():
                 file=f)
         return list_estimator_roc, list_estimator_percent, filename
 
+    def result_analysis(results, filename):
+        sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
+        for item in sorted_result:
+            print(item)
+
+        twenty_percent = int(len(sorted_result) * 0.2)
+        sorted_result = sorted_result[:twenty_percent]
+        result_param = [item[4][0] for item in sorted_result]
+        flattened_list = [item for sublist in result_param for item in sublist]
+        processed_list = []
+        for s in flattened_list:
+            parts = s.split('_')
+            processed_parts = [re.sub(r'\d+', '', part) for part in parts]
+            new_string = '_'.join(processed_parts)
+            if new_string.endswith('_') or new_string.endswith('__'):
+                new_string = new_string[:-1]
+            processed_list.append(new_string)
+
+        param_count = Counter(processed_list)
+        part_list = int(len(param_count) * 0.2)
+        common_param = param_count.most_common(part_list)
+        top_params = [item[0] for item in common_param]
+        for param in common_param:
+            print(f'{param[0]}: {param[1]}')
+
+        ui_rp.textEdit_test_result.setTextColor(Qt.black)
+        ui_rp.textEdit_test_result.insertPlainText(f'\nНаиболее часто встречающиеся параметры:\n')
+        for param in common_param:
+            ui_rp.textEdit_test_result.insertPlainText(f'{param[0]}: {param[1]}\n')
+
+        with open(filename, 'a') as f:
+            print(f'\nНаиболее часто встречающиеся параметры:\n', file=f)
+            for param in common_param:
+                print(f'{param[0]}: {param[1]}', file=f)
+
+
     def start_random_param():
         filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                   filter="TXT (*.txt)")
@@ -621,13 +657,15 @@ def push_random_param():
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
-                f"Итерация: #{i}\n"
-                f"Количество параметров: {len(list_param)}\n"
+                f"Итерация #{i}\nКоличество параметров: {len(list_param)}\n"
                       f"Выбранные параметры: \n{list_param}\n")
 
             with open(filename, 'a') as f:
-                print(f"Количество параметров: {len(list_param)}\n"
+                print(f"Итерация #{i}\nКоличество параметров: {len(list_param)}\n"
                       f"Выбранные параметры: \n{list_param}\n", file=f)
+
+            print(f"Итерация #{i}\nКоличество параметров: {len(list_param)}\n"
+                  f"Выбранные параметры: \n{list_param}\n")
             print('data train \n',  data_train)
             print('data test \n',  data_test)
 
@@ -647,9 +685,7 @@ def push_random_param():
                 print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n', file=f)
 
         print('results \n', results)
-        sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
-        for item in sorted_result:
-            print(item)
+        result_analysis(results, filename)
 
 
     def get_test_MLP_id():
