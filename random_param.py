@@ -589,7 +589,7 @@ def push_random_param():
 
         twenty_percent = int(len(sorted_result) * 0.2)
         sorted_result = sorted_result[:twenty_percent]
-        result_param = [item[4][0] for item in sorted_result]
+        result_param = [item[4] for item in sorted_result]
         flattened_list = [item for sublist in result_param for item in sublist]
         processed_list = []
         for s in flattened_list:
