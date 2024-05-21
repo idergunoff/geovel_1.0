@@ -1,10 +1,4 @@
-import inspect
-import random
-from collections import Counter
-import numpy as np
-from scipy.stats import randint, uniform
-from sklearn.model_selection import cross_validate
-import re
+
 from func import *
 
 
@@ -587,54 +581,6 @@ def push_random_param():
                 file=f)
         return list_estimator_roc, list_estimator_percent, filename
 
-    def analysis_plots(common_param, results, reverse=True):
-        if len(common_param) > 15:
-            common_param = common_param[:15]
-        labels, counts = zip(*common_param)
-        plt.figure(figsize=(18, 5))
-        color = 'blue' if reverse else 'red'
-        plt.bar(labels, counts, color=color)
-        plt.xlabel('Параметры')
-        plt.ylabel('Вхождения')
-        if reverse:
-            plt.title('Наиболее часто встречающиеся параметры')
-        else:
-            plt.title('Наименее часто встречающиеся параметры')
-        plt.show()
-
-        roc_values = [item[0] for item in results]
-        percent_values = [item[2] for item in results]
-
-        n_groups = len(results)
-        if n_groups > 10:
-            roc_values = roc_values[:10]
-            percent_values = percent_values[:10]
-            n_groups = 10
-        index = np.arange(n_groups)
-        bar_width = 0.35
-        fig, ax = plt.subplots(figsize=(10, 5))
-        bars1 = ax.bar(index - bar_width / 2, roc_values, bar_width, label='ROC')
-        bars2 = ax.bar(index + bar_width / 2, percent_values, bar_width, label='Percent')
-
-        ax.set_xlabel('Итерации')
-        ax.set_ylabel('Значения')
-        ax.set_title('Средние ROC and % значения по итерациям')
-        ax.set_xticks(index)
-        ax.set_xticklabels([f'{i + 1}' for i in range(n_groups)])
-        ax.legend()
-
-        def add_labels(bars):
-            for bar in bars:
-                height = bar.get_height()
-                ax.annotate(f'{height:.2f}',
-                            xy=(bar.get_x() + bar.get_width() / 2, height),
-                            xytext=(0, 3),
-                            textcoords="offset points",
-                            ha='center', va='bottom')
-
-        add_labels(bars1)
-        add_labels(bars2)
-        plt.show()
 
     def result_analysis(results, filename, reverse=True):
         if reverse is True:
@@ -660,7 +606,6 @@ def push_random_param():
         param_count = Counter(processed_list)
         part_list = int(len(param_count) * 0.2)
         common_param = param_count.most_common(part_list)
-        top_params = [item[0] for item in common_param]
         for param in common_param:
             print(f'{param[0]}: {param[1]}')
 
@@ -682,7 +627,6 @@ def push_random_param():
         for param in common_param:
             print(f'{param[0]}: {param[1]}')
 
-        analysis_plots(common_param, results, reverse=reverse)
 
     def start_random_param():
         start_time = datetime.datetime.now()
@@ -741,7 +685,8 @@ def push_random_param():
             print('data train \n',  data_train)
             print('data test \n',  data_test)
 
-            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=5, scoring='accuracy',
+            kv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=kv, scoring='accuracy',
                                         return_estimator=True)
             estimators = cv_results['estimator']
             print('cv_results \n', cv_results)
@@ -750,15 +695,16 @@ def push_random_param():
                                                                       list_param, filename)
             roc = np.array(list_roc).mean()
             percent = np.array(list_percent).mean()
-            results_list = [roc, list_roc, percent, list_percent, [list_param]]
+            results_list = [roc, list_roc, percent, list_percent, list_param]
             results.append(results_list)
 
             with open(filename, 'a') as f:
                 print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n', file=f)
 
-        print('results \n', results)
+        # print('results \n', results)
         result_analysis(results, filename, reverse=True)
         result_analysis(results, filename, reverse=False)
+        draw_result_rnd_prm(results)
 
 
         end_time = datetime.datetime.now() - start_time
@@ -809,6 +755,96 @@ def push_random_param():
             ui_rp.comboBox_test_analysis.addItem(f'{i.title} id{i.id}')
             update_list_test_well()
 
+    def draw_result_rnd_prm(data):
+        fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(20, 14))
+
+        sorted_result_best = sorted(data, key=lambda x: x[0], reverse=True)
+        sorted_result_low = sorted(data, key=lambda x: x[0], reverse=False)
+
+        common_param_best, result_best = find_common_param(sorted_result_best)
+        common_param_low, result_low = find_common_param(sorted_result_low)
+
+        roc_values_best = [item[0] for item in result_best]
+        percent_values_best = [item[2] for item in result_low]
+        roc_values_low = [item[0] for item in result_low]
+        percent_values_low = [item[2] for item in result_low]
+
+        n_groups_best = len(result_best)
+        n_groups_low = len(result_low)
+
+        index_best = np.arange(n_groups_best)
+        index_low = np.arange(n_groups_low)
+
+        bar_width = 0.35
+
+        bars_roc_best = ax[0].bar(index_best - bar_width / 2, roc_values_best, bar_width, label='ROC')
+        bars_perc_best = ax[0].bar(index_best + bar_width / 2, percent_values_best, bar_width, label='Percent')
+        bars_roc_low = ax[2].bar(index_low - bar_width / 2, roc_values_low, bar_width, label='ROC')
+        bars_perc_low = ax[2].bar(index_low + bar_width / 2, percent_values_low, bar_width, label='Percent')
+
+        ax[0].set_xlabel('Итерации')
+        ax[0].set_ylabel('Значения')
+        ax[0].set_title('Средние ROC and % значения по итерациям')
+        ax[0].set_xticks(index_best)
+        ax[0].set_xticklabels([f'{i + 1}' for i in range(n_groups_best)])
+        ax[0].legend()
+
+        ax[2].set_xlabel('Итерации')
+        ax[2].set_ylabel('Значения')
+        ax[2].set_title('Средние ROC and % значения по итерациям')
+        ax[2].set_xticks(index_low)
+        ax[2].set_xticklabels([f'{i + 1}' for i in range(n_groups_low)])
+        ax[2].legend()
+
+        def add_labels(bars, ax):
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:.2f}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+
+        add_labels(bars_roc_best, ax[0])
+        add_labels(bars_perc_best, ax[0])
+        add_labels(bars_roc_low, ax[2])
+        add_labels(bars_perc_low, ax[2])
+
+        labels_best, counts_best = zip(*common_param_best)
+        labels_low, counts_low = zip(*common_param_low)
+
+        ax[1].bar(labels_best, counts_best, color='#aad5ff')
+        ax[1].set_xticklabels(labels_best, rotation=90)
+        ax[1].set_xlabel('Параметры')
+        ax[1].set_ylabel('Вхождения')
+        ax[1].set_title('Наиболее часто встречающиеся параметры')
+
+        ax[3].bar(labels_low, counts_low, color='#ff9f98')
+        ax[3].set_xticklabels(labels_low, rotation=90)
+        ax[3].set_xlabel('Параметры')
+        ax[3].set_ylabel('Вхождения')
+        ax[3].set_title('Наименее часто встречающиеся параметры')
+
+        fig.tight_layout()
+        plt.show()
+
+    def find_common_param(sorted_result, percent_models=0.2, percent_params=0.4):
+        count_model = int(len(sorted_result) * percent_models)
+        percent_result = sorted_result[:count_model]
+        result_param = [item[4] for item in percent_result]
+        flattened_list = [item for sublist in result_param for item in sublist]
+        processed_list = []
+        for s in flattened_list:
+            parts = s.split('_')
+            processed_parts = [re.sub(r'\d+', '', part) for part in parts]
+            new_string = '_'.join(processed_parts)
+            if new_string.endswith('_') or new_string.endswith('__'):
+                new_string = new_string[:-1]
+            processed_list.append(new_string)
+        param_count = Counter(processed_list)
+        part_list = int(len(param_count) * percent_params)
+        common_param = param_count.most_common(part_list)
+        return common_param, percent_result
 
     update_test_analysis_combobox()
     update_list_test_well()
@@ -835,8 +871,5 @@ def push_random_param():
     ui_rp.spinBox_bot_skip_down.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
 
     RandomParam.exec_()
-
-    ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
-    ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
 
     Classifier.exec_()
