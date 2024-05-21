@@ -240,11 +240,8 @@ def push_random_param():
                 return f'{n_sig_top}_{n_sig_bot}'
 
         n_param = random.randint(2, len(list_param_group))
-        print(n_param, len(list_param_group))
         list_param_choice = random_combination(list_param_group, n_param)
 
-        print(list_param_group)
-        print(list_param_choice)
 
 
         if ui_rp.checkBox_ts_a.isChecked():
@@ -660,7 +657,6 @@ def push_random_param():
             text_model += text_scaler
             pipe_steps.append(('model', model_class))
             pipe = Pipeline(pipe_steps)
-            print('pipe \n', pipe)
 
             list_param = build_list_param()
             data_train, list_param = build_table_random_param(get_MLP_id(), list_param)
@@ -689,8 +685,7 @@ def push_random_param():
             cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=kv, scoring='accuracy',
                                         return_estimator=True)
             estimators = cv_results['estimator']
-            print('cv_results \n', cv_results)
-            print('estimators \n', estimators)
+
             list_roc, list_percent, filename = test_classif_estimator(estimators, data_test,
                                                                       list_param, filename)
             roc = np.array(list_roc).mean()
