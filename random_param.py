@@ -587,8 +587,60 @@ def push_random_param():
                 file=f)
         return list_estimator_roc, list_estimator_percent, filename
 
-    def result_analysis(results, filename):
-        sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
+    def analysis_plots(common_param, results, reverse=True):
+        if len(common_param) > 15:
+            common_param = common_param[:15]
+        labels, counts = zip(*common_param)
+        plt.figure(figsize=(18, 5))
+        color = 'blue' if reverse else 'red'
+        plt.bar(labels, counts, color=color)
+        plt.xlabel('Параметры')
+        plt.ylabel('Вхождения')
+        if reverse:
+            plt.title('Наиболее часто встречающиеся параметры')
+        else:
+            plt.title('Наименее часто встречающиеся параметры')
+        plt.show()
+
+        roc_values = [item[0] for item in results]
+        percent_values = [item[2] for item in results]
+
+        n_groups = len(results)
+        if n_groups > 10:
+            roc_values = roc_values[:10]
+            percent_values = percent_values[:10]
+            n_groups = 10
+        index = np.arange(n_groups)
+        bar_width = 0.35
+        fig, ax = plt.subplots(figsize=(10, 5))
+        bars1 = ax.bar(index - bar_width / 2, roc_values, bar_width, label='ROC')
+        bars2 = ax.bar(index + bar_width / 2, percent_values, bar_width, label='Percent')
+
+        ax.set_xlabel('Итерации')
+        ax.set_ylabel('Значения')
+        ax.set_title('Средние ROC and % значения по итерациям')
+        ax.set_xticks(index)
+        ax.set_xticklabels([f'{i + 1}' for i in range(n_groups)])
+        ax.legend()
+
+        def add_labels(bars):
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:.2f}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+
+        add_labels(bars1)
+        add_labels(bars2)
+        plt.show()
+
+    def result_analysis(results, filename, reverse=True):
+        if reverse is True:
+            sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
+        else:
+            sorted_result = sorted(results, key=lambda x: x[0], reverse=False)
         for item in sorted_result:
             print(item)
 
@@ -612,16 +664,25 @@ def push_random_param():
         for param in common_param:
             print(f'{param[0]}: {param[1]}')
 
+        if reverse is True:
+            test_result = '\nНаиболее часто встречающиеся параметры для лучших моделей:\n'
+        else:
+            test_result = '\nНаиболее часто встречающиеся параметры для худших моделей:\n'
         ui_rp.textEdit_test_result.setTextColor(Qt.black)
-        ui_rp.textEdit_test_result.insertPlainText(f'\nНаиболее часто встречающиеся параметры:\n')
+        ui_rp.textEdit_test_result.insertPlainText(test_result)
         for param in common_param:
             ui_rp.textEdit_test_result.insertPlainText(f'{param[0]}: {param[1]}\n')
 
         with open(filename, 'a') as f:
-            print(f'\nНаиболее часто встречающиеся параметры:\n', file=f)
+            print(test_result, file=f)
             for param in common_param:
                 print(f'{param[0]}: {param[1]}', file=f)
 
+        print(test_result)
+        for param in common_param:
+            print(f'{param[0]}: {param[1]}')
+
+        analysis_plots(common_param, results, reverse=reverse)
 
     def start_random_param():
         start_time = datetime.datetime.now()
@@ -696,14 +757,15 @@ def push_random_param():
                 print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n', file=f)
 
         print('results \n', results)
-        result_analysis(results, filename)
+        result_analysis(results, filename, reverse=True)
+        result_analysis(results, filename, reverse=False)
+
+
         end_time = datetime.datetime.now() - start_time
         with open(filename, 'a') as f:
             print(f'\nВремя выполнения: {end_time}', file=f)
-
         ui_rp.textEdit_test_result.setTextColor(Qt.red)
         ui_rp.textEdit_test_result.insertPlainText(f'Время выполнения: {end_time}\n')
-
         print(f'Время выполнения: {end_time}')
 
 
