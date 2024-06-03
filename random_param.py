@@ -212,6 +212,8 @@ def push_random_param():
             list_param_group.append('attr_Pht')
         if ui_rp.checkBox_attr_wt.isChecked():
             list_param_group.append('attr_Wt')
+        if ui_rp.checkBox_attr_crl.isChecked():
+            list_param_group.append('attr_CRL')
 
         if ui_rp.checkBox_stat.isChecked():
             list_param_group.append('stat')
@@ -297,6 +299,10 @@ def push_random_param():
             if 'attr_Wt' in list_param_choice:
                 list_param_all += ['Wt_top', 'Wt_sum', 'Wt_mean', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf', 'Wt_Qf',
                                    'Wt_Sn_wmf']
+        if ui_rp.checkBox_attr_crl.isChecked():
+            if 'attr_CRL' in list_param_choice:
+                list_param_all += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
+                                   'CRL_Qf', 'CRL_Sn_wmf']
 
         if ui_rp.checkBox_form_t.isChecked():
             if 'form_t' in list_param_choice:

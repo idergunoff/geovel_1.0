@@ -5,6 +5,7 @@ from itertools import combinations
 from collections import Counter
 import re
 import inspect
+import chardet
 
 
 import tqdm as tqdm
@@ -78,6 +79,7 @@ from sklearn.neighbors import KNeighborsRegressor, LocalOutlierFactor
 from sklearn.svm import SVR, SVC
 from sklearn.neural_network import MLPRegressor
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE, RFECV
 from sklearn.pipeline import Pipeline
