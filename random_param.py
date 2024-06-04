@@ -241,7 +241,7 @@ def push_random_param():
             elif ts == 'sig':
                 return f'{n_sig_top}_{n_sig_bot}'
 
-        n_param = random.randint(2, len(list_param_group))
+        n_param = random.randint(1, len(list_param_group))
         list_param_choice = random_combination(list_param_group, n_param)
 
 
