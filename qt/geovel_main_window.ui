@@ -1037,8 +1037,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3704,7 +3704,7 @@ Therm</string>
                        <number>1</number>
                       </property>
                       <property name="maximum">
-                       <number>100</number>
+                       <number>1000</number>
                       </property>
                       <property name="value">
                        <number>13</number>
@@ -4169,7 +4169,7 @@ Therm</string>
                          <number>1</number>
                         </property>
                         <property name="maximum">
-                         <number>100</number>
+                         <number>1000</number>
                         </property>
                         <property name="value">
                          <number>13</number>
@@ -5160,7 +5160,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -107,7 +107,7 @@
                <item row="6" column="0">
                 <widget class="QSpinBox" name="spinBox_bot_skip_down">
                  <property name="maximum">
-                  <number>250</number>
+                  <number>500</number>
                  </property>
                  <property name="value">
                   <number>20</number>
@@ -117,7 +117,7 @@
                <item row="2" column="0">
                 <widget class="QSpinBox" name="spinBox_top_skip_up">
                  <property name="maximum">
-                  <number>250</number>
+                  <number>500</number>
                  </property>
                  <property name="value">
                   <number>50</number>
@@ -134,7 +134,7 @@
                <item row="5" column="0">
                 <widget class="QSpinBox" name="spinBox_bot_skip_up">
                  <property name="maximum">
-                  <number>250</number>
+                  <number>500</number>
                  </property>
                  <property name="value">
                   <number>20</number>
@@ -144,7 +144,7 @@
                <item row="3" column="0">
                 <widget class="QSpinBox" name="spinBox_top_skip_down">
                  <property name="maximum">
-                  <number>250</number>
+                  <number>500</number>
                  </property>
                  <property name="value">
                   <number>50</number>

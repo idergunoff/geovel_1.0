@@ -231,6 +231,9 @@ def push_random_param():
         n_sig_top = random.randint(ui_rp.spinBox_top_skip_up.value(), ui_rp.spinBox_top_skip_down.value())
         n_sig_bot = random.randint(ui_rp.spinBox_bot_skip_up.value(), ui_rp.spinBox_bot_skip_down.value())
 
+        if n_sig_bot + n_sig_top > 505:
+            n_sig_bot = 505 - n_sig_top
+
         def get_n(ts: str) -> str:
             if ts == 'distr':
                 return str(n_distr)
