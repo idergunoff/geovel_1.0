@@ -442,7 +442,7 @@ def push_random_param():
                             for num in range(n):
                                 dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
                         elif p == 'sep':
-                            sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
+                            sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
                             for num in range(n):
                                 dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
                         elif p == 'mfcc':

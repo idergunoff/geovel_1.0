@@ -1600,6 +1600,24 @@ def get_mean_values(values: list, n: int) -> list:
     return mean_values
 
 
+def get_interpolate_list(lst, n):
+    # Преобразуем список в массив NumPy
+    arr = np.array(lst)
+
+    # Создаем равномерное разбиение от 0 до длины исходного списка
+    x = np.linspace(0, len(lst) - 1, len(lst))
+
+    # Создаем равномерное разбиение от 0 до 99 для создания нового списка из 100 чисел
+    new_x = np.linspace(0, len(lst) - 1, n)
+
+    # Интерполируем значения для новых точек
+    new_y = np.interp(new_x, x, arr)
+
+    # Преобразуем массив NumPy обратно в список
+    new_list = list(new_y)
+
+    return new_list
+
 def get_mfcc(values: list, n: int):
     return list(mfcc(signal=np.array(values), samplerate=125000000, winlen=0.000004104, nfilt=513, nfft=513, numcep=n)[0])
 
