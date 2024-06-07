@@ -503,7 +503,7 @@ class Ui_RandomParam(object):
         self.gridLayout_25.addWidget(self.pushButton_start, 0, 1, 1, 1)
         self.spinBox_n_iter = QtWidgets.QSpinBox(RandomParam)
         self.spinBox_n_iter.setMinimum(5)
-        self.spinBox_n_iter.setMaximum(1000)
+        self.spinBox_n_iter.setMaximum(100000)
         self.spinBox_n_iter.setSingleStep(50)
         self.spinBox_n_iter.setProperty("value", 100)
         self.spinBox_n_iter.setObjectName("spinBox_n_iter")
