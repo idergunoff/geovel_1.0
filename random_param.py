@@ -202,28 +202,61 @@ def push_random_param():
             for i in list_ts:
                 list_param_group.append(f'{i}_CRL')
 
-        if ui_rp.checkBox_attr_a.isChecked():
-            list_param_group.append('attr_A')
-        if ui_rp.checkBox_attr_at.isChecked():
-            list_param_group.append('attr_At')
-        if ui_rp.checkBox_attr_vt.isChecked():
-            list_param_group.append('attr_Vt')
-        if ui_rp.checkBox_attr_pht.isChecked():
-            list_param_group.append('attr_Pht')
-        if ui_rp.checkBox_attr_wt.isChecked():
-            list_param_group.append('attr_Wt')
-        if ui_rp.checkBox_attr_crl.isChecked():
-            list_param_group.append('attr_CRL')
+        if ui_rp.checkBox_group.isChecked():
 
-        if ui_rp.checkBox_stat.isChecked():
-            list_param_group.append('stat')
-        if ui_rp.checkBox_crl_stat.isChecked():
-            list_param_group.append('CRL_stat')
+            if ui_rp.checkBox_attr_a.isChecked():
+                list_param_group.append('attr_A')
+            if ui_rp.checkBox_attr_at.isChecked():
+                list_param_group.append('attr_At')
+            if ui_rp.checkBox_attr_vt.isChecked():
+                list_param_group.append('attr_Vt')
+            if ui_rp.checkBox_attr_pht.isChecked():
+                list_param_group.append('attr_Pht')
+            if ui_rp.checkBox_attr_wt.isChecked():
+                list_param_group.append('attr_Wt')
+            if ui_rp.checkBox_attr_crl.isChecked():
+                list_param_group.append('attr_CRL')
 
-        if ui_rp.checkBox_form_t.isChecked():
-            list_param_group.append('form_t')
-        if ui_rp.checkBox_prior.isChecked():
-            list_param_group.append('prior')
+            if ui_rp.checkBox_stat.isChecked():
+                list_param_group.append('stat')
+            if ui_rp.checkBox_crl_stat.isChecked():
+                list_param_group.append('CRL_stat')
+
+            if ui_rp.checkBox_form_t.isChecked():
+                list_param_group.append('form_t')
+            if ui_rp.checkBox_prior.isChecked():
+                list_param_group.append('prior')
+
+        else:
+
+            if ui_rp.checkBox_attr_a.isChecked():
+                list_param_group += ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf',
+                                   'A_Qf', 'A_Sn_wmf']
+            if ui_rp.checkBox_attr_at.isChecked():
+                list_param_group += ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn',
+                                   'At_wmf', 'At_Qf', 'At_Sn_wmf']
+            if ui_rp.checkBox_attr_vt.isChecked():
+                list_param_group += ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf',
+                                   'Vt_Qf', 'Vt_Sn_wmf']
+            if ui_rp.checkBox_attr_pht.isChecked():
+                list_param_group += ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn',
+                                   'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']
+            if ui_rp.checkBox_attr_wt.isChecked():
+                list_param_group += ['Wt_top', 'Wt_mean', 'Wt_sum', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf',
+                                   'Wt_Qf', 'Wt_Sn_wmf']
+            if ui_rp.checkBox_attr_crl.isChecked():
+                list_param_group += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
+                                   'CRL_Qf', 'CRL_Sn_wmf']
+
+            if ui_rp.checkBox_stat.isChecked():
+                list_param_group += ['skew', 'kurt', 'std', 'k_var']
+            if ui_rp.checkBox_crl_stat.isChecked():
+                list_param_group += ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']
+
+            if ui_rp.checkBox_form_t.isChecked():
+                list_param_group += ['T_top', 'T_bottom', 'dT']
+            if ui_rp.checkBox_prior.isChecked():
+                list_param_group += ['width', 'top', 'land', 'speed', 'speed_cover']
 
         n_distr = random.randint(ui_rp.spinBox_distr_up.value(), ui_rp.spinBox_distr_down.value())
         n_sep = random.randint(ui_rp.spinBox_sep_up.value(), ui_rp.spinBox_sep_down.value())
@@ -252,8 +285,6 @@ def push_random_param():
 
         n_param = random.randint(1, len(list_param_group))
         list_param_choice = random_combination(list_param_group, n_param)
-
-
 
         if ui_rp.checkBox_ts_a.isChecked():
             for i in list_ts:
@@ -288,44 +319,98 @@ def push_random_param():
                 if f'{i}_CRL' in list_param_choice:
                     list_param_all.append(f'{i}_CRL_{get_n(i)}')
 
-        if ui_rp.checkBox_attr_a.isChecked():
-            if 'attr_A' in list_param_choice:
-                list_param_all += ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf',
-                                   'A_Qf', 'A_Sn_wmf']
-        if ui_rp.checkBox_attr_at.isChecked():
-            if 'attr_At' in list_param_choice:
-                list_param_all += ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn',
-                                   'At_wmf', 'At_Qf', 'At_Sn_wmf']
-        if ui_rp.checkBox_attr_vt.isChecked():
-            if 'attr_Vt' in list_param_choice:
-                list_param_all += ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf',
-                                   'Vt_Qf', 'Vt_Sn_wmf']
-        if ui_rp.checkBox_attr_pht.isChecked():
-            if 'attr_Pht' in list_param_choice:
-                list_param_all += ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn',
-                                   'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']
-        if ui_rp.checkBox_attr_wt.isChecked():
-            if 'attr_Wt' in list_param_choice:
-                list_param_all += ['Wt_top', 'Wt_sum', 'Wt_mean', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf', 'Wt_Qf',
-                                   'Wt_Sn_wmf']
-        if ui_rp.checkBox_attr_crl.isChecked():
-            if 'attr_CRL' in list_param_choice:
-                list_param_all += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
-                                   'CRL_Qf', 'CRL_Sn_wmf']
+        if ui_rp.checkBox_group.isChecked():
 
-        if ui_rp.checkBox_form_t.isChecked():
-            if 'form_t' in list_param_choice:
-                list_param_all += ['T_top', 'T_bottom', 'dT']
-        if ui_rp.checkBox_prior.isChecked():
-            if 'prior' in list_param_choice:
-                list_param_all += ['width', 'top', 'land', 'speed', 'speed_cover']
+            if ui_rp.checkBox_attr_a.isChecked():
+                if 'attr_A' in list_param_choice:
+                    list_param_all += ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf',
+                                       'A_Qf', 'A_Sn_wmf']
+            if ui_rp.checkBox_attr_at.isChecked():
+                if 'attr_At' in list_param_choice:
+                    list_param_all += ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn',
+                                       'At_wmf', 'At_Qf', 'At_Sn_wmf']
+            if ui_rp.checkBox_attr_vt.isChecked():
+                if 'attr_Vt' in list_param_choice:
+                    list_param_all += ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf',
+                                       'Vt_Qf', 'Vt_Sn_wmf']
+            if ui_rp.checkBox_attr_pht.isChecked():
+                if 'attr_Pht' in list_param_choice:
+                    list_param_all += ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn',
+                                       'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']
+            if ui_rp.checkBox_attr_wt.isChecked():
+                if 'attr_Wt' in list_param_choice:
+                    list_param_all += ['Wt_top', 'Wt_sum', 'Wt_mean', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf', 'Wt_Qf',
+                                       'Wt_Sn_wmf']
+            if ui_rp.checkBox_attr_crl.isChecked():
+                if 'attr_CRL' in list_param_choice:
+                    list_param_all += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
+                                       'CRL_Qf', 'CRL_Sn_wmf']
 
-        if ui_rp.checkBox_stat.isChecked():
-            if 'stat' in list_param_choice:
-                list_param_all += ['skew', 'kurt', 'std', 'k_var']
-        if ui_rp.checkBox_crl_stat.isChecked():
-            if 'CRL_stat' in list_param_choice:
-                list_param_all += ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']
+            if ui_rp.checkBox_form_t.isChecked():
+                if 'form_t' in list_param_choice:
+                    list_param_all += ['T_top', 'T_bottom', 'dT']
+            if ui_rp.checkBox_prior.isChecked():
+                if 'prior' in list_param_choice:
+                    list_param_all += ['width', 'top', 'land', 'speed', 'speed_cover']
+
+            if ui_rp.checkBox_stat.isChecked():
+                if 'stat' in list_param_choice:
+                    list_param_all += ['skew', 'kurt', 'std', 'k_var']
+            if ui_rp.checkBox_crl_stat.isChecked():
+                if 'CRL_stat' in list_param_choice:
+                    list_param_all += ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']
+
+        else:
+
+            if ui_rp.checkBox_attr_a.isChecked():
+                for i in ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf', 'A_Qf', 'A_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_attr_at.isChecked():
+                for i in  ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn', 'At_wmf', 'At_Qf', 'At_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_attr_vt.isChecked():
+                for i in ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf', 'Vt_Qf', 'Vt_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_attr_pht.isChecked():
+                for i in ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn', 'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_attr_wt.isChecked():
+                for i in ['Wt_top', 'Wt_sum', 'Wt_mean', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf', 'Wt_Qf', 'Wt_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_attr_crl.isChecked():
+                for i in ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf', 'CRL_Qf', 'CRL_Sn_wmf']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_form_t.isChecked():
+                for i in ['T_top', 'T_bottom', 'dT']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_prior.isChecked():
+                for i in ['width', 'top', 'land', 'speed', 'speed_cover']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_stat.isChecked():
+                for i in ['skew', 'kurt', 'std', 'k_var']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
+
+            if ui_rp.checkBox_crl_stat.isChecked():
+                for i in ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']:
+                    if i in list_param_choice:
+                        list_param_all.append(i)
 
         print(len(list_param_all), list_param_all)
         return list_param_all
@@ -409,11 +494,17 @@ def push_random_param():
                             {str(markup.profile.id) + '_CRL_NF_' + str(measure):
                                 locals()[str(markup.profile.id) + '_CRLNF'][measure]}
                         )
-                # # Если параметр сохранён в базе
-                # else:
-                #     # Загрузка значений параметра из формации
-                #     locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
-                #         Formation.id == markup.formation_id).first()[0])
+
+                for i in list_param:
+                    if i in list_param_geovel:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'Formation.{i}')).filter(
+                                       Formation.id == markup.formation_id
+                                   ).first()[0])}
+                            )
+
 
             # Обработка каждого измерения в разметке
             for measure in json.loads(markup.list_measure):
@@ -458,8 +549,9 @@ def push_random_param():
 
                     else:
                         # Загрузка значения параметра из списка значений
-                        dict_value[param] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
-                        Formation.id == markup.formation_id).first()[0])[measure]
+                        dict_value[param] = locals_dict[str(markup.profile.id) + '_' + param][measure]
+                        # dict_value[param] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
+                        # Formation.id == markup.formation_id).first()[0])[measure]
 
                 # Добавление данных в обучающую выборку
                 data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
