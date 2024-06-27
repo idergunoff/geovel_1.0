@@ -297,8 +297,11 @@ def push_random_param():
             n_param_attr  = random.randint(ui_rp.spinBox_min_attr.value(), ui_rp.spinBox_max_attr.value())
             list_param_choice_attr = random_combination(list_param_attr, n_param_attr)
             list_param_group += list_param_choice_attr
-            n_param = random.randint(ui_rp.spinBox_min_attr.value(), len(list_param_group))
-            list_param_choice = random_combination(list_param_group, n_param)
+            if len(list_param_choice_attr) == len(list_param_group):
+                list_param_choice = list_param_group
+            else:
+                n_param = random.randint(ui_rp.spinBox_min_attr.value(), len(list_param_group))
+                list_param_choice = random_combination(list_param_group, n_param)
 
 
         if ui_rp.checkBox_ts_a.isChecked():
