@@ -39,6 +39,13 @@ def push_random_param():
     Classifier.show()
     Classifier.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
+    ui_rp.groupBox_minmax_attr.hide()
+
+    def check_group_attr():
+        if ui_rp.checkBox_group.isChecked():
+            ui_rp.groupBox_minmax_attr.hide()
+        else:
+            ui_rp.groupBox_minmax_attr.show()
 
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
@@ -228,35 +235,35 @@ def push_random_param():
                 list_param_group.append('prior')
 
         else:
-
+            list_param_attr = []
             if ui_rp.checkBox_attr_a.isChecked():
-                list_param_group += ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf',
-                                   'A_Qf', 'A_Sn_wmf']
+                list_param_attr += ['A_top', 'A_bottom', 'dA', 'A_sum', 'A_mean', 'A_max', 'A_T_max', 'A_Sn', 'A_wmf',
+                                    'A_Qf', 'A_Sn_wmf']
             if ui_rp.checkBox_attr_at.isChecked():
-                list_param_group += ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn',
-                                   'At_wmf', 'At_Qf', 'At_Sn_wmf']
+                list_param_attr += ['At_top', 'dAt', 'At_sum', 'At_mean', 'At_max', 'At_T_max', 'At_Sn',
+                                    'At_wmf', 'At_Qf', 'At_Sn_wmf']
             if ui_rp.checkBox_attr_vt.isChecked():
-                list_param_group += ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf',
-                                   'Vt_Qf', 'Vt_Sn_wmf']
+                list_param_attr += ['Vt_top', 'dVt', 'Vt_sum', 'Vt_mean', 'Vt_max', 'Vt_T_max', 'Vt_Sn', 'Vt_wmf',
+                                    'Vt_Qf', 'Vt_Sn_wmf']
             if ui_rp.checkBox_attr_pht.isChecked():
-                list_param_group += ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn',
-                                   'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']
+                list_param_attr += ['Pht_top', 'dPht', 'Pht_sum', 'Pht_mean', 'Pht_max', 'Pht_T_max', 'Pht_Sn',
+                                    'Pht_wmf', 'Pht_Qf', 'Pht_Sn_wmf']
             if ui_rp.checkBox_attr_wt.isChecked():
-                list_param_group += ['Wt_top', 'Wt_mean', 'Wt_sum', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf',
-                                   'Wt_Qf', 'Wt_Sn_wmf']
+                list_param_attr += ['Wt_top', 'Wt_mean', 'Wt_sum', 'Wt_max', 'Wt_T_max', 'Wt_Sn', 'Wt_wmf',
+                                    'Wt_Qf', 'Wt_Sn_wmf']
             if ui_rp.checkBox_attr_crl.isChecked():
-                list_param_group += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
-                                   'CRL_Qf', 'CRL_Sn_wmf']
+                list_param_attr += ['CRL_top', 'CRL_sum', 'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf',
+                                    'CRL_Qf', 'CRL_Sn_wmf']
 
             if ui_rp.checkBox_stat.isChecked():
-                list_param_group += ['skew', 'kurt', 'std', 'k_var']
+                list_param_attr += ['skew', 'kurt', 'std', 'k_var']
             if ui_rp.checkBox_crl_stat.isChecked():
-                list_param_group += ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']
+                list_param_attr += ['CRL_skew', 'CRL_kurt', 'CRL_std', 'CRL_k_var']
 
             if ui_rp.checkBox_form_t.isChecked():
-                list_param_group += ['T_top', 'T_bottom', 'dT']
+                list_param_attr += ['T_top', 'T_bottom', 'dT']
             if ui_rp.checkBox_prior.isChecked():
-                list_param_group += ['width', 'top', 'land', 'speed', 'speed_cover']
+                list_param_attr += ['width', 'top', 'land', 'speed', 'speed_cover']
 
         n_distr = random.randint(ui_rp.spinBox_distr_up.value(), ui_rp.spinBox_distr_down.value())
         n_sep = random.randint(ui_rp.spinBox_sep_up.value(), ui_rp.spinBox_sep_down.value())
@@ -283,8 +290,16 @@ def push_random_param():
             elif ts == 'sig':
                 return f'{n_sig_top}_{n_sig_bot}'
 
-        n_param = random.randint(1, len(list_param_group))
-        list_param_choice = random_combination(list_param_group, n_param)
+        if ui_rp.checkBox_group.isChecked():
+            n_param = random.randint(1, len(list_param_group))
+            list_param_choice = random_combination(list_param_group, n_param)
+        else:
+            n_param_attr  = random.randint(ui_rp.spinBox_min_attr.value(), ui_rp.spinBox_max_attr.value())
+            list_param_choice_attr = random_combination(list_param_attr, n_param_attr)
+            list_param_group += list_param_choice_attr
+            n_param = random.randint(ui_rp.spinBox_min_attr.value(), len(list_param_group))
+            list_param_choice = random_combination(list_param_group, n_param)
+
 
         if ui_rp.checkBox_ts_a.isChecked():
             for i in list_ts:
@@ -971,6 +986,8 @@ def push_random_param():
 
     ui_rp.spinBox_bot_skip_up.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
     ui_rp.spinBox_bot_skip_down.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
+
+    ui_rp.checkBox_group.clicked.connect(check_group_attr)
 
     RandomParam.exec_()
 
