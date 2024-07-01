@@ -6,605 +6,1597 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>804</width>
-    <height>708</height>
+    <width>927</width>
+    <height>709</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>RandomParam</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_27">
+  <layout class="QGridLayout" name="gridLayout_5">
    <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout_23">
+    <layout class="QGridLayout" name="gridLayout_4" rowstretch="5,2">
      <item row="0" column="0">
-      <widget class="QGroupBox" name="groupBox_6">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="currentIndex">
+        <number>0</number>
        </property>
-       <property name="title">
-        <string>Signal Parameter</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_12">
-        <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_11">
-          <item row="1" column="1">
-           <widget class="QGroupBox" name="groupBox_4">
-            <property name="title">
-             <string>Interpolat</string>
+       <widget class="QWidget" name="tab_3">
+        <attribute name="title">
+         <string>Group Parameter</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="0" column="0">
+            <widget class="QGroupBox" name="groupBox_15">
+             <property name="title">
+              <string>GeoVel Parameter</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_60">
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_61">
+                <item row="0" column="1">
+                 <widget class="QGroupBox" name="groupBox_16">
+                  <property name="title">
+                   <string>Attribute</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_62">
+                   <item row="2" column="0">
+                    <spacer name="verticalSpacer_8">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QGridLayout" name="gridLayout_63">
+                     <item row="0" column="0">
+                      <layout class="QGridLayout" name="gridLayout_64">
+                       <item row="0" column="0">
+                        <widget class="QLabel" name="label_35">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>top</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_36">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>bottom</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="0">
+                        <widget class="QLabel" name="label_37">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>delta</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="3" column="0">
+                        <widget class="QLabel" name="label_38">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>sum</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="4" column="0">
+                        <widget class="QLabel" name="label_39">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>mean</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="5" column="0">
+                        <widget class="QLabel" name="label_40">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>max</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="6" column="0">
+                        <widget class="QLabel" name="label_41">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>T max</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="8" column="0">
+                        <widget class="QLabel" name="label_42">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>wmf</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="9" column="0">
+                        <widget class="QLabel" name="label_43">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Qf</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="10" column="0">
+                        <widget class="QLabel" name="label_44">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Sn/wmf</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="7" column="0">
+                        <widget class="QLabel" name="label_45">
+                         <property name="font">
+                          <font>
+                           <pointsize>8</pointsize>
+                           <weight>75</weight>
+                           <italic>true</italic>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Sn</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item row="0" column="1">
+                      <layout class="QGridLayout" name="gridLayout_65">
+                       <item row="0" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_all">
+                         <property name="font">
+                          <font>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>all</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_a">
+                         <property name="text">
+                          <string>A base</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_at">
+                         <property name="text">
+                          <string>At</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="3" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_vt">
+                         <property name="text">
+                          <string>Vt</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="4" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_pht">
+                         <property name="text">
+                          <string>Pht</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="5" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_wt">
+                         <property name="text">
+                          <string>Wt</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="6" column="0">
+                        <widget class="QCheckBox" name="checkBox_attr_crl">
+                         <property name="text">
+                          <string>CRL</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="checkBox_group">
+                     <property name="text">
+                      <string>group</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QGroupBox" name="groupBox_17">
+                  <property name="title">
+                   <string>Statistic</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_66">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_67">
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_46">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>skew</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QLabel" name="label_47">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>k var</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QLabel" name="label_48">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>std</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_49">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>kurt</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_stat">
+                       <property name="text">
+                        <string>stat</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="checkBox_crl_stat">
+                       <property name="text">
+                        <string>CRL stat</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="0">
+                      <spacer name="verticalSpacer_9">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>40</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QGroupBox" name="groupBox_minmax_attr">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="title">
+                      <string>Min/Max attr</string>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_68">
+                      <item row="0" column="0">
+                       <widget class="QSpinBox" name="spinBox_min_attr">
+                        <property name="minimum">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <number>75</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QSpinBox" name="spinBox_max_attr">
+                        <property name="minimum">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <number>75</number>
+                        </property>
+                        <property name="value">
+                         <number>75</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QGroupBox" name="groupBox_18">
+                  <property name="title">
+                   <string>Formation</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_69">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_70">
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_50">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>T bottom</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QLabel" name="label_51">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>width</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="8" column="0">
+                      <widget class="QLabel" name="label_52">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>speed</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="0">
+                      <widget class="QLabel" name="label_53">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>top</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_54">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>T top</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QCheckBox" name="checkBox_prior">
+                       <property name="text">
+                        <string>prior</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="0">
+                      <widget class="QLabel" name="label_55">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>land</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_56">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>dT</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="9" column="0">
+                      <widget class="QLabel" name="label_57">
+                       <property name="font">
+                        <font>
+                         <pointsize>8</pointsize>
+                         <weight>75</weight>
+                         <italic>true</italic>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>speed cover</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_form_t">
+                       <property name="font">
+                        <font>
+                         <weight>50</weight>
+                         <bold>false</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>T</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="1" column="0">
+                    <spacer name="verticalSpacer_10">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QGroupBox" name="groupBox_19">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
+             <property name="title">
+              <string>Signal Parameter</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_71">
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_72">
+                <item row="0" column="0" colspan="3">
+                 <widget class="QGroupBox" name="groupBox_20">
+                  <property name="title">
+                   <string>Type Signal</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_73">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_74">
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_ts_all">
+                       <property name="font">
+                        <font>
+                         <pointsize>11</pointsize>
+                         <weight>75</weight>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>all</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QCheckBox" name="checkBox_ts_crl">
+                       <property name="text">
+                        <string>CRL</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="checkBox_ts_a">
+                       <property name="text">
+                        <string>A base</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QCheckBox" name="checkBox_ts_at">
+                       <property name="text">
+                        <string>At</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="2">
+                      <widget class="QCheckBox" name="checkBox_ts_pht">
+                       <property name="text">
+                        <string>Pht</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QCheckBox" name="checkBox_ts_diff">
+                       <property name="text">
+                        <string>diff</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QCheckBox" name="checkBox_ts_vt">
+                       <property name="text">
+                        <string>Vt</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="2">
+                      <widget class="QCheckBox" name="checkBox_ts_wt">
+                       <property name="text">
+                        <string>Wt</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QCheckBox" name="checkBox_ts_crlnf">
+                       <property name="text">
+                        <string>CRL NF</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QGroupBox" name="groupBox_21">
+                  <property name="title">
+                   <string>Interpolat</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_75">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_76">
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_sep">
+                       <property name="text">
+                        <string>sep</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_58">
+                       <property name="text">
+                        <string>N intrval:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QSpinBox" name="spinBox_sep_up">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QSpinBox" name="spinBox_sep_down">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QGroupBox" name="groupBox_22">
+                  <property name="title">
+                   <string>MFCC</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_77">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_78">
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_59">
+                       <property name="text">
+                        <string>count:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QSpinBox" name="spinBox_mfcc_down">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>13</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_mfcc">
+                       <property name="text">
+                        <string>MFCC</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QSpinBox" name="spinBox_mfcc_up">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>13</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="3" rowspan="3">
+                 <widget class="QGroupBox" name="groupBox_23">
+                  <property name="title">
+                   <string>Signal</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_79">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_80">
+                     <item row="6" column="0">
+                      <widget class="QLabel" name="label_60">
+                       <property name="text">
+                        <string>bottom skip:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="8" column="0">
+                      <widget class="QSpinBox" name="spinBox_bot_skip_down">
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>20</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QSpinBox" name="spinBox_top_skip_down">
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>50</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_sig">
+                       <property name="text">
+                        <string>signal</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QCheckBox" name="checkBox_width">
+                       <property name="text">
+                        <string>width</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="0">
+                      <widget class="QSpinBox" name="spinBox_bot_skip_up">
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>20</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_61">
+                       <property name="text">
+                        <string>top skip:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QSpinBox" name="spinBox_top_skip_up">
+                       <property name="maximum">
+                        <number>500</number>
+                       </property>
+                       <property name="value">
+                        <number>50</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <spacer name="verticalSpacer_11">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>40</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QGroupBox" name="groupBox_24">
+                  <property name="title">
+                   <string>Distribution</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_81">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_82">
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_distr">
+                       <property name="text">
+                        <string>distr</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_62">
+                       <property name="text">
+                        <string>N interval:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QSpinBox" name="spinBox_distr_up">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>300</number>
+                       </property>
+                       <property name="value">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QSpinBox" name="spinBox_distr_down">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <number>300</number>
+                       </property>
+                       <property name="value">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <spacer name="verticalSpacer_12">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_4">
+        <attribute name="title">
+         <string>Full List Parameter</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_83">
+         <item row="0" column="0">
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item>
+            <widget class="QCheckBox" name="checkBox_flp">
+             <property name="text">
+              <string>full list parameters</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_63">
+             <property name="text">
+              <string>Min/Max attr</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="spinBox_flp_min_attr">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>75</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="spinBox_flp_max_attr">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>75</number>
+             </property>
+             <property name="value">
+              <number>75</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0">
+          <widget class="QToolBox" name="toolBox_2">
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <widget class="QWidget" name="page_2">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>885</width>
+              <height>343</height>
+             </rect>
             </property>
-            <layout class="QGridLayout" name="gridLayout_7">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_8">
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_sep">
-                 <property name="text">
-                  <string>sep</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="label_4">
-                 <property name="text">
-                  <string>N intrval:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QSpinBox" name="spinBox_sep_up">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>10</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QSpinBox" name="spinBox_sep_down">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>10</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+            <attribute name="label">
+             <string>Signal / Distr / Sep / MFCC</string>
+            </attribute>
+            <layout class="QGridLayout" name="gridLayout_84">
+             <item row="0" column="1">
+              <spacer name="horizontalSpacer_4">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
              </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="3" rowspan="2">
-           <widget class="QGroupBox" name="groupBox_2">
-            <property name="title">
-             <string>Signal</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_4">
              <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_3">
-               <item row="6" column="0">
-                <widget class="QSpinBox" name="spinBox_bot_skip_up">
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>20</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="0">
-                <widget class="QSpinBox" name="spinBox_bot_skip_down">
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>20</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="label">
-                 <property name="text">
-                  <string>top skip:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QSpinBox" name="spinBox_top_skip_up">
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>50</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0">
-                <widget class="QLabel" name="label_2">
-                 <property name="text">
-                  <string>bottom skip:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QSpinBox" name="spinBox_top_skip_down">
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>50</number>
-                 </property>
-                </widget>
-               </item>
+              <layout class="QGridLayout" name="gridLayout_85">
                <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_sig">
-                 <property name="text">
-                  <string>signal</string>
+                <widget class="QGroupBox" name="groupBox_25">
+                 <property name="title">
+                  <string>Signal</string>
                  </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
-                <widget class="QCheckBox" name="checkBox_width">
-                 <property name="text">
-                  <string>width</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QGroupBox" name="groupBox_5">
-            <property name="title">
-             <string>MFCC</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_9">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_10">
-               <item row="1" column="0">
-                <widget class="QLabel" name="label_5">
-                 <property name="text">
-                  <string>count:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QSpinBox" name="spinBox_mfcc_down">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>13</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_mfcc">
-                 <property name="text">
-                  <string>MFCC</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QSpinBox" name="spinBox_mfcc_up">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>500</number>
-                 </property>
-                 <property name="value">
-                  <number>13</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="3">
-           <widget class="QGroupBox" name="groupBox">
-            <property name="title">
-             <string>Type Signal</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_2">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout">
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_ts_all">
-                 <property name="font">
-                  <font>
-                   <pointsize>11</pointsize>
-                   <weight>75</weight>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>all</string>
-                 </property>
+                 <layout class="QGridLayout" name="gridLayout_86">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_87">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_88">
+                      <item row="0" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_all">
+                        <property name="font">
+                         <font>
+                          <pointsize>11</pointsize>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_crl">
+                        <property name="text">
+                         <string>CRL</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_a">
+                        <property name="text">
+                         <string>A base</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_at">
+                        <property name="text">
+                         <string>At</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_pht">
+                        <property name="text">
+                         <string>Pht</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_diff">
+                        <property name="text">
+                         <string>diff</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_vt">
+                        <property name="text">
+                         <string>Vt</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_wt">
+                        <property name="text">
+                         <string>Wt</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_sig_ts_crlnf">
+                        <property name="text">
+                         <string>CRL NF</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QGridLayout" name="gridLayout_89">
+                      <item row="0" column="0">
+                       <layout class="QGridLayout" name="gridLayout_90">
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="label_64">
+                          <property name="text">
+                           <string>top skip:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QSpinBox" name="spinBox_flp_top_skip_up">
+                          <property name="maximum">
+                           <number>500</number>
+                          </property>
+                          <property name="value">
+                           <number>50</number>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0">
+                         <widget class="QSpinBox" name="spinBox_flp_top_skip_down">
+                          <property name="maximum">
+                           <number>500</number>
+                          </property>
+                          <property name="value">
+                           <number>50</number>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="0">
+                         <spacer name="verticalSpacer_13">
+                          <property name="orientation">
+                           <enum>Qt::Vertical</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>20</width>
+                            <height>40</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="0" column="1">
+                       <layout class="QGridLayout" name="gridLayout_91">
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="label_65">
+                          <property name="text">
+                           <string>bottom skip:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QSpinBox" name="spinBox_flp_bot_skip_up">
+                          <property name="maximum">
+                           <number>500</number>
+                          </property>
+                          <property name="value">
+                           <number>20</number>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0">
+                         <widget class="QSpinBox" name="spinBox_flp_bot_skip_down">
+                          <property name="maximum">
+                           <number>500</number>
+                          </property>
+                          <property name="value">
+                           <number>20</number>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="0">
+                         <widget class="QCheckBox" name="checkBox_flp_sig_width">
+                          <property name="text">
+                           <string>width</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item row="0" column="1">
-                <widget class="QCheckBox" name="checkBox_ts_crl">
-                 <property name="text">
-                  <string>CRL</string>
+                <widget class="QGroupBox" name="groupBox_26">
+                 <property name="title">
+                  <string>Distribution</string>
                  </property>
+                 <layout class="QGridLayout" name="gridLayout_92">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_93">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_94">
+                      <item row="0" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_all">
+                        <property name="font">
+                         <font>
+                          <pointsize>11</pointsize>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_crl">
+                        <property name="text">
+                         <string>CRL</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_a">
+                        <property name="text">
+                         <string>A base</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_at">
+                        <property name="text">
+                         <string>At</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_pht">
+                        <property name="text">
+                         <string>Pht</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_diff">
+                        <property name="text">
+                         <string>diff</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_vt">
+                        <property name="text">
+                         <string>Vt</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_dstr_ts_wt">
+                        <property name="text">
+                         <string>Wt</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QGridLayout" name="gridLayout_95">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_66">
+                        <property name="text">
+                         <string>N interval:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_distr_up">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>300</number>
+                        </property>
+                        <property name="value">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_distr_down">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>300</number>
+                        </property>
+                        <property name="value">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item row="1" column="0">
-                <widget class="QCheckBox" name="checkBox_ts_a">
-                 <property name="text">
-                  <string>A base</string>
+                <widget class="QGroupBox" name="groupBox_27">
+                 <property name="title">
+                  <string>MFCC</string>
                  </property>
+                 <layout class="QGridLayout" name="gridLayout_96">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_97">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_98">
+                      <item row="0" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_all">
+                        <property name="font">
+                         <font>
+                          <pointsize>11</pointsize>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_crl">
+                        <property name="text">
+                         <string>CRL</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_a">
+                        <property name="text">
+                         <string>A base</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_at">
+                        <property name="text">
+                         <string>At</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_pht">
+                        <property name="text">
+                         <string>Pht</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_diff">
+                        <property name="text">
+                         <string>diff</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_vt">
+                        <property name="text">
+                         <string>Vt</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_mfcc_ts_wt">
+                        <property name="text">
+                         <string>Wt</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QGridLayout" name="gridLayout_99">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_67">
+                        <property name="text">
+                         <string>count:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_mfcc_up">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>500</number>
+                        </property>
+                        <property name="value">
+                         <number>13</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_mfcc_down">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>500</number>
+                        </property>
+                        <property name="value">
+                         <number>13</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item row="1" column="1">
-                <widget class="QCheckBox" name="checkBox_ts_at">
-                 <property name="text">
-                  <string>At</string>
+                <widget class="QGroupBox" name="groupBox_28">
+                 <property name="title">
+                  <string>Interpolate (sep)</string>
                  </property>
-                </widget>
-               </item>
-               <item row="1" column="2">
-                <widget class="QCheckBox" name="checkBox_ts_pht">
-                 <property name="text">
-                  <string>Pht</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QCheckBox" name="checkBox_ts_diff">
-                 <property name="text">
-                  <string>diff</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QCheckBox" name="checkBox_ts_vt">
-                 <property name="text">
-                  <string>Vt</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="2">
-                <widget class="QCheckBox" name="checkBox_ts_wt">
-                 <property name="text">
-                  <string>Wt</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QCheckBox" name="checkBox_ts_crlnf">
-                 <property name="text">
-                  <string>CRL NF</string>
-                 </property>
+                 <layout class="QGridLayout" name="gridLayout_100">
+                  <item row="0" column="0">
+                   <layout class="QGridLayout" name="gridLayout_101">
+                    <item row="0" column="0">
+                     <layout class="QGridLayout" name="gridLayout_102">
+                      <item row="0" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_all">
+                        <property name="font">
+                         <font>
+                          <pointsize>11</pointsize>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_crl">
+                        <property name="text">
+                         <string>CRL</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_a">
+                        <property name="text">
+                         <string>A base</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_at">
+                        <property name="text">
+                         <string>At</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_pht">
+                        <property name="text">
+                         <string>Pht</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_diff">
+                        <property name="text">
+                         <string>diff</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_vt">
+                        <property name="text">
+                         <string>Vt</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QCheckBox" name="checkBox_flp_sep_ts_wt">
+                        <property name="text">
+                         <string>Wt</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QGridLayout" name="gridLayout_103">
+                      <item row="1" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_sep_up">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>500</number>
+                        </property>
+                        <property name="value">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QSpinBox" name="spinBox_flp_sep_down">
+                        <property name="minimum">
+                         <number>3</number>
+                        </property>
+                        <property name="maximum">
+                         <number>500</number>
+                        </property>
+                        <property name="value">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_68">
+                        <property name="text">
+                         <string>N intrval:</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
                 </widget>
                </item>
               </layout>
              </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QGroupBox" name="groupBox_3">
-            <property name="title">
-             <string>Distribution</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_6">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_5">
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_distr">
-                 <property name="text">
-                  <string>distr</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="label_3">
-                 <property name="text">
-                  <string>N interval:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QSpinBox" name="spinBox_distr_up">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>300</number>
-                 </property>
-                 <property name="value">
-                  <number>10</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QSpinBox" name="spinBox_distr_down">
-                 <property name="minimum">
-                  <number>3</number>
-                 </property>
-                 <property name="maximum">
-                  <number>300</number>
-                 </property>
-                 <property name="value">
-                  <number>10</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QGroupBox" name="groupBox_10">
-       <property name="title">
-        <string>GeoVel Parameter</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_22">
-        <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_21">
-          <item row="0" column="1">
-           <widget class="QGroupBox" name="groupBox_7">
-            <property name="title">
-             <string>Attribute</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_16">
              <item row="1" column="0">
-              <layout class="QGridLayout" name="gridLayout_15">
-               <item row="0" column="0">
-                <layout class="QGridLayout" name="gridLayout_13">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_6">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>top</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_7">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>bottom</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_8">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>delta</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="label_9">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>sum</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QLabel" name="label_10">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>mean</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QLabel" name="label_11">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>max</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QLabel" name="label_12">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>T max</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="7" column="0">
-                  <widget class="QLabel" name="label_13">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Sn</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="8" column="0">
-                  <widget class="QLabel" name="label_14">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>wmf</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="9" column="0">
-                  <widget class="QLabel" name="label_15">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Qf</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="10" column="0">
-                  <widget class="QLabel" name="label_16">
-                   <property name="font">
-                    <font>
-                     <pointsize>8</pointsize>
-                     <weight>75</weight>
-                     <italic>true</italic>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Sn/wmf</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="0" column="1">
-                <layout class="QGridLayout" name="gridLayout_14">
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_all">
-                   <property name="font">
-                    <font>
-                     <weight>75</weight>
-                     <bold>true</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>all</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_a">
-                   <property name="text">
-                    <string>A base</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_at">
-                   <property name="text">
-                    <string>At</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_vt">
-                   <property name="text">
-                    <string>Vt</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_pht">
-                   <property name="text">
-                    <string>Pht</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_wt">
-                   <property name="text">
-                    <string>Wt</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QCheckBox" name="checkBox_attr_crl">
-                   <property name="text">
-                    <string>CRL</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </item>
-             <item row="2" column="0">
-              <spacer name="verticalSpacer_2">
+              <spacer name="verticalSpacer_14">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
                </property>
@@ -616,354 +1608,859 @@
                </property>
               </spacer>
              </item>
-             <item row="0" column="0">
-              <widget class="QCheckBox" name="checkBox_group">
-               <property name="text">
-                <string>group</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QGroupBox" name="groupBox_9">
-            <property name="title">
-             <string>Statistic</string>
+           <widget class="QWidget" name="page_6">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>885</width>
+              <height>343</height>
+             </rect>
             </property>
-            <layout class="QGridLayout" name="gridLayout_20">
+            <attribute name="label">
+             <string>Attributes</string>
+            </attribute>
+            <layout class="QGridLayout" name="gridLayout_104">
              <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_19">
+              <layout class="QGridLayout" name="gridLayout_105">
                <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_stat">
-                 <property name="text">
-                  <string>stat</string>
-                 </property>
-                </widget>
+                <layout class="QGridLayout" name="gridLayout_106">
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_bot">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_bottom</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_da">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>dA</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QCheckBox" name="checkBox_a_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   </property>
+                   <property name="text">
+                    <string>A_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="5" column="0">
-                <widget class="QLabel" name="label_20">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>k var</string>
-                 </property>
-                </widget>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout_107">
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_dat">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>dAt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_at_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(143, 240, 164);</string>
+                   </property>
+                   <property name="text">
+                    <string>At_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QCheckBox" name="checkBox_attr_width">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(105, 115, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>width</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="2" column="0">
-                <widget class="QLabel" name="label_17">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>skew</string>
-                 </property>
-                </widget>
+               <item row="0" column="2">
+                <layout class="QGridLayout" name="gridLayout_108">
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_dvt">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>dVt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_vt_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(249, 240, 107);</string>
+                   </property>
+                   <property name="text">
+                    <string>Vt_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QCheckBox" name="checkBox_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(105, 115, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>top</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="4" column="0">
-                <widget class="QLabel" name="label_19">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>std</string>
-                 </property>
-                </widget>
+               <item row="0" column="3">
+                <layout class="QGridLayout" name="gridLayout_109">
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_dpht">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>dPht</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_pht_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 190, 111);</string>
+                   </property>
+                   <property name="text">
+                    <string>Pht_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QCheckBox" name="checkBox_land">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(105, 115, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>land</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="3" column="0">
-                <widget class="QLabel" name="label_18">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>kurt</string>
-                 </property>
-                </widget>
+               <item row="0" column="4">
+                <layout class="QGridLayout" name="gridLayout_110">
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_speed">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(105, 115, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>speed</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_wt_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 138, 221);</string>
+                   </property>
+                   <property name="text">
+                    <string>Wt_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="1" column="0">
-                <widget class="QCheckBox" name="checkBox_crl_stat">
-                 <property name="text">
-                  <string>CRL stat</string>
-                 </property>
-                </widget>
+               <item row="0" column="5">
+                <layout class="QGridLayout" name="gridLayout_111">
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_sum">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_sum</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_mean">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_mean</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_speed_cover">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(105, 115, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>speed_cover</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_t_max">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_T_max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_qf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_Qf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_sn">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_Sn</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_sn_wmf">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(246, 97, 81);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_Sn_wmf</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
-               <item row="6" column="0">
-                <spacer name="verticalSpacer">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
+               <item row="0" column="6">
+                <layout class="QGridLayout" name="gridLayout_112">
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="checkBox_skew">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(233, 103, 185);</string>
+                   </property>
+                   <property name="text">
+                    <string>skew</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_kurt">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(233, 103, 185);</string>
+                   </property>
+                   <property name="text">
+                    <string>kurt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="checkBox_std">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(233, 103, 185);</string>
+                   </property>
+                   <property name="text">
+                    <string>std</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QCheckBox" name="checkBox_k_var">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(233, 103, 185);</string>
+                   </property>
+                   <property name="text">
+                    <string>k_var</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_skew">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 159, 152);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_skew</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_kurt">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 159, 152);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_kurt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_std">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 159, 152);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_std</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="checkBox_crl_k_var">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 159, 152);</string>
+                   </property>
+                   <property name="text">
+                    <string>CRL_k_var</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="checkBox_t_top">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(205, 171, 143);</string>
+                   </property>
+                   <property name="text">
+                    <string>T_top</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QCheckBox" name="checkBox_t_bot">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(205, 171, 143);</string>
+                   </property>
+                   <property name="text">
+                    <string>T_bottom</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QCheckBox" name="checkBox_dt">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(205, 171, 143);</string>
+                   </property>
+                   <property name="text">
+                    <string>dT</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
               </layout>
              </item>
-             <item row="1" column="0">
-              <widget class="QGroupBox" name="groupBox_minmax_attr">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="title">
-                <string>Min/Max attr</string>
-               </property>
-               <layout class="QGridLayout" name="gridLayout_28">
-                <item row="0" column="0">
-                 <widget class="QSpinBox" name="spinBox_min_attr">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QSpinBox" name="spinBox_max_attr">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="value">
-                   <number>99</number>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
             </layout>
            </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QGroupBox" name="groupBox_8">
-            <property name="title">
-             <string>Formation</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_18">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_17">
-               <item row="2" column="0">
-                <widget class="QLabel" name="label_22">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>T bottom</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0">
-                <widget class="QLabel" name="label_24">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>width</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="8" column="0">
-                <widget class="QLabel" name="label_27">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>speed</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="6" column="0">
-                <widget class="QLabel" name="label_25">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>top</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="label_21">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>T top</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
-                <widget class="QCheckBox" name="checkBox_prior">
-                 <property name="text">
-                  <string>prior</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="0">
-                <widget class="QLabel" name="label_26">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>land</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QLabel" name="label_23">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>dT</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="9" column="0">
-                <widget class="QLabel" name="label_28">
-                 <property name="font">
-                  <font>
-                   <pointsize>8</pointsize>
-                   <weight>75</weight>
-                   <italic>true</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>speed cover</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="checkBox_form_t">
-                 <property name="font">
-                  <font>
-                   <weight>50</weight>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>T</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
-    </layout>
-   </item>
-   <item row="0" column="1">
-    <layout class="QGridLayout" name="gridLayout_26">
-     <item row="0" column="0">
-      <layout class="QGridLayout" name="gridLayout_24" rowstretch="1,1,4" rowminimumheight="0,0,0">
+     <item row="1" column="0">
+      <layout class="QGridLayout" name="gridLayout_3">
        <item row="0" column="0">
         <widget class="QComboBox" name="comboBox_test_analysis"/>
        </item>
        <item row="1" column="0">
-        <widget class="QListWidget" name="listWidget_test_point"/>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="QListWidget" name="listWidget_test_point"/>
+         </item>
+         <item row="0" column="1">
+          <widget class="QTextEdit" name="textEdit_test_result"/>
+         </item>
+        </layout>
        </item>
        <item row="2" column="0">
-        <widget class="QTextEdit" name="textEdit_test_result"/>
-       </item>
-      </layout>
-     </item>
-     <item row="1" column="0">
-      <layout class="QGridLayout" name="gridLayout_25">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="pushButton">
-         <property name="text">
-          <string>PushButton</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="pushButton_start">
-         <property name="text">
-          <string>START</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QSpinBox" name="spinBox_n_iter">
-         <property name="minimum">
-          <number>5</number>
-         </property>
-         <property name="maximum">
-          <number>100000</number>
-         </property>
-         <property name="singleStep">
-          <number>50</number>
-         </property>
-         <property name="value">
-          <number>100</number>
-         </property>
-        </widget>
+        <layout class="QGridLayout" name="gridLayout_25">
+         <item row="0" column="0">
+          <widget class="QPushButton" name="pushButton">
+           <property name="text">
+            <string>PushButton</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QPushButton" name="pushButton_start">
+           <property name="text">
+            <string>START</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QSpinBox" name="spinBox_n_iter">
+           <property name="minimum">
+            <number>5</number>
+           </property>
+           <property name="maximum">
+            <number>100000</number>
+           </property>
+           <property name="singleStep">
+            <number>50</number>
+           </property>
+           <property name="value">
+            <number>100</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
