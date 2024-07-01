@@ -880,6 +880,8 @@ def push_random_param():
     def test_classif_estimator(estimators, data_val, list_param, filename):
         list_estimator_roc = []
         list_estimator_percent = []
+        list_estimator_recall, list_estimator_precision = [], []
+        list_estimator_f1 = []
         for class_model in estimators:
             time_start = datetime.datetime.now()
             data_test = data_val.copy()
@@ -923,12 +925,19 @@ def push_random_param():
             roc_auc = auc(fpr, tpr)
             print('roc_auc ', roc_auc)
             list_estimator_roc.append(roc_auc)
+            recall = recall_score(y_val, y_prob)
+            precision = precision_score(y_val, y_prob)
+            f1 = f1_score(y_val, y_prob)
+            list_estimator_recall.append(recall)
+            list_estimator_precision.append(precision)
+            list_estimator_f1.append(f1)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.darkGreen)
             ui_rp.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                       f"Тестирование модели {class_model}\n"
                       f"Количество параметров: {len(list_param)}\n"
                       f"ROC AUC: {roc_auc:.3f}"
+                      f'\nRecall: {recall:.3f}\nPrecision: {precision:.3f}\nF1: {f1:.3f}'
                       f'\nВсего совпало: {correct_matches}/{len(data_test)}\n')
 
             with open(filename, 'a') as f:
@@ -936,6 +945,7 @@ def push_random_param():
                       f"Тестирование модели {class_model}\n"
                       f"Количество параметров: {len(list_param)}\n"
                       f"ROC AUC: {roc_auc:.3f}"
+                      f'\nRecall: {recall:.3f}\nPrecision: {precision:.3f}\nF1: {f1:.3f}'
                       f'\nВсего совпало: {correct_matches}/{len(data_test)}\n', file=f)
 
             index = 0
@@ -1000,7 +1010,7 @@ def push_random_param():
                 print(
                 f'Всего совпало: {correct_matches}/{len(data_test)} - {percent:.1f}%\nВремя выполнения: {time_end}\n',
                 file=f)
-        return list_estimator_roc, list_estimator_percent, filename
+        return list_estimator_roc, list_estimator_percent, list_estimator_recall, list_estimator_precision, list_estimator_f1, filename
 
 
     def result_analysis(results, filename, reverse=True):
@@ -1008,8 +1018,10 @@ def push_random_param():
             sorted_result = sorted(results, key=lambda x: x[0], reverse=True)
         else:
             sorted_result = sorted(results, key=lambda x: x[0], reverse=False)
-        for item in sorted_result:
+        for item in sorted_result[:20]:
             print(item)
+
+        ## file console
 
         twenty_percent = int(len(sorted_result) * 0.2)
         sorted_result = sorted_result[:twenty_percent]
@@ -1110,15 +1122,19 @@ def push_random_param():
                                         return_estimator=True)
             estimators = cv_results['estimator']
 
-            list_roc, list_percent, filename = test_classif_estimator(estimators, data_test,
+            list_roc, list_percent, list_recall, list_precision, list_f1, filename = test_classif_estimator(estimators, data_test,
                                                                       list_param, filename)
             roc = np.array(list_roc).mean()
             percent = np.array(list_percent).mean()
-            results_list = [roc, list_roc, percent, list_percent, list_param]
+            recall = np.array(list_recall).mean()
+            precision = np.array(list_precision).mean()
+            f1 = np.array(list_f1).mean()
+            results_list = [roc, list_roc, percent, recall, precision, f1, list_percent, list_param]
             results.append(results_list)
 
             with open(filename, 'a') as f:
-                print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n', file=f)
+                print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n'
+                      f'recall mean: {recall}\nprecision mean: {precision}\nf1 mean: {f1}\n', file=f)
 
         # print('results \n', results)
         result_analysis(results, filename, reverse=True)
