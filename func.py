@@ -1226,7 +1226,7 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                         sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
                     else:
                         sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
-                    sep = get_mean_values(sig_measure[list_up[measure]: list_down[measure]], n)
+                    sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
                     for num in range(n):
                         dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
                 elif param.startswith('mfcc'):
@@ -1336,7 +1336,7 @@ def build_table_test(analisis='lda'):
                     sig_measure = locals()[str(curr_form.profile.id) + '_CRL'][i]
                 else:
                     sig_measure = calc_atrib_measure(locals()[str(curr_form.profile.id) + '_signal'][i], atr)
-                sep = get_mean_values(sig_measure[list_up[i]: list_down[i]], n)
+                sep = get_interpolate_list(sig_measure[list_up[i]: list_down[i]], n)
                 for num in range(n):
                     dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
             elif param.startswith('mfcc'):
