@@ -1136,6 +1136,8 @@ def push_random_param():
             with open(filename, 'a') as f:
                 print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n'
                       f'recall mean: {recall}\nprecision mean: {precision}\nf1 mean: {f1}\n', file=f)
+            print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n'
+                  f'recall mean: {recall}\nprecision mean: {precision}\nf1 mean: {f1}\n')
 
         # print('results \n', results)
         result_analysis(results, filename, reverse=True)
