@@ -827,13 +827,13 @@ def calc_class_profile():
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
 
-        draw_result_mlp(working_data_result, curr_form)
+        draw_result_mlp(working_data_result, curr_form, ui_rm.checkBox_color_marker.isChecked())
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
     Choose_RegModel.exec_()
 
 
-def draw_result_mlp(working_data, curr_form):
+def draw_result_mlp(working_data, curr_form, color_marker):
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
@@ -842,26 +842,50 @@ def draw_result_mlp(working_data, curr_form):
     list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
 
+    col = working_data.columns[-3]
+
     previous_element = None
     list_dupl = []
-    for index, current_element in enumerate(working_data['mark']):
-        if current_element == previous_element:
-            list_dupl.append(index)
-        else:
-            if list_dupl:
-                list_dupl.append(list_dupl[-1] + 1)
-                y_up = [list_up[i] for i in list_dupl]
-                y_down = [list_down[i] for i in list_dupl]
-                draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
-            list_dupl = [index]
-        previous_element = current_element
-    if len(list_dupl) > 0:
-        y_up = [list_up[i] for i in list_dupl]
-        y_down = [list_down[i] for i in list_dupl]
-        draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
+
+
+    if color_marker:
+
+        for index, current_element in enumerate(working_data['mark']):
+            if current_element == previous_element:
+                list_dupl.append(index)
+            else:
+                if list_dupl:
+                    list_dupl.append(list_dupl[-1] + 1)
+                    y_up = [list_up[i] for i in list_dupl]
+                    y_down = [list_down[i] for i in list_dupl]
+                    draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
+                list_dupl = [index]
+            previous_element = current_element
+        if len(list_dupl) > 0:
+            y_up = [list_up[i] for i in list_dupl]
+            y_down = [list_down[i] for i in list_dupl]
+            draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
+
+
+    else:
+        for index, probability in enumerate(working_data[col]):
+            color = get_color_rainbow(probability)
+            if color == previous_element:
+                list_dupl.append(index)
+            else:
+                if list_dupl:
+                    list_dupl.append(list_dupl[-1] + 1)
+                    y_up = [list_up[i] for i in list_dupl]
+                    y_down = [list_down[i] for i in list_dupl]
+                    draw_fill_result(list_dupl, y_up, y_down, previous_element)
+                list_dupl = [index]
+            previous_element = color
+        if len(list_dupl) > 0:
+            y_up = [list_up[i] for i in list_dupl]
+            y_down = [list_down[i] for i in list_dupl]
+            draw_fill_result(list_dupl, y_up, y_down, get_color_rainbow(working_data[col].tolist()[-1]))
 
     ui.graph.clear()
-    col = working_data.columns[-3]
     number = list(range(1, len(working_data[col]) + 1))
     # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
     curve = pg.PlotCurveItem(x=number, y=working_data[col].tolist())
@@ -883,6 +907,24 @@ def draw_result_mlp(working_data, curr_form):
             set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
         except ValueError:
             pass
+
+
+def get_color_rainbow(probability):
+
+    rainbow_colors =[
+        "#0000FF",  # Синий
+        "#0066FF",  # Голубой
+        "#00CCFF",  # Светло-голубой
+        "#00FFCC",  # Бирюзовый
+        "#00FF66",  # Зеленовато-голубой
+        "#33FF33",  # Ярко-зеленый
+        "#99FF33",  # Желто-зеленый
+        "#FFFF00",  # Желтый
+        "#FF6600",  # Оранжевый
+        "#FF0000"   # Красный
+    ]
+
+    return rainbow_colors[int(probability * 10)]
 
 
 def calc_object_class():
