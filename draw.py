@@ -70,10 +70,17 @@ def save_image():
 
     images = [Image.open(path) for path in list_paths]
 
+    color_break = 0
+    for i in range(100):
+        color = images[0].getpixel((i, 50)) == (0, 0, 0, 255)
+        if not color:
+            color_break = i
+            break
+
     for i in range(len(images)):
         width, height = images[i].size
-        left = 45 if i != 0 else 0
-        images[i] = images[i].crop((left, 0, width, height - 15))
+        left = color_break if i != 0 else 0
+        images[i] = images[i].crop((left, 0, width, height))
 
     total_width = sum(img.width for img in images)
     max_height = max(img.height for img in images)
