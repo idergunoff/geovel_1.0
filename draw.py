@@ -51,9 +51,6 @@ def set_scale():
 
 
 def save_image():
-    path = QFileDialog.getExistingDirectory()
-    if path == '':
-        return
     exporter = ImageExporter(radarogramma)
     exporter.parameters()['height'] = 610
     count_measure = len(
@@ -65,21 +62,18 @@ def save_image():
         n = i * 400
         m = n + 400
         radarogramma.setXRange(n, m, padding=0)
-        exporter.export(f'{path}/{i}.png')
-        list_paths.append(f'{path}/{i}.png')
+        exporter.export(f'{i}_part.png')
+        list_paths.append(f'{i}_part.png')
 
     images = [Image.open(path) for path in list_paths]
 
     color_break = 0
-    for i in range(100):
-        color = images[0].getpixel((i, 50)) == (0, 0, 0, 255)
-        if not color:
-            color_break = i
-            break
+    while images[0].getpixel((color_break, 50)) == (0, 0, 0, 255):
+        color_break += 1
 
     for i in range(len(images)):
         width, height = images[i].size
-        left = color_break if i != 0 else 0
+        left = color_break + 1 if i != 0 else 0
         images[i] = images[i].crop((left, 0, width, height))
 
     total_width = sum(img.width for img in images)
@@ -97,8 +91,8 @@ def save_image():
     if not save_path.endswith('.png'):
         save_path += '.png'
     combined_image.save(save_path)
-    # for file in list_paths:
-    #     os.remove(file)
+    for file in list_paths:
+        os.remove(file)
 
     # img.save('radarogramma.png')
     #
