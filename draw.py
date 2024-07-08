@@ -90,8 +90,8 @@ def save_image():
     if not save_path.endswith('.png'):
         save_path += '.png'
     combined_image.save(save_path)
-    for file in list_paths:
-        os.remove(file)
+    # for file in list_paths:
+    #     os.remove(file)
 
     # img.save('radarogramma.png')
     #
