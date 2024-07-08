@@ -51,24 +51,24 @@ def set_scale():
 
 
 def save_image():
+    path = QFileDialog.getExistingDirectory()
+    if path == '':
+        return
     exporter = ImageExporter(radarogramma)
+    exporter.parameters()['height'] = 610
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
 
+    list_paths = []
     N = (count_measure + 399) // 400
     for i in range(N):
         n = i * 400
         m = n + 400
         radarogramma.setXRange(n, m, padding=0)
-        exporter.export(f'pics/{i}.png')
-        print(f'(#{i}) range ({n}, {m})')
+        exporter.export(f'{path}/{i}.png')
+        list_paths.append(f'{path}/{i}.png')
 
-    folder_path = "pics/"
-    files = os.listdir(folder_path)
-
-    image_paths = [os.path.join(folder_path, f) for f in files if f.endswith(".png")]
-    image_paths.sort()
-    images = [Image.open(path) for path in image_paths]
+    images = [Image.open(path) for path in list_paths]
 
     for i in range(len(images)):
         width, height = images[i].size
@@ -84,7 +84,14 @@ def save_image():
         combined_image.paste(img, (x_offset, 0))
         x_offset += img.width
 
-    combined_image.save('pics/radarogramma.png')
+    save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
+    if save_path == '':
+        return
+    if not save_path.endswith('.png'):
+        save_path += '.png'
+    combined_image.save(save_path)
+    for file in list_paths:
+        os.remove(file)
 
     # img.save('radarogramma.png')
     #
