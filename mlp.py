@@ -516,6 +516,68 @@ def add_param_geovel_mlp():
         set_info(f'Параметр {param} уже добавлен', 'red')
 
 
+def add_param_list_mlp():
+    analysis_id = get_MLP_id()
+    session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
+    session.query(AnalysisMLP).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    check_except = False
+    for i in ui.lineEdit_string.text().split('//'):
+        param = i.split('_')
+        if param[0] == 'sig':
+            if param[1] == 'CRL':
+                if session.query(ParameterMLP).filter_by(
+                        analysis_id=analysis_id,
+                        parameter='CRL'
+                ).count() == 0:
+
+                    new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter='CRL')
+                    session.add(new_param_mlp)
+                    session.commit()
+
+                else:
+                    set_info(f'Параметр CRL уже добавлен', 'red')
+            elif param[1] == 'CRLNF':
+                if session.query(ParameterMLP).filter_by(
+                        analysis_id=analysis_id,
+                        parameter='CRL_NF'
+                ).count() == 0:
+                    new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter='CRL_NF')
+                    session.add(new_param_mlp)
+                    session.commit()
+                else:
+                    set_info(f'Параметр CRL_NF уже добавлен', 'red')
+            else:
+                if session.query(ParameterMLP).filter_by(
+                        analysis_id=analysis_id,
+                        parameter=f'Signal_{param[1]}'
+                ).count() == 0:
+                    new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=f'Signal_{param[1]}')
+                    session.add(new_param_mlp)
+                    session.commit()
+                else:
+                    set_info(f'Параметр Signal_{param[1]} уже добавлен', 'red')
+            if not check_except:
+                str_exeption = f'1-{param[2]},{f"{str(512-int(param[3]))}-512" if int(param[3]) > 0  else ""}'
+                session.query(ExceptionMLP).filter_by(analysis_id=analysis_id).update({'except_signal': str_exeption,
+                                                                              'except_crl': str_exeption},
+                                                                             synchronize_session='fetch')
+                session.commit()
+                check_except = True
+        else:
+            if session.query(ParameterMLP).filter_by(
+                    analysis_id=analysis_id,
+                    parameter=i
+            ).count() == 0:
+                new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=i)
+                session.add(new_param_mlp)
+                session.commit()
+            else:
+                set_info(f'Параметр {i} уже добавлен', 'red')
+    set_color_button_updata()
+    update_line_edit_exception_mlp()
+
+
 def add_all_param_geovel_mlp():
     new_list_param = list_param_geovel.copy()
     for param in list_param_geovel:
@@ -923,8 +985,10 @@ def get_color_rainbow(probability):
         "#FF6600",  # Оранжевый
         "#FF0000"   # Красный
     ]
-
-    return rainbow_colors[int(probability * 10)]
+    try:
+        return rainbow_colors[int(probability * 10)]
+    except IndexError:
+        return '#FF0000'
 
 
 def calc_object_class():

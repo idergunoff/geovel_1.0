@@ -50,6 +50,11 @@ def set_scale():
     radarogramma.setYRange(0, 512)
 
 
+def on_range_changed():
+    X, Y = radarogramma.viewRange()
+    ui.graph.setXRange(X[0], X[1])
+
+
 def save_image():
     exporter = ImageExporter(radarogramma)
     exporter.parameters()['height'] = 610
@@ -363,7 +368,6 @@ def draw_fill_result(x, y1, y2, color):
     poly_item.setOpacity(0.5)
     poly_item.setZValue(1)
     globals()[f'poly_item{x[0]}'] = poly_item
-    poly_item.save('r.png')
 
 
 def draw_fill_model(x, y1, y2, color):

@@ -130,6 +130,9 @@ ui.pushButton_set_scale.clicked.connect(set_scale)
 ui.checkBox_grid.clicked.connect(show_grid)
 ui.pushButton_save_img.clicked.connect(save_image)
 ui.pushButton_slide.clicked.connect(slide_average)
+radarogramma.sigRangeChanged.connect(on_range_changed)
+
+
 
 #   lda
 ui.pushButton_add_lda.clicked.connect(add_lda)
@@ -181,6 +184,7 @@ ui.pushButton_add_sep_mlp.clicked.connect(add_param_sep_mlp)
 ui.pushButton_add_all_distr_mlp.clicked.connect(add_all_param_distr_mlp)
 ui.pushButton_add_crl.clicked.connect(add_param_crl_mlp)
 ui.pushButton_add_crl_nf.clicked.connect(add_param_crl_nf_mlp)
+ui.pushButton_mlp_add_param_list.clicked.connect(add_param_list_mlp)
 ui.pushButton_update_well_mlp.clicked.connect(update_well_markup_mlp)
 ui.pushButton_rem_well_mlp.clicked.connect(remove_well_markup_mlp)
 ui.pushButton_rem_param_mlp.clicked.connect(remove_param_geovel_mlp)

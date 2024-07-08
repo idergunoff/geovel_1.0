@@ -1,7 +1,6 @@
 import json
 import pickle
 import matplotlib.pyplot as plt
-import shap.plots
 from sklearn.model_selection import cross_validate
 from func import *
 from random_search import push_random_search
