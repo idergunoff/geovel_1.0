@@ -1,5 +1,6 @@
 from func import *
-
+from pyqtgraph.exporters import ImageExporter
+from PIL import Image
 
 def draw_radarogram():
     global l_up, l_down
@@ -46,85 +47,121 @@ def draw_radarogram():
 
 def set_scale():
     radarogramma.setXRange(0, 400)
+    radarogramma.setYRange(0, 512)
 
 
 def save_image():
-    img.save('radarogramma.png')
+    exporter = ImageExporter(radarogramma)
+    count_measure = len(
+        json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
 
-    # Открываем изображение
-    result_image = Image.open("radarogramma.png")
+    N = (count_measure + 399) // 400
+    for i in range(N):
+        n = i * 400
+        m = n + 400
+        radarogramma.setXRange(n, m, padding=0)
+        exporter.export(f'pics/{i}.png')
+        print(f'(#{i}) range ({n}, {m})')
 
-    # Получаем размеры изображения
-    width, height = result_image.size
+    folder_path = "pics/"
+    files = os.listdir(folder_path)
 
-    # Задаем отступы для увеличения изображения
-    lp = 50
-    bp = 25
+    image_paths = [os.path.join(folder_path, f) for f in files if f.endswith(".png")]
+    image_paths.sort()
+    images = [Image.open(path) for path in image_paths]
 
-    # Создаем новое изображение с учетом отступов
-    new_width = width + lp
-    new_height = height + bp
-    new_image = Image.new("RGB", (new_width, new_height), "black")
+    for i in range(len(images)):
+        width, height = images[i].size
+        left = 45 if i != 0 else 0
+        images[i] = images[i].crop((left, 0, width, height - 15))
 
-    # Вставляем текущее изображение с учетом отступов
-    new_image.paste(result_image, (lp, 0))
+    total_width = sum(img.width for img in images)
+    max_height = max(img.height for img in images)
+    combined_image = Image.new('RGB', (total_width, max_height))
 
-    # Создаем объект для рисования на новом изображении
-    draw = ImageDraw.Draw(new_image)
-    # Создаем объект для рисования
-    # draw = ImageDraw.Draw(result_image)
+    x_offset = 0
+    for img in images:
+        combined_image.paste(img, (x_offset, 0))
+        x_offset += img.width
 
-    font = ImageFont.load_default()
+    combined_image.save('pics/radarogramma.png')
 
-    # Рисуем ось x (горизонтальную линию внизу)
-    draw.line([(0 + lp, height - 1), (width + lp, height - 1)], fill="white", width=1)
-
-    # Рисуем ось y (вертикальную линию слева)
-    draw.line([(0 + lp, 0), (0 + lp, height)], fill="white", width=1)
-
-    # Добавляем деления и подписи на оси X
-    for x in range(0, width, 40):
-        draw.line([(x + lp, height - 5), (x + lp, height + 5)], fill="white", width=1)
-        tick_label = f"{int(x * 2.5)}"
-        draw.text((x + lp - 10, height + 10), tick_label, fill="white", font=font)
-
-    # Добавляем деления и подписи на оси Y
-    for y in range(0, height, 64):
-        draw.line([(-5 + lp, y), (5 + lp, y)], fill="white", width=2)
-        tick_label = f"{y * 8}"
-        draw.text((-30 + lp, y + 5), tick_label, fill="white", font=font)
-
-    # Добавляем тонкую светлую сетку грида
-    dash_length = 5
-    for x in range(0, width, 40):
-        for y in range(0, height, dash_length * 2):
-            draw.point((x + lp, y), fill=(200, 200, 200))
-
-    for y in range(0, height, 64):
-        for x in range(0, width, dash_length * 2):
-            draw.point((x + lp, y), fill=(200, 200, 200))
-
-    # Подписываем оси
-    draw.text((width + lp - 20, height - 20), "X", fill="white", font=font)
-    draw.text((10 + lp, 10), "Y", fill="white", font=font)
-
-    # Сохраняем результат
-    try:
-        file_name = f"{get_profile_name()}.png"
-        fn = QFileDialog.getSaveFileName(
-            caption=f'Сохранить файл "{get_profile_name()}"',
-            directory=file_name,
-            filter="Изображения (*.png)")
-        print(fn)
-        new_image.save(fn[0])
-        set_info(f'Сохранено в файл: {fn[0]}', 'green')
-    except ValueError:
-        pass
-
-    # Удаляем файл
-    del_img = 'radarogramma.png'
-    if os.path.exists(del_img):
-        os.remove(del_img)
+    # img.save('radarogramma.png')
+    #
+    # # Открываем изображение
+    # result_image = Image.open("radarogramma.png")
+    #
+    # # Получаем размеры изображения
+    # width, height = result_image.size
+    #
+    # # Задаем отступы для увеличения изображения
+    # lp = 50
+    # bp = 25
+    #
+    # # Создаем новое изображение с учетом отступов
+    # new_width = width + lp
+    # new_height = height + bp
+    # new_image = Image.new("RGB", (new_width, new_height), "black")
+    #
+    # # Вставляем текущее изображение с учетом отступов
+    # new_image.paste(result_image, (lp, 0))
+    #
+    # # Создаем объект для рисования на новом изображении
+    # draw = ImageDraw.Draw(new_image)
+    # # Создаем объект для рисования
+    # # draw = ImageDraw.Draw(result_image)
+    #
+    # font = ImageFont.load_default()
+    #
+    # # Рисуем ось x (горизонтальную линию внизу)
+    # draw.line([(0 + lp, height - 1), (width + lp, height - 1)], fill="white", width=1)
+    #
+    # # Рисуем ось y (вертикальную линию слева)
+    # draw.line([(0 + lp, 0), (0 + lp, height)], fill="white", width=1)
+    #
+    # # Добавляем деления и подписи на оси X
+    # for x in range(0, width, 40):
+    #     draw.line([(x + lp, height - 5), (x + lp, height + 5)], fill="white", width=1)
+    #     tick_label = f"{int(x * 2.5)}"
+    #     draw.text((x + lp - 10, height + 10), tick_label, fill="white", font=font)
+    #
+    # # Добавляем деления и подписи на оси Y
+    # for y in range(0, height, 64):
+    #     draw.line([(-5 + lp, y), (5 + lp, y)], fill="white", width=2)
+    #     tick_label = f"{y * 8}"
+    #     draw.text((-30 + lp, y + 5), tick_label, fill="white", font=font)
+    #
+    # # Добавляем тонкую светлую сетку грида
+    # dash_length = 5
+    # for x in range(0, width, 40):
+    #     for y in range(0, height, dash_length * 2):
+    #         draw.point((x + lp, y), fill=(200, 200, 200))
+    #
+    # for y in range(0, height, 64):
+    #     for x in range(0, width, dash_length * 2):
+    #         draw.point((x + lp, y), fill=(200, 200, 200))
+    #
+    # # Подписываем оси
+    # draw.text((width + lp - 20, height - 20), "X", fill="white", font=font)
+    # draw.text((10 + lp, 10), "Y", fill="white", font=font)
+    #
+    # # Сохраняем результат
+    # try:
+    #     file_name = f"{get_profile_name()}.png"
+    #     fn = QFileDialog.getSaveFileName(
+    #         caption=f'Сохранить файл "{get_profile_name()}"',
+    #         directory=file_name,
+    #         filter="Изображения (*.png)")
+    #     print(fn)
+    #     new_image.save(fn[0])
+    #     set_info(f'Сохранено в файл: {fn[0]}', 'green')
+    # except ValueError:
+    #     pass
+    #
+    # # Удаляем файл
+    # del_img = 'radarogramma.png'
+    # if os.path.exists(del_img):
+    #     os.remove(del_img)
 
 
 def show_grid():
@@ -318,6 +355,7 @@ def draw_fill_result(x, y1, y2, color):
     poly_item.setOpacity(0.5)
     poly_item.setZValue(1)
     globals()[f'poly_item{x[0]}'] = poly_item
+    poly_item.save('r.png')
 
 
 def draw_fill_model(x, y1, y2, color):

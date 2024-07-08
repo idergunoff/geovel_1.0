@@ -1183,8 +1183,9 @@ class PyTorchClassifier(BaseEstimator):
         return label_mark
 
     def predict_proba(self, X):
+        self.model.eval()
         predictions = []
-        X = torch.from_numpy(X).float()
+        X = torch.tensor(X, dtype=torch.float32)
         with torch.no_grad():
             pred_batch = self.model(X)  # вероятность
             predictions.extend([np.hstack((pred.numpy(), 1 - pred.numpy())) for pred in pred_batch])
@@ -1617,7 +1618,19 @@ def torch_classifier_train():
         start_time = datetime.datetime.now()
         pipeline.fit(X, y)
 
-        print('list classes in pipeline: ', list(pipeline.classes_))
+        # Функция предсказания для SHAP
+        # def model_predict_proba(X):
+        #     pipeline['classifier'].model.eval()
+        #     X_tensor = torch.tensor(X, dtype=torch.float32)
+        #     with torch.no_grad():
+        #         logits = pipeline['classifier'].model(X_tensor)
+        #         softmax = nn.Softmax(dim=1)
+        #         return softmax(logits).numpy()
+        #
+        # explainer = shap.KernelExplainer(model_predict_proba, X_train[:100])
+        # shap_values = explainer.shap_values(X_test[:5])
+        # shap.summary_plot(shap_values, X_test[:5], plot_type="bar", feature_names=data[:2].columns.tolist())
+        # # shap.summary_plot(shap_values, X_test[:5], plot_type="violin")
 
         y_mark = pipeline.predict(X_val)
         mark = []

@@ -1,8 +1,8 @@
 import json
 import pickle
-
+import matplotlib.pyplot as plt
+import shap.plots
 from sklearn.model_selection import cross_validate
-
 from func import *
 from random_search import push_random_search
 from random_param import push_random_param
@@ -463,6 +463,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         print("precision", precision_score(markup_test, preds_t, average='binary', pos_label='bitum'))
         print("recall", recall_score(markup_test, preds_t, average='binary', pos_label='bitum'))
         print("f1", f1_score(markup_test, preds_t, average='binary', pos_label='bitum'))
+
         # if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
         #         and ui_cls.checkBox_voting_hard.isChecked()):
         #     hard_flag = True
@@ -508,6 +509,31 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                                 imp_name_params.append(list_param[n])
                                 imp_params.append(i)
 
+        # def model_predict_proba(X):
+        #     return pipe['model'].predict_proba(X)
+        #
+        # print(training_sample_test.shape)
+        # print(type(training_sample_test))
+        # print('DATA ', training_sample_test[:100, :10])
+        # list_names = data_train.iloc[:, 2:].columns
+        # print('LIST_NAMES ', list_names)
+        # explainer = shap.KernelExplainer(model_predict_proba, training_sample_train[:100])
+        # shap_values = explainer(training_sample_test[:30])
+        # print('shap values ', shap_values)
+        # print('shap values shape ', shap_values.shape)
+        # print(f"SHAP values shape for class 0: {shap_values[0].shape}")
+        # print(f"SHAP values shape for class 1: {shap_values[0, 0].shape}")
+        # print(f"SHAP values shape for class 2: {shap_values[0][0].shape}")
+        # shap.plots.bar(shap_values[:, :, 0])
+        # shap.summary_plot(shap_values, training_sample_test[:30], plot_type="bar", feature_names=list_names)
+        # shap.summary_plot(shap_values, training_sample_test[:30], feature_names=list_names)
+
+
+
+        # shap.plots.heatmap(shap_values[0])
+        #
+        # shap.plots.beeswarm(shap_values[0, 0], training_sample_test[:10])
+        # shap.plots.waterfall(shap_values[0][0], max_display=20)
 
 
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
