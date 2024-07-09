@@ -73,7 +73,7 @@ def save_image():
     images = [Image.open(path) for path in list_paths]
 
     color_break = 0
-    while images[0].getpixel((color_break, 250)) == (0, 0, 0, 255):
+    while images[0].getpixel((color_break, 200)) == (0, 0, 0, 255):
         color_break += 1
 
     for i in range(len(images)):
