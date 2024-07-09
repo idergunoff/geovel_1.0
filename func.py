@@ -1406,7 +1406,8 @@ def update_list_trained_models_class():
         item.setData(Qt.UserRole, model.id)
         item.setToolTip(f'{model.comment}\n'
                         f'Количество параметров: '
-                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}')
+                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n'
+                        f'{model.list_params}\nSignal: {model.except_signal}')
         ui.listWidget_trained_model_class.addItem(item)
     ui.listWidget_trained_model_class.setCurrentRow(0)
 
