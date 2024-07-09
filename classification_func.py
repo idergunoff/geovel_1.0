@@ -454,14 +454,22 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         train_time = datetime.datetime.now() - start_time
 
-        text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)}, \nвремя обучения: {train_time}'
+        text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)},'
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
+        preds_test = pipe.predict_proba(training_sample_test)[:, 0]
+        fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+        roc_auc = auc(fpr, tpr)
         preds_t = pipe.predict(training_sample_test)
-        print("accuracy", accuracy_score(markup_test, preds_t, normalize=True))
-        print("precision", precision_score(markup_test, preds_t, average='binary', pos_label='bitum'))
-        print("recall", recall_score(markup_test, preds_t, average='binary', pos_label='bitum'))
-        print("f1", f1_score(markup_test, preds_t, average='binary', pos_label='bitum'))
+        precision = precision_score(markup_test, preds_t, average='binary', pos_label='bitum')
+        recall = recall_score(markup_test, preds_t, average='binary', pos_label='bitum')
+        f1 = f1_score(markup_test, preds_t, average='binary', pos_label='bitum')
+        # fpr, tpr, thresholds = roc_curve(markup_test, probab)
+        # roc_auc = auc(fpr, tpr)
+
+        text_model += f'test_precision: {round(precision, 4)},\ntest_recall: {round(recall, 4)},' \
+                      f'\ntest_f1: {round(f1, 4)},\nroc_auc: {round(roc_auc, 4)},\nвремя обучения: {train_time}'
+        set_info(text_model, 'blue')
 
         # if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
         #         and ui_cls.checkBox_voting_hard.isChecked()):
@@ -564,7 +572,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if model_name == 'RFC' or model_name == 'ETC':
             if not ui_cls.checkBox_calibr.isChecked():
                 if not ui_cls.checkBox_baggig.isChecked():
-                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
+                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}, \n' \
+                                   f'roc_auc: {round(roc_auc, 7)}'
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC') and not ui_cls.checkBox_cross_val.isChecked():
             if not ui_cls.checkBox_calibr.isChecked():

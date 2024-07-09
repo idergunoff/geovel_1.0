@@ -90,6 +90,15 @@ def save_image():
         combined_image.paste(img, (x_offset, 0))
         x_offset += img.width
 
+    back_break = 0
+    comb_width, comb_height = combined_image.size
+    for x in range(comb_width - 1, -1, -1):
+        if combined_image.getpixel((x, 100)) != (0, 0, 0, 255) \
+                and combined_image.getpixel((x, 100)) != (0, 0, 0):
+            back_break = x
+            combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
+            break
+
     save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
     if save_path == '':
         return
