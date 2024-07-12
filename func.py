@@ -340,6 +340,7 @@ def update_param_combobox():
     draw_param()  # отрисовываем параметр
     update_layers()  # обновляем список слоев в соответствии с выбранным параметром
 
+
 def draw_param():
     # Очищаем график
     ui.graph.clear()
@@ -406,6 +407,7 @@ def draw_param():
         ui.graph.getAxis('bottom').setScale(2.5)
         ui.graph.getAxis('bottom').setLabel('Профиль, м')
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
+
 
 def save_max_min(radar):
     radar_max_min = []
