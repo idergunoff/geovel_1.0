@@ -131,6 +131,7 @@ ui.checkBox_grid.clicked.connect(show_grid)
 ui.pushButton_save_img.clicked.connect(save_image)
 ui.pushButton_slide.clicked.connect(slide_average)
 radarogramma.sigRangeChanged.connect(on_range_changed)
+ui.checkBox_black_white.clicked.connect(change_background)
 
 
 

@@ -50,9 +50,60 @@ def set_scale():
     radarogramma.setYRange(0, 512)
 
 
+def change_background():
+    if ui.checkBox_black_white.isChecked():
+        ui.radarogram.setBackground('w')
+        ui.graph.setBackground('w')
+        ui.signal.setBackground('w')
+    else:
+        ui.radarogram.setBackground('k')
+        ui.graph.setBackground('k')
+        ui.signal.setBackground('k')
+
+
 def on_range_changed():
     X, Y = radarogramma.viewRange()
     ui.graph.setXRange(X[0], X[1])
+
+
+def crop_from_right(image):
+    """Обрезает изображение справа до первого ненулевого (не черного) пикселя."""
+    width, height = image.size
+    color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
+
+    for x in range(width - 1, -1, -1):
+        if image.getpixel((x, 5)) != color:
+            back_break = x
+            combined_image = image.crop((0, 0, back_break, height))
+            break
+    return combined_image
+
+def resize_image(image, width):
+    """Изменить размер изображения до заданной ширины, сохраняя пропорции."""
+    aspect_ratio = image.height / image.width
+    new_height = int(aspect_ratio * width)
+    return image.resize((width, new_height), Image.Resampling.LANCZOS)
+
+def concatenate_images_vertically(image1, image2):
+    """Объединить два изображения по вертикали."""
+    new_width = max(image1.width, image2.width)
+    new_height = image1.height + image2.height
+    new_image = Image.new('RGB', (new_width, new_height))
+    new_image.paste(image1, (0, 0))
+    new_image.paste(image2, (0, image1.height))
+    return new_image
+
+def process_images(images, graphs):
+    """Изменить размеры изображений в graphs и объединить каждую пару с изображениями из images."""
+    combined_images = []
+    for i in range(len(images)):
+        img1 = images[i]
+        img2 = graphs[i]
+        img2_cropped = crop_from_right(img2)
+        img2_resized = resize_image(img2_cropped, img1.width)
+        combined_image = concatenate_images_vertically(img1, img2_resized)
+        combined_images.append(combined_image)
+    return combined_images
 
 
 def save_image():
@@ -61,52 +112,126 @@ def save_image():
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
 
-    list_paths = []
-    N = (count_measure + 399) // 400
-    for i in range(N):
-        n = i * 400
-        m = n + 400
-        radarogramma.setXRange(n, m, padding=0)
-        exporter.export(f'{i}_part.png')
-        list_paths.append(f'{i}_part.png')
+    if ui.checkBox_save_graph.isChecked():
+        graph_exporter = ImageExporter(ui.graph.scene())
+        graph_exporter.parameters()['width'] = 868
 
-    images = [Image.open(path) for path in list_paths]
+        list_paths = []
+        list_graphs = []
+        N = (count_measure + 399) // 400
+        for i in range(N):
+            n = i * 400
+            m = n + 400
+            radarogramma.setXRange(n, m, padding=0)
+            ui.graph.setXRange(n, m, padding=0)
+            exporter.export(f'{i}_part.png')
+            graph_exporter.export(f'{i}_graph.png')
+            list_paths.append(f'{i}_part.png')
+            list_graphs.append(f'{i}_graph.png')
 
-    color_break = 0
-    while images[0].getpixel((color_break, 200)) == (0, 0, 0, 255):
-        color_break += 1
+        images = [Image.open(path) for path in list_paths]
+        graphs = [Image.open(path) for path in list_graphs]
 
-    for i in range(len(images)):
-        width, height = images[i].size
-        left = color_break + 1 if i != 0 else 0
-        images[i] = images[i].crop((left, 0, width, height))
+        color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
+        color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
+        color_break = 0
+        while images[0].getpixel((color_break, 200)) == color:
+            color_break += 1
 
-    total_width = sum(img.width for img in images)
-    max_height = max(img.height for img in images)
-    combined_image = Image.new('RGB', (total_width, max_height))
+        graph_break = 0
+        while graphs[0].getpixel((graph_break, 2)) == color:
+            graph_break += 1
 
-    x_offset = 0
-    for img in images:
-        combined_image.paste(img, (x_offset, 0))
-        x_offset += img.width
+        for i in range(len(images)):
+            width, height = images[i].size
+            left = color_break + 1 if i != 0 else 0
+            images[i] = images[i].crop((left, 0, width, height))
 
-    back_break = 0
-    comb_width, comb_height = combined_image.size
-    for x in range(comb_width - 1, -1, -1):
-        if combined_image.getpixel((x, 100)) != (0, 0, 0, 255) \
-                and combined_image.getpixel((x, 100)) != (0, 0, 0):
-            back_break = x
-            combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
-            break
+        for i in range(len(graphs)):
+            width, height = graphs[i].size
+            left = graph_break + 1 if i != 0 else 0
+            graphs[i] = graphs[i].crop((left, 0, width, height))
 
-    save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
-    if save_path == '':
-        return
-    if not save_path.endswith('.png'):
-        save_path += '.png'
-    combined_image.save(save_path)
-    for file in list_paths:
-        os.remove(file)
+        combined_images = process_images(images, graphs)
+
+        total_width = sum(img.width for img in combined_images)
+        max_height = max(img.height for img in combined_images)
+        combined_image = Image.new('RGB', (total_width, max_height), color_short)
+
+        x_offset = 0
+        for img in combined_images:
+            combined_image.paste(img, (x_offset, 0))
+            x_offset += img.width
+
+        back_break = 0
+        comb_width, comb_height = combined_image.size
+        for x in range(comb_width - 1, -1, -1):
+            if combined_image.getpixel((x, 100)) != color \
+                    and combined_image.getpixel((x, 100)) != color_short:
+                back_break = x
+                combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
+                break
+
+        save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
+        if save_path == '':
+            return
+        if not save_path.endswith('.png'):
+            save_path += '.png'
+        combined_image.save(save_path)
+
+        for file in list_paths:
+            os.remove(file)
+        for file in list_graphs:
+            os.remove(file)
+
+    else:
+        list_paths = []
+        N = (count_measure + 399) // 400
+        for i in range(N):
+            n = i * 400
+            m = n + 400
+            radarogramma.setXRange(n, m, padding=0)
+            exporter.export(f'{i}_part.png')
+            list_paths.append(f'{i}_part.png')
+
+        images = [Image.open(path) for path in list_paths]
+
+        color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
+        color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
+        color_break = 0
+        while images[0].getpixel((color_break, 200)) == color:
+            color_break += 1
+
+        for i in range(len(images)):
+            width, height = images[i].size
+            left = color_break + 1 if i != 0 else 0
+            images[i] = images[i].crop((left, 0, width, height))
+
+        total_width = sum(img.width for img in images)
+        max_height = max(img.height for img in images)
+        combined_image = Image.new('RGB', (total_width, max_height), color_short)
+
+        x_offset = 0
+        for img in images:
+            combined_image.paste(img, (x_offset, 0))
+            x_offset += img.width
+
+        back_break = 0
+        comb_width, comb_height = combined_image.size
+        for x in range(comb_width - 1, -1, -1):
+            if combined_image.getpixel((x, 100)) != color and combined_image.getpixel((x, 100)) != color_short:
+                back_break = x
+                combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
+                break
+
+        save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
+        if save_path == '':
+            return
+        if not save_path.endswith('.png'):
+            save_path += '.png'
+        combined_image.save(save_path)
+        for file in list_paths:
+            os.remove(file)
 
     # img.save('radarogramma.png')
     #
@@ -316,8 +441,8 @@ def draw_formation():
             layer_down = calc_line_by_vel_model(vel_mod.vel_model_id, layer_down, vel_mod.scale)
 
     # Создаем объект линии и добавляем его на радарограмму
-    curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(color='white', width=2))
-    curve_down = pg.PlotCurveItem(x=x, y=layer_down, pen=pg.mkPen(color='white', width=2))
+    curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(width=2))
+    curve_down = pg.PlotCurveItem(x=x, y=layer_down, pen=pg.mkPen(width=2))
     radarogramma.addItem(curve_up)
     radarogramma.addItem(curve_down)
     # Создаем объект текста для отображения id слоя и добавляем его на радарограмму

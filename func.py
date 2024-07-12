@@ -373,11 +373,12 @@ def draw_param():
             # Создаем список значений по порядку
             number = list(range(1, len(graph) + 1))
             # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-            curve = pg.PlotCurveItem(x=number, y=graph)
+            cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
+            curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)
             wl = 2.4 if f.id == get_formation_id() else 1
             cl = 'red' if f.id == get_formation_id() else 'green'
             curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3),
-                                            pen=pg.mkPen(color=cl, width=wl))
+                                            pen=cl, width=wl)
             # Если выбран текущий пласт, то добавляем только кривую на график
             if f.id == get_formation_id():
                 ui.graph.addItem(curve)
@@ -393,7 +394,10 @@ def draw_param():
             graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
                 Formation.id == get_formation_id()).first()[0])
         number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
-        curve = pg.PlotCurveItem(x=number, y=graph)  # создаем объект класса PlotCurveItem для отображения графика данных
+        # cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
+        cc = (120, 120, 120, 255)
+        curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
+        # m для отображения графика данных
         # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
         curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
         ui.graph.addItem(curve)  # добавляем график данных на график

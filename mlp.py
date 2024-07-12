@@ -950,7 +950,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     ui.graph.clear()
     number = list(range(1, len(working_data[col]) + 1))
     # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
-    curve = pg.PlotCurveItem(x=number, y=working_data[col].tolist())
+    curve = pg.PlotCurveItem(x=number, y=working_data[col].tolist(), pen=pg.mkPen(color='#969696'))
     curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(working_data[col].tolist(), 31, 3),
                                     pen=pg.mkPen(color='red', width=2.4))
     # Добавляем кривую и отфильтрованную кривую на график для всех пластов

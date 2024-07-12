@@ -217,16 +217,6 @@
                 </item>
                </layout>
               </item>
-              <item row="19" column="0">
-               <widget class="QPushButton" name="pushButton_save_img">
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(153, 193, 241);</string>
-                </property>
-                <property name="text">
-                 <string>Save Image</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_6">
                 <item row="5" column="0">
@@ -1037,8 +1027,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>418</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5106,6 +5096,23 @@ Therm</string>
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="pushButton_save_img">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(153, 193, 241);</string>
+            </property>
+            <property name="text">
+             <string>Save Image</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_save_graph">
+            <property name="text">
+             <string>w/graph</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -5134,7 +5141,7 @@ Therm</string>
          </layout>
         </item>
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,0,2,1">
+         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,0,2,1,0">
           <item row="0" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
@@ -5142,20 +5149,27 @@ Therm</string>
             </property>
            </widget>
           </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_relief">
+            <property name="text">
+             <string>relief</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="3">
+           <widget class="QLineEdit" name="lineEdit_string"/>
+          </item>
+          <item row="0" column="4">
            <widget class="QPushButton" name="pushButton_color">
             <property name="text">
              <string>color</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QLineEdit" name="lineEdit_string"/>
-          </item>
           <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_relief">
+           <widget class="QCheckBox" name="checkBox_black_white">
             <property name="text">
-             <string>relief</string>
+             <string>b/w</string>
             </property>
            </widget>
           </item>
@@ -5173,7 +5187,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
