@@ -954,8 +954,8 @@ def push_random_param_reg():
             try:
                 y_pred = model.predict(working_sample)
             except ValueError:
-                data = imputer.fit_transform(working_sample)
-                y_pred = model.predict(data)
+                working_sample = imputer.fit_transform(working_sample)
+                y_pred = model.predict(working_sample)
 
                 for i in working_sample.index:
                     p_nan = [working_sample.columns[ic + 3] for ic, v in enumerate(working_sample.iloc[i, 3:].tolist()) if
