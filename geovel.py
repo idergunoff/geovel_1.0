@@ -18,6 +18,7 @@ from test_model import *
 from lineup_train_models import *
 from nn_torch_classifier import *
 from nn_torch_regression import *
+
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()

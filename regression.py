@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
+from random_param_reg import push_random_param_reg
 
 
 
@@ -740,10 +741,26 @@ def train_regression_model():
 
         start_time = datetime.datetime.now()
         # Нормализация данных
-        scaler = StandardScaler()
+        text_scaler = ''
 
         pipe_steps = []
-        pipe_steps.append(('scaler', scaler))
+        if ui_r.checkBox_stdscaler_reg.isChecked():
+            std_scaler = StandardScaler()
+            pipe_steps.append(('scaler', std_scaler))
+            text_scaler += '\nStandardScaler'
+        if ui_r.checkBox_robscaler_reg.isChecked():
+            robust_scaler = RobustScaler()
+            pipe_steps.append(('scaler', robust_scaler))
+            text_scaler += '\nRobustScaler'
+        if ui_r.checkBox_mnmxscaler_reg.isChecked():
+            minmax_scaler = MinMaxScaler()
+            pipe_steps.append(('scaler', minmax_scaler))
+            text_scaler += '\nMinMaxScaler'
+        if ui_r.checkBox_mxabsscaler_reg.isChecked():
+            maxabs_scaler = MaxAbsScaler()
+            pipe_steps.append(('scaler', maxabs_scaler))
+            text_scaler += '\nMaxAbsScaler'
+
 
         # Разделение данных на обучающую и тестовую выборки
         x_train, x_test, y_train, y_test = train_test_split(
@@ -768,6 +785,7 @@ def train_regression_model():
                                             random_state=0, n_jobs=-1)
         bagging_text = f'\nBagging: n_estimators={ui_r.spinBox_bagging.value()}' if ui_r.checkBox_baggig.isChecked() else ''
 
+        text_model += text_scaler
         text_model += text_pca
         text_model += bagging_text
 
@@ -792,12 +810,15 @@ def train_regression_model():
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
 
+
         pipe.fit(x_train, y_train)
         y_pred = pipe.predict(x_test)
 
         r2 = r2_score(y_test, y_pred)
         accuracy = round(pipe.score(x_test, y_test), 5)
-        mse = round(mean_squared_error(y_test, y_pred), 5)
+        # mse = round(mean_squared_error(y_test, y_pred), 5)
+        mse = np.mean((y_test - y_pred) ** 2)
+
 
         cv_text = (
             f'\nКРОСС-ВАЛИДАЦИЯ\nОценки на каждом разбиении:\n {" / ".join(str(round(val, 2)) for val in scores_cv)}'
@@ -1098,6 +1119,7 @@ def train_regression_model():
     ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
+    ui_r.pushButton_random_param.clicked.connect(push_random_param_reg)
     Regressor.exec_()
 
 
@@ -1448,7 +1470,6 @@ def calc_object_model_regmod():
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
-    print(list_formation)
     # working_data_result = pd.DataFrame()
     # list_formation = []
     # for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
