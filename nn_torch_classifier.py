@@ -1048,16 +1048,17 @@ def torch_save_classifier(pipeline, accuracy, list_params, text_model):
         pass
 
 
-def draw_results_graphs(loss, epochs):
+def draw_results_graphs(loss, epochs, learning_rate, hidden_units, weight_decay, dropout_rate, regular):
     fig, axs = plt.subplots(1, 1, figsize=(16, 8))
     epoch = list(range(1, epochs + 1))
     axs.plot(epoch, loss, marker='o', linestyle='-', label='Val Loss')
     axs.set_xlabel('Epochs')
     axs.set_ylabel('Loss')
-    axs.set_title('Loss vs Epochs')
     axs.legend()
 
-    fig.suptitle(f'\nTrain Loss Plot: ')
+    fig.suptitle(f'\nTrain Loss Plot: ' + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(hidden_units) \
+                         + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                         '\nregularization: ' + str(regular))
     plt.subplots_adjust(top=0.8)
     plt.show()
 
@@ -1163,7 +1164,8 @@ class PyTorchClassifier(BaseEstimator):
                         self.epochs = epoch
                         break
             losses.append(running_loss / (X_train.shape[0] / self.batch_size))
-        draw_results_graphs(losses, self.epochs)
+        draw_results_graphs(losses, self.epochs, self.learning_rate, self.hidden_units,
+                            self.weight_decay, self.dropout_rate, self.regular)
 
     def predict(self, X):
         predictions = []
@@ -1350,6 +1352,7 @@ def draw_roc_curve(y_val, y_mark):
     plt.title('Receiver Operating Characteristic')
     plt.legend(loc="lower right")
     plt.show()
+    return roc_auc
 
 def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
     fpr, tpr, thresholds = roc_curve(y_val, y_mark)
@@ -1638,13 +1641,18 @@ def torch_classifier_train():
         y_res = pipeline.predict_proba(X_val)
         y_prob = [i[0] for i in y_res]
         accuracy = accuracy_score(y_val, mark)
+        precision = precision_score(y_val, mark)
+        recall = recall_score(y_val, mark)
+        f1 = f1_score(y_val, mark)
         print('Accuracy: ', accuracy)
-        draw_roc_curve(y_val, y_prob)
+        roc_auc = draw_roc_curve(y_val, y_prob)
         end_time = datetime.datetime.now() - start_time
         print(end_time)
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) \
+                               + '\nroc_auc: ' + str(round(roc_auc, 3)) + '\nprecision: ' + str(round(precision, 3)) +\
+                               '' + '\nrecall: ' + str(round(recall, 3)) + '\nf1: ' + str(round(f1, 3)) + '\nвремя обучения: ' \
                          + str(end_time) + '\nlearning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
                 hidden_units) \
                          + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
@@ -1802,17 +1810,24 @@ def torch_classifier_train():
 
         pipeline.fit(X, y)
         y_mark = pipeline.predict(X_val)
+        y_res = pipeline.predict_proba(X_val)
+        y_prob = [i[0] for i in y_res]
         mark = []
         mark.extend([labels[m] for m in y_mark if m in labels])
         accuracy = accuracy_score(y_val, mark)
+        precision = precision_score(y_val, mark)
+        recall = recall_score(y_val, mark)
+        f1 = f1_score(y_val, mark)
+        roc_auc = draw_roc_curve(y_val, y_prob)
         print('Best Accuracy: ', accuracy)
         end_time = datetime.datetime.now() - start_time
         print(end_time)
 
         if ui_tch.checkBox_save_model.isChecked():
-            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
-                         + str(end_time) + '\nlearning_rate: ' + str(best_learning_rate) + '\nhidden units: ' + str(
-                best_num_hidden_units) \
+            text_model_final = '*** TORCH NN *** \n' + text_model + 'test_accuray: ' + str(round(accuracy, 3)) +\
+                               '\nprecision ' +  str(round(precision, 3)) + '\nrecall ' + str(round(recall, 3)) \
+                               + '\nf1 ' + str(round(f1, 3)) +  '\nroc_auc ' + str(round(roc_auc, 3)) + '\nвремя обучения: ' + str(end_time) + '\nlearning_rate: '\
+                               + str(best_learning_rate) + '\nhidden units: ' + str(best_num_hidden_units) \
                          + '\nweight decay: ' + str(best_weight_decay) + '\ndropout rate: ' + str(best_dropout_rate) + \
                          '\nregularization: ' + str(best_regularization)
             torch_save_classifier(pipeline, accuracy, list_param, text_model_final)
