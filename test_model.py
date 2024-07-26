@@ -519,8 +519,8 @@ def regression_test():
         try:
             y_pred = reg_model.predict(working_sample)
         except ValueError:
-            data = imputer.fit_transform(working_sample)
-            y_pred = reg_model.predict(data)
+            working_sample = imputer.fit_transform(working_sample)
+            y_pred = reg_model.predict(working_sample)
 
             for i in working_data.index:
                 p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
@@ -533,7 +533,6 @@ def regression_test():
         working_data['diff'] = working_data['target_value'] - working_data['y_pred']
 
         # print(working_data[['target_value', 'y_pred', 'diff']].head(20))
-
         accuracy = reg_model.score(working_sample, working_data['target_value'].values.tolist())
         mse = round(mean_squared_error(working_data['target_value'].values.tolist(), working_data['y_pred'].values.tolist()), 5)
 
@@ -649,8 +648,8 @@ def regression_test():
             try:
                 y_pred = reg_model.predict(working_sample)
             except ValueError:
-                data = imputer.fit_transform(working_sample)
-                y_pred = reg_model.predict(data)
+                working_sample = imputer.fit_transform(working_sample)
+                y_pred = reg_model.predict(working_sample)
 
                 for i in working_data.index:
                     p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if

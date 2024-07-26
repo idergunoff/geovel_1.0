@@ -135,9 +135,12 @@ def add_wells():
         list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
         n_new, n_update = 0, 0
         for i in pd_wells.index:
-            curr_well = session.query(Well).filter(Well.name == str(pd_wells[name_cell][i]),
+            try:
+                curr_well = session.query(Well).filter(Well.name == str(pd_wells[name_cell][i]),
                                           Well.x_coord == float(process_string(pd_wells[x_cell][i])),
                                           Well.y_coord == float(process_string(pd_wells[y_cell][i]))).first()
+            except ValueError:
+                continue
             if curr_well:
                 n_update += 1
                 set_info(f'Скважина {curr_well.name} уже есть в БД', 'red')

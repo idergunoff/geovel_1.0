@@ -895,13 +895,13 @@ def draw_well(well_id):
     x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
     y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
     index, dist = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
-    curve = pg.PlotCurveItem(x=[index, index], y=[0, 512], pen=pg.mkPen(color='white', width=2))
+    curve = pg.PlotCurveItem(x=[index, index], y=[0, 512], pen=pg.mkPen(color='#c0bfbc', width=2))
     radarogramma.addItem(curve)
     globals()[f'well_curve_id{well_id}'] = curve
 
 
     well_text = f'int ({well.name.split("/")[2]})' if well.name.startswith('int') else well.name
-    text_item = pg.TextItem(text=f'{well_text} ({round(dist, 2)})', color='white')
+    text_item = pg.TextItem(text=f'{well_text} ({round(dist, 2)})', color='#c0bfbc')
     text_item.setPos(index, -30)
     radarogramma.addItem(text_item)
     globals()[f'well_text_id{well_id}'] = text_item
@@ -925,13 +925,13 @@ def draw_intersection(int_id):
 
     intersection = session.query(Intersection).filter_by(id=int_id).first()
 
-    curve = pg.PlotCurveItem(x=[intersection.i_profile, intersection.i_profile], y=[0, 512], pen=pg.mkPen(color='white', width=2))
+    curve = pg.PlotCurveItem(x=[intersection.i_profile, intersection.i_profile], y=[0, 512], pen=pg.mkPen(color='#c0bfbc', width=2))
     radarogramma.addItem(curve)
     globals()[f'well_curve_id{int_id}'] = curve
 
 
     well_text = intersection.name.split("_")[0]
-    text_item = pg.TextItem(text=f'{well_text}', color='white')
+    text_item = pg.TextItem(text=f'{well_text}', color='#c0bfbc')
     font = QtGui.QFont()
     font.setPointSize(7)  # Установите размер шрифта, который вам нужен
     text_item.setFont(font)
