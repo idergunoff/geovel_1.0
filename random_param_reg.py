@@ -1,3 +1,4 @@
+from sklearn.metrics import mean_absolute_error
 
 from func import *
 
@@ -967,11 +968,13 @@ def push_random_param_reg():
             data_test['y_pred'] = y_pred
             data_test['diff'] = data_test['target_value'] - data_test['y_pred']
             accuracy = model.score(working_sample, data_test['target_value'].values.tolist())
+            mae = round(mean_absolute_error(data_test['target_value'].values.tolist(),
+                                            data_test['y_pred'].values.tolist()), 5)
             mse = round(mean_squared_error(data_test['target_value'].values.tolist(),
                                            data_test['y_pred'].values.tolist()), 5)
             r2 = r2_score(data_test['target_value'].values.tolist(), data_test['y_pred'].values.tolist())
 
-            list_estimator_accuracy.append(accuracy)
+            list_estimator_accuracy.append(mae)
             list_estimator_mse.append(mse)
             list_estimator_r2.append(r2)
 
@@ -979,7 +982,7 @@ def push_random_param_reg():
             ui_rp.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                       f"Тестирование модели {model}\n"
                       f"Количество параметров: {len(list_param)}\n"
-                      f"Accuracy: {accuracy:.3f}"
+                      f"MAE: {mae:.3f}"
                       f'\nMSE: {mse:.3f}'
                         f'\nR2: {r2:.3f}')
 
@@ -987,7 +990,7 @@ def push_random_param_reg():
                 print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                       f"Тестирование модели {model}\n"
                       f"Количество параметров: {len(list_param)}\n"
-                      f"Accuracy: {accuracy:.3f}"
+                      f"MAE: {mae:.3f}"
                       f'\nMSE: {mse:.3f}\nR2: {r2:.3f}', file=f)
 
             index = 0
@@ -1108,15 +1111,15 @@ def push_random_param_reg():
             estimators = cv_results['estimator']
 
             list_accuracy, list_mse, list_r2, filename = test_classif_regressor(estimators,data_test,list_param, filename)
-            accuracy = np.array(list_accuracy).mean()
+            mae = np.array(list_accuracy).mean()
             mse = np.array(list_mse).mean()
             r2 = np.array(list_r2).mean()
-            results_list = [accuracy, mse, r2, list_param]
+            results_list = [mae, mse, r2, list_param]
             results.append(results_list)
 
             with open(filename, 'a') as f:
-                print(f'\n!!!RESULT!!!\nAccuracy mean: {accuracy}\nMSE mean: {mse}\nR2 mean: {r2}', file=f)
-            print(f'\n!!!RESULT!!!\nAccuracy mean: {accuracy}\nMSE mean: {mse}\nR2 mean: {r2}')
+                print(f'\n!!!RESULT!!!\nMAE mean: {mae}\nMSE mean: {mse}\nR2 mean: {r2}', file=f)
+            print(f'\n!!!RESULT!!!\nMAE mean: {mae}\nMSE mean: {mse}\nR2 mean: {r2}')
 
         result_analysis(results, filename, reverse=True)
         result_analysis(results, filename, reverse=False)
