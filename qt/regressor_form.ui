@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>908</width>
+    <width>930</width>
     <height>580</height>
    </rect>
   </property>
@@ -183,7 +183,7 @@
          </layout>
         </widget>
        </item>
-       <item row="0" column="1">
+       <item row="0" column="2">
         <widget class="QGroupBox" name="groupBox_4">
          <property name="styleSheet">
           <string notr="true"/>
@@ -843,6 +843,99 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_14">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>XGBoostRegressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_43">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_44">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_gbc_7">
+               <property name="toolTip">
+                <string>Gradient Boosting Regressor</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(187, 227, 250);</string>
+               </property>
+               <property name="text">
+                <string>XGB</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_19">
+               <property name="toolTip">
+                <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+               </property>
+               <property name="text">
+                <string>learning_rate:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_20">
+               <property name="toolTip">
+                <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+               </property>
+               <property name="text">
+                <string>n_estimators:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate_xgb">
+               <property name="toolTip">
+                <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+               </property>
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QSpinBox" name="spinBox_n_estimators_xgb">
+               <property name="toolTip">
+                <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>10000</number>
+               </property>
+               <property name="singleStep">
+                <number>50</number>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
         </item>
        </layout>
       </widget>

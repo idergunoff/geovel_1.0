@@ -578,6 +578,11 @@ def train_regression_model():
         elif model == 'LSS':
             model_reg = Lasso(alpha=ui_r.doubleSpinBox_alpha.value(), random_state=0)
             text_model = f'**LSS**: \nalpha: {round(ui_r.doubleSpinBox_alpha.value(), 2)}, '
+        elif model == 'XGB':
+            model_reg = XGBRegressor(n_estimators=ui_r.spinBox_n_estimators_xgb.value(),
+                                     learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(), random_state=0)
+            text_model = f'**XGB**: \nn estimators: {ui_r.spinBox_n_estimators_xgb.value()}, ' \
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, '
 
         else:
             model_reg = QuadraticDiscriminantAnalysis()

@@ -140,6 +140,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                               C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
+        # elif model == 'XGB':
+        #     model_class = XGBClassifier(objective='binary:logistic', n_estimators=ui_cls.spinBox_xgb_estim.value(), learning_rate=0.01,
+        #                                 max_depth=5, random_state=0)
+        #     print('XGB CHOSEN')
+        #     text_model = f'**XGB**: \nn estimators: {ui_cls.spinBox_xgb_estim.value()}, '
 
         else:
             model_class = QuadraticDiscriminantAnalysis()

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>993</width>
-    <height>722</height>
+    <height>584</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -693,7 +693,7 @@
          </item>
         </layout>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_3">
          <property name="styleSheet">
           <string notr="true"/>
@@ -824,7 +824,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="4" column="1">
         <widget class="QGroupBox" name="groupBox_17">
          <property name="title">
           <string>PreProcess</string>
@@ -866,6 +866,70 @@
            </layout>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_xgb">
+         <property name="title">
+          <string>ExtremeGradientBoosting</string>
+         </property>
+         <widget class="QWidget" name="layoutWidget">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>20</y>
+            <width>231</width>
+            <height>81</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_42">
+           <item row="0" column="0">
+            <widget class="QRadioButton" name="radioButton_xgb">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="mouseTracking">
+              <bool>true</bool>
+             </property>
+             <property name="toolTip">
+              <string>K-Nearest Neighbors classifier</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(252, 249, 206);</string>
+             </property>
+             <property name="text">
+              <string>XGB</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="label_41">
+             <property name="text">
+              <string>n_estimators</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QSpinBox" name="spinBox_xgb_estim">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="value">
+              <number>5</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -1368,7 +1432,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_stack_vote"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_stack_vote"/>
  </buttongroups>
 </ui>

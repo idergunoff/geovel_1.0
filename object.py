@@ -73,6 +73,7 @@ from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, RandomizedSearchCV, cross_validate
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
 from sklearn.tree import DecisionTreeRegressor
+from xgboost import XGBClassifier, XGBRegressor
 from sklearn.manifold import TSNE
 from sklearn.linear_model import LinearRegression, ElasticNet, Lasso
 from sklearn.neighbors import KNeighborsRegressor, LocalOutlierFactor
