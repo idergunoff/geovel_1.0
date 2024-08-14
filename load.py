@@ -53,7 +53,7 @@ def load_profile():
     try:
         ui.progressBar.setMaximum(int(len(pd_radar.index)/512))
         signal = []
-        for i in range(pd_radar['X'].max() + 1):
+        for i in range(int(pd_radar['X'].max() + 1)):
             if len(set(pd_radar[pd_radar['X'] == i]['ALn'])) > 1:
                 signal.append(pd_radar[pd_radar['X'] == i]['ALn'].tolist())
             ui.progressBar.setValue(i+1)

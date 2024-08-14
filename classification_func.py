@@ -79,7 +79,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                           f'({",".join(map(str, tuple(map(int, ui_cls.lineEdit_layer_mlp.text().split()))))}), '
                           f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
                           f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
-                          f'\nalpha: {round(ui_cls.doubleSpinBox_alpha_mlp.value(), 2)}, '
+                          f'\nalpha: {round(ui_cls.doubleSpinBox_alpha_mlp.value(), 5)}, '
                           f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
                           f'\nvalidation_fraction: {round(ui_cls.doubleSpinBox_valid_mlp.value(), 2)}, ')
 
