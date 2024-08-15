@@ -559,7 +559,7 @@ def add_param_list_mlp():
                 else:
                     set_info(f'Параметр Signal_{param[1]} уже добавлен', 'red')
             if not check_except:
-                str_exeption = f'1-{param[2]},{f"{str(int(param[2]) + int(param[3]))}-512" if int(param[3]) > 0  else ""}'
+                str_exeption = f'1-{param[2]},{f"{str(512 - int(param[3]))}-512" if int(param[3]) > 0  else ""}'
                 session.query(ExceptionMLP).filter_by(analysis_id=analysis_id).update({'except_signal': str_exeption,
                                                                               'except_crl': str_exeption},
                                                                              synchronize_session='fetch')
@@ -1477,23 +1477,22 @@ def list_param_to_lineEdit():
 
     if not model:
         return
+    ex_sig, ex_crl = model.except_signal.split(','), model.except_crl.split(',')
+    sig_up = ex_sig[0].split('-')[1] if model.except_signal else '0'
+    crl_up = ex_crl[0].split('-')[1] if model.except_crl else '0'
+    sig_down = str(int(ex_sig[-1].split('-')[1]) - int(ex_sig[-1].split('-')[0])) if model.except_signal else '512'
+    crl_down = str(int(ex_sig[-1].split('-')[1]) - int(ex_sig[-1].split('-')[0])) if model.except_crl else '512'
 
-    sig_up = model.except_signal.split(',')[0].split('-')[1] if model.except_signal else '0'
-    crl_up = model.except_crl.split(',')[0].split('-')[1] if model.except_crl else '0'
-    sig_down = model.except_signal.split(',')[-1].split('-')[0] if model.except_signal else '512'
-    crl_down = model.except_crl.split(',')[-1].split('-')[0] if model.except_crl else '512'
-    sig_width = str(int(sig_down) - int(sig_up))
-    crl_width = str(int(crl_down) - int(crl_up))
 
     list_param_model = []
     for param in json.loads(model.list_params):
         parts = param.split('_')
         if param.startswith('Signal'):
-            list_param_model.append(f'sig_{parts[1]}_{sig_up}_{sig_width}')
+            list_param_model.append(f'sig_{parts[1]}_{sig_up}_{sig_down}')
         elif param == 'CRL':
-            list_param_model.append(f'sig_CRL_{crl_up}_{crl_width}')
+            list_param_model.append(f'sig_CRL_{crl_up}_{crl_down}')
         elif param == 'CRL_NF':
-            list_param_model.append(f'sig_CRLNF_{crl_up}_{crl_width}')
+            list_param_model.append(f'sig_CRLNF_{crl_up}_{crl_down}')
         else:
             list_param_model.append(param)
     print(list_param_model)
