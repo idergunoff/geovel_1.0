@@ -3,6 +3,7 @@ import datetime
 import numpy as np
 
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
+from formation_ai import get_model_id
 from func import *
 from nn_torch_classifier import *
 from krige import draw_map
@@ -558,7 +559,7 @@ def add_param_list_mlp():
                 else:
                     set_info(f'Параметр Signal_{param[1]} уже добавлен', 'red')
             if not check_except:
-                str_exeption = f'1-{param[2]},{f"{str(512-int(param[3]))}-512" if int(param[3]) > 0  else ""}'
+                str_exeption = f'1-{param[2]},{f"{str(int(param[2]) + int(param[3]))}-512" if int(param[3]) > 0  else ""}'
                 session.query(ExceptionMLP).filter_by(analysis_id=analysis_id).update({'except_signal': str_exeption,
                                                                               'except_crl': str_exeption},
                                                                              synchronize_session='fetch')
@@ -1468,3 +1469,34 @@ def rename_model_class():
     ui_rnm.buttonBox.rejected.connect(RenameModel.close)
 
     RenameModel.exec_()
+
+
+def list_param_to_lineEdit():
+    model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
+        Qt.UserRole)).first()
+
+    if not model:
+        return
+
+    sig_up = model.except_signal.split(',')[0].split('-')[1] if model.except_signal else '0'
+    crl_up = model.except_crl.split(',')[0].split('-')[1] if model.except_crl else '0'
+    sig_down = model.except_signal.split(',')[-1].split('-')[0] if model.except_signal else '512'
+    crl_down = model.except_crl.split(',')[-1].split('-')[0] if model.except_crl else '512'
+    sig_width = str(int(sig_down) - int(sig_up))
+    crl_width = str(int(crl_down) - int(crl_up))
+
+    list_param_model = []
+    for param in json.loads(model.list_params):
+        parts = param.split('_')
+        if param.startswith('Signal'):
+            list_param_model.append(f'sig_{parts[1]}_{sig_up}_{sig_width}')
+        elif param == 'CRL':
+            list_param_model.append(f'sig_CRL_{crl_up}_{crl_width}')
+        elif param == 'CRL_NF':
+            list_param_model.append(f'sig_CRLNF_{crl_up}_{crl_width}')
+        else:
+            list_param_model.append(param)
+    print(list_param_model)
+    line_param = '//'.join(list_param_model)
+    print(line_param)
+    ui.lineEdit_string.setText(line_param)
