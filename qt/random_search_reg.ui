@@ -1,0 +1,1586 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RandomSearchReg</class>
+ <widget class="QDialog" name="RandomSearchReg">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>983</width>
+    <height>616</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Random Search Pararmeters for Regression</string>
+  </property>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>31</x>
+     <y>20</y>
+     <width>936</width>
+     <height>581</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_56">
+    <item row="0" column="0">
+     <layout class="QGridLayout" name="gridLayout_51">
+      <item row="0" column="0" colspan="2">
+       <layout class="QGridLayout" name="gridLayout_44">
+        <item row="0" column="0" colspan="2">
+         <layout class="QGridLayout" name="gridLayout_50">
+          <item row="0" column="0">
+           <widget class="QGroupBox" name="groupBox">
+            <property name="title">
+             <string>Extreme Gradient Boosting Regressor</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_49">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="gridLayout_46">
+               <item row="0" column="0">
+                <widget class="QRadioButton" name="radioButton_xgb">
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(186, 253, 233);</string>
+                 </property>
+                 <property name="text">
+                  <string>XGB</string>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label">
+                   <property name="text">
+                    <string>n_estimators</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QSpinBox" name="spinBox_estim_xgb_min">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>50</number>
+                   </property>
+                   <property name="value">
+                    <number>100</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QSpinBox" name="spinBox_estim_xgb_max">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>50</number>
+                   </property>
+                   <property name="value">
+                    <number>1000</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_19">
+                 <item row="1" column="0">
+                  <widget class="QSpinBox" name="spinBox_depth_xgb_min">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>3</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QSpinBox" name="spinBox_depth_xgb_max">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>20</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>max_depth</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="1">
+                <layout class="QGridLayout" name="gridLayout_18">
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_xgb_min">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000100000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_xgb_max">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.100000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>learning_rate</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="2" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_20">
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_xgb_min">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000100000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_xgb_max">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.100000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_alpha">
+                   <property name="text">
+                    <string>alpha</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QGroupBox" name="groupBox_5">
+            <property name="title">
+             <string>Gradient Boostting Regressor</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_47">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_gbr">
+               <property name="toolTip">
+                <string>Gaussian Process Regressor</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(251, 228, 170);</string>
+               </property>
+               <property name="text">
+                <string>GBR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <layout class="QGridLayout" name="gridLayout_31">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_29">
+                 <item row="0" column="0">
+                  <layout class="QGridLayout" name="gridLayout_23">
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_20">
+                     <property name="text">
+                      <string>n_estimators</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QSpinBox" name="spinBox_estim_gbr_min">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>50</number>
+                     </property>
+                     <property name="value">
+                      <number>100</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QSpinBox" name="spinBox_estim_gbr_max">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>50</number>
+                     </property>
+                     <property name="value">
+                      <number>1000</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="0" column="1">
+                  <layout class="QGridLayout" name="gridLayout_24">
+                   <item row="1" column="0">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_gbr_min">
+                     <property name="decimals">
+                      <number>5</number>
+                     </property>
+                     <property name="minimum">
+                      <double>0.000010000000000</double>
+                     </property>
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.010000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>0.000100000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_gbr_max">
+                     <property name="decimals">
+                      <number>5</number>
+                     </property>
+                     <property name="minimum">
+                      <double>0.000010000000000</double>
+                     </property>
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.010000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>0.100000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_21">
+                     <property name="text">
+                      <string>learning_rate</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="0" column="2">
+                  <layout class="QGridLayout" name="gridLayout_25">
+                   <item row="1" column="0">
+                    <widget class="QSpinBox" name="spinBox_depth_gbr_min">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>3</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QSpinBox" name="spinBox_depth_gbr_max">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>20</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_22">
+                     <property name="text">
+                      <string>max_depth</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_30">
+                 <item row="0" column="0">
+                  <layout class="QGridLayout" name="gridLayout_26">
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_23">
+                     <property name="text">
+                      <string>min_samp_split</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QSpinBox" name="spinBox_min_split_gbr_min">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>2</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QSpinBox" name="spinBox_min_split_gbr_max">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>20</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="0" column="1">
+                  <layout class="QGridLayout" name="gridLayout_27">
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_24">
+                     <property name="text">
+                      <string>min_samp_leaf</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QSpinBox" name="spinBox_min_leaf_gbr_min">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>1</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QSpinBox" name="spinBox_min_leaf_gbr_max">
+                     <property name="maximum">
+                      <number>5000</number>
+                     </property>
+                     <property name="singleStep">
+                      <number>1</number>
+                     </property>
+                     <property name="value">
+                      <number>20</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="0" column="2">
+                  <layout class="QGridLayout" name="gridLayout_28">
+                   <item row="0" column="0" colspan="2">
+                    <widget class="QLabel" name="label_25">
+                     <property name="text">
+                      <string>subsample</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_subsample_gbr_min">
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.100000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>0.500000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_subsample_gbr_max">
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.100000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>1.000000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Random Forest Regressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_41">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_39">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_rfr">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(252, 249, 206);</string>
+               </property>
+               <property name="text">
+                <string>RFR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_2">
+               <item row="0" column="0" colspan="2">
+                <widget class="QLabel" name="label_4">
+                 <property name="text">
+                  <string>n_estimators</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QSpinBox" name="spinBox_estim_rfr_min">
+                 <property name="maximum">
+                  <number>5000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>10</number>
+                 </property>
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QSpinBox" name="spinBox_estim_rfr_max">
+                 <property name="maximum">
+                  <number>5000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>10</number>
+                 </property>
+                 <property name="value">
+                  <number>100</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="2">
+              <layout class="QGridLayout" name="gridLayout_16">
+               <item row="1" column="0">
+                <widget class="QSpinBox" name="spinBox_depth_rfr_min">
+                 <property name="maximum">
+                  <number>5000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>1</number>
+                 </property>
+                 <property name="value">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QSpinBox" name="spinBox_depth_rfr_max">
+                 <property name="maximum">
+                  <number>5000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>1</number>
+                 </property>
+                 <property name="value">
+                  <number>20</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0" colspan="2">
+                <widget class="QLabel" name="label_5">
+                 <property name="text">
+                  <string>max_depth</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0" colspan="3">
+              <layout class="QGridLayout" name="gridLayout_40">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_15">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_6">
+                   <property name="text">
+                    <string>min_samp_split</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QSpinBox" name="spinBox_min_split_rfr_min">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>2</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QSpinBox" name="spinBox_min_split_rfr_max">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>20</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout_17">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_7">
+                   <property name="text">
+                    <string>min_samp_leaf</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QSpinBox" name="spinBox_min_leaf_rfr_min">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>1</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QSpinBox" name="spinBox_min_leaf_rfr_max">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>20</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_3">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_9">
+                   <property name="text">
+                    <string>max_features</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QCheckBox" name="checkBox_none_rfr">
+                   <property name="text">
+                    <string>none</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QCheckBox" name="checkBox_sqrt_rfr">
+                   <property name="text">
+                    <string>sqrt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QCheckBox" name="checkBox_log2_rfr">
+                   <property name="text">
+                    <string>log2</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="groupBox_4">
+          <property name="title">
+           <string>SVR</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_43">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_42">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_svr">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(227, 200, 255);</string>
+               </property>
+               <property name="text">
+                <string>SVR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_12">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_17">
+                 <property name="text">
+                  <string>C</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_C_min">
+                 <property name="decimals">
+                  <number>5</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000010000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.000100000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_C_max">
+                 <property name="decimals">
+                  <number>5</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000010000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>10.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0" colspan="2">
+              <layout class="QGridLayout" name="gridLayout_38">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_11">
+                 <item row="0" column="0" alignment="Qt::AlignRight">
+                  <widget class="QLabel" name="label_18">
+                   <property name="text">
+                    <string>epsilon</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_epsilon_min">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.001000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_epsilon_max">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>1.000000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_13">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_19">
+                   <property name="text">
+                    <string>kernel:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QCheckBox" name="checkBox_rbf">
+                   <property name="text">
+                    <string>rbf</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QCheckBox" name="checkBox_linear">
+                   <property name="text">
+                    <string>linear</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QCheckBox" name="checkBox_poly">
+                   <property name="text">
+                    <string>poly</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="4">
+                  <widget class="QCheckBox" name="checkBox_sigmoid">
+                   <property name="text">
+                    <string>sigmoid</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Multi-layer Perceptron Regressor</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_48">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_45">
+           <item row="0" column="0">
+            <widget class="QRadioButton" name="radioButton_mlpr">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(252, 226, 251);</string>
+             </property>
+             <property name="text">
+              <string>MLPR</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="0" column="1" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_10">
+               <property name="text">
+                <string>neurons</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="spinBox_neurons_min">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="singleStep">
+                <number>10</number>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QSpinBox" name="spinBox_neurons_max">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="singleStep">
+                <number>10</number>
+               </property>
+               <property name="value">
+                <number>100</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="3" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_14">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_11">
+               <property name="text">
+                <string>layers</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="spinBox_layers_min">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="singleStep">
+                <number>10</number>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QSpinBox" name="spinBox_layers_max">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="singleStep">
+                <number>10</number>
+               </property>
+               <property name="value">
+                <number>100</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <layout class="QGridLayout" name="gridLayout_6">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_12">
+               <property name="text">
+                <string>activation:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="checkBox_relu">
+               <property name="text">
+                <string>relu</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QCheckBox" name="checkBox_tanh">
+               <property name="text">
+                <string>tanh</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QCheckBox" name="checkBox_logistic">
+               <property name="text">
+                <string>logistic</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="3" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_7">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_13">
+               <property name="text">
+                <string>solver:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="checkBox_adam">
+               <property name="text">
+                <string>adam</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QCheckBox" name="checkBox_sgd">
+               <property name="text">
+                <string>sgd</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_8">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_14">
+               <property name="text">
+                <string>alpha</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp_min">
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.000100000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp_max">
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="2" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_9">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_15">
+               <property name="text">
+                <string>learning_rate</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp_min">
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.000100000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp_max">
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="4">
+            <layout class="QGridLayout" name="gridLayout_10">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_16">
+               <property name="text">
+                <string>iter</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="spinBox_iter_mlp">
+               <property name="maximum">
+                <number>5000</number>
+               </property>
+               <property name="value">
+                <number>500</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox_6">
+        <property name="title">
+         <string>Gaussian Process Regressor</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_37">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_36">
+           <item row="0" column="0">
+            <widget class="QRadioButton" name="radioButton_gpr">
+             <property name="toolTip">
+              <string>Gradient Boosting Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(187, 227, 250);</string>
+             </property>
+             <property name="text">
+              <string>GPR</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="0" column="1" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_32">
+             <item row="0" column="0" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_37">
+               <property name="text">
+                <string>constant_value</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_101">
+               <item row="0" column="2">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_const_max">
+                 <property name="toolTip">
+                  <string>Это коэффициент масштабирования, который влияет на общую масштабируемость и вклад ядра в модель. Применение этого коэффициента масштабирования может быть полезным, когда наблюдения имеют различные масштабы или когда у нас есть априорная информация о важности или распределении вклада ядра в модель. Он позволяет управлять &quot;весом&quot; ядра и его влиянием на предсказания.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>100.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_const_min">
+                 <property name="toolTip">
+                  <string>Ширина ядра. В гауссовском процессе ширина ядра определяет, насколько далеко друг от друга могут находиться две точки, чтобы их взаимосвязь была учтена в модели. Большая ширина позволяет учитывать большее расстояние, что делает гауссовский процесс более гладким, но менее подстраивающимся под данные. Наоборот, маленькая ширина делает гауссовский процесс более чувствительным к данным.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000100000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.100000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_33">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_26">
+               <property name="text">
+                <string>length_scale</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_102">
+               <item row="0" column="0">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_scale_min">
+                 <property name="toolTip">
+                  <string>Ширина ядра. В гауссовском процессе ширина ядра определяет, насколько далеко друг от друга могут находиться две точки, чтобы их взаимосвязь была учтена в модели. Большая ширина позволяет учитывать большее расстояние, что делает гауссовский процесс более гладким, но менее подстраивающимся под данные. Наоборот, маленькая ширина делает гауссовский процесс более чувствительным к данным.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.100000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_scale_max">
+                 <property name="toolTip">
+                  <string>Это коэффициент масштабирования, который влияет на общую масштабируемость и вклад ядра в модель. Применение этого коэффициента масштабирования может быть полезным, когда наблюдения имеют различные масштабы или когда у нас есть априорная информация о важности или распределении вклада ядра в модель. Он позволяет управлять &quot;весом&quot; ядра и его влиянием на предсказания.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>100.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="2">
+            <layout class="QGridLayout" name="gridLayout_34">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_40">
+               <property name="toolTip">
+                <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+               </property>
+               <property name="text">
+                <string>n_restart_optim:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="spinBox_gpr_n_restart_min">
+               <property name="toolTip">
+                <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QSpinBox" name="spinBox_gpr_n_restart_max">
+               <property name="toolTip">
+                <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_35">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_27">
+               <property name="text">
+                <string>alpha</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_103">
+               <item row="0" column="0">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_alpha_min">
+                 <property name="toolTip">
+                  <string>Ширина ядра. В гауссовском процессе ширина ядра определяет, насколько далеко друг от друга могут находиться две точки, чтобы их взаимосвязь была учтена в модели. Большая ширина позволяет учитывать большее расстояние, что делает гауссовский процесс более гладким, но менее подстраивающимся под данные. Наоборот, маленькая ширина делает гауссовский процесс более чувствительным к данным.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>10</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000100000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.000100000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_alpha_max">
+                 <property name="toolTip">
+                  <string>Это коэффициент масштабирования, который влияет на общую масштабируемость и вклад ядра в модель. Применение этого коэффициента масштабирования может быть полезным, когда наблюдения имеют различные масштабы или когда у нас есть априорная информация о важности или распределении вклада ядра в модель. Он позволяет управлять &quot;весом&quot; ядра и его влиянием на предсказания.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>5</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>100.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0">
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="1">
+     <layout class="QGridLayout" name="gridLayout_55">
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="plainTextEdit"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox_11">
+        <property name="title">
+         <string>PCA</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_52">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_21">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_pca">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinBox_pca">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="value">
+              <number>30</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QSpinBox" name="spinBox_pca_lim">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="value">
+              <number>50</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QCheckBox" name="checkBox_pca_mle">
+             <property name="text">
+              <string>mle</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox_17">
+        <property name="title">
+         <string>PreProcess</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_53">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_22">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_stdscaler">
+             <property name="text">
+              <string>StandardScaler</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QCheckBox" name="checkBox_mnmxscaler">
+             <property name="text">
+              <string>MinMaxScaler</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_robscaler">
+             <property name="text">
+              <string>RobustScaler</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QCheckBox" name="checkBox_mxabsscaler">
+             <property name="text">
+              <string>MaxAbsScaler</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <layout class="QGridLayout" name="gridLayout_54">
+        <item row="0" column="0" alignment="Qt::AlignRight|Qt::AlignBottom">
+         <widget class="QCheckBox" name="checkBox_save_model">
+          <property name="text">
+           <string>save</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Trials</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QSpinBox" name="spinBox_trials">
+            <property name="maximum">
+             <number>500</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="2" alignment="Qt::AlignBottom">
+         <widget class="QPushButton" name="pushButton_search_param">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(252, 222, 222);</string>
+          </property>
+          <property name="text">
+           <string>SEARCH</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
+</ui>
