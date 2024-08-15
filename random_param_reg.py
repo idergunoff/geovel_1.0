@@ -812,19 +812,22 @@ def push_random_param_reg():
                 activation=ui_r.comboBox_activation_mlp.currentText(),
                 solver=ui_r.comboBox_solvar_mlp.currentText(),
                 alpha=ui_r.doubleSpinBox_alpha_mlp.value(),
+                learning_rate_init=ui_r.doubleSpinBox_lr_mlp.value(),
                 max_iter=5000,
                 early_stopping=ui_r.checkBox_e_stop_mlp.isChecked(),
                 validation_fraction=ui_r.doubleSpinBox_valid_mlp.value(),
                 random_state=0
             )
-            text_model = (f'**MLPR**: \nhidden_layer_sizes: '
-                          f'({",".join(map(str, tuple(map(int, ui_r.lineEdit_layer_mlp.text().split()))))}), '
-                          f'\nactivation: {ui_r.comboBox_activation_mlp.currentText()}, '
-                          f'\nsolver: {ui_r.comboBox_solvar_mlp.currentText()}, '
-                          f'\nalpha: {round(ui_r.doubleSpinBox_alpha_mlp.value(), 2)}, '
-                          f'\n{"early stopping, " if ui_r.checkBox_e_stop_mlp.isChecked() else ""}'
-                          f'\nvalidation_fraction: {round(ui_r.doubleSpinBox_valid_mlp.value(), 2)}, ')
-
+            text_model = (
+                f'**MLPR**: \n'
+                f'hidden_layer_sizes: ({",".join(map(str, tuple(map(int, ui_r.lineEdit_layer_mlp.text().split()))))}), '
+                f'\nactivation: {ui_r.comboBox_activation_mlp.currentText()}, '
+                f'\nsolver: {ui_r.comboBox_solvar_mlp.currentText()}, '
+                f'\nalpha: {round(ui_r.doubleSpinBox_alpha_mlp.value(), 2)}, '
+                f'\nlearning_rate: {round(ui_r.doubleSpinBox_lr_mlp.value(), 2)}'
+                f'\n{"early stopping, " if ui_r.checkBox_e_stop_mlp.isChecked() else ""}'
+                f'\nvalidation_fraction: {round(ui_r.doubleSpinBox_valid_mlp.value(), 2)}'
+            )
         elif model == 'KNNR':
             n_knn = ui_r.spinBox_neighbors.value()
             weights_knn = 'distance' if ui_r.checkBox_knn_weights.isChecked() else 'uniform'
@@ -847,9 +850,17 @@ def push_random_param_reg():
             text_model = f'**DTR**: \nsplitter: {spl}, '
 
         elif model == 'RFR':
-            model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), oob_score=True, random_state=0,
-                                              n_jobs=-1)
-            text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
+            model_reg = RandomForestRegressor(n_estimators=ui_r.spinBox_rfr_n.value(),
+                                              max_depth=ui_r.spinBox_depth_rfr.value(),
+                                              min_samples_split=ui_r.spinBox_min_sample_split.value(),
+                                              min_samples_leaf=ui_r.spinBox_min_sample_leaf.value(),
+                                              max_features=ui_r.comboBox_max_features_rfr.currentText(),
+                                              oob_score=True, random_state=0, n_jobs=-1)
+            text_model = f'**RFR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, ' \
+                         f'\nmax_depth: {ui_r.spinBox_depth_rfr.value()},' \
+                         f'\nmin_samples_split: {ui_r.spinBox_min_sample_split.value()}, ' \
+                         f'\nmin_samples_leaf: {ui_r.spinBox_min_sample_leaf.value()}, ' \
+                         f'\nmax_features: {ui_r.comboBox_max_features_rfr.currentText()}, '
 
         elif model == 'ABR':
             model_reg = AdaBoostRegressor(n_estimators=ui_r.spinBox_rfr_n.value(), random_state=0)
@@ -875,9 +886,11 @@ def push_random_param_reg():
                 f'\nn restart: {n_restart_optimization} ,')
 
         elif model == 'SVR':
-            model_reg = SVR(kernel=ui_r.comboBox_svr_kernel.currentText(), C=ui_r.doubleSpinBox_svr_c.value())
+            model_reg = SVR(kernel=ui_r.comboBox_svr_kernel.currentText(), C=ui_r.doubleSpinBox_svr_c.value(),
+                            epsilon=ui_r.doubleSpinBox_epsilon_svr.value())
             text_model = (f'**SVR**: \nkernel: {ui_r.comboBox_svr_kernel.currentText()}, '
-                          f'\nC: {round(ui_r.doubleSpinBox_svr_c.value(), 2)}, ')
+                          f'\nC: {round(ui_r.doubleSpinBox_svr_c.value(), 2)}, '
+                          f'\nepsilon: {round(ui_r.doubleSpinBox_epsilon_svr.value(), 2)}')
 
         elif model == 'EN':
             model_reg = ElasticNet(
@@ -894,12 +907,16 @@ def push_random_param_reg():
 
         elif model == 'XGB':
             model_reg = XGBRegressor(n_estimators=ui_r.spinBox_n_estimators_xgb.value(),
-                                     learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(), random_state=0)
+                                     learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(),
+                                     max_depth=ui_r.spinBox_depth_xgb.value(),
+                                     alpha=ui_r.doubleSpinBox_alpha_xgb.value(), booster='gbtree', random_state=0)
             text_model = f'**XGB**: \nn estimators: {ui_r.spinBox_n_estimators_xgb.value()}, ' \
-                         f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, '
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, ' \
+                         f'\nmax_depth: {ui_r.spinBox_depth_xgb.value()} \nalpha: {ui_r.doubleSpinBox_alpha_xgb.value()}'
         else:
             model_reg = QuadraticDiscriminantAnalysis()
             text_model = ''
+
         return model_reg, text_model
 
     def result_analysis(results, filename, reverse=True):
