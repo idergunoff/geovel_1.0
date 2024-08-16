@@ -1,6 +1,7 @@
 import shutil
 import time
 import optuna
+import pandas as pd
 from scipy.stats import uniform, randint
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
+from functools import partial
 
 
 def add_regression_model():
@@ -781,6 +783,7 @@ def train_regression_model():
 
         set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
 
+
     def calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test):
         pipe_steps = []
         text_scaler = ''
@@ -816,11 +819,11 @@ def train_regression_model():
                 n_estimators=trial.params['n_estimators'],
                 learning_rate=trial.params['learning_rate'],
                 max_depth=trial.params['max_depth'],
-                alpha=trial.params['alpha']
+                # alpha=trial.params['alpha']
             )
             text_model += f'**XGB**: \nn estimators: {trial.params["n_estimators"]}, ' \
                          f'\nlearning_rate: {round(trial.params["learning_rate"], 5),} ' \
-                         f'\nmax_depth: {trial.params["max_depth"]} \nalpha: {round(trial.params["alpha"], 5)}'
+                         f'\nmax_depth: {trial.params["max_depth"]}'
 
         if ui_rs.radioButton_rfr.isChecked():
             model = RandomForestRegressor(
@@ -971,170 +974,251 @@ def train_regression_model():
             training_sample, target, test_size=0.2, random_state=42
         )
 
+        def create_data():
+            if ui_rs.radioButton_xgb.isChecked():
+                data = pd.DataFrame(columns=['n_estimators', 'learning_rate', 'max_depth', 'r2', 'mse'])
+            if ui_rs.radioButton_rfr.isChecked():
+                data = pd.DataFrame(columns=['n_estimators', 'max_depth', 'min_samples_split',
+                                               'min_samples_leaf', 'max_features', 'r2', 'mse'])
+            if ui_rs.radioButton_mlpr.isChecked():
+                data = pd.DataFrame(columns=['layers', 'hidden_layer_sizes', 'activation', 'solver', 'alpha',
+                                'learning_rate_init', 'max_iter', 'r2', 'mse'])
+            if ui_rs.radioButton_svr.isChecked():
+                data = pd.DataFrame(columns=['C', 'epsilon', 'kernel', 'r2', 'mse'])
+            if ui_rs.radioButton_gbr.isChecked():
+                data = pd.DataFrame(columns=['n_estimators', 'learning_rate', 'max_depth', 'min_samples_split',
+                                             'min_samples_leaf', 'subsample', 'r2', 'mse'])
+            if ui_rs.radioButton_gpr.isChecked():
+                data = pd.DataFrame(columns=['length_scale', 'constant_value', 'alpha', 'n_restarts_optimizer',
+                                'r2', 'mse'])
+            return data
+
+
         def search_param():
+            global data
+            filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
+                                                      filter="Excel Files (*.xlsx)")
             ui_rs.plainTextEdit.clear()
             start_time = datetime.datetime.now()
-            def objective(trial):
-                print("Trial number:", trial.number)
-                ui_rs.plainTextEdit.appendPlainText("Trial number: " + str(trial.number))
-                pipe_steps = []
+            data = create_data()
 
-                if ui_rs.checkBox_stdscaler.isChecked():
-                    std_scaler = StandardScaler()
-                    pipe_steps.append(('scaler', std_scaler))
-                if ui_rs.checkBox_robscaler.isChecked():
-                    robust_scaler = RobustScaler()
-                    pipe_steps.append(('scaler', robust_scaler))
-                if ui_rs.checkBox_mnmxscaler.isChecked():
-                    minmax_scaler = MinMaxScaler()
-                    pipe_steps.append(('scaler', minmax_scaler))
-                if ui_rs.checkBox_mxabsscaler.isChecked():
-                    maxabs_scaler = MaxAbsScaler()
-                    pipe_steps.append(('scaler', maxabs_scaler))
+            def create_objective(data):
+                def objective(trial):
+                    global data
+                    print("Trial number:", trial.number)
+                    ui_rs.plainTextEdit.appendPlainText("Trial number: " + str(trial.number))
+                    pipe_steps = []
 
-                if ui_rs.checkBox_pca.isChecked():
-                    comp = trial.suggest_int('n_components', ui_rs.spinBox_pca.value(), ui_rs.spinBox_pca_lim.value())
-                    n_comp = 'mle' if ui_rs.checkBox_pca_mle.isChecked() else comp
-                    pca = PCA(n_components=n_comp, random_state=0)
-                    pipe_steps.append(('pca', pca))
+                    if ui_rs.checkBox_stdscaler.isChecked():
+                        std_scaler = StandardScaler()
+                        pipe_steps.append(('scaler', std_scaler))
+                    if ui_rs.checkBox_robscaler.isChecked():
+                        robust_scaler = RobustScaler()
+                        pipe_steps.append(('scaler', robust_scaler))
+                    if ui_rs.checkBox_mnmxscaler.isChecked():
+                        minmax_scaler = MinMaxScaler()
+                        pipe_steps.append(('scaler', minmax_scaler))
+                    if ui_rs.checkBox_mxabsscaler.isChecked():
+                        maxabs_scaler = MaxAbsScaler()
+                        pipe_steps.append(('scaler', maxabs_scaler))
 
-                try:
-                    if ui_rs.radioButton_xgb.isChecked():
-                        estim = [ui_rs.spinBox_estim_xgb_min.value(), ui_rs.spinBox_estim_xgb_max.value()]
-                        lr = [ui_rs.doubleSpinBox_lr_xgb_min.value(), ui_rs.doubleSpinBox_lr_xgb_max.value()]
-                        depth = [ui_rs.spinBox_depth_xgb_min.value(), ui_rs.spinBox_depth_xgb_max.value()]
-                        alpha = [ui_rs.doubleSpinBox_alpha_xgb_min.value(), ui_rs.doubleSpinBox_alpha_xgb_max.value()]
-                        model = XGBRegressor(
-                            objective='reg:squarederror',
-                            n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
-                            learning_rate=trial.suggest_float('learning_rate', lr[0], lr[1], log=True),
-                            max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
-                            alpha=trial.suggest_float('alpha', alpha[0], alpha[1], log=True)
-                        )
+                    if ui_rs.checkBox_pca.isChecked():
+                        comp = trial.suggest_int('n_components', ui_rs.spinBox_pca.value(), ui_rs.spinBox_pca_lim.value())
+                        n_comp = 'mle' if ui_rs.checkBox_pca_mle.isChecked() else comp
+                        pca = PCA(n_components=n_comp, random_state=0)
+                        pipe_steps.append(('pca', pca))
 
-                    if ui_rs.radioButton_rfr.isChecked():
-                        estim = [ui_rs.spinBox_estim_rfr_min.value(), ui_rs.spinBox_estim_rfr_max.value()]
-                        depth = [ui_rs.spinBox_depth_rfr_min.value(), ui_rs.spinBox_depth_rfr_max.value()]
-                        min_split = [ui_rs.spinBox_min_split_rfr_min.value(), ui_rs.spinBox_min_split_rfr_max.value()]
-                        min_leaf = [ui_rs.spinBox_min_leaf_rfr_min.value(), ui_rs.spinBox_min_leaf_rfr_max.value()]
-                        max_features = []
-                        if ui_rs.checkBox_none_rfr.isChecked():
-                            max_features.append(None)
-                        if ui_rs.checkBox_sqrt_rfr.isChecked():
-                            max_features.append('sqrt')
-                        if ui_rs.checkBox_log2_rfr.isChecked():
-                            max_features.append('log2')
-                        model = RandomForestRegressor(
-                            n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
-                            max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
-                            min_samples_split=trial.suggest_int('min_samples_split', min_split[0], min_split[1]),
-                            min_samples_leaf=trial.suggest_int('min_samples_leaf', min_leaf[0], min_leaf[1]),
-                            max_features=trial.suggest_categorical('max_features', max_features)
-                        )
-                    if ui_rs.radioButton_mlpr.isChecked():
-                        neurons = [ui_rs.spinBox_neurons_min.value(), ui_rs.spinBox_neurons_max.value()]
-                        layers = [ui_rs.spinBox_layers_min.value(), ui_rs.spinBox_layers_max.value()]
+                    try:
+                        if ui_rs.radioButton_xgb.isChecked():
+                            estim = [ui_rs.spinBox_estim_xgb_min.value(), ui_rs.spinBox_estim_xgb_max.value()]
+                            lr = [ui_rs.doubleSpinBox_lr_xgb_min.value(), ui_rs.doubleSpinBox_lr_xgb_max.value()]
+                            depth = [ui_rs.spinBox_depth_xgb_min.value(), ui_rs.spinBox_depth_xgb_max.value()]
+                            alpha = [ui_rs.doubleSpinBox_alpha_xgb_min.value(), ui_rs.doubleSpinBox_alpha_xgb_max.value()]
+                            model = XGBRegressor(
+                                objective='reg:squarederror',
+                                n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
+                                learning_rate=trial.suggest_float('learning_rate', lr[0], lr[1], log=True),
+                                max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
+                                # alpha=trial.suggest_float('alpha', alpha[0], alpha[1], log=True)
+                            )
+                            new_row = pd.Series({
+                                'n_estimators': model.n_estimators,
+                                'learning_rate': model.learning_rate,
+                                'max_depth': model.max_depth,
+                                # 'alpha': model.alpha
+                            })
 
-                        n_layers = trial.suggest_int('n_layers', layers[0], layers[1])
-                        hidden_layer_sizes = tuple(
-                            trial.suggest_int(f'hidden_layer_size_{i}', neurons[0], neurons[1])
-                            for i in range(n_layers)
-                        )
-                        activation = []
-                        if ui_rs.checkBox_relu.isChecked():
-                            activation.append('relu')
-                        if ui_rs.checkBox_tanh.isChecked():
-                            activation.append('tanh')
-                        if ui_rs.checkBox_logistic.isChecked():
-                            activation.append('logistic')
+                        if ui_rs.radioButton_rfr.isChecked():
+                            estim = [ui_rs.spinBox_estim_rfr_min.value(), ui_rs.spinBox_estim_rfr_max.value()]
+                            depth = [ui_rs.spinBox_depth_rfr_min.value(), ui_rs.spinBox_depth_rfr_max.value()]
+                            min_split = [ui_rs.spinBox_min_split_rfr_min.value(), ui_rs.spinBox_min_split_rfr_max.value()]
+                            min_leaf = [ui_rs.spinBox_min_leaf_rfr_min.value(), ui_rs.spinBox_min_leaf_rfr_max.value()]
+                            max_features = []
+                            if ui_rs.checkBox_none_rfr.isChecked():
+                                max_features.append(None)
+                            if ui_rs.checkBox_sqrt_rfr.isChecked():
+                                max_features.append('sqrt')
+                            if ui_rs.checkBox_log2_rfr.isChecked():
+                                max_features.append('log2')
+                            model = RandomForestRegressor(
+                                n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
+                                max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
+                                min_samples_split=trial.suggest_int('min_samples_split', min_split[0], min_split[1]),
+                                min_samples_leaf=trial.suggest_int('min_samples_leaf', min_leaf[0], min_leaf[1]),
+                                max_features=trial.suggest_categorical('max_features', max_features)
+                            )
+                            new_row = pd.Series({
+                                'n_estimators': model.n_estimators,
+                                'max_depth': model.max_depth,
+                                'min_samples_split': model.min_samples_split,
+                                'min_samples_leaf': model.min_samples_leaf,
+                                'max_features': model.max_features
+                            })
 
-                        solver = []
-                        if ui_rs.checkBox_adam.isChecked():
-                            solver.append('adam')
-                        if ui_rs.checkBox_sgd.isChecked():
-                            solver.append('sgd')
+                        if ui_rs.radioButton_mlpr.isChecked():
+                            neurons = [ui_rs.spinBox_neurons_min.value(), ui_rs.spinBox_neurons_max.value()]
+                            layers = [ui_rs.spinBox_layers_min.value(), ui_rs.spinBox_layers_max.value()]
 
-                        alpha = [ui_rs.doubleSpinBox_alpha_mlp_min.value(), ui_rs.doubleSpinBox_alpha_mlp_max.value()]
-                        lr = [ui_rs.doubleSpinBox_lr_mlp_min.value(), ui_rs.doubleSpinBox_lr_mlp_max.value()]
-                        iter = ui_rs.spinBox_iter_mlp.value()
-                        model = MLPRegressor(
-                            hidden_layer_sizes=hidden_layer_sizes,
-                            activation=trial.suggest_categorical('activation', activation),
-                            solver=trial.suggest_categorical('solver', solver),
-                            alpha=trial.suggest_float('alpha', alpha[0], alpha[1], log=True),
-                            learning_rate_init=trial.suggest_float('learning_rate_init', lr[0], lr[1], log=True),
-                            max_iter=iter,
-                            random_state=42
-                        )
+                            n_layers = trial.suggest_int('n_layers', layers[0], layers[1])
+                            hidden_layer_sizes = tuple(
+                                trial.suggest_int(f'hidden_layer_size_{i}', neurons[0], neurons[1])
+                                for i in range(n_layers)
+                            )
+                            activation = []
+                            if ui_rs.checkBox_relu.isChecked():
+                                activation.append('relu')
+                            if ui_rs.checkBox_tanh.isChecked():
+                                activation.append('tanh')
+                            if ui_rs.checkBox_logistic.isChecked():
+                                activation.append('logistic')
+
+                            solver = []
+                            if ui_rs.checkBox_adam.isChecked():
+                                solver.append('adam')
+                            if ui_rs.checkBox_sgd.isChecked():
+                                solver.append('sgd')
+
+                            alpha = [ui_rs.doubleSpinBox_alpha_mlp_min.value(), ui_rs.doubleSpinBox_alpha_mlp_max.value()]
+                            lr = [ui_rs.doubleSpinBox_lr_mlp_min.value(), ui_rs.doubleSpinBox_lr_mlp_max.value()]
+                            iter = ui_rs.spinBox_iter_mlp.value()
+                            model = MLPRegressor(
+                                hidden_layer_sizes=hidden_layer_sizes,
+                                activation=trial.suggest_categorical('activation', activation),
+                                solver=trial.suggest_categorical('solver', solver),
+                                alpha=trial.suggest_float('alpha', alpha[0], alpha[1], log=True),
+                                learning_rate_init=trial.suggest_float('learning_rate_init', lr[0], lr[1], log=True),
+                                max_iter=iter,
+                                random_state=42
+                            )
+                            new_row = pd.Series({
+                                'layers': n_layers,
+                                'hidden_layer_sizes': model.hidden_layer_sizes,
+                                'activation': model.activation,
+                                'solver': model.solver,
+                                'alpha': model.alpha,
+                                'learning_rate_init': model.learning_rate_init,
+                                'max_iter': model.max_iter
+                            })
 
 
-                    if ui_rs.radioButton_svr.isChecked():
-                        C = [ui_rs.doubleSpinBox_C_min.value(), ui_rs.doubleSpinBox_C_max.value()]
-                        epsilon = [ui_rs.doubleSpinBox_epsilon_min.value(), ui_rs.doubleSpinBox_epsilon_max.value()]
-                        kernel = []
-                        if ui_rs.checkBox_rbf.isChecked():
-                            kernel.append('rbf')
-                        if ui_rs.checkBox_linear.isChecked():
-                            kernel.append('linear')
-                        if ui_rs.checkBox_poly.isChecked():
-                            kernel.append('poly')
-                        if ui_rs.checkBox_sigmoid.isChecked():
-                            kernel.append('sigmoid')
-                        model = SVR(C=trial.suggest_float('C', C[0], C[1], log=True),
-                                    epsilon=trial.suggest_float('epsilon', epsilon[0], epsilon[1]),
-                                    kernel=trial.suggest_categorical('kernel', kernel)
-                                    )
+                        if ui_rs.radioButton_svr.isChecked():
+                            C = [ui_rs.doubleSpinBox_C_min.value(), ui_rs.doubleSpinBox_C_max.value()]
+                            epsilon = [ui_rs.doubleSpinBox_epsilon_min.value(), ui_rs.doubleSpinBox_epsilon_max.value()]
+                            kernel = []
+                            if ui_rs.checkBox_rbf.isChecked():
+                                kernel.append('rbf')
+                            if ui_rs.checkBox_linear.isChecked():
+                                kernel.append('linear')
+                            if ui_rs.checkBox_poly.isChecked():
+                                kernel.append('poly')
+                            if ui_rs.checkBox_sigmoid.isChecked():
+                                kernel.append('sigmoid')
+                            model = SVR(C=trial.suggest_float('C', C[0], C[1], log=True),
+                                        epsilon=trial.suggest_float('epsilon', epsilon[0], epsilon[1]),
+                                        kernel=trial.suggest_categorical('kernel', kernel)
+                                        )
+                            new_row = pd.Series({
+                                'C': model.C,
+                                'epsilon': model.epsilon,
+                                'kernel': model.kernel
+                            })
 
-                    if ui_rs.radioButton_gbr.isChecked():
-                        estim = [ui_rs.spinBox_estim_gbr_min.value(), ui_rs.spinBox_estim_gbr_max.value()]
-                        lr = [ui_rs.doubleSpinBox_lr_gbr_min.value(), ui_rs.doubleSpinBox_lr_gbr_max.value()]
-                        depth = [ui_rs.spinBox_depth_gbr_min.value(), ui_rs.spinBox_depth_gbr_max.value()]
-                        min_split = [ui_rs.spinBox_min_split_gbr_min.value(), ui_rs.spinBox_min_split_gbr_max.value()]
-                        min_leaf = [ui_rs.spinBox_min_leaf_gbr_min.value(), ui_rs.spinBox_min_leaf_gbr_max.value()]
-                        subsample = [ui_rs.doubleSpinBox_subsample_gbr_min.value(), ui_rs.doubleSpinBox_subsample_gbr_max.value()]
+                        if ui_rs.radioButton_gbr.isChecked():
+                            estim = [ui_rs.spinBox_estim_gbr_min.value(), ui_rs.spinBox_estim_gbr_max.value()]
+                            lr = [ui_rs.doubleSpinBox_lr_gbr_min.value(), ui_rs.doubleSpinBox_lr_gbr_max.value()]
+                            depth = [ui_rs.spinBox_depth_gbr_min.value(), ui_rs.spinBox_depth_gbr_max.value()]
+                            min_split = [ui_rs.spinBox_min_split_gbr_min.value(), ui_rs.spinBox_min_split_gbr_max.value()]
+                            min_leaf = [ui_rs.spinBox_min_leaf_gbr_min.value(), ui_rs.spinBox_min_leaf_gbr_max.value()]
+                            subsample = [ui_rs.doubleSpinBox_subsample_gbr_min.value(), ui_rs.doubleSpinBox_subsample_gbr_max.value()]
 
-                        model = GradientBoostingRegressor(
-                            n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
-                            learning_rate=trial.suggest_float('learning_rate', lr[0], lr[1], log=True),
-                            max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
-                            min_samples_split=trial.suggest_int('min_samples_split', min_split[0], min_split[1]),
-                            min_samples_leaf=trial.suggest_int('min_samples_leaf', min_leaf[0], min_leaf[1]),
-                            subsample=trial.suggest_float('subsample', subsample[0], subsample[1])
-                        )
+                            model = GradientBoostingRegressor(
+                                n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1]),
+                                learning_rate=trial.suggest_float('learning_rate', lr[0], lr[1], log=True),
+                                max_depth=trial.suggest_int('max_depth', depth[0], depth[1]),
+                                min_samples_split=trial.suggest_int('min_samples_split', min_split[0], min_split[1]),
+                                min_samples_leaf=trial.suggest_int('min_samples_leaf', min_leaf[0], min_leaf[1]),
+                                subsample=trial.suggest_float('subsample', subsample[0], subsample[1])
+                            )
+                            new_row = pd.Series({
+                                'n_estimators': model.n_estimators,
+                                'learning_rate': model.learning_rate,
+                                'max_depth': model.max_depth,
+                                'min_samples_split': model.min_samples_split,
+                                'min_samples_leaf': model.min_samples_leaf,
+                                'subsample': model.subsample
+                            })
 
-                    if ui_rs.radioButton_gpr.isChecked():
-                        scale = [ui_rs.doubleSpinBox_gpr_scale_min.value(), ui_rs.doubleSpinBox_gpr_scale_max.value()]
-                        constant = [ui_rs.doubleSpinBox_gpr_const_min.value(), ui_rs.doubleSpinBox_gpr_const_max.value()]
-                        alpha = [ui_rs.doubleSpinBox_gpr_alpha_min.value(), ui_rs.doubleSpinBox_gpr_alpha_max.value()]
-                        n = [ui_rs.spinBox_gpr_n_restart_min.value(), ui_rs.spinBox_gpr_n_restart_max.value()]
-                        length_scale = trial.suggest_float('length_scale', scale[0], scale[1])
-                        constant_value = trial.suggest_float('constant_value', constant[0], constant[1])
-                        kernel = ConstantKernel(constant_value) * RBF(length_scale=length_scale)
+                        if ui_rs.radioButton_gpr.isChecked():
+                            scale = [ui_rs.doubleSpinBox_gpr_scale_min.value(), ui_rs.doubleSpinBox_gpr_scale_max.value()]
+                            constant = [ui_rs.doubleSpinBox_gpr_const_min.value(), ui_rs.doubleSpinBox_gpr_const_max.value()]
+                            alpha = [ui_rs.doubleSpinBox_gpr_alpha_min.value(), ui_rs.doubleSpinBox_gpr_alpha_max.value()]
+                            n = [ui_rs.spinBox_gpr_n_restart_min.value(), ui_rs.spinBox_gpr_n_restart_max.value()]
+                            length_scale = trial.suggest_float('length_scale', scale[0], scale[1])
+                            constant_value = trial.suggest_float('constant_value', constant[0], constant[1])
+                            kernel = ConstantKernel(constant_value) * RBF(length_scale=length_scale)
+                            model = GaussianProcessRegressor(kernel=kernel,
+                                                             alpha=trial.suggest_float('alpha', alpha[0], alpha[1]),
+                                                             n_restarts_optimizer=trial.suggest_int('n_restarts_optimizer',
+                                                                                                    n[0], n[1]))
+                            new_row = pd.Series({
+                                'length_scale': length_scale,
+                                'constant_value': constant_value,
+                                'alpha': model.alpha,
+                                'n_restarts_optimizer': model.n_restarts_optimizer
+                            })
 
-                        model = GaussianProcessRegressor(kernel=kernel,
-                                                         alpha=trial.suggest_float('alpha', alpha[0], alpha[1]),
-                                                         n_restarts_optimizer=trial.suggest_int('n_restarts_optimizer',
-                                                                                                n[0], n[1]))
+                        pipe_steps.append(('model', model))
+                        pipe = Pipeline(pipe_steps)
+                        pipe.fit(x_train, y_train)
+                        y_pred = pipe.predict(x_test)
+                        r2 = r2_score(y_test, y_pred)
+                        mse = mean_squared_error(y_test, y_pred)
+                        new_row['r2'] = r2
+                        new_row['mse'] = mse
+                        ui_rs.plainTextEdit.appendPlainText("R2: " + str(r2))
+                        ui_rs.plainTextEdit.appendPlainText("MSE: " + str(mse))
+                        print('r2: ', r2)
+                        print('mse: ', mse)
+                        new_row_df = pd.DataFrame([new_row])
+                        data = pd.concat([data, new_row_df], ignore_index=True)
+                        pd.set_option('display.max_columns', None)
+                        print(data)
+                        return r2
 
-                    pipe_steps.append(('model', model))
-                    pipe = Pipeline(pipe_steps)
-                    pipe.fit(x_train, y_train)
-                    y_pred = pipe.predict(x_test)
-                    r2 = r2_score(y_test, y_pred)
-                    ui_rs.plainTextEdit.appendPlainText("R2: " + str(r2))
-                    print('r2: ', r2)
-                    return r2
+                    except ValueError as e:
+                        print(f"Trial failed due to: {e}")
+                        ui_rs.plainTextEdit.appendPlainText(f"Trial failed due to: {e}")
+                        return float('-inf')
 
-                except ValueError as e:
-                    print(f"Trial failed due to: {e}")
-                    ui_rs.plainTextEdit.appendPlainText(f"Trial failed due to: {e}")
-                    return float('-inf')
+                return objective
+
 
             # Запуск оптимизации
-            optuna.logging.set_verbosity(optuna.logging.CRITICAL)
-            study = optuna.create_study(direction='maximize')
+            # optuna.logging.set_verbosity(optuna.logging.CRITICAL)
             try:
-                study.optimize(objective, n_trials=ui_rs.spinBox_trials.value())
+                objective_func = create_objective(data)
+                study = optuna.create_study(direction='maximize')
+                study.optimize(objective_func, n_trials=ui_rs.spinBox_trials.value())
 
                 # Вывод лучших параметров
                 print("\nNumber of finished trials:", len(study.trials))
@@ -1150,6 +1234,11 @@ def train_regression_model():
                 for key, value in trial.params.items():
                     ui_rs.plainTextEdit.appendPlainText(f"    {key}: {value}")
                     print(f"    {key}: {value}")
+
+                print('\n\nDATA:\n', data)
+
+                if filename:
+                    data.to_excel(filename, index=False)
             except optuna.exceptions.OptunaError as e:
                 print(f"Optimization stopped: {e}")
 
