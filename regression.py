@@ -1235,8 +1235,6 @@ def train_regression_model():
                     ui_rs.plainTextEdit.appendPlainText(f"    {key}: {value}")
                     print(f"    {key}: {value}")
 
-                print('\n\nDATA:\n', data)
-
                 if filename:
                     data.to_excel(filename, index=False)
             except optuna.exceptions.OptunaError as e:
