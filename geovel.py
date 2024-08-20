@@ -103,6 +103,8 @@ ui.pushButton_medfilt.clicked.connect(calc_medfilt)
 ui.pushButton_wiener.clicked.connect(calc_wiener)
 ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
+ui.pushButton_wavelet_filter.clicked.connect(calc_wavelet_filter)
+
 ui.pushButton_reset.clicked.connect(reset_spinbox_fft)
 # ui.pushButton_maxmin.clicked.connect(draw_max_min)
 ui.pushButton_rfft2.clicked.connect(calc_rfft2)

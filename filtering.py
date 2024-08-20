@@ -462,3 +462,65 @@ def secret_filter():
     filter19()
 
 
+def universal_threshold(data):
+    n = len(data)
+    sigma = np.median(np.abs(data)) / 0.6745
+    return sigma * np.sqrt(2 * np.log(n))
+
+
+def sure_shrink(data):
+    n = len(data)
+    sigma = np.median(np.abs(data)) / 0.6745
+    squared_data = data**2
+    t = np.sqrt(2 * np.log(n))
+    risk = ((n - 2 * np.sum(norm.cdf(-data / sigma))) + 
+            (squared_data / sigma**2) * (1 - norm.cdf(-data / sigma)) + 
+            t**2 * norm.cdf(-t))
+    best_t = t[np.argmin(risk)]
+    return sigma * best_t
+
+
+def denoise_profile(profile, wavelet='db4', level=None, mode='soft', threshold_func=universal_threshold):
+    # Если уровень не задан, используем максимально возможный
+    if level is None:
+        level = pywt.dwt_max_level(len(profile[0]), wavelet)
+
+    denoised_profile = np.zeros_like(profile)
+
+    for i, signal in enumerate(profile):
+        # Применяем вейвлет-преобразование
+        coeffs = pywt.wavedec(signal, wavelet, level=level)
+
+        # Применяем пороговую обработку к каждому уровню детализации
+        for j in range(1, len(coeffs)):
+            threshold = threshold_func(coeffs[j])
+            coeffs[j] = pywt.threshold(coeffs[j], threshold, mode=mode)
+
+        # Выполняем обратное вейвлет-преобразование
+        denoised_profile[i] = pywt.waverec(coeffs, wavelet)
+
+    return denoised_profile
+
+
+# Пример использования
+
+
+def calc_wavelet_filter():
+    type_wavelet = ui.comboBox_type_wavelet.currentText()
+    level_wavelet = ui.spinBox_level_wavelet.value()
+    mode_wavelet = 'soft' if ui.checkBox_mode_threshold.isChecked() else 'hard'
+    threshold_func = universal_threshold
+
+    radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
+
+    denoised = denoise_profile(radar, wavelet=type_wavelet, level=level_wavelet, mode=mode_wavelet, threshold_func=threshold_func)
+    clear_current_profile()
+    new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(denoised.tolist()))
+    session.add(new_current)
+    session.commit()
+    save_max_min(denoised)
+    if ui.checkBox_minmax.isChecked():
+        denoised = json.loads(session.query(CurrentProfileMinMax.signal).filter(CurrentProfileMinMax.id == 1).first()[0])
+    draw_image(denoised)
+    updatePlot()
+    set_info(f'wavelet filter {type_wavelet}, level {level_wavelet}, mode {mode_wavelet}', 'blue')
