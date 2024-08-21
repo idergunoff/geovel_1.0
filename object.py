@@ -73,8 +73,10 @@ from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, RandomizedSearchCV, cross_validate
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBClassifier, XGBRegressor
+import lightgbm as lgb
 from sklearn.manifold import TSNE
 from sklearn.linear_model import LinearRegression, ElasticNet, Lasso
 from sklearn.neighbors import KNeighborsRegressor, LocalOutlierFactor
@@ -110,6 +112,8 @@ from screeninfo import get_monitors
 from numpy.linalg import LinAlgError
 import pickle
 from scipy.signal import butter, filtfilt
+
+import optuna
 
 from functools import lru_cache
 
