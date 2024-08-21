@@ -47,11 +47,12 @@ import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
+import pywt
 import zipfile
 import shutil
 from tqdm import tqdm
 
-from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr
+from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm
 
 from scipy.fftpack import fft2, ifft2, dctn, idctn
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
