@@ -747,6 +747,16 @@
                 </item>
                 <item row="5" column="1">
                  <layout class="QGridLayout" name="gridLayout_149">
+                  <item row="0" column="2">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_threshold">
+                    <property name="minimum">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>20.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="0">
                    <widget class="QComboBox" name="comboBox_type_wavelet">
                     <item>
@@ -776,6 +786,13 @@
                     </item>
                    </widget>
                   </item>
+                  <item row="0" column="1">
+                   <widget class="QCheckBox" name="checkBox_thershold_const">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                 <item row="5" column="2">
@@ -786,7 +803,7 @@
                      <number>2</number>
                     </property>
                     <property name="maximum">
-                     <number>50</number>
+                     <number>1000</number>
                     </property>
                     <property name="value">
                      <number>5</number>

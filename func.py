@@ -1,11 +1,3 @@
-import json
-import random
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
-
 from object import *
 
 list_param_geovel = [
@@ -18,6 +10,20 @@ list_param_geovel = [
     'CRL_mean', 'CRL_max', 'CRL_T_max', 'CRL_Sn', 'CRL_wmf', 'CRL_Qf', 'CRL_Sn_wmf', 'CRL_skew', 'CRL_kurt',
     'CRL_std', 'CRL_k_var', 'k_r'
     ]
+
+list_wavelet_futures = [
+    'wvt_energ_D1', 'wvt_energ_D2', 'wvt_energ_D3', 'wvt_energ_D4', 'wvt_energ_D5', 'wvt_energ_A5',
+    'wvt_mean_D1', 'wvt_mean_D2', 'wvt_mean_D3', 'wvt_mean_D4', 'wvt_mean_D5', 'wvt_mean_A5',
+    'wvt_max_D1', 'wvt_max_D2', 'wvt_max_D3', 'wvt_max_D4', 'wvt_max_D5', 'wvt_max_A5',
+    'wvt_min_D1', 'wvt_min_D2', 'wvt_min_D3', 'wvt_min_D4', 'wvt_min_D5', 'wvt_min_A5',
+    'wvt_std_D1', 'wvt_std_D2', 'wvt_std_D3', 'wvt_std_D4', 'wvt_std_D5', 'wvt_std_A5',
+    'wvt_skew_D1', 'wvt_skew_D2', 'wvt_skew_D3', 'wvt_skew_D4', 'wvt_skew_D5', 'wvt_skew_A5',
+    'wvt_kurt_D1', 'wvt_kurt_D2', 'wvt_kurt_D3', 'wvt_kurt_D4', 'wvt_kurt_D5', 'wvt_kurt_A5',
+    'wvt_entr_D1', 'wvt_entr_D2', 'wvt_entr_D3', 'wvt_entr_D4', 'wvt_entr_D5', 'wvt_entr_A5',
+    'wvt_energ_D1D2', 'wvt_energ_D2D3', 'wvt_energ_D3D4', 'wvt_energ_D4D5', 'wvt_energ_D5A5',
+    'wvt_HfLf_Ratio', 'wvt_HfLf_D1', 'wvt_HfLf_D2', 'wvt_HfLf_D3', 'wvt_HfLf_D4', 'wvt_HfLf_D5'
+]
+
 
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
                    "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
@@ -334,6 +340,8 @@ def update_param_combobox():
             # если в таблице формаций есть хотя бы одна запись, где значение параметра не NULL, то добавляем параметр в комбобокс
             if session.query(Formation).filter(text(f"profile_id=:p_id and {i} NOT NULL")).params(p_id=get_profile_id()).count() > 0:
                 ui.comboBox_param_plast.addItem(i)
+        for i in list_wavelet_futures:
+            ui.comboBox_param_plast.addItem(i)
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
         ui.comboBox_param_plast.setCurrentIndex(index)
@@ -368,9 +376,15 @@ def draw_param():
         # # Добавляем кривую и отфильтрованную кривую на график для всех пластов
         # ui.graph.addItem(curve_filter)
         # Для каждого пласта
+
         for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
             # Получаем данные для текущего пласта
-            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
+            if param in list_wavelet_futures:
+                graph = json.loads(session.query(literal_column(f'wavelet_future.{param}')).filter(
+                    WaveletFuture.formation_id == f.id
+                ).first()[0])
+            else:
+                graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
             # Создаем список значений по порядку
             number = list(range(1, len(graph) + 1))
             # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
@@ -392,8 +406,12 @@ def draw_param():
             return
         else:  # в остальных случаях получаем данные для формации
             # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
-            graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
-                Formation.id == get_formation_id()).first()[0])
+            if param in list_wavelet_futures:
+                graph = json.loads(session.query(literal_column(f'wavelet_future.{param}')).filter(
+                    WaveletFuture.formation_id == get_formation_id()
+                ).first()[0])
+            else:
+                graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])
         number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
         # cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
         cc = (120, 120, 120, 255)
@@ -646,6 +664,7 @@ def update_formation_combobox():
     ui.comboBox_plast.clear()
     # Получаем все формации текущего профиля
     formations = session.query(Formation).filter(Formation.profile_id == get_profile_id()).all()
+
     # Добавляем первые два пункта в список
     ui.comboBox_plast.addItem('-----')
     # if session.query(Profile.T_top).filter(Profile.id == get_profile_id()).first()[0]:

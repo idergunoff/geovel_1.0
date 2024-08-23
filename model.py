@@ -339,6 +339,98 @@ class Formation(Base):
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
     markups_reg = relationship('MarkupReg', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
+    wavelet_future = relationship('WaveletFuture', back_populates='formation')
+
+
+class WaveletFuture(Base):
+    __tablename__ = 'wavelet_future'
+    # __table_args__ = {'info': dict(is_view=True)}dd
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+
+    # Энергия вейвлета для каждого уровня декомпозиции
+    wvt_energ_D1 = Column(Text)
+    wvt_energ_D2 = Column(Text)
+    wvt_energ_D3 = Column(Text)
+    wvt_energ_D4 = Column(Text)
+    wvt_energ_D5 = Column(Text)
+    wvt_energ_A5 = Column(Text)
+
+    # Среднее вейвлета для каждого уровня декомпозиции
+    wvt_mean_D1 = Column(Text)
+    wvt_mean_D2 = Column(Text)
+    wvt_mean_D3 = Column(Text)
+    wvt_mean_D4 = Column(Text)
+    wvt_mean_D5 = Column(Text)
+    wvt_mean_A5 = Column(Text)
+
+    # Максимум вейвлета для каждого уровня декомпозиции
+    wvt_max_D1 = Column(Text)
+    wvt_max_D2 = Column(Text)
+    wvt_max_D3 = Column(Text)
+    wvt_max_D4 = Column(Text)
+    wvt_max_D5 = Column(Text)
+    wvt_max_A5 = Column(Text)
+
+    # Минимум вейвлета для каждого уровня декомпозиции
+    wvt_min_D1 = Column(Text)
+    wvt_min_D2 = Column(Text)
+    wvt_min_D3 = Column(Text)
+    wvt_min_D4 = Column(Text)
+    wvt_min_D5 = Column(Text)
+    wvt_min_A5 = Column(Text)
+
+    # Стандартное отклонение вейвлета для каждого уровня декомпозиции
+    wvt_std_D1 = Column(Text)
+    wvt_std_D2 = Column(Text)
+    wvt_std_D3 = Column(Text)
+    wvt_std_D4 = Column(Text)
+    wvt_std_D5 = Column(Text)
+    wvt_std_A5 = Column(Text)
+
+    # Коэффициент асимметрии вейвлета для каждого уровня декомпозиции
+    wvt_skew_D1 = Column(Text)
+    wvt_skew_D2 = Column(Text)
+    wvt_skew_D3 = Column(Text)
+    wvt_skew_D4 = Column(Text)
+    wvt_skew_D5 = Column(Text)
+    wvt_skew_A5 = Column(Text)
+
+    # Коэффициент эксцесса вейвлета для каждого уровня декомпозиции
+    wvt_kurt_D1 = Column(Text)
+    wvt_kurt_D2 = Column(Text)
+    wvt_kurt_D3 = Column(Text)
+    wvt_kurt_D4 = Column(Text)
+    wvt_kurt_D5 = Column(Text)
+    wvt_kurt_A5 = Column(Text)
+
+    # Энтропия вейвлета для каждого уровня декомпозиции
+    wvt_entr_D1 = Column(Text)
+    wvt_entr_D2 = Column(Text)
+    wvt_entr_D3 = Column(Text)
+    wvt_entr_D4 = Column(Text)
+    wvt_entr_D5 = Column(Text)
+    wvt_entr_A5 = Column(Text)
+
+    # Отношение энергий между различными уровнями декомпозиции
+    wvt_energ_D1D2 = Column(Text)
+    wvt_energ_D2D3 = Column(Text)
+    wvt_energ_D3D4 = Column(Text)
+    wvt_energ_D4D5 = Column(Text)
+    wvt_energ_D5A5 = Column(Text)
+
+    # Отношение энергии высокочастотных компонент к низкочастотным
+    wvt_HfLf_Ratio = Column(Text)
+
+    # Соотношение высоких и низких частот на разных масштабах
+    wvt_HfLf_D1 = Column(Text)
+    wvt_HfLf_D2 = Column(Text)
+    wvt_HfLf_D3 = Column(Text)
+    wvt_HfLf_D4 = Column(Text)
+    wvt_HfLf_D5 = Column(Text)
+
+    formation = relationship('Formation', back_populates='wavelet_future')
 
 
 class Well(Base):

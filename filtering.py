@@ -493,16 +493,16 @@ def denoise_profile(profile, wavelet='db4', level=None, mode='soft', threshold_f
 
         # Применяем пороговую обработку к каждому уровню детализации
         for j in range(1, len(coeffs)):
-            threshold = threshold_func(coeffs[j])
+            if ui.checkBox_thershold_const.isChecked():
+                threshold = ui.doubleSpinBox_threshold.value()
+            else:
+                threshold = threshold_func(coeffs[j])
             coeffs[j] = pywt.threshold(coeffs[j], threshold, mode=mode)
 
         # Выполняем обратное вейвлет-преобразование
         denoised_profile[i] = pywt.waverec(coeffs, wavelet)
 
     return denoised_profile
-
-
-# Пример использования
 
 
 def calc_wavelet_filter():

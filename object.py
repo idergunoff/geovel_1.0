@@ -1,12 +1,13 @@
 import sys, os
 import random, math
 from sqlite3 import connect
-from itertools import combinations
+from itertools import combinations, permutations
 from collections import Counter
 import re
 import inspect
 import chardet
 
+from model import *
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
@@ -41,18 +42,19 @@ from qt.rename_model import *
 from qt.random_param import *
 from qt.random_search_reg import *
 
-from model import *
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
 import pywt
+from nolds import hurst_rs, dfa
+from numpy.lib.stride_tricks import as_strided
 import zipfile
 import shutil
 from tqdm import tqdm
 
-from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm
+from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm, entropy
 
 from scipy.fftpack import fft2, ifft2, dctn, idctn
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
