@@ -1,10 +1,11 @@
-import shutil
-import time
-import optuna
-import pandas as pd
-from scipy.stats import uniform, randint
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel
-import matplotlib.pyplot as plt
+# import shutil
+# import time
+# import optuna
+# import lightgbm as lgb
+# import pandas as pd
+# from scipy.stats import uniform, randint
+# from sklearn.gaussian_process.kernels import RBF, ConstantKernel
+# import matplotlib.pyplot as plt
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
@@ -616,6 +617,7 @@ def train_regression_model():
         elif model == 'LSS':
             model_reg = Lasso(alpha=ui_r.doubleSpinBox_alpha.value(), random_state=0)
             text_model = f'**LSS**: \nalpha: {round(ui_r.doubleSpinBox_alpha.value(), 2)}, '
+
         elif model == 'XGB':
             model_reg = XGBRegressor(n_estimators=ui_r.spinBox_n_estimators_xgb.value(),
                                      learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(),
@@ -625,6 +627,31 @@ def train_regression_model():
                          f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, ' \
                          f'\nmax_depth: {ui_r.spinBox_depth_xgb.value()} \nalpha: {ui_r.doubleSpinBox_alpha_xgb.value()}'
 
+        elif model == 'LGBM':
+            model_reg = lgb.LGBMRegressor(
+                objective='regression',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=ui_r.doubleSpinBox_l1_lgbm.value(),
+                reg_lambda=ui_r.doubleSpinBox_l2_lgbm.value(),
+                num_leaves=ui_r.spinBox_lgbm_num_leaves.value(),
+                colsample_bytree=ui_r.doubleSpinBox_lgbm_feature.value(),
+                subsample=ui_r.doubleSpinBox_lgbm_subsample.value(),
+                subsample_freq=ui_r.spinBox_lgbm_sub_freq.value(),
+                min_child_samples=ui_r.spinBox_lgbm_child.value(),
+                learning_rate=ui_r.doubleSpinBox_lr_lgbm.value(),
+                n_estimators=ui_r.spinBox_estim_lgbm.value(),
+            )
+
+            text_model = f'**LGBM**: \nlambda_1: {ui_r.doubleSpinBox_l1_lgbm.value()}, ' \
+                         f'\nlambda_2: {ui_r.doubleSpinBox_l2_lgbm.value()}, ' \
+                         f'\nnum_leaves: {ui_r.spinBox_lgbm_num_leaves.value()}, ' \
+                         f'\nfeature_fraction: {ui_r.doubleSpinBox_lgbm_feature.value()}, ' \
+                         f'\nsubsample: {ui_r.doubleSpinBox_lgbm_subsample.value()}, ' \
+                         f'\nsubsample_freq: {ui_r.spinBox_lgbm_sub_freq.value()}, ' \
+                         f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
+                         f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
         else:
             model_reg = QuadraticDiscriminantAnalysis()
             text_model = ''
@@ -895,6 +922,31 @@ def train_regression_model():
                          f'\nalpha: {round(trial.params["alpha"], 4)}, ' \
                          f'\nn_restarts_optimizer: {trial.params["n_restarts_optimizer"]}'
 
+        if ui_rs.radioButton_lgbm.isChecked():
+            model = lgb.LGBMRegressor(
+                objective='regression',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=trial.params["reg_alpha"],
+                reg_lambda=trial.params["reg_lambda"],
+                num_leaves=trial.params["num_leaves"],
+                colsample_bytree=trial.params["colsample_bytree"],
+                subsample=trial.params["subsample"],
+                subsample_freq=trial.params["subsample_freq"],
+                min_child_samples=trial.params["min_child_samples"],
+                learning_rate=trial.params["learning_rate"],
+                n_estimators=trial.params["n_estimators"]
+            )
+            text_model = f'**LGBMReg**: \nl1: {round(trial.params["reg_alpha"], 4)}' \
+                         f'\nl2: {round(trial.params["reg_lambda"], 4)}, ' \
+                         f'\nnum_leaves: {trial.params["num_leaves"]}, ' \
+                         f'\nfeature_fraction: {round(trial.params["colsample_bytree"], 4)}, ' \
+                         f'\nsubsample: {round(trial.params["subsample"], 4)}' \
+                         f'\nsubsample_freq: {round(trial.params["subsample_freq"], 4)}, ' \
+                         f'\nlearning_rate: {round(trial.params["learning_rate"], 4)}'  \
+                         f'\nmin_child_samples: {trial.params["min_child_samples"]}, ' \
+                         f'\nn_estimators: {trial.params["n_estimators"]}'
+
         model_name = ui_rs.buttonGroup.checkedButton().text()
         text_model += text_scaler
         text_model += text_pca
@@ -991,6 +1043,11 @@ def train_regression_model():
             if ui_rs.radioButton_gpr.isChecked():
                 data = pd.DataFrame(columns=['length_scale', 'constant_value', 'alpha', 'n_restarts_optimizer',
                                 'r2', 'mse'])
+
+            if ui_rs.radioButton_lgbm.isChecked():
+                data = pd.DataFrame(columns=['lambda_l1', 'lambda_l2', 'num_leaves', 'colsample_bytree',
+                                             'subsample', 'subsample_freq', 'min_child_samples',
+                                             'learning_rate', 'n_estimators', 'r2', 'mse'])
             return data
 
 
@@ -1120,7 +1177,6 @@ def train_regression_model():
                                 'max_iter': model.max_iter
                             })
 
-
                         if ui_rs.radioButton_svr.isChecked():
                             C = [ui_rs.doubleSpinBox_C_min.value(), ui_rs.doubleSpinBox_C_max.value()]
                             epsilon = [ui_rs.doubleSpinBox_epsilon_min.value(), ui_rs.doubleSpinBox_epsilon_max.value()]
@@ -1186,6 +1242,45 @@ def train_regression_model():
                                 'alpha': model.alpha,
                                 'n_restarts_optimizer': model.n_restarts_optimizer
                             })
+
+                        if ui_rs.radioButton_lgbm.isChecked():
+                            l1 = [ui_rs.doubleSpinBox_l1_lgbm_min.value(), ui_rs.doubleSpinBox_l1_lgbm_max.value()]
+                            l2 = [ui_rs.doubleSpinBox_l2_lgbm_min.value(), ui_rs.doubleSpinBox_l2_lgbm_max.value()]
+                            leaves = [ui_rs.spinBox_lgbm_num_leaves_min.value(), ui_rs.spinBox_lgbm_num_leaves_max.value()]
+                            feature = [ui_rs.doubleSpinBox_lgbm_feature_min.value(), ui_rs.doubleSpinBox_lgbm_feature_max.value()]
+                            subsample = [ui_rs.doubleSpinBox_lgbm_subsample_min.value(), ui_rs.doubleSpinBox_lgbm_subsample_max.value()]
+                            subsample_freq = [ui_rs.spinBox_lgbm_sub_freq_min.value(), ui_rs.spinBox_lgbm_sub_freq_max.value()]
+                            min_child = [ui_rs.spinBox_lgbm_child_min.value(), ui_rs.spinBox_lgbm_child_max.value()]
+                            lr = [ui_rs.doubleSpinBox_lr_lgbm_min.value(), ui_rs.doubleSpinBox_lr_lgbm_max.value()]
+                            estim = [ui_rs.spinBox_estim_lgbm_min.value(), ui_rs.spinBox_estim_lgbm_max.value()]
+
+                            model = lgb.LGBMRegressor(
+                                objective='regression',
+                                verbosity=-1,
+                                boosting_type='gbdt',
+                                reg_alpha=trial.suggest_float('reg_alpha', l1[0], l1[1]),
+                                reg_lambda=trial.suggest_float('reg_lambda', l2[0], l2[1]),
+                                num_leaves=trial.suggest_int('num_leaves', leaves[0], leaves[1]),
+                                colsample_bytree=trial.suggest_float('colsample_bytree', feature[0], feature[1]),
+                                subsample=trial.suggest_float('subsample', subsample[0], subsample[1]),
+                                subsample_freq=trial.suggest_int('subsample_freq', subsample_freq[0], subsample_freq[1]),
+                                min_child_samples=trial.suggest_int('min_child_samples', min_child[0], min_child[1]),
+                                learning_rate=trial.suggest_float('learning_rate', lr[0], lr[1]),
+                                n_estimators=trial.suggest_int('n_estimators', estim[0], estim[1])
+                            )
+
+                            new_row = pd.Series({
+                                'lambda_l1': model.reg_alpha,
+                                'lambda_l2': model.reg_lambda,
+                                'num_leaves': model.num_leaves,
+                                'colsample_bytree': model.colsample_bytree,
+                                'subsample': model.subsample,
+                                'subsample_freq': model.subsample_freq,
+                                'min_child_samples': model.min_child_samples,
+                                'learning_rate': model.learning_rate,
+                                'n_estimators': model.n_estimators
+                            })
+
 
                         pipe_steps.append(('model', model))
                         pipe = Pipeline(pipe_steps)
@@ -1323,7 +1418,7 @@ def train_regression_model():
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
 
-
+        print(pipe.steps)
         pipe.fit(x_train, y_train)
         y_pred = pipe.predict(x_test)
 

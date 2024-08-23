@@ -1068,8 +1068,6 @@ class PyTorchClassifier(BaseEstimator):
                             dropout_rate, activation_function,
                             loss_function, optimizer, learning_rate, weight_decay,
                             epochs, regular, early_stopping, patience, labels, batch_size=20):
-        # self.model = model(input_dim, output_dim, hidden_units,
-        #                    dropout_rate, activation_function)
         self.model = model(input_dim, output_dim, hidden_units,
                            dropout_rate, activation_function)
         self.input_dim = input_dim

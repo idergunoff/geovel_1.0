@@ -63,6 +63,7 @@ def push_random_param():
                 activation=ui_cls.comboBox_activation_mlp.currentText(),
                 solver=ui_cls.comboBox_solvar_mlp.currentText(),
                 alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
+                learning_rate_init=ui_cls.doubleSpinBox_lr_mlp.value(),
                 max_iter=5000,
                 early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
                 validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
@@ -73,6 +74,7 @@ def push_random_param():
                           f'\nactivation: {ui_cls.comboBox_activation_mlp.currentText()}, '
                           f'\nsolver: {ui_cls.comboBox_solvar_mlp.currentText()}, '
                           f'\nalpha: {round(ui_cls.doubleSpinBox_alpha_mlp.value(), 2)}, '
+                          f'\nlearning_rate: {round(ui_cls.doubleSpinBox_lr_mlp.value(), 5)}, '
                           f'\n{"early stopping, " if ui_cls.checkBox_e_stop_mlp.isChecked() else ""}'
                           f'\nvalidation_fraction: {round(ui_cls.doubleSpinBox_valid_mlp.value(), 2)}, ')
 
@@ -134,6 +136,32 @@ def push_random_param():
                               C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
+
+        elif model == 'LGBM':
+            model_class = lgb.LGBMClassifier(
+                objective='binary',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=ui_cls.doubleSpinBox_l1_lgbm.value(),
+                reg_lambda=ui_cls.doubleSpinBox_l2_lgbm.value(),
+                num_leaves=ui_cls.spinBox_lgbm_num_leaves.value(),
+                colsample_bytree=ui_cls.doubleSpinBox_lgbm_feature.value(),
+                subsample=ui_cls.doubleSpinBox_lgbm_subsample.value(),
+                subsample_freq=ui_cls.spinBox_lgbm_sub_freq.value(),
+                min_child_samples=ui_cls.spinBox_lgbm_child.value(),
+                learning_rate=ui_cls.doubleSpinBox_lr_lgbm.value(),
+                n_estimators=ui_cls.spinBox_estim_lgbm.value(),
+            )
+
+            text_model = f'**LGBM**: \nlambda_1: {ui_cls.doubleSpinBox_l1_lgbm.value()}, ' \
+                         f'\nlambda_2: {ui_cls.doubleSpinBox_l2_lgbm.value()}, ' \
+                         f'\nnum_leaves: {ui_cls.spinBox_lgbm_num_leaves.value()}, ' \
+                         f'\nfeature_fraction: {ui_cls.doubleSpinBox_lgbm_feature.value()}, ' \
+                         f'\nsubsample: {ui_cls.doubleSpinBox_lgbm_subsample.value()}, ' \
+                         f'\nsubsample_freq: {ui_cls.spinBox_lgbm_sub_freq.value()}, ' \
+                         f'\nmin_child_samples: {ui_cls.spinBox_lgbm_child.value()}, ' \
+                         f'\nlearning_rate: {ui_cls.doubleSpinBox_lr_lgbm.value()}, ' \
+                         f'\nn_estimators: {ui_cls.spinBox_estim_lgbm.value()}'
 
         else:
             model_class = QuadraticDiscriminantAnalysis()
