@@ -1,22 +1,32 @@
 from func import *
-from test_fractal import alpha, f_alpha
 
+
+
+def calc_all_params():
+    for r in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
+        for f in session.query(Formation).filter(Formation.profile_id == r.id).all():
+            calc_wavelet_features(f.id)
+            calc_fractal_features(f.id)
+            calc_entropy_features(f.id)
+
+
+
+def calc_add_features_profile():
+    for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
+        calc_wavelet_features(f.id)
+        calc_fractal_features(f.id)
+        calc_entropy_features(f.id)
 
 # Вейвлет преобразования
 
-def calc_add_futures_profile():
-    for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
-        calc_wavelet_futures(f.id)
-        calc_fractal_futures(f.id)
-
-
-def calc_wavelet_futures(f_id, wavelet='db4', level=5):
-    if session.query(WaveletFuture).filter_by(formation_id=f_id).count() != 0:
+def calc_wavelet_features(f_id, wavelet='db4', level=5):
+    if session.query(WaveletFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет вейвлет параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
-    dict_wvt_ftr_list = {f'{wvt}_l': [] for wvt in list_wavelet_futures}
+    dict_wvt_ftr_list = {f'{wvt}_l': [] for wvt in list_wavelet_features}
     ui.progressBar.setMaximum(len(signal))
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
@@ -47,9 +57,9 @@ def calc_wavelet_futures(f_id, wavelet='db4', level=5):
 
     dict_wvt_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_wvt_ftr_list.items()}
 
-    new_wavelet_formation = WaveletFuture(formation_id=f_id)
+    new_wavelet_formation = WaveletFeature(formation_id=f_id)
     session.add(new_wavelet_formation)
-    session.query(WaveletFuture).filter(WaveletFuture.formation_id == f_id).update(dict_wvt_ftr_json, synchronize_session="fetch")
+    session.query(WaveletFeature).filter(WaveletFeature.formation_id == f_id).update(dict_wvt_ftr_json, synchronize_session="fetch")
     session.commit()
 
 
@@ -141,14 +151,14 @@ def lacunarity(signal, box_sizes=None):
     return np.mean(lac)
 
 
-def calc_fractal_futures(f_id):
-    if session.query(FractalFuture).filter_by(formation_id=f_id).count() != 0:
+def calc_fractal_features(f_id):
+    if session.query(FractalFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет фрактальных параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
-    dict_frl_ftr_list = {f'{frl}_l': [] for frl in list_fractal_futures}
-    print(dict_frl_ftr_list)
+    dict_frl_ftr_list = {f'{frl}_l': [] for frl in list_fractal_features}
     ui.progressBar.setMaximum(len(signal))
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
@@ -170,8 +180,95 @@ def calc_fractal_futures(f_id):
 
     dict_frl_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_frl_ftr_list.items()}
 
-    new_fractal_formation = (FractalFuture(formation_id=f_id))
+    new_fractal_formation = (FractalFeature(formation_id=f_id))
     session.add(new_fractal_formation)
-    session.query(FractalFuture).filter(FractalFuture.formation_id == f_id).update(dict_frl_ftr_json, synchronize_session="fetch")
+    session.query(FractalFeature).filter(FractalFeature.formation_id == f_id).update(dict_frl_ftr_json, synchronize_session="fetch")
+    session.commit()
+
+
+# Параметры энтропии
+
+def shannon_entropy(signal, bins=50):
+    hist, _ = np.histogram(signal, bins=bins)
+    hist = hist / np.sum(hist)
+    return entropy(hist, base=2)
+
+
+def permutation_entropy(signal, order=3, delay=1):
+    x = np.array(signal)
+    n = len(x)
+    n_permutations = np.array(list(permutations(range(order))))
+    c = [0] * len(n_permutations)
+
+    for i in range(n - delay * (order - 1)):
+        # Extract a window of the time series
+        sorted_idx = np.argsort(x[i:i + delay * order:delay])
+        for j, perm in enumerate(n_permutations):
+            if np.all(sorted_idx == perm):
+                c[j] += 1
+                break
+
+    c = np.array(c) / float(sum(c))
+    return -np.sum(c[c > 0] * np.log2(c[c > 0]))
+
+
+def approx_entropy(signal, m=2, r=0.2):
+    def _maxdist(x_i, x_j):
+        return max([abs(ua - va) for ua, va in zip(x_i, x_j)])
+
+    def _phi(m):
+        x = [[signal[j] for j in range(i, i + m - 1 + 1)] for i in range(N - m + 1)]
+        C = [len([1 for x_j in x if _maxdist(x_i, x_j) <= r]) / (N - m + 1.0) for x_i in x]
+        return (N - m + 1.0) ** (-1) * sum(np.log(C))
+
+    N = len(signal)
+    r *= np.std(signal)
+
+    return abs(_phi(m + 1) - _phi(m))
+
+
+def sample_ent(signal, m=2, r=0.2):
+    return entr.sample_entropy(signal, m, r)
+
+
+def multiscale_entropy(signal, scales=10):
+    def coarse_grain(data, scale):
+        return np.array([np.mean(data[i:i + scale]) for i in range(0, len(data) - scale + 1, scale)])
+
+    return [shannon_entropy(coarse_grain(signal, i + 1), bins=50) for i in range(scales)]
+
+
+def fourier_entropy(signal):
+    f = np.abs(fft(signal))**2
+    f = f / np.sum(f)
+    return -np.sum(f * np.log2(f + 1e-12))  # добавляем малое число, чтобы избежать log(0)
+
+
+def calc_entropy_features(f_id):
+    if session.query(EntropyFeature).filter_by(formation_id=f_id).count() != 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет параметров энтропии для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_ent_ftr_list = {f'{ent}_l': [] for ent in list_entropy_features}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        dict_ent_ftr_list['ent_sh_l'].append(shannon_entropy(form_signal))
+        dict_ent_ftr_list['ent_perm_l'].append(permutation_entropy(form_signal))
+        dict_ent_ftr_list['ent_appr_l'].append(approx_entropy(form_signal))
+        for n_se, i_se in enumerate(sample_ent(form_signal)):
+            dict_ent_ftr_list[f'ent_sample{n_se + 1}_l'].append(i_se)
+        for n_me, i_me in enumerate(multiscale_entropy(form_signal)):
+            dict_ent_ftr_list[f'ent_ms{n_me + 1}_l'].append(i_me)
+        dict_ent_ftr_list['ent_fft_l'].append(fourier_entropy(form_signal))
+
+    dict_ent_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_ent_ftr_list.items()}
+
+    new_entropy_formation = (EntropyFeature(formation_id=f_id))
+    session.add(new_entropy_formation)
+    session.query(EntropyFeature).filter(EntropyFeature.formation_id == f_id).update(dict_ent_ftr_json, synchronize_session="fetch")
     session.commit()
 

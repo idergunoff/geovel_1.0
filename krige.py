@@ -32,12 +32,15 @@ def show_map():
         list_y += (json.loads(profile.y_pulc))
         try:
             if len(profile.formations) == 1:
-                if param in list_wavelet_futures:
-                    form = session.query(literal_column(f'wavelet_future.{param}')).filter(
-                        WaveletFuture.formation_id == profile.formations[0].id).first()
-                elif param in list_fractal_futures:
-                    form = session.query(literal_column(f'fractal_future.{param}')).filter(
-                        FractalFuture.formation_id == profile.formations[0].id).first()
+                if param in list_wavelet_features:
+                    form = session.query(literal_column(f'wavelet_feature.{param}')).filter(
+                        WaveletFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_fractal_features:
+                    form = session.query(literal_column(f'fractal_feature.{param}')).filter(
+                        FractalFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_entropy_features:
+                    form = session.query(literal_column(f'entropy_feature.{param}')).filter(
+                        EntropyFeature.formation_id == profile.formations[0].id).first()
                 else:
                     form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == profile.formations[0].id).first()
 
@@ -55,10 +58,12 @@ def show_map():
                 def form_lda_ok():
                     global list_z
                     f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
-                    if param in list_wavelet_futures:
-                        form = session.query(literal_column(f'wavelet_future.{param}')).filter(WaveletFuture.formation_id == f_id).first()
-                    if param in list_fractal_futures:
-                        form = session.query(literal_column(f'fractal_future.{param}')).filter(FractalFuture.formation_id == f_id).first()
+                    if param in list_wavelet_features:
+                        form = session.query(literal_column(f'wavelet_feature.{param}')).filter(WaveletFeature.formation_id == f_id).first()
+                    elif param in list_fractal_features:
+                        form = session.query(literal_column(f'fractal_feature.{param}')).filter(FractalFeature.formation_id == f_id).first()
+                    elif param in list_entropy_features:
+                        form = session.query(literal_column(f'entropy_feature.{param}')).filter(EntropyFeature.formation_id == f_id).first()
                     else:
                         form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
                     list_z += (json.loads(form[0]))

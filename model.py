@@ -339,12 +339,13 @@ class Formation(Base):
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
     markups_reg = relationship('MarkupReg', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
-    wavelet_future = relationship('WaveletFuture', back_populates='formation')
-    fractal_future = relationship('FractalFuture', back_populates='formation')
+    wavelet_feature = relationship('WaveletFeature', back_populates='formation')
+    fractal_feature = relationship('FractalFeature', back_populates='formation')
+    entropy_feature = relationship('EntropyFeature', back_populates='formation')
 
 
-class WaveletFuture(Base):
-    __tablename__ = 'wavelet_future'
+class WaveletFeature(Base):
+    __tablename__ = 'wavelet_feature'
     # __table_args__ = {'info': dict(is_view=True)}dd
 
     id = Column(Integer, primary_key=True)
@@ -431,10 +432,10 @@ class WaveletFuture(Base):
     wvt_HfLf_D4 = Column(Text)
     wvt_HfLf_D5 = Column(Text)
 
-    formation = relationship('Formation', back_populates='wavelet_future')
+    formation = relationship('Formation', back_populates='wavelet_feature')
 
-class FractalFuture(Base):
-    __tablename__ = 'fractal_future'
+class FractalFeature(Base):
+    __tablename__ = 'fractal_feature'
 
     id = Column(Integer, primary_key=True)
     formation_id = Column(Integer, ForeignKey('formation.id'))
@@ -450,7 +451,32 @@ class FractalFuture(Base):
     mf_std_alpha = Column(Text)
     mf_std_f_alpha = Column(Text)
 
-    formation = relationship('Formation', back_populates='fractal_future')
+    formation = relationship('Formation', back_populates='fractal_feature')
+
+
+class EntropyFeature(Base):
+    __tablename__ = 'entropy_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    ent_sh = Column(Text)
+    ent_perm = Column(Text)
+    ent_appr = Column(Text)
+    ent_sample1 = Column(Text)
+    ent_sample2 = Column(Text)
+    ent_ms1 = Column(Text)
+    ent_ms2 = Column(Text)
+    ent_ms3 = Column(Text)
+    ent_ms4 = Column(Text)
+    ent_ms5 = Column(Text)
+    ent_ms6 = Column(Text)
+    ent_ms7 = Column(Text)
+    ent_ms8 = Column(Text)
+    ent_ms9 = Column(Text)
+    ent_ms10 = Column(Text)
+    ent_fft = Column(Text)
+
+    formation = relationship('Formation', back_populates='entropy_feature')
 
 
 class Well(Base):

@@ -49,6 +49,7 @@ import pandas as pd
 import json
 import pywt
 from nolds import hurst_rs, dfa
+from pyentrp import entropy as entr
 from numpy.lib.stride_tricks import as_strided
 import zipfile
 import shutil
