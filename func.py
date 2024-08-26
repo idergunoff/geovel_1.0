@@ -44,6 +44,11 @@ list_morphology_feature = [
     'mph_peak_num', 'mph_peak_width', 'mph_peak_amp_ratio', 'mph_peak_asymm', 'mph_peak_steep', 'mph_erosion', 'mph_dilation'
 ]
 
+list_frequency_feature = [
+    'frq_central', 'frq_bandwidth', 'frq_hl_ratio', 'frq_spec_centroid', 'frq_spec_slope', 'frq_spec_entr', 'frq_dom1',
+    'frq_dom2', 'frq_dom3', 'frq_mmt1', 'frq_mmt2', 'frq_mmt3', 'frq_attn_coef'
+]
+
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
                    "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
 
@@ -369,6 +374,8 @@ def update_param_combobox():
             ui.comboBox_param_plast.addItem(i)
         for i in list_morphology_feature:
             ui.comboBox_param_plast.addItem(i)
+        for i in list_frequency_feature:
+            ui.comboBox_param_plast.addItem(i)
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
         ui.comboBox_param_plast.setCurrentIndex(index)
@@ -426,6 +433,10 @@ def draw_param():
                 graph = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
                     MorphologyFeature.formation_id == f.id
                 ).first()[0])
+            elif param in list_frequency_feature:
+                graph = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
+                    FrequencyFeature.formation_id == f.id
+                ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
             # Создаем список значений по порядку
@@ -468,6 +479,10 @@ def draw_param():
             elif param in list_morphology_feature:
                 graph = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
                     MorphologyFeature.formation_id == get_formation_id()
+                ).first()[0])
+            elif param in list_frequency_feature:
+                graph = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
+                    FrequencyFeature.formation_id == get_formation_id()
                 ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])

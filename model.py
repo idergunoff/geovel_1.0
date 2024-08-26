@@ -344,6 +344,7 @@ class Formation(Base):
     entropy_feature = relationship('EntropyFeature', back_populates='formation')
     nonlinear_feature = relationship('NonlinearFeature', back_populates='formation')
     morphology_feature = relationship('MorphologyFeature', back_populates='formation')
+    frequency_feature = relationship('FrequencyFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -509,6 +510,28 @@ class MorphologyFeature(Base):
     mph_dilation = Column(Text)
 
     formation = relationship('Formation', back_populates='morphology_feature')
+
+
+class FrequencyFeature(Base):
+    __tablename__ = 'frequency_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    frq_central = Column(Text)
+    frq_bandwidth = Column(Text)
+    frq_hl_ratio = Column(Text)
+    frq_spec_centroid = Column(Text)
+    frq_spec_slope = Column(Text)
+    frq_spec_entr = Column(Text)
+    frq_dom1 = Column(Text)
+    frq_dom2 = Column(Text)
+    frq_dom3 = Column(Text)
+    frq_mmt1 = Column(Text)
+    frq_mmt2 = Column(Text)
+    frq_mmt3 = Column(Text)
+    frq_attn_coef = Column(Text)
+
+    formation = relationship('Formation', back_populates='frequency_feature')
 
 
 class Well(Base):

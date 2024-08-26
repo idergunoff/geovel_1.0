@@ -10,6 +10,7 @@ def calc_all_params():
             calc_entropy_features(f.id)
             calc_nonlinear_features(f.id)
             calc_morphology_features(f.id)
+            calc_frequency_features(f.id)
 
 
 
@@ -20,6 +21,9 @@ def calc_add_features_profile():
         calc_entropy_features(f.id)
         calc_nonlinear_features(f.id)
         calc_morphology_features(f.id)
+        calc_frequency_features(f.id)
+
+
 
 # Вейвлет преобразования
 
@@ -404,3 +408,139 @@ def calc_morphology_features(f_id):
     dict_mph_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_mph_ftr_list.items()}
     session.add(MorphologyFeature(formation_id=f_id, **dict_mph_ftr_json))
     session.commit()
+
+
+# Частотные характеристики
+
+
+def power_spectrum(signal, fs=15):
+    n = len(signal)
+    freqs = np.fft.fftfreq(n, 1/fs)
+    ps = np.abs(fft(signal))**2
+    return freqs[:n//2], ps[:n//2]
+
+
+def central_frequency(freqs, ps):
+    return np.sum(freqs * ps) / np.sum(ps)
+
+
+def bandwidth(freqs, ps, threshold=0.5):
+    max_power = np.max(ps[1:])
+    mask = ps > (max_power * threshold)
+    return np.max(freqs[mask]) - np.min(freqs[mask])
+
+
+def high_low_frequency_ratio(freqs, ps):
+    threshold_freq = np.median(freqs)
+    low_freq_energy = np.sum(ps[freqs < threshold_freq])
+    high_freq_energy = np.sum(ps[freqs >= threshold_freq])
+    return high_freq_energy / low_freq_energy if low_freq_energy != 0 else np.inf
+
+
+def spectral_centroid(freqs, ps):
+    return np.sum(freqs * ps) / np.sum(ps)
+
+
+def spectral_slope(freqs, ps):
+    log_freqs = np.log10(freqs[1:])  # исключаем нулевую частоту
+    log_ps = np.log10(ps[1:])
+    return linregress(log_freqs, log_ps).slope
+
+
+def spectral_entropy(ps):
+    ps_norm = ps / np.sum(ps)
+    return entropy(ps_norm)
+
+def dominant_frequencies(freqs, ps, num_peaks=4):
+    peak_indices = np.argsort(ps)[-num_peaks:][::-1]
+    return freqs[peak_indices[1:]]
+
+def spectral_moments(freqs, ps, order=4):
+    moments = []
+    for i in range(order):
+        moments.append(np.sum((freqs**i) * ps) / np.sum(ps))
+    return moments[1:]
+
+
+def attenuation_coefficient(signal, depth, freqs_rate):
+    n = len(signal)
+
+    # Проверка на минимальную длину сигнала
+    if n < 4:
+        return np.nan  # Сигнал слишком короткий для анализа
+
+    # Разделение сигнала на две равные части
+    half = n // 2
+    signal1 = signal[:half]
+    signal2 = signal[half:]
+
+    # Выравнивание длин сигналов, если они различаются
+    if len(signal1) != len(signal2):
+        signal2 = signal2[:len(signal1)]
+
+    # Вычисление FFT
+    fft1 = fft(signal1)
+    fft2 = fft(signal2)
+
+    # Вычисление частот
+    freqs = fftfreq(len(signal1), d=(depth[1] - depth[0]))
+
+    # Вычисление спектров мощности
+    ps1 = np.abs(fft1) ** 2
+    ps2 = np.abs(fft2) ** 2
+
+    # Создание маски для нужного диапазона частот
+    mask = (freqs_rate >= freqs[0]) & (freqs_rate <= freqs[1])
+
+    # Проверка, есть ли частоты в заданном диапазоне
+    if not np.any(mask):
+        return np.nan
+
+    # Вычисление отношения спектров и логарифма
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ratio = np.where(ps2[mask] != 0, ps1[mask] / ps2[mask], 1)
+        log_ratio = np.where(ratio > 0, np.log(ratio), 0)
+
+    # Вычисление коэффициента затухания
+    return np.mean(log_ratio) / (depth[half] - depth[0])
+
+
+
+def calc_frequency_features(f_id):
+    if session.query(FrequencyFeature).filter(FrequencyFeature.formation_id == f_id).count() > 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет частотных характеристик для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_freq_ftr_list = {f'{freq}_l': [] for freq in list_frequency_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        freqs, ps = power_spectrum(form_signal)
+        dict_freq_ftr_list['frq_central_l'].append(central_frequency(freqs, ps))
+        dict_freq_ftr_list['frq_bandwidth_l'].append(bandwidth(freqs, ps))
+        dict_freq_ftr_list['frq_hl_ratio_l'].append(high_low_frequency_ratio(freqs, ps))
+        dict_freq_ftr_list['frq_spec_centroid_l'].append(spectral_centroid(freqs, ps))
+        dict_freq_ftr_list['frq_spec_slope_l'].append(spectral_slope(freqs, ps))
+        dict_freq_ftr_list['frq_spec_entr_l'].append(spectral_entropy(ps))
+        for n_freq, f in enumerate(dominant_frequencies(freqs, ps)):
+            dict_freq_ftr_list[f'frq_dom{n_freq+1}_l'].append(f)
+        for n_freq, f in enumerate(spectral_moments(freqs, ps)):
+            dict_freq_ftr_list[f'frq_mmt{n_freq+1}_l'].append(f)
+        dict_freq_ftr_list['frq_attn_coef_l'].append(attenuation_coefficient(form_signal, depth=range(len(form_signal)), freqs_rate=freqs))
+
+    dict_freq_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_freq_ftr_list.items()}
+    session.add(FrequencyFeature(formation_id=f_id, **dict_freq_ftr_json))
+    session.commit()
+
+
+
+
+
+
+list_frequency_feature = [
+    'frq_central', 'frq_bandwidth', 'frq_hl_ratio', 'frq_spec_centroid', 'frq_spec_slope', 'frq_spec_entr', 'frq_dom1',
+    'frq_dom2', 'frq_dom3', 'frq_mmt1', 'frq_mmt2', 'frq_mmt3', 'frq_attn_coef'
+]
