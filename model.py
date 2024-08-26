@@ -343,6 +343,7 @@ class Formation(Base):
     fractal_feature = relationship('FractalFeature', back_populates='formation')
     entropy_feature = relationship('EntropyFeature', back_populates='formation')
     nonlinear_feature = relationship('NonlinearFeature', back_populates='formation')
+    morphology_feature = relationship('MorphologyFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -492,6 +493,22 @@ class NonlinearFeature(Base):
     nln_hirsh = Column(Text)
 
     formation = relationship('Formation', back_populates='nonlinear_feature')
+
+
+class MorphologyFeature(Base):
+    __tablename__ = 'morphology_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    mph_peak_num = Column(Text)
+    mph_peak_width = Column(Text)
+    mph_peak_amp_ratio = Column(Text)
+    mph_peak_asymm = Column(Text)
+    mph_peak_steep = Column(Text)
+    mph_erosion = Column(Text)
+    mph_dilation = Column(Text)
+
+    formation = relationship('Formation', back_populates='morphology_feature')
 
 
 class Well(Base):

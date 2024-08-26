@@ -9,6 +9,7 @@ def calc_all_params():
             calc_fractal_features(f.id)
             calc_entropy_features(f.id)
             calc_nonlinear_features(f.id)
+            calc_morphology_features(f.id)
 
 
 
@@ -18,6 +19,7 @@ def calc_add_features_profile():
         calc_fractal_features(f.id)
         calc_entropy_features(f.id)
         calc_nonlinear_features(f.id)
+        calc_morphology_features(f.id)
 
 # Вейвлет преобразования
 
@@ -327,3 +329,78 @@ def calc_nonlinear_features(f_id):
     session.add(NonlinearFeature(formation_id=f_id, **dict_nln_ftr_json))
     session.commit()
 
+
+# Морофологические параметры
+
+def count_peaks(peaks):
+    return len(peaks)
+
+
+def main_peak_width(signal, peaks, rel_height=0.5):
+    if len(peaks) == 0:
+        return 0
+    main_peak = peaks[np.argmax(signal[peaks])]
+    widths = peak_widths(signal, [main_peak], rel_height=rel_height)
+    return widths[0][0]
+
+
+def peak_amplitude_ratio(signal, peaks):
+    if len(peaks) < 2:
+        return 1
+    peak_amplitudes = signal[peaks]
+    return np.mean(peak_amplitudes[1:] / peak_amplitudes[:-1])
+
+
+def peak_asymmetry(signal, peaks, window_size=10):
+    if len(peaks) == 0:
+        return 0
+    asymmetries = []
+    for peak in peaks:
+        start = max(0, peak - window_size)
+        end = min(len(signal), peak + window_size + 1)
+        window = signal[start:end]
+        asymmetries.append(skew(window))
+    return np.mean(asymmetries)
+
+
+def slope_steepness(signal, window_size=5):
+    slopes = np.abs(np.diff(signal))
+    return np.mean([np.max(slopes[i:i+window_size]) for i in range(len(slopes)-window_size)])
+
+
+
+def morphological_features(signal, threshold=0.5):
+    binary_signal = signal > (np.max(signal) * threshold)
+    eroded = binary_erosion(binary_signal)
+    dilated = binary_dilation(binary_signal)
+    return {
+        'erosion_ratio': np.sum(eroded) / np.sum(binary_signal),
+        'dilation_ratio': np.sum(dilated) / np.sum(binary_signal)
+    }
+
+
+def calc_morphology_features(f_id):
+    if session.query(MorphologyFeature).filter_by(formation_id=f_id).count() != 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет морфологических параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_mph_ftr_list = {f'{mph}_l': [] for mph in list_morphology_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        peaks, _ = find_peaks(form_signal)
+        dict_mph_ftr_list['mph_peak_num_l'].append(count_peaks(peaks))
+        dict_mph_ftr_list['mph_peak_width_l'].append(main_peak_width(form_signal, peaks))
+        dict_mph_ftr_list['mph_peak_amp_ratio_l'].append(peak_amplitude_ratio(form_signal, peaks))
+        dict_mph_ftr_list['mph_peak_asymm_l'].append(peak_asymmetry(form_signal, peaks))
+        dict_mph_ftr_list['mph_peak_steep_l'].append(slope_steepness(form_signal))
+        morph_feature = morphological_features(form_signal)
+        dict_mph_ftr_list['mph_erosion_l'].append(morph_feature['erosion_ratio'])
+        dict_mph_ftr_list['mph_dilation_l'].append(morph_feature['dilation_ratio'])
+
+    dict_mph_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_mph_ftr_list.items()}
+    session.add(MorphologyFeature(formation_id=f_id, **dict_mph_ftr_json))
+    session.commit()

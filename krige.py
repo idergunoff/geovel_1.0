@@ -44,6 +44,9 @@ def show_map():
                 elif param in list_nonlinear_features:
                     form = session.query(literal_column(f'nonlinear_feature.{param}')).filter(
                         NonlinearFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_morphology_feature:
+                    form = session.query(literal_column(f'morphology_feature.{param}')).filter(
+                        MorphologyFeature.formation_id == profile.formations[0].id).first()
                 else:
                     form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == profile.formations[0].id).first()
 
@@ -69,6 +72,8 @@ def show_map():
                         form = session.query(literal_column(f'entropy_feature.{param}')).filter(EntropyFeature.formation_id == f_id).first()
                     elif param in list_nonlinear_features:
                         form = session.query(literal_column(f'nonlinear_feature.{param}')).filter(NonlinearFeature.formation_id == f_id).first()
+                    elif param in list_morphology_feature:
+                        form = session.query(literal_column(f'morphology_feature.{param}')).filter(MorphologyFeature.formation_id == f_id).first()
                     else:
                         form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
                     list_z += (json.loads(form[0]))
