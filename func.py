@@ -25,6 +25,12 @@ list_wavelet_futures = [
 ]
 
 
+list_fractal_futures = [
+    'fractal_dim','hurst_exp', 'lacunarity', 'mf_width', 'mf_max_position', 'mf_asymmetry', 'mf_max_height',
+    'mf_mean_alpha', 'mf_mean_f_alpha', 'mf_std_alpha', 'mf_std_f_alpha'
+]
+
+
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
                    "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
 
@@ -342,6 +348,8 @@ def update_param_combobox():
                 ui.comboBox_param_plast.addItem(i)
         for i in list_wavelet_futures:
             ui.comboBox_param_plast.addItem(i)
+        for i in list_fractal_futures:
+            ui.comboBox_param_plast.addItem(i)
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
         ui.comboBox_param_plast.setCurrentIndex(index)
@@ -383,6 +391,10 @@ def draw_param():
                 graph = json.loads(session.query(literal_column(f'wavelet_future.{param}')).filter(
                     WaveletFuture.formation_id == f.id
                 ).first()[0])
+            elif param in list_fractal_futures:
+                graph = json.loads(session.query(literal_column(f'fractal_future.{param}')).filter(
+                    FractalFuture.formation_id == f.id
+                ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
             # Создаем список значений по порядку
@@ -409,6 +421,10 @@ def draw_param():
             if param in list_wavelet_futures:
                 graph = json.loads(session.query(literal_column(f'wavelet_future.{param}')).filter(
                     WaveletFuture.formation_id == get_formation_id()
+                ).first()[0])
+            elif param in list_fractal_futures:
+                graph = json.loads(session.query(literal_column(f'fractal_future.{param}')).filter(
+                    FractalFuture.formation_id == get_formation_id()
                 ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])

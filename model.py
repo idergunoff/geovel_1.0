@@ -340,6 +340,7 @@ class Formation(Base):
     markups_reg = relationship('MarkupReg', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
     wavelet_future = relationship('WaveletFuture', back_populates='formation')
+    fractal_future = relationship('FractalFuture', back_populates='formation')
 
 
 class WaveletFuture(Base):
@@ -431,6 +432,25 @@ class WaveletFuture(Base):
     wvt_HfLf_D5 = Column(Text)
 
     formation = relationship('Formation', back_populates='wavelet_future')
+
+class FractalFuture(Base):
+    __tablename__ = 'fractal_future'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    fractal_dim = Column(Text)
+    hurst_exp = Column(Text)
+    lacunarity = Column(Text)
+    mf_width = Column(Text)
+    mf_max_position = Column(Text)
+    mf_asymmetry = Column(Text)
+    mf_max_height = Column(Text)
+    mf_mean_alpha = Column(Text)
+    mf_mean_f_alpha = Column(Text)
+    mf_std_alpha = Column(Text)
+    mf_std_f_alpha = Column(Text)
+
+    formation = relationship('Formation', back_populates='fractal_future')
 
 
 class Well(Base):
