@@ -35,6 +35,11 @@ list_entropy_features = [
     'ent_ms5', 'ent_ms6', 'ent_ms7', 'ent_ms8', 'ent_ms9', 'ent_ms10', 'ent_fft'
 ]
 
+
+list_nonlinear_features = [
+    'nln_corr_dim', 'nln_rec_rate', 'nln_determin', 'nln_avg_diag', 'nln_hirsh'
+]
+
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
                    "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
 
@@ -356,6 +361,8 @@ def update_param_combobox():
             ui.comboBox_param_plast.addItem(i)
         for i in list_entropy_features:
             ui.comboBox_param_plast.addItem(i)
+        for i in list_nonlinear_features:
+            ui.comboBox_param_plast.addItem(i)
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
         ui.comboBox_param_plast.setCurrentIndex(index)
@@ -405,6 +412,10 @@ def draw_param():
                 graph = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
                     EntropyFeature.formation_id == f.id
                 ).first()[0])
+            elif param in list_nonlinear_features:
+                graph = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                    NonlinearFeature.formation_id == f.id
+                ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
             # Создаем список значений по порядку
@@ -439,6 +450,10 @@ def draw_param():
             elif param in list_entropy_features:
                 graph = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
                     EntropyFeature.formation_id == get_formation_id()
+                ).first()[0])
+            elif param in list_nonlinear_features:
+                graph = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                    NonlinearFeature.formation_id == get_formation_id()
                 ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])

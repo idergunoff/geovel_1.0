@@ -48,7 +48,7 @@ from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
 import pywt
-from nolds import hurst_rs, dfa
+from nolds import hurst_rs, dfa, corr_dim, sampen, lyap_r
 from pyentrp import entropy as entr
 from numpy.lib.stride_tricks import as_strided
 import zipfile
@@ -56,13 +56,15 @@ import shutil
 from tqdm import tqdm
 
 from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm, entropy
-
+from scipy.signal import butter, filtfilt
 from scipy.fftpack import fft2, ifft2, dctn, idctn
 from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
 from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from scipy.special import softmax
+from scipy.spatial.distance import pdist, squareform
+
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import normalize
@@ -115,8 +117,8 @@ from skgstat import Variogram, OrdinaryKriging
 from screeninfo import get_monitors
 from numpy.linalg import LinAlgError
 import pickle
-from scipy.signal import butter, filtfilt
 
+from pyts.image import RecurrencePlot
 import optuna
 
 from functools import lru_cache

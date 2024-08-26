@@ -342,6 +342,7 @@ class Formation(Base):
     wavelet_feature = relationship('WaveletFeature', back_populates='formation')
     fractal_feature = relationship('FractalFeature', back_populates='formation')
     entropy_feature = relationship('EntropyFeature', back_populates='formation')
+    nonlinear_feature = relationship('NonlinearFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -477,6 +478,20 @@ class EntropyFeature(Base):
     ent_fft = Column(Text)
 
     formation = relationship('Formation', back_populates='entropy_feature')
+
+
+class NonlinearFeature(Base):
+    __tablename__ = 'nonlinear_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    nln_corr_dim = Column(Text)
+    nln_rec_rate = Column(Text)
+    nln_determin = Column(Text)
+    nln_avg_diag = Column(Text)
+    nln_hirsh = Column(Text)
+
+    formation = relationship('Formation', back_populates='nonlinear_feature')
 
 
 class Well(Base):

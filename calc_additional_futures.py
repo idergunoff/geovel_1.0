@@ -8,6 +8,7 @@ def calc_all_params():
             calc_wavelet_features(f.id)
             calc_fractal_features(f.id)
             calc_entropy_features(f.id)
+            calc_nonlinear_features(f.id)
 
 
 
@@ -16,6 +17,7 @@ def calc_add_features_profile():
         calc_wavelet_features(f.id)
         calc_fractal_features(f.id)
         calc_entropy_features(f.id)
+        calc_nonlinear_features(f.id)
 
 # Вейвлет преобразования
 
@@ -270,5 +272,58 @@ def calc_entropy_features(f_id):
     new_entropy_formation = (EntropyFeature(formation_id=f_id))
     session.add(new_entropy_formation)
     session.query(EntropyFeature).filter(EntropyFeature.formation_id == f_id).update(dict_ent_ftr_json, synchronize_session="fetch")
+    session.commit()
+
+
+# Нелинейные характеристики
+
+def correlation_dimension(signal, emb_dim=10, lag=1):
+    return corr_dim(signal, emb_dim=emb_dim, lag=lag)
+
+
+def recurrence_plot_features(signal, dimension=3, time_delay=1, threshold='point', percentage=10):
+    rp = RecurrencePlot(dimension=dimension, time_delay=time_delay, threshold=threshold, percentage=percentage)
+    X = signal.reshape(1, -1)
+    rec_plot = rp.fit_transform(X)[0]
+
+    # Рассчитываем некоторые характеристики рекуррентного графика
+    recurrence_rate = np.mean(rec_plot)
+    determinism = np.sum(np.diag(rec_plot, k=1)) / np.sum(rec_plot)
+    avg_diagonal_line = np.mean(np.diag(rec_plot, k=1))
+
+    return {
+        'recurrence_rate': recurrence_rate,
+        'determinism': determinism,
+        'avg_diagonal_line': avg_diagonal_line
+    }
+
+
+def hirschman_index(signal):
+    f = np.abs(fft(signal))**2
+    f = f / np.sum(f)
+    return np.exp(np.sum(f * np.log(f + 1e-12)))  # добавляем малое число, чтобы избежать log(0)
+
+
+def calc_nonlinear_features(f_id):
+    if session.query(NonlinearFeature).filter_by(formation_id=f_id).count() != 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет нелинейныхпараметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_nln_ftr_list = {f'{ent}_l': [] for ent in list_nonlinear_features}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        dict_nln_ftr_list['nln_corr_dim_l'].append(correlation_dimension(form_signal))
+        rec_plot = recurrence_plot_features(form_signal)
+        dict_nln_ftr_list['nln_rec_rate_l'].append(rec_plot['recurrence_rate'])
+        dict_nln_ftr_list['nln_determin_l'].append(rec_plot['determinism'])
+        dict_nln_ftr_list['nln_avg_diag_l'].append(rec_plot['avg_diagonal_line'])
+        dict_nln_ftr_list['nln_hirsh_l'].append(hirschman_index(form_signal))
+
+    dict_nln_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_nln_ftr_list.items()}
+    session.add(NonlinearFeature(formation_id=f_id, **dict_nln_ftr_json))
     session.commit()
 
