@@ -346,6 +346,7 @@ class Formation(Base):
     morphology_feature = relationship('MorphologyFeature', back_populates='formation')
     frequency_feature = relationship('FrequencyFeature', back_populates='formation')
     envelope_feature = relationship('EnvelopeFeature', back_populates='formation')
+    autocorr_feature = relationship('AutocorrFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -554,6 +555,22 @@ class EnvelopeFeature(Base):
     env_energy_win3 = Column(Text)
 
     formation = relationship('Formation', back_populates='envelope_feature')
+    
+    
+class AutocorrFeature(Base):
+    __tablename__ = 'autocorr_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    acf_first_min = Column(Text)
+    acf_lag_10 = Column(Text)
+    acf_decay = Column(Text)
+    acf_integral = Column(Text)
+    acf_peak_width = Column(Text)
+    acf_ratio = Column(Text)
+
+    formation = relationship('Formation', back_populates='autocorr_feature')
+
 
 class Well(Base):
     __tablename__ = 'well'

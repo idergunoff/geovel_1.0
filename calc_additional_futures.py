@@ -10,6 +10,7 @@ def calc_all_params():
             calc_morphology_features(f.id)
             calc_frequency_features(f.id)
             calc_envelope_feature(f.id)
+            calc_autocorr_feature(f.id)
 
 
 
@@ -22,6 +23,7 @@ def calc_add_features_profile():
         calc_morphology_features(f.id)
         calc_frequency_features(f.id)
         calc_envelope_feature(f.id)
+        calc_autocorr_feature(f.id)
 
 
 
@@ -624,4 +626,73 @@ def calc_envelope_feature(f_id):
     session.add(EnvelopeFeature(formation_id=f_id, **dict_env_ftr_json))
     session.commit()
 
+# параметры автокорреляции
+
+def autocorrelation(signal):
+    result = correlate(signal, signal, mode='full')
+    return result[result.size // 2:]
+
+
+def first_minimum(acf):
+    for i in range(1, len(acf)-1):
+        if acf[i] < acf[i-1] and acf[i] <= acf[i+1]:
+            return i
+    # Проверка последнего элемента
+    if len(acf) > 1 and acf[-1] < acf[-2]:
+        return len(acf) - 1
+    return None
+
+
+def autocorrelation_at_lag(acf, lag=10):
+    if lag < len(acf):
+        return acf[lag]
+    return None
+
+
+def autocorrelation_decay(acf, num_points=10):
+    return np.polyfit(range(num_points), acf[:num_points], 1)[0]
+
+
+def acf_integral(acf):
+    return np.trapz(acf)
+
+
+def acf_main_peak_width(acf, height_ratio=0.5):
+    peak_height = acf[0]
+    threshold = peak_height * height_ratio
+    right = 0
+    while right < len(acf) - 1 and acf[right] > threshold:
+        right += 1
+    return right
+
+
+def acf_ratio(acf, lag1=10, lag2=20):
+    if lag1 < len(acf) and lag2 < len(acf):
+        return acf[lag1] / acf[lag2] if acf[lag2] != 0 else np.inf
+    return None
+
+
+def calc_autocorr_feature(f_id):
+    if session.query(AutocorrFeature).filter(AutocorrFeature.formation_id == f_id).count() > 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет характеристик автокорреляции для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_acf_list = {f'{acf}_l': [] for acf in list_autocorr_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        acf = autocorrelation(form_signal)
+        dict_acf_list['acf_first_min_l'].append(float(first_minimum(acf)))
+        dict_acf_list['acf_lag_10_l'].append(float(autocorrelation_at_lag(acf)))
+        dict_acf_list['acf_decay_l'].append(autocorrelation_decay(acf))
+        dict_acf_list['acf_integral_l'].append(acf_integral(acf))
+        dict_acf_list['acf_peak_width_l'].append(float(acf_main_peak_width(acf)))
+        dict_acf_list['acf_ratio_l'].append(acf_ratio(acf))
+
+    dict_acf_json = {key[:-2]: json.dumps(value) for key, value in dict_acf_list.items()}
+    session.add(AutocorrFeature(formation_id=f_id, **dict_acf_json))
+    session.commit()
 
