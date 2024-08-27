@@ -347,6 +347,7 @@ class Formation(Base):
     frequency_feature = relationship('FrequencyFeature', back_populates='formation')
     envelope_feature = relationship('EnvelopeFeature', back_populates='formation')
     autocorr_feature = relationship('AutocorrFeature', back_populates='formation')
+    emd_feature = relationship('EMDFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -570,6 +571,42 @@ class AutocorrFeature(Base):
     acf_ratio = Column(Text)
 
     formation = relationship('Formation', back_populates='autocorr_feature')
+
+
+class EMDFeature(Base):
+    __tablename__ = 'emd_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    emd_num_imfs = Column(Text)
+    emd_energ_mean = Column(Text)
+    emd_energ_med = Column(Text)
+    emd_energ_max = Column(Text)
+    emd_energ_min = Column(Text)
+    emd_energ_std = Column(Text)
+    emd_rel_energ_mean = Column(Text)
+    emd_rel_energ_med = Column(Text)
+    emd_rel_energ_max = Column(Text)
+    emd_rel_energ_min = Column(Text)
+    emd_rel_energ_std = Column(Text)
+    emd_dom_freqs_mean = Column(Text)
+    emd_dom_freqs_med = Column(Text)
+    emd_dom_freqs_max = Column(Text)
+    emd_dom_freqs_min = Column(Text)
+    emd_dom_freqs_std = Column(Text)
+    emd_mean_corr = Column(Text)
+    emd_median_corr = Column(Text)
+    emd_max_corr = Column(Text)
+    emd_min_corr = Column(Text)
+    emd_std_corr = Column(Text)
+    emd_corr_25 = Column(Text)
+    emd_corr_50 = Column(Text)
+    emd_corr_75 = Column(Text)
+    emd_energ_entropy = Column(Text)
+    emd_oi = Column(Text)
+    emd_hi = Column(Text)
+
+    formation = relationship('Formation', back_populates='emd_feature')
 
 
 class Well(Base):

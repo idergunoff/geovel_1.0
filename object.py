@@ -113,6 +113,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
 import lasio as ls
+from PyEMD import EMD
 from skgstat import Variogram, OrdinaryKriging
 
 from screeninfo import get_monitors

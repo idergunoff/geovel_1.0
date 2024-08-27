@@ -11,6 +11,7 @@ def calc_all_params():
             calc_frequency_features(f.id)
             calc_envelope_feature(f.id)
             calc_autocorr_feature(f.id)
+            calc_emd_feature(f.id)
 
 
 
@@ -24,6 +25,7 @@ def calc_add_features_profile():
         calc_frequency_features(f.id)
         calc_envelope_feature(f.id)
         calc_autocorr_feature(f.id)
+        calc_emd_feature(f.id)
 
 
 
@@ -415,7 +417,7 @@ def calc_morphology_features(f_id):
 # Частотные характеристики
 
 
-def power_spectrum(signal, fs=15):
+def power_spectrum(signal, fs=15e6):
     n = len(signal)
     freqs = np.fft.fftfreq(n, 1/fs)
     ps = np.abs(fft(signal))**2
@@ -696,3 +698,154 @@ def calc_autocorr_feature(f_id):
     session.add(AutocorrFeature(formation_id=f_id, **dict_acf_json))
     session.commit()
 
+
+# параметры эмпирической модовой декомпозиции EMD
+
+def perform_emd(signal):
+    emd = EMD()
+    imfs = emd(signal)
+    return imfs
+
+
+def count_imfs(imfs):
+    return len(imfs)
+
+
+def imf_energies(imfs):
+    energies =[np.sum(imf**2) for imf in imfs]
+    return {'mean_energy': np.mean(energies),
+            'median_energy': np.median(energies),
+            'max_energy': np.max(energies),
+            'min_energy': np.min(energies),
+            'std_energy': np.std(energies)}
+
+
+def relative_imf_energies(imfs):
+    energies =[np.sum(imf**2) for imf in imfs]
+    total_energy = sum(energies)
+    enrs = [enr / total_energy for enr in energies]
+    return {
+        'mean_energy': np.mean(enrs),
+        'median_energy': np.median(enrs),
+        'max_energy': np.max(enrs),
+        'min_energy': np.min(enrs),
+        'std_energy': np.std(enrs)
+    }
+
+
+def emd_dominant_frequencies(imfs, fs=15e6):
+    frequencies = []
+    for imf in imfs:
+        peaks, _ = find_peaks(imf)
+        if len(peaks) > 1:
+            mean_period = np.mean(np.diff(peaks))
+            frequencies.append(fs / mean_period)
+        else:
+            frequencies.append(0)
+    return {
+        'mean_freq': np.mean(frequencies),
+        'median_freq': np.median(frequencies),
+        'max_freq': np.max(frequencies),
+        'min_freq': np.min(frequencies),
+        'std_freq': np.std(frequencies)
+    }
+
+
+def imf_correlations(imfs):
+    corr_matrix = np.corrcoef(imfs)
+    corr_values = corr_matrix[np.triu_indices(len(imfs), k=1)]
+    return {
+        'mean_corr': np.mean(corr_values),
+        'median_corr': np.median(corr_values),
+        'max_corr': np.max(np.abs(corr_values)),
+        'min_corr': np.min(np.abs(corr_values)),
+        'std_corr': np.std(corr_values),
+        'corr_25': np.percentile(corr_values, 25),
+        'corr_50': np.percentile(corr_values, 50),
+        'corr_75': np.percentile(corr_values, 75)
+    }
+
+
+def imf_energy_entropy(imfs):
+    energies =[np.sum(imf**2) for imf in imfs]
+    total_energy = sum(energies)
+    rel_energies = [enr / total_energy for enr in energies]
+    return entropy(rel_energies)
+
+
+def orthogonality_index(imfs):
+    n = len(imfs)
+    m = len(imfs[0])
+    sum_sq = np.sum(np.sum(imfs**2, axis=1))
+    cross_terms = 0
+    for i in range(n):
+        for j in range(i+1, n):
+            cross_terms += np.abs(np.sum(imfs[i] * imfs[j]))
+    return cross_terms / sum_sq
+
+
+def instantaneous_frequency(imf, fs=15e6):
+    analytic_signal = hilbert(imf)
+    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+    instant_freq = np.diff(instantaneous_phase) / (2.0*np.pi) * fs
+    return np.insert(instant_freq, 0, instant_freq[0])
+
+
+def emd_hilbert_index(imfs):
+    n = len(imfs)
+    h_index = 0
+    for i in range(n-1):
+        mean_freq_i = np.mean(instantaneous_frequency(imfs[i]))
+        mean_freq_i1 = np.mean(instantaneous_frequency(imfs[i+1]))
+        h_index += np.abs(mean_freq_i - mean_freq_i1) / mean_freq_i
+    return h_index / (n - 1)
+
+
+def calc_emd_feature(f_id):
+    if session.query(EMDFeature).filter(EMDFeature.formation_id == f_id).count() > 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет характеристик EMD для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_emd_ftr_list = {f'{emd}_l': [] for emd in list_emd_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        imfs = perform_emd(form_signal)
+        dict_emd_ftr_list['emd_num_imfs_l'].append(float(count_imfs(imfs)))
+        emd_energ = imf_energies(imfs)
+        dict_emd_ftr_list['emd_energ_mean_l'].append(emd_energ['mean_energy'])
+        dict_emd_ftr_list['emd_energ_med_l'].append(emd_energ['median_energy'])
+        dict_emd_ftr_list['emd_energ_max_l'].append(emd_energ['max_energy'])
+        dict_emd_ftr_list['emd_energ_min_l'].append(emd_energ['min_energy'])
+        dict_emd_ftr_list['emd_energ_std_l'].append(emd_energ['std_energy'])
+        emd_rel_energ = relative_imf_energies(imfs)
+        dict_emd_ftr_list['emd_rel_energ_mean_l'].append(emd_rel_energ['mean_energy'])
+        dict_emd_ftr_list['emd_rel_energ_med_l'].append(emd_rel_energ['median_energy'])
+        dict_emd_ftr_list['emd_rel_energ_max_l'].append(emd_rel_energ['max_energy'])
+        dict_emd_ftr_list['emd_rel_energ_min_l'].append(emd_rel_energ['min_energy'])
+        dict_emd_ftr_list['emd_rel_energ_std_l'].append(emd_rel_energ['std_energy'])
+        emd_dom_freqs = emd_dominant_frequencies(imfs)
+        dict_emd_ftr_list['emd_dom_freqs_mean_l'].append(emd_dom_freqs['mean_freq'])
+        dict_emd_ftr_list['emd_dom_freqs_med_l'].append(emd_dom_freqs['median_freq'])
+        dict_emd_ftr_list['emd_dom_freqs_max_l'].append(emd_dom_freqs['max_freq'])
+        dict_emd_ftr_list['emd_dom_freqs_min_l'].append(emd_dom_freqs['min_freq'])
+        dict_emd_ftr_list['emd_dom_freqs_std_l'].append(emd_dom_freqs['std_freq'])
+        emd_corr = imf_correlations(imfs)
+        dict_emd_ftr_list['emd_mean_corr_l'].append(emd_corr['mean_corr'])
+        dict_emd_ftr_list['emd_median_corr_l'].append(emd_corr['median_corr'])
+        dict_emd_ftr_list['emd_max_corr_l'].append(emd_corr['max_corr'])
+        dict_emd_ftr_list['emd_min_corr_l'].append(emd_corr['min_corr'])
+        dict_emd_ftr_list['emd_std_corr_l'].append(emd_corr['std_corr'])
+        dict_emd_ftr_list['emd_corr_25_l'].append(emd_corr['corr_25'])
+        dict_emd_ftr_list['emd_corr_50_l'].append(emd_corr['corr_50'])
+        dict_emd_ftr_list['emd_corr_75_l'].append(emd_corr['corr_75'])
+        dict_emd_ftr_list['emd_energ_entropy_l'].append(imf_energy_entropy(imfs))
+        dict_emd_ftr_list['emd_oi_l'].append(orthogonality_index(imfs))
+        dict_emd_ftr_list['emd_hi_l'].append(emd_hilbert_index(imfs))
+
+    dict_emd_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_emd_ftr_list.items()}
+    session.add(EMDFeature(formation_id=f_id, **dict_emd_ftr_json))
+    session.commit()
