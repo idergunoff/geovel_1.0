@@ -1,7 +1,5 @@
 from func import *
 
-
-
 def calc_all_params():
     for r in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
         for f in session.query(Formation).filter(Formation.profile_id == r.id).all():
@@ -11,6 +9,7 @@ def calc_all_params():
             calc_nonlinear_features(f.id)
             calc_morphology_features(f.id)
             calc_frequency_features(f.id)
+            calc_envelope_feature(f.id)
 
 
 
@@ -22,6 +21,7 @@ def calc_add_features_profile():
         calc_nonlinear_features(f.id)
         calc_morphology_features(f.id)
         calc_frequency_features(f.id)
+        calc_envelope_feature(f.id)
 
 
 
@@ -536,11 +536,92 @@ def calc_frequency_features(f_id):
     session.commit()
 
 
+# характеристики огибающей
+
+def calculate_envelope(signal):
+    analytic_signal = hilbert(signal)
+    envelope = np.abs(analytic_signal)
+    return envelope
 
 
+def area_under_envelope(envelope):
+    return np.trapz(envelope)
 
 
-list_frequency_feature = [
-    'frq_central', 'frq_bandwidth', 'frq_hl_ratio', 'frq_spec_centroid', 'frq_spec_slope', 'frq_spec_entr', 'frq_dom1',
-    'frq_dom2', 'frq_dom3', 'frq_mmt1', 'frq_mmt2', 'frq_mmt3', 'frq_attn_coef'
-]
+def envelope_max(envelope):
+    return np.max(envelope)
+
+
+def time_to_max_envelope(envelope):
+    return np.argmax(envelope) # if calculated for formation - + Ttop
+
+
+def envelope_mean(envelope):
+    return np.mean(envelope)
+
+
+def envelope_std(envelope):
+    return np.std(envelope)
+
+
+def envelope_skewness(envelope):
+    return skew(envelope)
+
+
+def envelope_kurtosis(envelope):
+    return kurtosis(envelope)
+
+
+def max_to_mean_ratio(envelope):
+    return np.max(envelope) / np.mean(envelope)
+
+
+def main_peak_width_env(envelope, height_ratio=0.5):
+    peaks, _ = find_peaks(envelope)
+    if len(peaks) == 0:
+        return 0
+    main_peak = peaks[np.argmax(envelope[peaks])]
+    left = main_peak
+    right = main_peak
+    threshold = envelope[main_peak] * height_ratio
+    while left > 0 and envelope[left] > threshold:
+        left -= 1
+    while right < len(envelope) - 1 and envelope[right] > threshold:
+        right += 1
+    return right - left
+
+
+def envelope_energy_windows(envelope, num_windows=3):
+    window_size = len(envelope) // num_windows
+    return [np.sum(envelope[i*window_size:(i+1)*window_size]**2) for i in range(num_windows)]
+
+
+def calc_envelope_feature(f_id):
+    if session.query(EnvelopeFeature).filter(EnvelopeFeature.formation_id == f_id).count() > 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет характеристик огибающей для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_env_ftr_list = {f'{env}_l': [] for env in list_envelope_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        envelope = calculate_envelope(form_signal)
+        dict_env_ftr_list['env_area_l'].append(area_under_envelope(envelope))
+        dict_env_ftr_list['env_max_l'].append(envelope_max(envelope))
+        dict_env_ftr_list['env_t_max_l'].append(float(time_to_max_envelope(envelope)))
+        dict_env_ftr_list['env_mean_l'].append(envelope_mean(envelope))
+        dict_env_ftr_list['env_std_l'].append(envelope_std(envelope))
+        dict_env_ftr_list['env_skew_l'].append(envelope_skewness(envelope))
+        dict_env_ftr_list['env_kurt_l'].append(envelope_kurtosis(envelope))
+        dict_env_ftr_list['env_max_mean_ratio_l'].append(max_to_mean_ratio(envelope))
+        dict_env_ftr_list['env_peak_width_l'].append(float(main_peak_width_env(envelope)))
+        for n_inv, i_env in enumerate(envelope_energy_windows(envelope)):
+            dict_env_ftr_list[f'env_energy_win{n_inv+1}_l'].append(i_env)
+    dict_env_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_env_ftr_list.items()}
+    session.add(EnvelopeFeature(formation_id=f_id, **dict_env_ftr_json))
+    session.commit()
+
+

@@ -345,6 +345,7 @@ class Formation(Base):
     nonlinear_feature = relationship('NonlinearFeature', back_populates='formation')
     morphology_feature = relationship('MorphologyFeature', back_populates='formation')
     frequency_feature = relationship('FrequencyFeature', back_populates='formation')
+    envelope_feature = relationship('EnvelopeFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -533,6 +534,26 @@ class FrequencyFeature(Base):
 
     formation = relationship('Formation', back_populates='frequency_feature')
 
+
+class EnvelopeFeature(Base):
+    __tablename__ = 'envelope_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+    env_area = Column(Text)
+    env_max = Column(Text)
+    env_t_max = Column(Text)
+    env_mean = Column(Text)
+    env_std = Column(Text)
+    env_skew = Column(Text)
+    env_kurt = Column(Text)
+    env_max_mean_ratio = Column(Text)
+    env_peak_width = Column(Text)
+    env_energy_win1 = Column(Text)
+    env_energy_win2 = Column(Text)
+    env_energy_win3 = Column(Text)
+
+    formation = relationship('Formation', back_populates='envelope_feature')
 
 class Well(Base):
     __tablename__ = 'well'
