@@ -3,6 +3,7 @@ import math
 import numpy as np
 import pandas as pd
 from func import *
+from build_table import *
 from decimal import *
 
 

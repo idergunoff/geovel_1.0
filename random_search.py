@@ -1,5 +1,6 @@
 from scipy.stats import randint, uniform
 from func import *
+from build_table import *
 
 
 def push_random_search():

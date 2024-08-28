@@ -10,6 +10,7 @@ import skgstat
 
 import krige
 from func import *
+from build_table import *
 from krige import draw_map
 from random_search import *
 # import pykrige.kriging_tools as kt

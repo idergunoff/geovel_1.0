@@ -1,10 +1,7 @@
-import datetime
-
-import numpy as np
-
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from formation_ai import get_model_id
 from func import *
+from build_table import *
 from nn_torch_classifier import *
 from krige import draw_map
 from qt.choose_formation_lda import *
@@ -502,10 +499,11 @@ def add_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_mlp.currentText()
-    for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
-        if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
-            set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
-            return
+    if not param in list_all_additional_features:
+        for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+                set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                return
     if session.query(ParameterMLP).filter_by(
             analysis_id=get_MLP_id(),
             parameter= param
@@ -580,7 +578,7 @@ def add_param_list_mlp():
 
 
 def add_all_param_geovel_mlp():
-    new_list_param = list_param_geovel.copy()
+    new_list_param = list_param_geovel + list_all_additional_features
     for param in list_param_geovel:
         for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:

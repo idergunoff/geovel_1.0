@@ -1,3 +1,5 @@
+import numpy as np
+
 from func import *
 
 def calc_all_params():
@@ -755,7 +757,10 @@ def emd_dominant_frequencies(imfs, fs=15e6):
 
 def imf_correlations(imfs):
     corr_matrix = np.corrcoef(imfs)
-    corr_values = corr_matrix[np.triu_indices(len(imfs), k=1)]
+    try:
+        corr_values = corr_matrix[np.triu_indices(len(imfs), k=1)]
+    except IndexError:
+        corr_values = np.array([1.0])
     return {
         'mean_corr': np.mean(corr_values),
         'median_corr': np.median(corr_values),
@@ -795,6 +800,8 @@ def instantaneous_frequency(imf, fs=15e6):
 
 def emd_hilbert_index(imfs):
     n = len(imfs)
+    if n == 1:
+        return float(0)
     h_index = 0
     for i in range(n-1):
         mean_freq_i = np.mean(instantaneous_frequency(imfs[i]))
@@ -830,23 +837,23 @@ def calc_emd_feature(f_id):
         dict_emd_ftr_list['emd_rel_energ_min_l'].append(emd_rel_energ['min_energy'])
         dict_emd_ftr_list['emd_rel_energ_std_l'].append(emd_rel_energ['std_energy'])
         emd_dom_freqs = emd_dominant_frequencies(imfs)
-        dict_emd_ftr_list['emd_dom_freqs_mean_l'].append(emd_dom_freqs['mean_freq'])
-        dict_emd_ftr_list['emd_dom_freqs_med_l'].append(emd_dom_freqs['median_freq'])
-        dict_emd_ftr_list['emd_dom_freqs_max_l'].append(emd_dom_freqs['max_freq'])
-        dict_emd_ftr_list['emd_dom_freqs_min_l'].append(emd_dom_freqs['min_freq'])
-        dict_emd_ftr_list['emd_dom_freqs_std_l'].append(emd_dom_freqs['std_freq'])
+        dict_emd_ftr_list['emd_dom_freqs_mean_l'].append(float(emd_dom_freqs['mean_freq']))
+        dict_emd_ftr_list['emd_dom_freqs_med_l'].append(float(emd_dom_freqs['median_freq']))
+        dict_emd_ftr_list['emd_dom_freqs_max_l'].append(float(emd_dom_freqs['max_freq']))
+        dict_emd_ftr_list['emd_dom_freqs_min_l'].append(float(emd_dom_freqs['min_freq']))
+        dict_emd_ftr_list['emd_dom_freqs_std_l'].append(float(emd_dom_freqs['std_freq']))
         emd_corr = imf_correlations(imfs)
-        dict_emd_ftr_list['emd_mean_corr_l'].append(emd_corr['mean_corr'])
-        dict_emd_ftr_list['emd_median_corr_l'].append(emd_corr['median_corr'])
-        dict_emd_ftr_list['emd_max_corr_l'].append(emd_corr['max_corr'])
-        dict_emd_ftr_list['emd_min_corr_l'].append(emd_corr['min_corr'])
-        dict_emd_ftr_list['emd_std_corr_l'].append(emd_corr['std_corr'])
-        dict_emd_ftr_list['emd_corr_25_l'].append(emd_corr['corr_25'])
-        dict_emd_ftr_list['emd_corr_50_l'].append(emd_corr['corr_50'])
-        dict_emd_ftr_list['emd_corr_75_l'].append(emd_corr['corr_75'])
-        dict_emd_ftr_list['emd_energ_entropy_l'].append(imf_energy_entropy(imfs))
-        dict_emd_ftr_list['emd_oi_l'].append(orthogonality_index(imfs))
-        dict_emd_ftr_list['emd_hi_l'].append(emd_hilbert_index(imfs))
+        dict_emd_ftr_list['emd_mean_corr_l'].append(float(emd_corr['mean_corr']))
+        dict_emd_ftr_list['emd_median_corr_l'].append(float(emd_corr['median_corr']))
+        dict_emd_ftr_list['emd_max_corr_l'].append(float(emd_corr['max_corr']))
+        dict_emd_ftr_list['emd_min_corr_l'].append(float(emd_corr['min_corr']))
+        dict_emd_ftr_list['emd_std_corr_l'].append(float(emd_corr['std_corr']))
+        dict_emd_ftr_list['emd_corr_25_l'].append(float(emd_corr['corr_25']))
+        dict_emd_ftr_list['emd_corr_50_l'].append(float(emd_corr['corr_50']))
+        dict_emd_ftr_list['emd_corr_75_l'].append(float(emd_corr['corr_75']))
+        dict_emd_ftr_list['emd_energ_entropy_l'].append(float(imf_energy_entropy(imfs)))
+        dict_emd_ftr_list['emd_oi_l'].append(float(orthogonality_index(imfs)))
+        dict_emd_ftr_list['emd_hi_l'].append(float(emd_hilbert_index(imfs)))
 
     dict_emd_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_emd_ftr_list.items()}
     session.add(EMDFeature(formation_id=f_id, **dict_emd_ftr_json))

@@ -9,6 +9,7 @@ from torch import optim, randperm
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
 from geochem import *
 from func import *
+from build_table import *
 import matplotlib
 import pandas as pd
 import numpy as np

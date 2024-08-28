@@ -3,6 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
 from func import *
+from build_table import *
 from random_search import push_random_search
 from random_param import push_random_param
 
@@ -19,13 +20,16 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
     """
-
-    list_nan_param, count_nan = [], 0
+    list_nan_param, count_nan = set(), 0
     for i in data_train.index:
         for param in list_param:
             if pd.isna(data_train[param][i]):
                 count_nan += 1
-                list_nan_param.append(param)
+                list_nan_param.add(param)
+            if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
+                data_train[param][i] = 0
+                count_nan += 1
+                list_nan_param.add(param)
     if count_nan > 0:
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
