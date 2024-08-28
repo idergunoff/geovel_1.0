@@ -12,6 +12,7 @@ def calc_all_params():
             calc_envelope_feature(f.id)
             calc_autocorr_feature(f.id)
             calc_emd_feature(f.id)
+            calc_hht_features(f.id)
 
 
 
@@ -26,6 +27,7 @@ def calc_add_features_profile():
         calc_envelope_feature(f.id)
         calc_autocorr_feature(f.id)
         calc_emd_feature(f.id)
+        calc_hht_features(f.id)
 
 
 
@@ -848,4 +850,192 @@ def calc_emd_feature(f_id):
 
     dict_emd_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_emd_ftr_list.items()}
     session.add(EMDFeature(formation_id=f_id, **dict_emd_ftr_json))
+    session.commit()
+    
+    
+# Преобразования Гильберта-Хуанга (HHT)
+
+
+def calc_stat_list(param: list, param_name: str) -> dict:
+    return {
+        f'{param_name}_mean': np.mean(param),
+        f'{param_name}_med': np.median(param),
+        f'{param_name}_max': np.max(param),
+        f'{param_name}_min': np.min(param),
+        f'{param_name}_std': np.std(param),
+        # f'{param_name}_25': np.percentile(param, 25),
+        # f'{param_name}_50': np.percentile(param, 50),
+        # f'{param_name}_75': np.percentile(param, 75)
+    }
+
+
+def perform_hht(signal, fs=15e6):
+    emd = EMD()
+    imfs = emd(signal)
+
+    hht = []
+    for imf in imfs:
+        analytic_signal = hilbert(imf)
+        amplitude = np.abs(analytic_signal)
+        phase = np.unwrap(np.angle(analytic_signal))
+        frequency = np.diff(phase) / (2.0 * np.pi * (1/fs))
+        frequency = np.insert(frequency, 0, frequency[0])  # Добавляем первое значение, чтобы длина совпадала
+        hht.append((amplitude, frequency))
+
+    return imfs, hht
+
+
+def instantaneous_frequency_amplitude(hht):
+    inst_freq = [h[1] for h in hht]
+    inst_amp = [h[0] for h in hht]
+    return inst_freq, inst_amp
+
+
+def mean_inst_freq_amp(hht):
+    mean_freq = [np.mean(h[1]) for h in hht]
+    mean_amp = [np.mean(h[0]) for h in hht]
+    return mean_freq, mean_amp
+
+
+def marginal_spectrum(hht, fs=15e6):
+    n_samples = len(hht[0][0])
+    freq_bins = np.linspace(0, fs / 2, n_samples // 2 + 1)
+    marginal_spectrum = np.zeros(len(freq_bins) - 1)
+
+    for amp, freq in hht:
+        hist, _ = np.histogram(freq, bins=freq_bins, weights=amp ** 2)
+        marginal_spectrum += hist
+
+    return freq_bins[:-1], marginal_spectrum
+
+
+def teager_energy(imf):
+    return np.mean(imf[1:-1]**2 - imf[:-2]*imf[2:])
+
+
+def teager_energies(imfs):
+    return [teager_energy(imf) for imf in imfs]
+
+
+def hilbert_index(hht):
+    mean_freqs = [np.mean(h[1]) for h in hht]
+    return np.mean(np.abs(np.diff(mean_freqs)) / mean_freqs[:-1])
+
+
+def degree_of_stationarity(hht):
+    dos = []
+    for amp, freq in hht:
+        amp_mean = np.mean(amp)
+        dos.append(np.mean((amp - amp_mean)**2) / amp_mean**2)
+    return dos
+
+
+def hht_orthogonality_index(imfs):
+    n = len(imfs)
+    m = len(imfs[0])
+    sum_sq = np.sum(np.sum(imfs**2, axis=1))
+    cross_terms = 0
+    for i in range(n):
+        for j in range(i+1, n):
+            cross_terms += np.abs(np.sum(imfs[i] * imfs[j]))
+    return cross_terms / sum_sq
+
+def hilbert_spectral_density(hht, signal):
+    time = np.arange(len(signal))
+    hsd = np.zeros((len(hht), len(time)))
+    for i, (amp, freq) in enumerate(hht):
+        hsd[i] = amp**2
+    return hsd
+
+def complexity_index(hht):
+    return len(hht)  # Количество IMF
+
+
+def calc_hht_features(f_id):
+    if session.query(HHTFeature).filter(HHTFeature.formation_id == f_id).count() > 0:
+        return
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет характеристик HHT для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+    dict_hht_ftr_list = {f'{hht}_l': [] for hht in list_hht_feature}
+    ui.progressBar.setMaximum(len(signal))
+    for meas, s in enumerate(tqdm(signal)):
+        ui.progressBar.setValue(meas)
+        form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
+        imfs, hht = perform_hht(form_signal)
+
+        inst_freq, inst_amp = instantaneous_frequency_amplitude(hht)
+        hht_inst_freq = calc_stat_list(inst_freq, 'hht_inst_freq')
+        hht_inst_amp = calc_stat_list(inst_amp, 'hht_inst_amp')
+        dict_hht_ftr_list['hht_inst_freq_mean_l'].append(hht_inst_freq['hht_inst_freq_mean'])
+        dict_hht_ftr_list['hht_inst_freq_med_l'].append(hht_inst_freq['hht_inst_freq_med'])
+        dict_hht_ftr_list['hht_inst_freq_max_l'].append(hht_inst_freq['hht_inst_freq_max'])
+        dict_hht_ftr_list['hht_inst_freq_min_l'].append(hht_inst_freq['hht_inst_freq_min'])
+        dict_hht_ftr_list['hht_inst_freq_std_l'].append(hht_inst_freq['hht_inst_freq_std'])
+
+        dict_hht_ftr_list['hht_inst_amp_mean_l'].append(hht_inst_amp['hht_inst_amp_mean'])
+        dict_hht_ftr_list['hht_inst_amp_med_l'].append(hht_inst_amp['hht_inst_amp_med'])
+        dict_hht_ftr_list['hht_inst_amp_max_l'].append(hht_inst_amp['hht_inst_amp_max'])
+        dict_hht_ftr_list['hht_inst_amp_min_l'].append(hht_inst_amp['hht_inst_amp_min'])
+        dict_hht_ftr_list['hht_inst_amp_std_l'].append(hht_inst_amp['hht_inst_amp_std'])
+
+        mean_freq, mean_amp = mean_inst_freq_amp(hht)
+        hht_mean_freq = calc_stat_list(mean_freq, 'hht_mean_freq')
+        hht_mean_amp = calc_stat_list(mean_amp, 'hht_mean_amp')
+        dict_hht_ftr_list['hht_mean_freq_mean_l'].append(hht_mean_freq['hht_mean_freq_mean'])
+        dict_hht_ftr_list['hht_mean_freq_med_l'].append(hht_mean_freq['hht_mean_freq_med'])
+        dict_hht_ftr_list['hht_mean_freq_max_l'].append(hht_mean_freq['hht_mean_freq_max'])
+        dict_hht_ftr_list['hht_mean_freq_min_l'].append(hht_mean_freq['hht_mean_freq_min'])
+        dict_hht_ftr_list['hht_mean_freq_std_l'].append(hht_mean_freq['hht_mean_freq_std'])
+
+        dict_hht_ftr_list['hht_mean_amp_mean_l'].append(hht_mean_amp['hht_mean_amp_mean'])
+        dict_hht_ftr_list['hht_mean_amp_med_l'].append(hht_mean_amp['hht_mean_amp_med'])
+        dict_hht_ftr_list['hht_mean_amp_max_l'].append(hht_mean_amp['hht_mean_amp_max'])
+        dict_hht_ftr_list['hht_mean_amp_min_l'].append(hht_mean_amp['hht_mean_amp_min'])
+        dict_hht_ftr_list['hht_mean_amp_std_l'].append(hht_mean_amp['hht_mean_amp_std'])
+
+        freq_bins, marg_spec = marginal_spectrum(hht)
+        hht_marg_spec = calc_stat_list(marg_spec.tolist(), 'hht_marg_spec')
+        dict_hht_ftr_list['hht_marg_spec_mean_l'].append(hht_marg_spec['hht_marg_spec_mean'])
+        dict_hht_ftr_list['hht_marg_spec_med_l'].append(hht_marg_spec['hht_marg_spec_med'])
+        dict_hht_ftr_list['hht_marg_spec_max_l'].append(hht_marg_spec['hht_marg_spec_max'])
+        dict_hht_ftr_list['hht_marg_spec_min_l'].append(hht_marg_spec['hht_marg_spec_min'])
+        dict_hht_ftr_list['hht_marg_spec_std_l'].append(hht_marg_spec['hht_marg_spec_std'])
+
+        teager_energ = teager_energies(imfs)
+        hht_teager_energ = calc_stat_list(teager_energ, 'hht_teager_energ')
+        dict_hht_ftr_list['hht_teager_energ_mean_l'].append(hht_teager_energ['hht_teager_energ_mean'])
+        dict_hht_ftr_list['hht_teager_energ_med_l'].append(hht_teager_energ['hht_teager_energ_med'])
+        dict_hht_ftr_list['hht_teager_energ_max_l'].append(hht_teager_energ['hht_teager_energ_max'])
+        dict_hht_ftr_list['hht_teager_energ_min_l'].append(hht_teager_energ['hht_teager_energ_min'])
+        dict_hht_ftr_list['hht_teager_energ_std_l'].append(hht_teager_energ['hht_teager_energ_std'])
+
+        hi = hilbert_index(hht)
+        dict_hht_ftr_list['hht_hi_l'].append(hi)
+
+        dos = degree_of_stationarity(hht)
+        hht_dos = calc_stat_list(dos, 'hht_dos')
+        dict_hht_ftr_list['hht_dos_mean_l'].append(hht_dos['hht_dos_mean'])
+        dict_hht_ftr_list['hht_dos_med_l'].append(hht_dos['hht_dos_med'])
+        dict_hht_ftr_list['hht_dos_max_l'].append(hht_dos['hht_dos_max'])
+        dict_hht_ftr_list['hht_dos_min_l'].append(hht_dos['hht_dos_min'])
+        dict_hht_ftr_list['hht_dos_std_l'].append(hht_dos['hht_dos_std'])
+
+        oi = orthogonality_index(imfs)
+        dict_hht_ftr_list['hht_oi_l'].append(oi)
+
+        hsd = hilbert_spectral_density(hht, form_signal)
+        hht_hsd = calc_stat_list(hsd.tolist(), 'hht_hsd')
+        dict_hht_ftr_list['hht_hsd_mean_l'].append(hht_hsd['hht_hsd_mean'])
+        dict_hht_ftr_list['hht_hsd_med_l'].append(hht_hsd['hht_hsd_med'])
+        dict_hht_ftr_list['hht_hsd_max_l'].append(hht_hsd['hht_hsd_max'])
+        dict_hht_ftr_list['hht_hsd_min_l'].append(hht_hsd['hht_hsd_min'])
+        dict_hht_ftr_list['hht_hsd_std_l'].append(hht_hsd['hht_hsd_std'])
+
+        ci = complexity_index(hht)
+        dict_hht_ftr_list['hht_ci_l'].append(ci)
+
+    dict_hht_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_hht_ftr_list.items()}
+    session.add(HHTFeature(formation_id=f_id, **dict_hht_ftr_json))
     session.commit()

@@ -70,6 +70,19 @@ list_emd_feature = [
     'emd_energ_entropy', 'emd_oi', 'emd_hi'
 ]
 
+list_hht_feature = [
+    'hht_inst_freq_mean', 'hht_inst_freq_med', 'hht_inst_freq_max', 'hht_inst_freq_min', 'hht_inst_freq_std',
+    'hht_inst_amp_mean', 'hht_inst_amp_med', 'hht_inst_amp_max', 'hht_inst_amp_min', 'hht_inst_amp_std',
+    'hht_mean_freq_mean', 'hht_mean_freq_med', 'hht_mean_freq_max', 'hht_mean_freq_min', 'hht_mean_freq_std',
+    'hht_mean_amp_mean', 'hht_mean_amp_med', 'hht_mean_amp_max', 'hht_mean_amp_min', 'hht_mean_amp_std',
+    'hht_marg_spec_mean', 'hht_marg_spec_med', 'hht_marg_spec_max', 'hht_marg_spec_min', 'hht_marg_spec_std',
+    'hht_teager_energ_mean', 'hht_teager_energ_med', 'hht_teager_energ_max', 'hht_teager_energ_min', 'hht_teager_energ_std',
+    'hht_hi',
+    'hht_dos_mean', 'hht_dos_med', 'hht_dos_max', 'hht_dos_min', 'hht_dos_std',
+    'hht_oi',
+    'hht_hsd_mean', 'hht_hsd_med', 'hht_hsd_max', 'hht_hsd_min', 'hht_hsd_std',
+    'hht_ci'
+]
 
 rainbow_colors = [ "#5D0A0A", "#FF0000", "#FF5D00", "#FF9B00", "#FFE300", "#C3FF00", "#51FF00", "#0E8F03", "#00FF8D",
                    "#00FFDB", "#0073FF", "#6600FF", "#996633", "#A900FF", "#F100FF"]
@@ -404,6 +417,8 @@ def update_param_combobox():
             ui.comboBox_param_plast.addItem(i)
         for i in list_emd_feature:
             ui.comboBox_param_plast.addItem(i)
+        for i in list_hht_feature:
+            ui.comboBox_param_plast.addItem(i)
 
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
@@ -478,6 +493,10 @@ def draw_param():
                 graph = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
                     EMDFeature.formation_id == f.id
                 ).first()[0])
+            elif param in list_hht_feature:
+                graph = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
+                    HHTFeature.formation_id == f.id
+                ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
             # Создаем список значений по порядку
@@ -536,6 +555,10 @@ def draw_param():
             elif param in list_emd_feature:
                 graph = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
                     EMDFeature.formation_id == get_formation_id()
+                ).first()[0])
+            elif param in list_hht_feature:
+                graph = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
+                    HHTFeature.formation_id == get_formation_id()
                 ).first()[0])
             else:
                 graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])

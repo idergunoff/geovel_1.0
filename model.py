@@ -348,6 +348,7 @@ class Formation(Base):
     envelope_feature = relationship('EnvelopeFeature', back_populates='formation')
     autocorr_feature = relationship('AutocorrFeature', back_populates='formation')
     emd_feature = relationship('EMDFeature', back_populates='formation')
+    hht_feature = relationship('HHTFeature', back_populates='formation')
 
 
 class WaveletFeature(Base):
@@ -607,6 +608,69 @@ class EMDFeature(Base):
     emd_hi = Column(Text)
 
     formation = relationship('Formation', back_populates='emd_feature')
+
+
+class HHTFeature(Base):
+    __tablename__ = 'hht_feature'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation.id'))
+
+    hht_inst_freq_mean = Column(Text)
+    hht_inst_freq_med = Column(Text)
+    hht_inst_freq_max = Column(Text)
+    hht_inst_freq_min = Column(Text)
+    hht_inst_freq_std = Column(Text)
+
+    hht_inst_amp_mean = Column(Text)
+    hht_inst_amp_med = Column(Text)
+    hht_inst_amp_max = Column(Text)
+    hht_inst_amp_min = Column(Text)
+    hht_inst_amp_std = Column(Text)
+
+    hht_mean_freq_mean = Column(Text)
+    hht_mean_freq_med = Column(Text)
+    hht_mean_freq_max = Column(Text)
+    hht_mean_freq_min = Column(Text)
+    hht_mean_freq_std = Column(Text)
+
+    hht_mean_amp_mean = Column(Text)
+    hht_mean_amp_med = Column(Text)
+    hht_mean_amp_max = Column(Text)
+    hht_mean_amp_min = Column(Text)
+    hht_mean_amp_std = Column(Text)
+
+    hht_marg_spec_mean = Column(Text)
+    hht_marg_spec_med = Column(Text)
+    hht_marg_spec_max = Column(Text)
+    hht_marg_spec_min = Column(Text)
+    hht_marg_spec_std = Column(Text)
+
+    hht_teager_energ_mean = Column(Text)
+    hht_teager_energ_med = Column(Text)
+    hht_teager_energ_max = Column(Text)
+    hht_teager_energ_min = Column(Text)
+    hht_teager_energ_std = Column(Text)
+
+    hht_hi = Column(Text)
+
+    hht_dos_mean = Column(Text)
+    hht_dos_med = Column(Text)
+    hht_dos_max = Column(Text)
+    hht_dos_min = Column(Text)
+    hht_dos_std = Column(Text)
+
+    hht_oi = Column(Text)
+
+    hht_hsd_mean = Column(Text)
+    hht_hsd_med = Column(Text)
+    hht_hsd_max = Column(Text)
+    hht_hsd_min = Column(Text)
+    hht_hsd_std = Column(Text)
+
+    hht_ci = Column(Text)
+
+    formation = relationship('Formation', back_populates='hht_feature')
 
 
 class Well(Base):
