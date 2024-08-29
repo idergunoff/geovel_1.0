@@ -39,7 +39,8 @@ def calc_wavelet_features(f_id, wavelet='db4', level=5):
     if session.query(WaveletFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет вейвлет параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    set_info(f'Расчет вейвлет параметров для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_wvt_ftr_list = {f'{wvt}_l': [] for wvt in list_wavelet_features}
@@ -171,7 +172,8 @@ def calc_fractal_features(f_id):
     if session.query(FractalFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет фрактальных параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    set_info(f'Расчет фрактальных параметров для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_frl_ftr_list = {f'{frl}_l': [] for frl in list_fractal_features}
@@ -264,7 +266,8 @@ def calc_entropy_features(f_id):
     if session.query(EntropyFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет параметров энтропии для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    set_info(f'Расчет параметров энтропии для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_ent_ftr_list = {f'{ent}_l': [] for ent in list_entropy_features}
@@ -338,7 +341,7 @@ def calc_nonlinear_features(f_id):
     if session.query(NonlinearFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет нелинейныхпараметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    set_info(f'Расчет нелинейныхпараметров для профиля {formation.profile.title} и пласта {formation.title}. {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_nln_ftr_list = {f'{ent}_l': [] for ent in list_nonlinear_features}
@@ -411,7 +414,8 @@ def calc_morphology_features(f_id):
     if session.query(MorphologyFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет морфологических параметров для профиля {formation.profile.title} и пласта {formation.title}', 'blue')
+    set_info(f'Расчет морфологических параметров для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_mph_ftr_list = {f'{mph}_l': [] for mph in list_morphology_feature}
@@ -534,7 +538,8 @@ def calc_frequency_features(f_id):
     if session.query(FrequencyFeature).filter(FrequencyFeature.formation_id == f_id).count() > 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет частотных характеристик для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    set_info(f'Расчет частотных характеристик для профиля {formation.profile.title} пласт {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_freq_ftr_list = {f'{freq}_l': [] for freq in list_frequency_feature}
@@ -624,7 +629,8 @@ def calc_envelope_feature(f_id):
     if session.query(EnvelopeFeature).filter(EnvelopeFeature.formation_id == f_id).count() > 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет характеристик огибающей для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    set_info(f'Расчет характеристик огибающей для профиля {formation.profile.title} пласт {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_env_ftr_list = {f'{env}_l': [] for env in list_envelope_feature}
@@ -698,7 +704,8 @@ def calc_autocorr_feature(f_id):
     if session.query(AutocorrFeature).filter(AutocorrFeature.formation_id == f_id).count() > 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет характеристик автокорреляции для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    set_info(f'Расчет характеристик автокорреляции для профиля {formation.profile.title} пласт {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_acf_list = {f'{acf}_l': [] for acf in list_autocorr_feature}
@@ -830,7 +837,7 @@ def calc_emd_feature(f_id):
     if session.query(EMDFeature).filter(EMDFeature.formation_id == f_id).count() > 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет характеристик EMD для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    set_info(f'Расчет характеристик EMD для профиля {formation.profile.title} пласт {formation.title}. {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_emd_ftr_list = {f'{emd}_l': [] for emd in list_emd_feature}
@@ -978,7 +985,8 @@ def calc_hht_features(f_id):
     if session.query(HHTFeature).filter(HHTFeature.formation_id == f_id).count() > 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет характеристик HHT для профиля {formation.profile.title} пласт {formation.title}', 'blue')
+    set_info(f'Расчет характеристик HHT для профиля {formation.profile.title} пласт {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_hht_ftr_list = {f'{hht}_l': [] for hht in list_hht_feature}
