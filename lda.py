@@ -1,5 +1,6 @@
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from func import *
+from build_table import *
 from qt.choose_formation_lda import *
 from krige import draw_map
 

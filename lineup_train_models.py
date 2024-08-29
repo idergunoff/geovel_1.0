@@ -1,4 +1,5 @@
 from func import *
+from build_table import *
 from regression import update_list_trained_models_regmod
 
 

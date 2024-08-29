@@ -32,7 +32,39 @@ def show_map():
         list_y += (json.loads(profile.y_pulc))
         try:
             if len(profile.formations) == 1:
-                form = session.query(literal_column(f'Formation.{param}')).filter(Formation.profile_id == profile.id).first()
+                if param in list_wavelet_features:
+                    form = session.query(literal_column(f'wavelet_feature.{param}')).filter(
+                        WaveletFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_fractal_features:
+                    form = session.query(literal_column(f'fractal_feature.{param}')).filter(
+                        FractalFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_entropy_features:
+                    form = session.query(literal_column(f'entropy_feature.{param}')).filter(
+                        EntropyFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_nonlinear_features:
+                    form = session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                        NonlinearFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_morphology_feature:
+                    form = session.query(literal_column(f'morphology_feature.{param}')).filter(
+                        MorphologyFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_frequency_feature:
+                    form = session.query(literal_column(f'frequency_feature.{param}')).filter(
+                        FrequencyFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_envelope_feature:
+                    form = session.query(literal_column(f'envelope_feature.{param}')).filter(
+                        EnvelopeFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_autocorr_feature:
+                    form = session.query(literal_column(f'autocorr_feature.{param}')).filter(
+                        AutocorrFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_emd_feature:
+                    form = session.query(literal_column(f'emd_feature.{param}')).filter(
+                        EMDFeature.formation_id == profile.formations[0].id).first()
+                elif param in list_hht_feature:
+                    form = session.query(literal_column(f'hht_feature.{param}')).filter(
+                        HHTFeature.formation_id == profile.formations[0].id).first()
+                else:
+                    form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == profile.formations[0].id).first()
+
                 list_z += (json.loads(form[0]))
             elif len(profile.formations) > 1:
                 Choose_Formation = QtWidgets.QDialog()
@@ -47,7 +79,28 @@ def show_map():
                 def form_lda_ok():
                     global list_z
                     f_id = ui_cf.listWidget_form_map.currentItem().text().split(" id")[-1]
-                    form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
+                    if param in list_wavelet_features:
+                        form = session.query(literal_column(f'wavelet_feature.{param}')).filter(WaveletFeature.formation_id == f_id).first()
+                    elif param in list_fractal_features:
+                        form = session.query(literal_column(f'fractal_feature.{param}')).filter(FractalFeature.formation_id == f_id).first()
+                    elif param in list_entropy_features:
+                        form = session.query(literal_column(f'entropy_feature.{param}')).filter(EntropyFeature.formation_id == f_id).first()
+                    elif param in list_nonlinear_features:
+                        form = session.query(literal_column(f'nonlinear_feature.{param}')).filter(NonlinearFeature.formation_id == f_id).first()
+                    elif param in list_morphology_feature:
+                        form = session.query(literal_column(f'morphology_feature.{param}')).filter(MorphologyFeature.formation_id == f_id).first()
+                    elif param in list_frequency_feature:
+                        form = session.query(literal_column(f'frequency_feature.{param}')).filter(FrequencyFeature.formation_id == f_id).first()
+                    elif param in list_envelope_feature:
+                        form = session.query(literal_column(f'envelope_feature.{param}')).filter(EnvelopeFeature.formation_id == f_id).first()
+                    elif param in list_autocorr_feature:
+                        form = session.query(literal_column(f'autocorr_feature.{param}')).filter(AutocorrFeature.formation_id == f_id).first()
+                    elif param in list_emd_feature:
+                        form = session.query(literal_column(f'emd_feature.{param}')).filter(EMDFeature.formation_id == f_id).first()
+                    elif param in list_hht_feature:
+                        form = session.query(literal_column(f'hht_feature.{param}')).filter(HHTFeature.formation_id == f_id).first()
+                    else:
+                        form = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f_id).first()
                     list_z += (json.loads(form[0]))
                     Choose_Formation.close()
 

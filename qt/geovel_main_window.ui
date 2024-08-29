@@ -298,9 +298,15 @@
                    </widget>
                   </item>
                   <item row="1" column="3">
-                   <widget class="QCheckBox" name="checkBox_grid">
+                   <widget class="QPushButton" name="pushButton_calc_all_param">
+                    <property name="toolTip">
+                     <string>Рассчитать все возможные параметры для объекта</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(153, 155, 241);</string>
+                    </property>
                     <property name="text">
-                     <string>grid</string>
+                     <string>calc all param</string>
                     </property>
                    </widget>
                   </item>
@@ -747,6 +753,16 @@
                 </item>
                 <item row="5" column="1">
                  <layout class="QGridLayout" name="gridLayout_149">
+                  <item row="0" column="2">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_threshold">
+                    <property name="minimum">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>20.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="0">
                    <widget class="QComboBox" name="comboBox_type_wavelet">
                     <item>
@@ -776,6 +792,13 @@
                     </item>
                    </widget>
                   </item>
+                  <item row="0" column="1">
+                   <widget class="QCheckBox" name="checkBox_thershold_const">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                 <item row="5" column="2">
@@ -786,7 +809,7 @@
                      <number>2</number>
                     </property>
                     <property name="maximum">
-                     <number>50</number>
+                     <number>1000</number>
                     </property>
                     <property name="value">
                      <number>5</number>
@@ -1094,8 +1117,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>58</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5207,24 +5230,7 @@ Therm</string>
          </layout>
         </item>
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,0,2,1,0,0,0">
-          <item row="0" column="5">
-           <widget class="QLineEdit" name="lineEdit_string"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_black_white">
-            <property name="text">
-             <string>b/w</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QCheckBox" name="checkBox_relief">
-            <property name="text">
-             <string>relief</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QGridLayout" name="gridLayout_42" columnstretch="10,0,2,1,0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
@@ -5239,10 +5245,10 @@ Therm</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="6">
-           <widget class="QPushButton" name="pushButton_color">
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_black_white">
             <property name="text">
-             <string>color</string>
+             <string>b/w</string>
             </property>
            </widget>
           </item>
@@ -5250,6 +5256,30 @@ Therm</string>
            <widget class="QCheckBox" name="checkBox_seismic">
             <property name="text">
              <string>seismic</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_relief">
+            <property name="text">
+             <string>relief</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QLineEdit" name="lineEdit_string"/>
+          </item>
+          <item row="0" column="7">
+           <widget class="QPushButton" name="pushButton_color">
+            <property name="text">
+             <string>color</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_grid">
+            <property name="text">
+             <string>grid</string>
             </property>
            </widget>
           </item>

@@ -1,12 +1,13 @@
 import sys, os
 import random, math
 from sqlite3 import connect
-from itertools import combinations
+from itertools import combinations, permutations
 from collections import Counter
 import re
 import inspect
 import chardet
 
+from model import *
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
@@ -41,25 +42,30 @@ from qt.rename_model import *
 from qt.random_param import *
 from qt.random_search_reg import *
 
-from model import *
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
 import pywt
+from nolds import hurst_rs, dfa, corr_dim, sampen, lyap_r
+from pyentrp import entropy as entr
+from numpy.lib.stride_tricks import as_strided
 import zipfile
 import shutil
 from tqdm import tqdm
 
-from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm
-
+from scipy.stats import skew, kurtosis, rankdata, f_oneway, spearmanr, norm, entropy, linregress
 from scipy.fftpack import fft2, ifft2, dctn, idctn
-from scipy.signal import savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax, find_peaks
+from scipy.signal import (savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax,
+                          find_peaks, peak_widths, correlate)
 from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from scipy.special import softmax
+from scipy.spatial.distance import pdist, squareform
+from scipy.ndimage import binary_erosion, binary_dilation
+
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import normalize
@@ -118,13 +124,14 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
 import lasio as ls
+from PyEMD import EMD
 from skgstat import Variogram, OrdinaryKriging
 
 from screeninfo import get_monitors
 from numpy.linalg import LinAlgError
 import pickle
-from scipy.signal import butter, filtfilt
 
+from pyts.image import RecurrencePlot
 import optuna
 
 from functools import lru_cache
