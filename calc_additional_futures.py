@@ -292,7 +292,23 @@ def calc_entropy_features(f_id):
 # Нелинейные характеристики
 
 def correlation_dimension(signal, emb_dim=10, lag=1):
-    return corr_dim(signal, emb_dim=emb_dim, lag=lag)
+    try:
+        # Проверяем, что сигнал не константный
+        if np.all(signal == signal[0]):
+            return 0  # Возвращаем 0 для константного сигнала
+
+        # Нормализуем сигнал
+        signal = (signal - np.mean(signal)) / np.std(signal)
+
+        # Проверяем, достаточно ли точек для вычисления
+        if len(signal) < 2 * emb_dim:
+            return np.nan
+
+        return corr_dim(signal, emb_dim=emb_dim, lag=lag)
+    except Exception as e:
+        print(f"Ошибка при вычислении корреляционной размерности: {e}")
+        set_info(f"Ошибка при вычислении корреляционной размерности: {e}", 'red')
+        return np.nan
 
 
 def recurrence_plot_features(signal, dimension=3, time_delay=1, threshold='point', percentage=10):
