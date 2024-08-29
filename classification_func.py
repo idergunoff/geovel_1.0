@@ -1,10 +1,47 @@
 import json
+import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
 from func import *
 from random_search import push_random_search
 from random_param import push_random_param
+
+
+class Model(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
+        super(Model, self).__init__()
+
+        layers = []
+        current_input_dim = input_dim
+
+        # Словарь функций активации для простоты использования
+        activation_dict = {
+            'relu': nn.ReLU(),
+            'sigmoid': nn.Sigmoid(),
+            'tanh': nn.Tanh(),
+            'leaky_relu': nn.LeakyReLU()
+        }
+
+        if activation_fn not in activation_dict:
+            raise ValueError(f"Unsupported activation function: {activation_fn}")
+
+        activation_layer = activation_dict[activation_fn]
+
+        for units in hidden_units:
+            layers.append(nn.Linear(current_input_dim, units))
+            layers.append(activation_layer)
+            layers.append(nn.Dropout(dropout_rate))
+            current_input_dim = units
+
+        layers.append(nn.Linear(current_input_dim, output_dim))
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = x.float()
+        return self.model(x).squeeze(1).float()
+
 
 
 def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str):
@@ -62,7 +99,79 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if ui_cls.checkBox_smote.isChecked():
             ui_cls.checkBox_smote.setChecked(False)
 
-    def choice_model_classifier(model):
+    def build_torch_model(training_sample_train):
+        output_dim = 1
+
+        epochs = ui_cls.spinBox_epochs_torch.value()
+        learning_rate = ui_cls.doubleSpinBox_lr_torch.value()
+        hidden_units = list(map(int, ui_cls.lineEdit_layers_torch.text().split()))
+        dropout_rate = ui_cls.doubleSpinBox_dropout_torch.value()
+        weight_decay = ui_cls.doubleSpinBox_decay_torch.value()
+
+        if ui_cls.comboBox_activation_torch.currentText() == 'ReLU':
+            activation_function = 'relu'
+        elif ui_cls.comboBox_activation_torch.currentText() == 'Sigmoid':
+            activation_function = 'sigmoid'
+        elif ui_cls.comboBox_activation_torch.currentText() == 'Tanh':
+            activation_function = 'tanh'
+
+        if ui_cls.comboBox_optimizer_torch.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_cls.comboBox_optimizer_torch.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_cls.comboBox_loss_torch.currentText() == 'CrossEntropy':
+            loss_function = nn.CrossEntropyLoss
+            output_dim = 2
+        elif ui_cls.comboBox_loss_torch.currentText() == 'BCEWithLogitsLoss':
+            loss_function = nn.BCEWithLogitsLoss
+            output_dim = 1
+        elif ui_cls.comboBox_loss_torch.currentText() == 'BCELoss':
+            loss_function = nn.BCELoss
+            output_dim = 1
+
+        patience = 0
+        early_stopping_flag = False
+        if ui_cls.checkBox_estop_torch.isChecked():
+            early_stopping_flag = True
+            patience = ui_cls.spinBox_stop_patience.value()
+
+        early_stopping = EarlyStopping(
+            monitor='valid_loss',
+            patience=patience,
+            threshold=1e-4,
+            threshold_mode='rel',
+            lower_is_better=True,
+        )
+        if ui_cls.checkBox_pca.isChecked():
+            pca = PCA(n_components=ui_cls.spinBox_pca.value())
+            training_sample_train = pca.fit_transform(training_sample_train)
+
+        model = Model(training_sample_train.shape[1], output_dim, hidden_units, dropout_rate, activation_function)
+
+        model_class = NeuralNetClassifier(
+            model,
+            max_epochs=epochs,
+            lr=learning_rate,
+            optimizer=optimizer,
+            criterion=loss_function,
+            optimizer__weight_decay=weight_decay,
+            iterator_train__batch_size=32,
+            callbacks=[early_stopping] if early_stopping_flag else None,
+            train_split=ValidSplit(cv=5),
+            verbose=0
+        )
+
+        text_model = '*** TORCH NN *** \n' + 'learning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+            hidden_units) + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                     '\nactivation_func: ' + activation_function + '\noptimizer: ' + \
+                     ui_cls.comboBox_optimizer_torch.currentText() + '\ncriterion: ' + \
+                     ui_cls.comboBox_loss_torch.currentText() + '\nepochs: ' + str(epochs)
+
+        return model_class, text_model
+
+
+    def choice_model_classifier(model, training_sample_train):
         """ Выбор модели классификатора """
         if model == 'MLPC':
             model_class = MLPClassifier(
@@ -173,6 +282,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                          f'\nmin_child_samples: {ui_cls.spinBox_lgbm_child.value()}, ' \
                          f'\nlearning_rate: {ui_cls.doubleSpinBox_lr_lgbm.value()}, ' \
                          f'\nn_estimators: {ui_cls.spinBox_estim_lgbm.value()}'
+
+        elif model == 'TORCH':
+            model_class, text_model = build_torch_model(training_sample_train)
 
         else:
             model_class = QuadraticDiscriminantAnalysis()
@@ -461,12 +573,24 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         fig_cvw.tight_layout()
         fig_cvw.show()
 
+    def set_marks():
+        list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        labels = {}
+        labels[list_cat[0]] = 0
+        labels[list_cat[1]] = 1
+        if len(list_cat) > 2:
+            for index, i in enumerate(list_cat[2:]):
+                labels[i] = index
+        return labels
+
 
     def calc_model_class():
         """ Создание и тренировка модели """
 
         # global training_sample, markup
         start_time = datetime.datetime.now()
+        labels = set_marks()
+        labels_dict = {value: key for key, value in labels.items()}
 
         # Разделение данных на обучающую и тестовую выборки
         if ui_cls.checkBox_cvw.isChecked():
@@ -479,26 +603,38 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         (markup_train, model_class, model_name, pipe,
          text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
 
+        if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+            markup_train = [labels[i] for i in markup_train]
+            markup_train = np.array(markup_train, dtype=np.float32)
+            markup_test = [labels[i] for i in markup_test]
+            markup_test = np.array(markup_test, dtype=np.float32)
+            pos_label = np.array([labels[i] for i in list_marker], dtype=np.float32)
+        else:
+            pos_label = list_marker
+
         pipe.fit(training_sample_train, markup_train)
 
         # Оценка точности на всей обучающей выборке
-        train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
-
+        if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+            train_accuracy = pipe.score(training_sample, np.array([labels[i] for i in markup]), dtype=np.float32)
+        else:
+            train_accuracy = pipe.score(training_sample, markup)
         train_time = datetime.datetime.now() - start_time
 
         text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)},'
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
         preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-        fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+
+        fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=pos_label[0])
         roc_auc = auc(fpr, tpr)
         preds_t = pipe.predict(training_sample_test)
-        precision = precision_score(markup_test, preds_t, average='binary', pos_label='bitum')
-        recall = recall_score(markup_test, preds_t, average='binary', pos_label='bitum')
-        f1 = f1_score(markup_test, preds_t, average='binary', pos_label='bitum')
-        # fpr, tpr, thresholds = roc_curve(markup_test, probab)
-        # roc_auc = auc(fpr, tpr)
+        precision = precision_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
+        recall = recall_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
+        f1 = f1_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
+
+        print('precision ', precision, 'recall ', recall, 'f1 ', f1, 'roc_auc ', roc_auc)
 
         text_model += f'test_precision: {round(precision, 4)},\ntest_recall: {round(recall, 4)},' \
                       f'\ntest_f1: {round(f1, 4)},\nroc_auc: {round(roc_auc, 4)},\nвремя обучения: {train_time}'
@@ -533,8 +669,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             # if ui_cls.checkBox_adasyn.isChecked():
             #     adasyn = ADASYN(random_state=0)
             #     training_sample, markup = adasyn.fit_resample(training_sample, markup)
-
-            scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
+            if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+                scores_cv = cross_val_score(pipe, training_sample, np.array([labels[i] for i in markup], dtype=np.float32), cv=kf, n_jobs=-1)
+            else:
+                scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC':
             if not ui_cls.checkBox_baggig.isChecked():
@@ -578,7 +716,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
         fig_train.set_size_inches(25, 10)
-
+        if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+            data_tsne['mark'] = data_tsne['mark'].map(labels_dict)
         # if not hard_flag:
         sns.scatterplot(data=data_tsne, x=0, y=1, hue=mark, s=200, palette=colors, ax=axes[0])
         axes[0].grid()
@@ -588,7 +727,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if len(list_marker) == 2:
             # Вычисляем ROC-кривую и AUC
             preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=pos_label[0])
             roc_auc = auc(fpr, tpr)
 
             # Строим ROC-кривую
@@ -702,9 +841,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             model_class, text_model, model_name = build_stacking_voting_model()
         else:
             model_name = ui_cls.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_classifier(model_name)
+            model_class, text_model = choice_model_classifier(model_name, training_sample_train)
         if ui_cls.checkBox_baggig.isChecked():
-            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
+            model_class = BaggingClassifier(estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
                                             random_state=0, n_jobs=-1)
         bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
         text_model += text_scaler

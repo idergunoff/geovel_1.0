@@ -1,6 +1,38 @@
-
 from func import *
 
+class Model(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
+        super(Model, self).__init__()
+
+        layers = []
+        current_input_dim = input_dim
+
+        # Словарь функций активации для простоты использования
+        activation_dict = {
+            'relu': nn.ReLU(),
+            'sigmoid': nn.Sigmoid(),
+            'tanh': nn.Tanh(),
+            'leaky_relu': nn.LeakyReLU()
+        }
+
+        if activation_fn not in activation_dict:
+            raise ValueError(f"Unsupported activation function: {activation_fn}")
+
+        activation_layer = activation_dict[activation_fn]
+
+        for units in hidden_units:
+            layers.append(nn.Linear(current_input_dim, units))
+            layers.append(activation_layer)
+            layers.append(nn.Dropout(dropout_rate))
+            current_input_dim = units
+
+        layers.append(nn.Linear(current_input_dim, output_dim))
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = x.float()
+        return self.model(x).squeeze(1).float()
 
 def check_spinbox(spinbox1, spinbox2):
     spinbox1.setMaximum(spinbox2.value())
@@ -169,6 +201,87 @@ def push_random_param():
 
         return model_class, text_model
 
+    def set_marks():
+        list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+        labels = {}
+        labels[list_cat[0]] = 1
+        labels[list_cat[1]] = 0
+        if len(list_cat) > 2:
+            for index, i in enumerate(list_cat[2:]):
+                labels[i] = index
+        return labels
+
+    def build_torch_model(pipe_steps, x_train):
+        labels = set_marks()
+        output_dim = 1
+
+        epochs = ui_cls.spinBox_epochs_torch.value()
+        learning_rate = ui_cls.doubleSpinBox_lr_torch.value()
+        hidden_units = list(map(int, ui_cls.lineEdit_layers_torch.text().split()))
+        dropout_rate = ui_cls.doubleSpinBox_dropout_torch.value()
+        weight_decay = ui_cls.doubleSpinBox_decay_torch.value()
+
+        if ui_cls.comboBox_activation_torch.currentText() == 'ReLU':
+            activation_function = 'relu'
+        elif ui_cls.comboBox_activation_torch.currentText() == 'Sigmoid':
+            activation_function = 'sigmoid'
+        elif ui_cls.comboBox_activation_torch.currentText() == 'Tanh':
+            activation_function = 'tanh'
+
+        if ui_cls.comboBox_optimizer_torch.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_cls.comboBox_optimizer_torch.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_cls.comboBox_loss_torch.currentText() == 'CrossEntropy':
+            loss_function = nn.CrossEntropyLoss
+            output_dim = 2
+        elif ui_cls.comboBox_loss_torch.currentText() == 'BCEWithLogitsLoss':
+            loss_function = nn.BCEWithLogitsLoss
+            output_dim = 1
+        elif ui_cls.comboBox_loss_torch.currentText() == 'BCELoss':
+            loss_function = nn.BCELoss
+            output_dim = 1
+
+        patience = 0
+        early_stopping_flag = False
+        if ui_cls.checkBox_estop_torch.isChecked():
+            early_stopping_flag = True
+            patience = ui_cls.spinBox_stop_patience.value()
+
+        early_stopping = EarlyStopping(
+            monitor='valid_loss',
+            patience=patience,
+            threshold=1e-4,
+            threshold_mode='rel',
+            lower_is_better=True,
+        )
+
+        model = Model(x_train.shape[1], output_dim, hidden_units, dropout_rate, activation_function)
+
+        net = NeuralNetClassifier(
+            model,
+            max_epochs=epochs,
+            lr=learning_rate,
+            optimizer=optimizer,
+            criterion=loss_function,
+            optimizer__weight_decay=weight_decay,
+            iterator_train__batch_size=32,
+            callbacks=[early_stopping] if early_stopping_flag else None,
+            train_split=ValidSplit(cv=5),
+            verbose=0
+        )
+
+        pipe_steps.append(('model', net))
+        pipeline = Pipeline(pipe_steps)
+
+        text_model = '*** TORCH NN *** \n' + 'learning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+            hidden_units) + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                           '\nactivation_func: ' + activation_function  + '\noptimizer: ' + \
+                            ui_cls.comboBox_optimizer_torch.currentText() + '\ncriterion: ' + \
+                            ui_cls.comboBox_loss_torch.currentText() + '\nepochs: ' + str(epochs)
+
+        return pipeline, text_model
 
 
     def check_checkbox_ts():
@@ -905,7 +1018,7 @@ def push_random_param():
 
         return data_train, list_param
 
-    def test_classif_estimator(estimators, data_val, list_param, filename):
+    def test_classif_estimator(estimators, data_val, list_param, labels, filename):
         list_estimator_roc = []
         list_estimator_percent = []
         list_estimator_recall, list_estimator_precision = [], []
@@ -915,6 +1028,8 @@ def push_random_param():
             data_test = data_val.copy()
             working_sample = data_test.iloc[:, 2:].values.tolist()
             list_cat = list(class_model['model'].classes_)
+            if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+                list_cat = [labels[item] for item in list_cat]
 
             try:
                 mark = class_model.predict(working_sample)
@@ -944,7 +1059,7 @@ def push_random_param():
             predict_df.index = data_test.index
             data_test[list_cat[0]] = predict_df[list_cat[0]]
             data_test[list_cat[1]] = predict_df[list_cat[1]]
-            data_test['mark_probability'] = mark
+            data_test['mark_probability'] = [labels[item] for item in mark]
             data_test['совпадение'] = data_test['mark'].eq(data_test['mark_probability']).astype(int)
             correct_matches = data_test['совпадение'].sum()
             y_prob = np.array([i[0] for i in probability])
@@ -1022,6 +1137,7 @@ def push_random_param():
 
             data_test.reset_index(drop=True, inplace=True)
             percent = correct_matches / len(data_test) * 100
+            print('percent ', percent)
             result_percent = correct_matches / len(data_test)
             list_estimator_percent.append(result_percent)
             time_end = datetime.datetime.now() - time_start
@@ -1054,7 +1170,7 @@ def push_random_param():
 
         twenty_percent = int(len(sorted_result) * 0.2)
         sorted_result = sorted_result[:twenty_percent]
-        result_param = [item[4] for item in sorted_result]
+        result_param = [item[7] for item in sorted_result] #################???????????????????
         flattened_list = [item for sublist in result_param for item in sublist]
         processed_list = []
         for s in flattened_list:
@@ -1094,6 +1210,9 @@ def push_random_param():
         start_time = datetime.datetime.now()
         filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                   filter="TXT (*.txt)")
+        labels = set_marks()
+        labels_dict = {value: key for key, value in labels.items()}
+
         with open(filename, 'w') as f:
             print(f"START SEARCH PARAMS\n{datetime.datetime.now()}\n\n", file=f)
         results = []
@@ -1118,19 +1237,27 @@ def push_random_param():
                 text_scaler += '\nMaxAbsScaler'
 
             model_name = ui_cls.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_classifier(model_name)
-            text_model += text_scaler
-            pipe_steps.append(('model', model_class))
-            pipe = Pipeline(pipe_steps)
-
             list_param = build_list_param()
             data_train, list_param = build_table_random_param(get_MLP_id(), list_param)
             list_col = data_train.columns.tolist()
             data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
-            y_train = data_train['mark'].values
+            if model_name == 'TORCH':
+                y_train = data_train['mark'].replace(labels).values
+                y_train = np.array(y_train).astype(np.float32)
+            else:
+                y_train = data_train['mark'].values
             data_test, list_param = build_table_random_param(get_MLP_test_id(), list_param)
             list_col = data_test.columns.tolist()
             data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
+
+            if model_name == 'TORCH':
+                pipe, text_model = build_torch_model(pipe_steps, data_train.iloc[:, 2:])
+                text_model += text_scaler
+            else:
+                model_class, text_model = choice_model_classifier(model_name)
+                text_model += text_scaler
+                pipe_steps.append(('model', model_class))
+                pipe = Pipeline(pipe_steps)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
@@ -1143,16 +1270,16 @@ def push_random_param():
 
             print(f"Итерация #{i}\nКоличество параметров: {len(list_param)}\n"
                   f"Выбранные параметры: \n{list_param}\n")
-            print('data train \n',  data_train)
-            print('data test \n',  data_test)
 
+            data_train = data_train.iloc[:, 2:].values
             kv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=kv, scoring='accuracy',
+            cv_results = cross_validate(pipe, data_train, y_train, cv=kv, scoring='accuracy',
                                         return_estimator=True)
             estimators = cv_results['estimator']
+            print('estimators \n', estimators)
 
-            list_roc, list_percent, list_recall, list_precision, list_f1, filename = test_classif_estimator(estimators, data_test,
-                                                                      list_param, filename)
+            list_roc, list_percent, list_recall, list_precision, list_f1, filename = test_classif_estimator(estimators,
+                                                                    data_test, list_param, labels_dict, filename)
             roc = np.array(list_roc).mean()
             percent = np.array(list_percent).mean()
             recall = np.array(list_recall).mean()
@@ -1167,11 +1294,9 @@ def push_random_param():
             print(f'\n!!!RESULT!!!\nroc mean: {roc}\npercent mean: {percent}\n'
                   f'recall mean: {recall}\nprecision mean: {precision}\nf1 mean: {f1}\n')
 
-        # print('results \n', results)
         result_analysis(results, filename, reverse=True)
         result_analysis(results, filename, reverse=False)
         draw_result_rnd_prm(results)
-
 
         end_time = datetime.datetime.now() - start_time
         with open(filename, 'a') as f:
@@ -1298,7 +1423,7 @@ def push_random_param():
     def find_common_param(sorted_result, percent_models=0.2, percent_params=0.4):
         count_model = int(len(sorted_result) * percent_models)
         percent_result = sorted_result[:count_model]
-        result_param = [item[4] for item in percent_result]
+        result_param = [item[7] for item in percent_result]
         flattened_list = [item for sublist in result_param for item in sublist]
         processed_list = []
         for s in flattened_list:

@@ -1619,20 +1619,6 @@ def torch_classifier_train():
         start_time = datetime.datetime.now()
         pipeline.fit(X, y)
 
-        # Функция предсказания для SHAP
-        # def model_predict_proba(X):
-        #     pipeline['classifier'].model.eval()
-        #     X_tensor = torch.tensor(X, dtype=torch.float32)
-        #     with torch.no_grad():
-        #         logits = pipeline['classifier'].model(X_tensor)
-        #         softmax = nn.Softmax(dim=1)
-        #         return softmax(logits).numpy()
-        #
-        # explainer = shap.KernelExplainer(model_predict_proba, X_train[:100])
-        # shap_values = explainer.shap_values(X_test[:5])
-        # shap.summary_plot(shap_values, X_test[:5], plot_type="bar", feature_names=data[:2].columns.tolist())
-        # # shap.summary_plot(shap_values, X_test[:5], plot_type="violin")
-
         y_mark = pipeline.predict(X_val)
         mark = []
         mark.extend([labels[m] for m in y_mark if m in labels])

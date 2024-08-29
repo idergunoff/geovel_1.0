@@ -1,16 +1,43 @@
-# import shutil
-# import time
-# import optuna
-# import lightgbm as lgb
-# import pandas as pd
-# from scipy.stats import uniform, randint
-# from sklearn.gaussian_process.kernels import RBF, ConstantKernel
-# import matplotlib.pyplot as plt
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
-from functools import partial
+
+
+
+class RegressionModel(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
+        super(RegressionModel, self).__init__()
+
+        layers = []
+        current_input_dim = input_dim
+
+        activation_dict = {
+            'relu': nn.ReLU(),
+            'sigmoid': nn.Sigmoid(),
+            'tanh': nn.Tanh(),
+            'leaky_relu': nn.LeakyReLU()
+        }
+
+        if activation_fn not in activation_dict:
+            raise ValueError(f"Unsupported activation function: {activation_fn}")
+
+        activation_layer = activation_dict[activation_fn]
+
+        for units in hidden_units:
+            layers.append(nn.Linear(current_input_dim, units))
+            layers.append(activation_layer)
+            layers.append(nn.Dropout(dropout_rate))
+            current_input_dim = units
+
+        layers.append(nn.Linear(current_input_dim, output_dim))
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = x.float()
+        return self.model(x).squeeze(1).float()
+
 
 
 def add_regression_model():
@@ -504,7 +531,80 @@ def train_regression_model():
     ui_r.spinBox_pca.setMaximum(len(list_param_reg))
     ui_r.spinBox_pca.setValue(len(list_param_reg) // 2)
 
-    def choice_model_regressor(model):
+
+    def build_torch_model(training_sample_train):
+        output_dim = 1
+
+        epochs = ui_r.spinBox_epochs_torch.value()
+        learning_rate = ui_r.doubleSpinBox_lr_torch.value()
+        hidden_units = list(map(int, ui_r.lineEdit_layers_torch.text().split()))
+        dropout_rate = ui_r.doubleSpinBox_dropout_torch.value()
+        weight_decay = ui_r.doubleSpinBox_decay_torch.value()
+
+        if ui_r.comboBox_activation_torch.currentText() == 'ReLU':
+            activation_function = 'relu'
+        elif ui_r.comboBox_activation_torch.currentText() == 'Sigmoid':
+            activation_function = 'sigmoid'
+        elif ui_r.comboBox_activation_torch.currentText() == 'Tanh':
+            activation_function = 'tanh'
+
+        if ui_r.comboBox_optimizer_torch.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_r.comboBox_optimizer_torch.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_r.comboBox_loss_torch.currentText() == 'MSE':
+            loss_function = nn.MSELoss
+        elif ui_r.comboBox_loss_torch.currentText() == 'MAE':
+            loss_function = nn.L1Loss
+        elif ui_r.comboBox_loss_torch.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss
+        elif ui_r.comboBox_loss_torch.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss
+
+        patience = 0
+        early_stopping_flag = False
+        if ui_r.checkBox_estop_torch.isChecked():
+            early_stopping_flag = True
+            patience = ui_r.spinBox_stop_patience.value()
+
+        early_stopping = EarlyStopping(
+            monitor='valid_loss',
+            patience=patience,
+            threshold=1e-4,
+            threshold_mode='rel',
+            lower_is_better=True,
+        )
+        if ui_r.checkBox_pca.isChecked():
+            pca = PCA(n_components=ui_r.spinBox_pca.value())
+            training_sample_train = pca.fit_transform(training_sample_train)
+
+        model = RegressionModel(np.array(training_sample_train).shape[1], output_dim, hidden_units, dropout_rate,
+                                activation_function)
+
+        model_class = NeuralNetRegressor(
+            model,
+            max_epochs=epochs,
+            lr=learning_rate,
+            optimizer=optimizer,
+            criterion=loss_function,
+            optimizer__weight_decay=weight_decay,
+            iterator_train__batch_size=32,
+            callbacks=[early_stopping] if early_stopping_flag else None,
+            train_split=ValidSplit(cv=5),
+            verbose=0
+        )
+
+        text_model = '*** TORCH NN *** \n' + 'learning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+            hidden_units) + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                     '\nactivation_func: ' + activation_function + '\noptimizer: ' + \
+                     ui_r.comboBox_optimizer_torch.currentText() + '\ncriterion: ' + \
+                     ui_r.comboBox_loss_torch.currentText() + '\nepochs: ' + str(epochs)
+
+        return model_class, text_model
+
+
+    def choice_model_regressor(model, x_train):
         """ Выбор модели регрессии """
         if model == 'MLPR':
             model_reg = MLPRegressor(
@@ -652,6 +752,10 @@ def train_regression_model():
                          f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
                          f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
                          f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
+
+        elif model == 'TORCH':
+            model_reg, text_model = build_torch_model(x_train)
+
         else:
             model_reg = QuadraticDiscriminantAnalysis()
             text_model = ''
@@ -1386,7 +1490,7 @@ def train_regression_model():
             model_class, text_model, model_name = build_stacking_voting_model()
         else:
             model_name = ui_r.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_regressor(model_name)
+            model_class, text_model = choice_model_regressor(model_name, x_train)
 
         if ui_r.checkBox_baggig.isChecked():
             model_class = BaggingRegressor(base_estimator=model_class, n_estimators=ui_r.spinBox_bagging.value(),
@@ -1408,7 +1512,7 @@ def train_regression_model():
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
                 n_cross += 1
-            scores_cv = cross_val_score(pipe, training_sample, target, cv=kf, n_jobs=-1)
+            scores_cv = cross_val_score(pipe, training_sample, np.array(target, dtype=np.float32), cv=kf, n_jobs=-1)
             n_max = np.argmax(scores_cv)
             train_index, test_index = list_train[n_max], list_test[n_max]
 
@@ -1418,14 +1522,14 @@ def train_regression_model():
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
 
-        print(pipe.steps)
-        pipe.fit(x_train, y_train)
+        pipe.fit(x_train, np.array(y_train, dtype=np.float32))
         y_pred = pipe.predict(x_test)
 
         r2 = r2_score(y_test, y_pred)
         accuracy = round(pipe.score(x_test, y_test), 5)
         # mse = round(mean_squared_error(y_test, y_pred), 5)
         mse = np.mean((y_test - y_pred) ** 2)
+        print('accuracy ', accuracy, 'r2 ', r2, 'mse ', mse)
 
 
         cv_text = (
