@@ -2,6 +2,39 @@ from sklearn.metrics import mean_absolute_error
 
 from func import *
 
+class RegressionModel(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
+        super(RegressionModel, self).__init__()
+
+        layers = []
+        current_input_dim = input_dim
+
+        activation_dict = {
+            'relu': nn.ReLU(),
+            'sigmoid': nn.Sigmoid(),
+            'tanh': nn.Tanh(),
+            'leaky_relu': nn.LeakyReLU()
+        }
+
+        if activation_fn not in activation_dict:
+            raise ValueError(f"Unsupported activation function: {activation_fn}")
+
+        activation_layer = activation_dict[activation_fn]
+
+        for units in hidden_units:
+            layers.append(nn.Linear(current_input_dim, units))
+            layers.append(activation_layer)
+            layers.append(nn.Dropout(dropout_rate))
+            current_input_dim = units
+
+        layers.append(nn.Linear(current_input_dim, output_dim))
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = x.float()
+        return self.model(x).squeeze(1).float()
+
 
 def push_random_param_reg():
     RandomParam = QtWidgets.QDialog()
@@ -804,6 +837,78 @@ def push_random_param_reg():
             ui_rp.comboBox_test_analysis.addItem(f'{i.title} id{i.id}')
             update_list_test_well()
 
+    def build_torch_model(pipe_steps, x_train):
+        output_dim = 1
+
+        epochs = ui_r.spinBox_epochs_torch.value()
+        learning_rate = ui_r.doubleSpinBox_lr_torch.value()
+        hidden_units = list(map(int, ui_r.lineEdit_layers_torch.text().split()))
+        dropout_rate = ui_r.doubleSpinBox_dropout_torch.value()
+        weight_decay = ui_r.doubleSpinBox_decay_torch.value()
+
+        if ui_r.comboBox_activation_torch.currentText() == 'ReLU':
+            activation_function = 'relu'
+        elif ui_r.comboBox_activation_torch.currentText() == 'Sigmoid':
+            activation_function = 'sigmoid'
+        elif ui_r.comboBox_activation_torch.currentText() == 'Tanh':
+            activation_function = 'tanh'
+
+        if ui_r.comboBox_optimizer_torch.currentText() == 'Adam':
+            optimizer = torch.optim.Adam
+        elif ui_r.comboBox_optimizer_torch.currentText() == 'SGD':
+            optimizer = torch.optim.SGD
+
+        if ui_r.comboBox_loss_torch.currentText() == 'MSE':
+            loss_function = nn.MSELoss
+        elif ui_r.comboBox_loss_torch.currentText() == 'MAE':
+            loss_function = nn.L1Loss
+        elif ui_r.comboBox_loss_torch.currentText() == 'HuberLoss':
+            loss_function = nn.HuberLoss
+        elif ui_r.comboBox_loss_torch.currentText() == 'SmoothL1Loss':
+            loss_function = nn.SmoothL1Loss
+
+        patience = 0
+        early_stopping_flag = False
+        if ui_r.checkBox_estop_torch.isChecked():
+            early_stopping_flag = True
+            patience = ui_r.spinBox_stop_patience.value()
+
+        early_stopping = EarlyStopping(
+            monitor='valid_loss',
+            patience=patience,
+            threshold=1e-4,
+            threshold_mode='rel',
+            lower_is_better=True,
+        )
+
+        model = RegressionModel(x_train.shape[1], output_dim, hidden_units, dropout_rate,
+                                activation_function)
+
+        net = NeuralNetRegressor(
+            model,
+            max_epochs=epochs,
+            lr=learning_rate,
+            optimizer=optimizer,
+            criterion=loss_function,
+            optimizer__weight_decay=weight_decay,
+            iterator_train__batch_size=32,
+            callbacks=[early_stopping] if early_stopping_flag else None,
+            train_split=ValidSplit(cv=5),
+            verbose=0
+        )
+
+        pipe_steps.append(('model', net))
+        pipeline = Pipeline(pipe_steps)
+
+        text_model = '*** TORCH NN *** \n' + 'learning_rate: ' + str(learning_rate) + '\nhidden units: ' + str(
+            hidden_units) + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
+                           '\nactivation_func: ' + activation_function  + '\noptimizer: ' + \
+                            ui_r.comboBox_optimizer_torch.currentText() + '\ncriterion: ' + \
+                            ui_r.comboBox_loss_torch.currentText() + '\nepochs: ' + str(epochs)
+
+        return pipeline, text_model
+
+
     def choice_model_regressor(model):
         """ Выбор модели регрессии """
         if model == 'MLPR':
@@ -1097,12 +1202,6 @@ def push_random_param_reg():
                 pipe_steps.append(('maxabs_scaler', maxabs_scaler))
                 text_scaler += '\nMaxAbsScaler'
 
-            model_name = ui_r.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_regressor(model_name)
-            text_model += text_scaler
-            pipe_steps.append(('model', model_class))
-            pipe = Pipeline(pipe_steps)
-
             list_param = build_list_param()
             data_train, list_param = build_table_random_param_reg(get_regmod_id(), list_param)
             list_col = data_train.columns.tolist()
@@ -1114,6 +1213,16 @@ def push_random_param_reg():
             data_test, list_param = build_table_random_param_reg(get_regmod_test_id(), list_param)
             list_col = data_test.columns.tolist()
             data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
+
+            model_name = ui_r.buttonGroup.checkedButton().text()
+            if model_name == 'TORCH':
+                pipe, text_model = build_torch_model(pipe_steps, data_train.iloc[:, 2:])
+                text_model += text_scaler
+            else:
+                model_reg, text_model = choice_model_regressor(model_name)
+                text_model += text_scaler
+                pipe_steps.append(('model', model_reg))
+                pipe = Pipeline(pipe_steps)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
@@ -1128,7 +1237,7 @@ def push_random_param_reg():
                   f"Выбранные параметры: \n{list_param}\n")
 
             kv = KFold(n_splits=5, shuffle=True, random_state=0)
-            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], y_train, cv=kv, scoring='r2',
+            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], np.array(y_train, dtype=np.float32), cv=kv, scoring='r2',
                                         return_estimator=True)
             estimators = cv_results['estimator']
 

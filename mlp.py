@@ -1064,6 +1064,8 @@ def calc_object_class():
     Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
+        labels = set_marks()
+        labels_dict = {value: key for key, value in labels.items()}
 
         model = session.query(TrainedModelClass).filter_by(
             id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
@@ -1072,6 +1074,8 @@ def calc_object_class():
             class_model = pickle.load(f)
 
         list_cat = list(class_model.classes_)
+        if 'TORCH' in model.title:
+            list_cat = [labels_dict[i] for i in list_cat]
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()
@@ -1118,6 +1122,9 @@ def calc_object_class():
         # Добавление предсказанных меток и вероятностей в рабочие данные
         working_data_result = pd.concat([working_data_result_copy, pd.DataFrame(probability, columns=list_cat)], axis=1)
         working_data_result['mark'] = mark
+        if 'TORCH' in model.title:
+            working_data_result['mark'] = working_data_result['mark'].map(labels_dict)
+        print('working_data_result ', working_data_result)
 
         x = list(working_data_result['x_pulc'])
         y = list(working_data_result['y_pulc'])

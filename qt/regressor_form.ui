@@ -7,1974 +7,2265 @@
     <x>0</x>
     <y>0</y>
     <width>993</width>
-    <height>603</height>
+    <height>727</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Regression</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_67">
-   <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout_66">
-     <item row="0" column="0">
-      <layout class="QGridLayout" name="gridLayout_33">
-       <item row="0" column="0">
-        <layout class="QGridLayout" name="gridLayout_62">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="groupBox">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>Multi-layer Perceptron Regressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_56">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_48">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_29">
-                <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_45">
-                  <item row="0" column="0">
-                   <widget class="QRadioButton" name="radioButton_mlp">
-                    <property name="toolTip">
-                     <string>Multi-layer Perceptron Regressor</string>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(252, 226, 251);</string>
-                    </property>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>14</x>
+     <y>12</y>
+     <width>967</width>
+     <height>704</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_72">
+    <item row="0" column="0" rowspan="2">
+     <layout class="QGridLayout" name="gridLayout_70">
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_69">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>Multi-layer Perceptron Regressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_56">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_48">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="gridLayout_29">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_45">
+                 <item row="0" column="0">
+                  <widget class="QRadioButton" name="radioButton_mlp">
+                   <property name="toolTip">
+                    <string>Multi-layer Perceptron Regressor</string>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(252, 226, 251);</string>
+                   </property>
+                   <property name="text">
+                    <string>MLPR</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="checkBox_e_stop_mlp">
+                   <property name="text">
+                    <string>e-stop</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout_43">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_38">
+                   <property name="text">
+                    <string>activat</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QComboBox" name="comboBox_activation_mlp">
+                   <item>
                     <property name="text">
-                     <string>MLPR</string>
+                     <string>relu</string>
                     </property>
-                    <attribute name="buttonGroup">
-                     <string notr="true">buttonGroup</string>
-                    </attribute>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QCheckBox" name="checkBox_e_stop_mlp">
+                   </item>
+                   <item>
                     <property name="text">
-                     <string>e-stop</string>
+                     <string>logistic</string>
                     </property>
-                    <property name="checked">
-                     <bool>true</bool>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="0" column="1">
-                 <layout class="QGridLayout" name="gridLayout_43">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_38">
+                   </item>
+                   <item>
                     <property name="text">
-                     <string>activat</string>
+                     <string>tanh</string>
                     </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QComboBox" name="comboBox_activation_mlp">
-                    <item>
-                     <property name="text">
-                      <string>relu</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>logistic</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>tanh</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>identity</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_12">
-                  <item row="0" column="0" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_43">
+                   </item>
+                   <item>
                     <property name="text">
-                     <string>alpha</string>
+                     <string>identity</string>
                     </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
-                    <property name="decimals">
-                     <number>4</number>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.000100000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="1">
-                 <layout class="QGridLayout" name="gridLayout_22">
-                  <item row="2" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
-                    <property name="decimals">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.200000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_44">
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_12">
+                 <item row="0" column="0" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_43">
+                   <property name="text">
+                    <string>alpha</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000100000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="1">
+                <layout class="QGridLayout" name="gridLayout_22">
+                 <item row="2" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.200000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_44">
+                   <property name="text">
+                    <string>valid %</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_47">
+               <item row="0" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_46">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_36">
+                   <property name="text">
+                    <string>hidden layer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLineEdit" name="lineEdit_layer_mlp">
+                   <property name="text">
+                    <string>500</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_19">
+                 <item row="0" column="0" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_10">
+                   <property name="text">
+                    <string>learning_rate</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000100000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="1">
+                <layout class="QGridLayout" name="gridLayout_44">
+                 <item row="0" column="0" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_42">
+                   <property name="text">
+                    <string>solver</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QComboBox" name="comboBox_solvar_mlp">
+                   <property name="currentText">
+                    <string>lbfgs</string>
+                   </property>
+                   <property name="currentIndex">
+                    <number>1</number>
+                   </property>
+                   <item>
                     <property name="text">
-                     <string>valid %</string>
+                     <string>adam</string>
                     </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="1">
-               <layout class="QGridLayout" name="gridLayout_47">
-                <item row="0" column="0" colspan="2">
-                 <layout class="QGridLayout" name="gridLayout_46">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_36">
+                   </item>
+                   <item>
                     <property name="text">
-                     <string>hidden layer</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLineEdit" name="lineEdit_layer_mlp">
-                    <property name="text">
-                     <string>500</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_19">
-                  <item row="0" column="0" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_10">
-                    <property name="text">
-                     <string>learning_rate</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp">
-                    <property name="decimals">
-                     <number>4</number>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.000100000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="1">
-                 <layout class="QGridLayout" name="gridLayout_44">
-                  <item row="0" column="0" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_42">
-                    <property name="text">
-                     <string>solver</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QComboBox" name="comboBox_solvar_mlp">
-                    <property name="currentText">
                      <string>lbfgs</string>
                     </property>
-                    <property name="currentIndex">
-                     <number>1</number>
-                    </property>
-                    <item>
-                     <property name="text">
-                      <string>adam</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>lbfgs</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>sgd</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_15">
-           <property name="title">
-            <string>LGBMRegressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_49">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_50">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_51">
-                <item row="0" column="0">
-                 <widget class="QRadioButton" name="radioButton_lgbm">
-                  <property name="toolTip">
-                   <string>Gradient Boosting Regressor</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(187, 227, 250);</string>
-                  </property>
-                  <property name="text">
-                   <string>LGBM</string>
-                  </property>
-                  <property name="checked">
-                   <bool>false</bool>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">buttonGroup</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_59">
-                  <item row="0" column="0" colspan="2" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_30">
+                   </item>
+                   <item>
                     <property name="text">
-                     <string>num_leaves</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QSpinBox" name="spinBox_lgbm_num_leaves">
-                    <property name="maximum">
-                     <number>5000</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>10</number>
-                    </property>
-                    <property name="value">
-                     <number>31</number>
-                    </property>
-                    <property name="displayIntegerBase">
-                     <number>10</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_60">
-                  <item row="0" column="0" colspan="2" alignment="Qt::AlignBottom">
-                   <widget class="QLabel" name="label_31">
-                    <property name="text">
-                     <string>feature_fraction</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_feature">
-                    <property name="decimals">
-                     <number>5</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.800000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="1">
-               <layout class="QGridLayout" name="gridLayout_52">
-                <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_53">
-                  <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_57">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_28">
-                      <property name="text">
-                       <string>l1</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_l1_lgbm">
-                      <property name="decimals">
-                       <number>5</number>
-                      </property>
-                      <property name="minimum">
-                       <double>0.000010000000000</double>
-                      </property>
-                      <property name="maximum">
-                       <double>1.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.010000000000000</double>
-                      </property>
-                      <property name="value">
-                       <double>0.100000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_58">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_29">
-                      <property name="text">
-                       <string>l2</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_l2_lgbm">
-                      <property name="decimals">
-                       <number>5</number>
-                      </property>
-                      <property name="minimum">
-                       <double>0.000010000000000</double>
-                      </property>
-                      <property name="maximum">
-                       <double>1.000000000000000</double>
-                      </property>
-                      <property name="singleStep">
-                       <double>0.010000000000000</double>
-                      </property>
-                      <property name="value">
-                       <double>0.100000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_61">
-                  <item row="0" column="0" colspan="2">
-                   <widget class="QLabel" name="label_32">
-                    <property name="text">
-                     <string>learning_rate</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_lgbm">
-                    <property name="decimals">
-                     <number>5</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000010000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.010000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.050000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_54">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_33">
-                    <property name="text">
-                     <string>n_estimators</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QSpinBox" name="spinBox_estim_lgbm">
-                    <property name="maximum">
-                     <number>5000</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>50</number>
-                    </property>
-                    <property name="value">
-                     <number>100</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="2">
-               <layout class="QFormLayout" name="formLayout">
-                <item row="0" column="0" colspan="2">
-                 <layout class="QGridLayout" name="gridLayout_63">
-                  <item row="0" column="0" colspan="2">
-                   <widget class="QLabel" name="label_34">
-                    <property name="text">
-                     <string>min_child_samples</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QSpinBox" name="spinBox_lgbm_child">
-                    <property name="maximum">
-                     <number>5000</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>1</number>
-                    </property>
-                    <property name="value">
-                     <number>2</number>
-                    </property>
-                    <property name="displayIntegerBase">
-                     <number>20</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0" colspan="2">
-                 <layout class="QGridLayout" name="gridLayout_65">
-                  <item row="0" column="0" colspan="2">
-                   <widget class="QLabel" name="label_41">
-                    <property name="text">
-                     <string>subsample_freq</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QSpinBox" name="spinBox_lgbm_sub_freq">
-                    <property name="value">
-                     <number>5</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="3" column="0">
-                 <widget class="Line" name="line">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0" colspan="2">
-                 <layout class="QGridLayout" name="gridLayout_55">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_35">
-                    <property name="text">
-                     <string>subsample</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_subsample">
-                    <property name="decimals">
-                     <number>5</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.800000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="1" column="0">
-        <layout class="QGridLayout" name="gridLayout_30">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>KNeighbors Regressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_21">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_2">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_knn">
-                <property name="toolTip">
-                 <string>K-Nearest Neighbors Regressor</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(252, 249, 206);</string>
-                </property>
-                <property name="text">
-                 <string>KNNR</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_39">
-                <property name="text">
-                 <string>N neighbors:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_knn_weights">
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="autoFillBackground">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>weight</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QSpinBox" name="spinBox_neighbors">
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>1000</number>
-                </property>
-                <property name="value">
-                 <number>5</number>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_13">
-           <property name="title">
-            <string>SVR</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_24">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_23">
-              <item row="1" column="1">
-               <widget class="QLabel" name="label_8">
-                <property name="toolTip">
-                 <string>Параметр регуляризации. Он контролирует компромисс между подгонкой данных и регуляризацией. Меньшие значения C приводят к более сильной регуляризации, что может помочь уменьшить переобучение. Большие значения C уменьшают регуляризацию, что может привести к лучшему соответствию данным.</string>
-                </property>
-                <property name="text">
-                 <string>C:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_7">
-                <property name="toolTip">
-                 <string>Ядро, которое определяет тип нелинейности в модели. </string>
-                </property>
-                <property name="text">
-                 <string>kernel:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2" colspan="2">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_svr_c">
-                <property name="toolTip">
-                 <string>Параметр регуляризации. Он контролирует компромисс между подгонкой данных и регуляризацией. Меньшие значения C приводят к более сильной регуляризации, что может помочь уменьшить переобучение. Большие значения C уменьшают регуляризацию, что может привести к лучшему соответствию данным.</string>
-                </property>
-                <property name="minimum">
-                 <double>0.010000000000000</double>
-                </property>
-                <property name="value">
-                 <double>10.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2" colspan="2">
-               <widget class="QComboBox" name="comboBox_svr_kernel">
-                <property name="toolTip">
-                 <string>Ядро, которое определяет тип нелинейности в модели. </string>
-                </property>
-                <property name="currentIndex">
-                 <number>1</number>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>poly</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>rbf</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>linear</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>sigmoid</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>epsilon</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2" colspan="2">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_epsilon_svr">
-                <property name="decimals">
-                 <number>4</number>
-                </property>
-                <property name="maximum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.100000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_gpc_2">
-                <property name="toolTip">
-                 <string>Support Vector Machines</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(206, 185, 167);</string>
-                </property>
-                <property name="text">
-                 <string>SVR</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QGroupBox" name="groupBox_10">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>RandomForest</string>
-           </property>
-           <layout class="QFormLayout" name="formLayout_3">
-            <item row="0" column="0" colspan="2">
-             <layout class="QGridLayout" name="gridLayout_28">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_16">
-                <item row="0" column="0">
-                 <widget class="QRadioButton" name="radioButton_rfr">
-                  <property name="toolTip">
-                   <string>Random Forest Regressor</string>
-                  </property>
-                  <property name="autoFillBackground">
-                   <bool>false</bool>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(186, 253, 233);</string>
-                  </property>
-                  <property name="text">
-                   <string>RFR</string>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">buttonGroup</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QSpinBox" name="spinBox_rfr_n">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>10000</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>50</number>
-                  </property>
-                  <property name="value">
-                   <number>100</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QLabel" name="label_11">
-                  <property name="text">
-                   <string>depth</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QLabel" name="label_12">
-                  <property name="text">
-                   <string>max_features</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QRadioButton" name="radioButton_etr">
-                  <property name="toolTip">
-                   <string>ExtraTrees</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(161, 245, 173);</string>
-                  </property>
-                  <property name="text">
-                   <string>ETR</string>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">buttonGroup</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QRadioButton" name="radioButton_abr">
-                  <property name="toolTip">
-                   <string>AdaBoost</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(208, 253, 151);</string>
-                  </property>
-                  <property name="text">
-                   <string>ABR</string>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">buttonGroup</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QSpinBox" name="spinBox_depth_rfr">
-                  <property name="value">
-                   <number>5</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QComboBox" name="comboBox_max_features_rfr">
-                  <item>
-                   <property name="text">
-                    <string>none</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>sqrt</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>log2</string>
-                   </property>
-                  </item>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <layout class="QGridLayout" name="gridLayout_15">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_13">
-                  <property name="text">
-                   <string>min_samp_split</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QSpinBox" name="spinBox_min_sample_split">
-                  <property name="value">
-                   <number>10</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QLabel" name="label_14">
-                  <property name="text">
-                   <string>min_samp_leaf</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QSpinBox" name="spinBox_min_sample_leaf">
-                  <property name="value">
-                   <number>10</number>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="2" column="0">
-        <layout class="QGridLayout" name="gridLayout_64">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="groupBox_6">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>GradientBoosting Regressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_7">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_34">
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_27">
-                <item row="0" column="0">
-                 <widget class="QRadioButton" name="radioButton_gbc">
-                  <property name="toolTip">
-                   <string>Gradient Boosting Regressor</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(187, 227, 250);</string>
-                  </property>
-                  <property name="text">
-                   <string>GBR</string>
-                  </property>
-                  <property name="checked">
-                   <bool>false</bool>
-                  </property>
-                  <attribute name="buttonGroup">
-                   <string notr="true">buttonGroup</string>
-                  </attribute>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <layout class="QGridLayout" name="gridLayout_25">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_5">
-                    <property name="toolTip">
-                     <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
-                    </property>
-                    <property name="text">
-                     <string>learning_rate:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QLabel" name="label_6">
-                    <property name="toolTip">
-                     <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
-                    </property>
-                    <property name="text">
-                     <string>n_estimators:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate_gbr">
-                    <property name="toolTip">
-                     <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
-                    </property>
-                    <property name="minimum">
-                     <double>0.010000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>0.100000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.500000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QSpinBox" name="spinBox_n_estimators_gbr">
-                    <property name="toolTip">
-                     <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
-                    </property>
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>10000</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>50</number>
-                    </property>
-                    <property name="value">
-                     <number>200</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <layout class="QGridLayout" name="gridLayout_6">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_22">
-                  <property name="text">
-                   <string>max_depth</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1" colspan="2">
-                 <widget class="QSpinBox" name="spinBox_depth_gbr">
-                  <property name="value">
-                   <number>10</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QLabel" name="label_16">
-                  <property name="text">
-                   <string>min_samp_leaf</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="4">
-                 <widget class="QSpinBox" name="spinBox_min_sample_leaf_gbr">
-                  <property name="value">
-                   <number>10</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0" colspan="2">
-                 <widget class="QLabel" name="label_15">
-                  <property name="text">
-                   <string>min_samp_split</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QSpinBox" name="spinBox_min_sample_split_gbr">
-                  <property name="value">
-                   <number>10</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QLabel" name="label_25">
-                  <property name="text">
-                   <string>subsample</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="4">
-                 <widget class="QDoubleSpinBox" name="doubleSpinBox_subsample_gbr">
-                  <property name="value">
-                   <double>0.500000000000000</double>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_7">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>ElasticNet, Lasso</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_5">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_11">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_en">
-                <property name="toolTip">
-                 <string>ElasticNet</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(227, 200, 255);</string>
-                </property>
-                <property name="text">
-                 <string>EN</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label">
-                <property name="toolTip">
-                 <string>Этот параметр контролирует общую силу регуляризации.</string>
-                </property>
-                <property name="text">
-                 <string>alpha:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="label_2">
-                <property name="toolTip">
-                 <string>Этот параметр определяет смешивание регрессии L1 и L2 в ElasticNet. Значение l1_ratio находится в диапазоне от 0 до 1. Когда l1_ratio = 0, это эквивалентно регрессии L2 (Ridge). Когда l1_ratio = 1, это эквивалентно регрессии L1 (Lasso). При значениях между 0 и 1, это комбинация обеих регрессий.</string>
-                </property>
-                <property name="text">
-                 <string>l1_ratio:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QRadioButton" name="radioButton_lasso">
-                <property name="toolTip">
-                 <string>Lasso</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(233, 216, 252);</string>
-                </property>
-                <property name="text">
-                 <string>LSS</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha">
-                <property name="toolTip">
-                 <string>Этот параметр контролирует общую силу регуляризации.</string>
-                </property>
-                <property name="decimals">
-                 <number>1</number>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.500000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_l1_ratio">
-                <property name="toolTip">
-                 <string>Этот параметр определяет смешивание регрессии L1 и L2 в ElasticNet. Значение l1_ratio находится в диапазоне от 0 до 1. Когда l1_ratio = 0, это эквивалентно регрессии L2 (Ridge). Когда l1_ratio = 1, это эквивалентно регрессии L1 (Lasso). При значениях между 0 и 1, это комбинация обеих регрессий.</string>
-                </property>
-                <property name="decimals">
-                 <number>2</number>
-                </property>
-                <property name="maximum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.010000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.500000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QGroupBox" name="groupBox_8">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>LinearRegression</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_20">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_13">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_lr">
-                <property name="toolTip">
-                 <string/>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(252, 222, 222);</string>
-                </property>
-                <property name="text">
-                 <string>LR</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_fit_intercept">
-                <property name="toolTip">
-                 <string>fit_intercept, Определяет, нужно ли добавлять свободный член (пересечение) в модель. Если fit_intercept включен, то модель будет иметь угол наклона и свободный член (смещение). Если fit_intercept отключен, то угол наклона будет определен без свободного члена.</string>
-                </property>
-                <property name="text">
-                 <string>fit</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="3">
-          <widget class="QGroupBox" name="groupBox_4">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>DecisionTree</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_35">
-            <item row="0" column="0">
-             <widget class="QRadioButton" name="radioButton_dtr">
-              <property name="toolTip">
-               <string>Decision Tree Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(202, 251, 201);</string>
-              </property>
-              <property name="text">
-               <string>DTR</string>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup</string>
-              </attribute>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_splitter_rnd">
-              <property name="toolTip">
-               <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
-              </property>
-              <property name="text">
-               <string>rnd</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="3" column="0">
-        <layout class="QGridLayout" name="gridLayout_42">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>GaussianProcess Regressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_41">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_40">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_gpr">
-                <property name="toolTip">
-                 <string>Gaussian Process Regressor</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(251, 228, 170);</string>
-                </property>
-                <property name="text">
-                 <string>GPR</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <layout class="QGridLayout" name="gridLayout_39">
-                <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_26">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_37">
-                    <property name="text">
-                     <string>constant</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_const">
-                    <property name="toolTip">
-                     <string/>
-                    </property>
-                    <property name="decimals">
-                     <number>4</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000100000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>10000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.100000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="0" column="1">
-                 <layout class="QGridLayout" name="gridLayout_3">
-                  <item row="0" column="1">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_scale">
-                    <property name="toolTip">
-                     <string/>
-                    </property>
-                    <property name="decimals">
-                     <number>4</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>10000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>2.500000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_26">
-                    <property name="text">
-                     <string>scale</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_36">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_40">
-                    <property name="toolTip">
-                     <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
-                    </property>
-                    <property name="text">
-                     <string>n_restart_optim:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_gpr_n_restart">
-                    <property name="toolTip">
-                     <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
-                    </property>
-                    <property name="value">
-                     <number>5</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="1">
-                 <layout class="QGridLayout" name="gridLayout_38">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_27">
-                    <property name="text">
-                     <string>alpha</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_alpha">
-                    <property name="toolTip">
-                     <string/>
-                    </property>
-                    <property name="decimals">
-                     <number>5</number>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000100000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.000100000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_14">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>XGBoostRegressor</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_18">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_14">
-              <item row="0" column="0" colspan="2">
-               <widget class="QRadioButton" name="radioButton_gbc_7">
-                <property name="toolTip">
-                 <string>Gradient Boosting Regressor</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(187, 227, 250);</string>
-                </property>
-                <property name="text">
-                 <string>XGB</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="0" column="2" colspan="2">
-               <widget class="QLabel" name="label_19">
-                <property name="toolTip">
-                 <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
-                </property>
-                <property name="text">
-                 <string>learning_rate:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4" colspan="2">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate_xgb">
-                <property name="toolTip">
-                 <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
-                </property>
-                <property name="decimals">
-                 <number>5</number>
-                </property>
-                <property name="minimum">
-                 <double>0.000010000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.100000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="3">
-               <widget class="QLabel" name="label_20">
-                <property name="toolTip">
-                 <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
-                </property>
-                <property name="text">
-                 <string>n_estimators:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QSpinBox" name="spinBox_n_estimators_xgb">
-                <property name="toolTip">
-                 <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
-                </property>
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>10000</number>
-                </property>
-                <property name="singleStep">
-                 <number>50</number>
-                </property>
-                <property name="value">
-                 <number>10</number>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="4">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>depth</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="5">
-               <widget class="QSpinBox" name="spinBox_depth_xgb">
-                <property name="toolTip">
-                 <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
-                </property>
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>10000</number>
-                </property>
-                <property name="singleStep">
-                 <number>50</number>
-                </property>
-                <property name="value">
-                 <number>10</number>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>alpha</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1" colspan="3">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_xgb">
-                <property name="toolTip">
-                 <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
-                </property>
-                <property name="decimals">
-                 <number>5</number>
-                </property>
-                <property name="minimum">
-                 <double>0.000010000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.100000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </item>
-     <item row="0" column="1">
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox_12">
-         <property name="title">
-          <string>Выбросы</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_17">
-          <item row="0" column="0">
-           <widget class="QSpinBox" name="spinBox_lof_neighbor">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>100000</number>
-            </property>
-            <property name="value">
-             <number>20</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_lof">
-            <property name="text">
-             <string>LOF</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox_5">
-         <property name="title">
-          <string>Stacking/Voting Regressor</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10">
-          <item row="0" column="0">
-           <layout class="QGridLayout" name="gridLayout_4">
-            <item row="3" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_knnr">
-              <property name="toolTip">
-               <string>K-Nearest Neighbors Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(252, 249, 206);</string>
-              </property>
-              <property name="text">
-               <string>KNNR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QRadioButton" name="radioButton_voting">
-              <property name="text">
-               <string>Voting</string>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup_stack_vote</string>
-              </attribute>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_gbr">
-              <property name="toolTip">
-               <string>Gradient Boosting Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(187, 227, 250);</string>
-              </property>
-              <property name="text">
-               <string>GBR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_stack_vote">
-              <property name="text">
-               <string>ON</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_mlpr">
-              <property name="toolTip">
-               <string>Multi-layer Perceptron Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(252, 226, 251);</string>
-              </property>
-              <property name="text">
-               <string>MLPR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_gpr">
-              <property name="toolTip">
-               <string>Gaussian Process Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(251, 228, 170);</string>
-              </property>
-              <property name="text">
-               <string>GPR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_rfr">
-              <property name="toolTip">
-               <string>Random Forest Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(186, 253, 233);</string>
-              </property>
-              <property name="text">
-               <string>RFR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_svr">
-              <property name="toolTip">
-               <string>Support Vector Machines</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(206, 185, 167);</string>
-              </property>
-              <property name="text">
-               <string>SVR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QRadioButton" name="radioButton_stacking">
-              <property name="text">
-               <string>Stacking</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup_stack_vote</string>
-              </attribute>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_dtr">
-              <property name="toolTip">
-               <string>Decision Tree Regressor</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(202, 251, 201);</string>
-              </property>
-              <property name="text">
-               <string>DTR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_lasso">
-              <property name="toolTip">
-               <string>Lasso</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(233, 216, 252);</string>
-              </property>
-              <property name="text">
-               <string>LSS</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_en">
-              <property name="toolTip">
-               <string>ElasticNet</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(227, 200, 255);</string>
-              </property>
-              <property name="text">
-               <string>EN</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_etr">
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(161, 245, 173);</string>
-              </property>
-              <property name="text">
-               <string>ETR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QCheckBox" name="checkBox_stv_lr">
-              <property name="toolTip">
-               <string>LinearRegression</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(252, 222, 222);</string>
-              </property>
-              <property name="text">
-               <string>LR</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QCheckBox" name="checkBox_stv_abr">
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(208, 253, 151);</string>
-              </property>
-              <property name="text">
-               <string>ABR</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_9">
-         <property name="title">
-          <string>Cross Validate</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_9">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_cross_val">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_n_cross_val">
-            <property name="minimum">
-             <number>2</number>
-            </property>
-            <property name="value">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="2">
-        <widget class="QGroupBox" name="groupBox_16">
-         <property name="title">
-          <string>Bagging</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_32">
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_bagging">
-            <property name="minimum">
-             <number>5</number>
-            </property>
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="value">
-             <number>10</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_baggig">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox_11">
-         <property name="title">
-          <string>PCA</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_pca">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_pca">
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QCheckBox" name="checkBox_pca_mle">
-            <property name="text">
-             <string>mle</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QPushButton" name="pushButton_calc">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 204, 121);</string>
-         </property>
-         <property name="text">
-          <string>CALC</string>
-         </property>
-         <property name="autoRepeatInterval">
-          <number>100</number>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="pushButton_add_to_lineup">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(252, 204, 165);</string>
-         </property>
-         <property name="text">
-          <string>ADD TO LINEUP</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="2">
-        <widget class="QSplitter" name="splitter">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <widget class="QCheckBox" name="checkBox_save_model">
-          <property name="text">
-           <string>save</string>
-          </property>
+                     <string>sgd</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QGroupBox" name="groupBox_17">
-         <property name="title">
-          <string>PreProcess</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_37">
-          <item row="0" column="0">
-           <layout class="QGridLayout" name="gridLayout_31">
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_stdscaler_reg">
-              <property name="text">
-               <string>StandardScaler</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_robscaler_reg">
-              <property name="text">
-               <string>RobustScaler</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_mnmxscaler_reg">
-              <property name="text">
-               <string>MinMaxScaler</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QCheckBox" name="checkBox_mxabsscaler_reg">
-              <property name="text">
-               <string>MaxAbsScaler</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QPushButton" name="pushButton_random_param">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(220, 80, 221);</string>
-         </property>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_15">
+          <property name="title">
+           <string>LGBMRegressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_49">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_50">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="gridLayout_51">
+               <item row="0" column="0">
+                <widget class="QRadioButton" name="radioButton_lgbm">
+                 <property name="toolTip">
+                  <string>Gradient Boosting Regressor</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(187, 227, 250);</string>
+                 </property>
+                 <property name="text">
+                  <string>LGBM</string>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_59">
+                 <item row="0" column="0" colspan="2" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_30">
+                   <property name="text">
+                    <string>num_leaves</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QSpinBox" name="spinBox_lgbm_num_leaves">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>10</number>
+                   </property>
+                   <property name="value">
+                    <number>31</number>
+                   </property>
+                   <property name="displayIntegerBase">
+                    <number>10</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="2" column="0">
+                <layout class="QGridLayout" name="gridLayout_60">
+                 <item row="0" column="0" colspan="2" alignment="Qt::AlignBottom">
+                  <widget class="QLabel" name="label_31">
+                   <property name="text">
+                    <string>feature_fraction</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_feature">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.800000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_52">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_53">
+                 <item row="0" column="0">
+                  <layout class="QGridLayout" name="gridLayout_57">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_28">
+                     <property name="text">
+                      <string>l1</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_l1_lgbm">
+                     <property name="decimals">
+                      <number>5</number>
+                     </property>
+                     <property name="minimum">
+                      <double>0.000010000000000</double>
+                     </property>
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.010000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>0.100000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="1" column="0">
+                  <layout class="QGridLayout" name="gridLayout_58">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_29">
+                     <property name="text">
+                      <string>l2</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QDoubleSpinBox" name="doubleSpinBox_l2_lgbm">
+                     <property name="decimals">
+                      <number>5</number>
+                     </property>
+                     <property name="minimum">
+                      <double>0.000010000000000</double>
+                     </property>
+                     <property name="maximum">
+                      <double>1.000000000000000</double>
+                     </property>
+                     <property name="singleStep">
+                      <double>0.010000000000000</double>
+                     </property>
+                     <property name="value">
+                      <double>0.100000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_61">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_32">
+                   <property name="text">
+                    <string>learning_rate</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_lgbm">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000010000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.050000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="2" column="0">
+                <layout class="QGridLayout" name="gridLayout_54">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_33">
+                   <property name="text">
+                    <string>n_estimators</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QSpinBox" name="spinBox_estim_lgbm">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>50</number>
+                   </property>
+                   <property name="value">
+                    <number>100</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="2">
+              <layout class="QFormLayout" name="formLayout">
+               <item row="0" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_63">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_34">
+                   <property name="text">
+                    <string>min_child_samples</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QSpinBox" name="spinBox_lgbm_child">
+                   <property name="maximum">
+                    <number>5000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>2</number>
+                   </property>
+                   <property name="displayIntegerBase">
+                    <number>20</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_65">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_41">
+                   <property name="text">
+                    <string>subsample_freq</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QSpinBox" name="spinBox_lgbm_sub_freq">
+                   <property name="value">
+                    <number>5</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="3" column="0">
+                <widget class="Line" name="line">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0" colspan="2">
+                <layout class="QGridLayout" name="gridLayout_55">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_35">
+                   <property name="text">
+                    <string>subsample</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_subsample">
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.800000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <layout class="QGridLayout" name="gridLayout_68">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>KNeighbors Regressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_21">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_knn">
+               <property name="toolTip">
+                <string>K-Nearest Neighbors Regressor</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(252, 249, 206);</string>
+               </property>
+               <property name="text">
+                <string>KNNR</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_39">
+               <property name="text">
+                <string>N neighbors:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QCheckBox" name="checkBox_knn_weights">
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>weight</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QSpinBox" name="spinBox_neighbors">
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="value">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_13">
+          <property name="title">
+           <string>SVR</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_24">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_23">
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_8">
+               <property name="toolTip">
+                <string>Параметр регуляризации. Он контролирует компромисс между подгонкой данных и регуляризацией. Меньшие значения C приводят к более сильной регуляризации, что может помочь уменьшить переобучение. Большие значения C уменьшают регуляризацию, что может привести к лучшему соответствию данным.</string>
+               </property>
+               <property name="text">
+                <string>C:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_7">
+               <property name="toolTip">
+                <string>Ядро, которое определяет тип нелинейности в модели. </string>
+               </property>
+               <property name="text">
+                <string>kernel:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2" colspan="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_svr_c">
+               <property name="toolTip">
+                <string>Параметр регуляризации. Он контролирует компромисс между подгонкой данных и регуляризацией. Меньшие значения C приводят к более сильной регуляризации, что может помочь уменьшить переобучение. Большие значения C уменьшают регуляризацию, что может привести к лучшему соответствию данным.</string>
+               </property>
+               <property name="minimum">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>10.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2" colspan="2">
+              <widget class="QComboBox" name="comboBox_svr_kernel">
+               <property name="toolTip">
+                <string>Ядро, которое определяет тип нелинейности в модели. </string>
+               </property>
+               <property name="currentIndex">
+                <number>1</number>
+               </property>
+               <item>
+                <property name="text">
+                 <string>poly</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>rbf</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>linear</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>sigmoid</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_9">
+               <property name="text">
+                <string>epsilon</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="2" colspan="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_epsilon_svr">
+               <property name="decimals">
+                <number>4</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_gpc_2">
+               <property name="toolTip">
+                <string>Support Vector Machines</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(206, 185, 167);</string>
+               </property>
+               <property name="text">
+                <string>SVR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QGroupBox" name="groupBox_10">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>RandomForest</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_3">
+           <item row="0" column="0" colspan="2">
+            <layout class="QGridLayout" name="gridLayout_28">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="gridLayout_16">
+               <item row="0" column="0">
+                <widget class="QRadioButton" name="radioButton_rfr">
+                 <property name="toolTip">
+                  <string>Random Forest Regressor</string>
+                 </property>
+                 <property name="autoFillBackground">
+                  <bool>false</bool>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(186, 253, 233);</string>
+                 </property>
+                 <property name="text">
+                  <string>RFR</string>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="spinBox_rfr_n">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>10000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>50</number>
+                 </property>
+                 <property name="value">
+                  <number>100</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QLabel" name="label_11">
+                 <property name="text">
+                  <string>depth</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QLabel" name="label_12">
+                 <property name="text">
+                  <string>max_features</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QRadioButton" name="radioButton_etr">
+                 <property name="toolTip">
+                  <string>ExtraTrees</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(161, 245, 173);</string>
+                 </property>
+                 <property name="text">
+                  <string>ETR</string>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QRadioButton" name="radioButton_abr">
+                 <property name="toolTip">
+                  <string>AdaBoost</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(208, 253, 151);</string>
+                 </property>
+                 <property name="text">
+                  <string>ABR</string>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QSpinBox" name="spinBox_depth_rfr">
+                 <property name="value">
+                  <number>5</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QComboBox" name="comboBox_max_features_rfr">
+                 <item>
+                  <property name="text">
+                   <string>none</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>sqrt</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>log2</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0">
+              <layout class="QGridLayout" name="gridLayout_15">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_13">
+                 <property name="text">
+                  <string>min_samp_split</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="spinBox_min_sample_split">
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QLabel" name="label_14">
+                 <property name="text">
+                  <string>min_samp_leaf</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QSpinBox" name="spinBox_min_sample_leaf">
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="0">
+       <layout class="QGridLayout" name="gridLayout_67">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox_6">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>GradientBoosting Regressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_7">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_34">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="gridLayout_27">
+               <item row="0" column="0">
+                <widget class="QRadioButton" name="radioButton_gbc">
+                 <property name="toolTip">
+                  <string>Gradient Boosting Regressor</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">background-color: rgb(187, 227, 250);</string>
+                 </property>
+                 <property name="text">
+                  <string>GBR</string>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="buttonGroup">
+                  <string notr="true">buttonGroup</string>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout_25">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_5">
+                   <property name="toolTip">
+                    <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+                   </property>
+                   <property name="text">
+                    <string>learning_rate:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="label_6">
+                   <property name="toolTip">
+                    <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+                   </property>
+                   <property name="text">
+                    <string>n_estimators:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate_gbr">
+                   <property name="toolTip">
+                    <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+                   </property>
+                   <property name="minimum">
+                    <double>0.010000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.500000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QSpinBox" name="spinBox_n_estimators_gbr">
+                   <property name="toolTip">
+                    <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+                   </property>
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>10000</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>50</number>
+                   </property>
+                   <property name="value">
+                    <number>200</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0">
+              <layout class="QGridLayout" name="gridLayout_6">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_22">
+                 <property name="text">
+                  <string>max_depth</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1" colspan="2">
+                <widget class="QSpinBox" name="spinBox_depth_gbr">
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QLabel" name="label_16">
+                 <property name="text">
+                  <string>min_samp_leaf</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="4">
+                <widget class="QSpinBox" name="spinBox_min_sample_leaf_gbr">
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0" colspan="2">
+                <widget class="QLabel" name="label_15">
+                 <property name="text">
+                  <string>min_samp_split</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QSpinBox" name="spinBox_min_sample_split_gbr">
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QLabel" name="label_25">
+                 <property name="text">
+                  <string>subsample</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="4">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_subsample_gbr">
+                 <property name="value">
+                  <double>0.500000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_7">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>ElasticNet, Lasso</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_11">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_en">
+               <property name="toolTip">
+                <string>ElasticNet</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(227, 200, 255);</string>
+               </property>
+               <property name="text">
+                <string>EN</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label">
+               <property name="toolTip">
+                <string>Этот параметр контролирует общую силу регуляризации.</string>
+               </property>
+               <property name="text">
+                <string>alpha:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_2">
+               <property name="toolTip">
+                <string>Этот параметр определяет смешивание регрессии L1 и L2 в ElasticNet. Значение l1_ratio находится в диапазоне от 0 до 1. Когда l1_ratio = 0, это эквивалентно регрессии L2 (Ridge). Когда l1_ratio = 1, это эквивалентно регрессии L1 (Lasso). При значениях между 0 и 1, это комбинация обеих регрессий.</string>
+               </property>
+               <property name="text">
+                <string>l1_ratio:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QRadioButton" name="radioButton_lasso">
+               <property name="toolTip">
+                <string>Lasso</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(233, 216, 252);</string>
+               </property>
+               <property name="text">
+                <string>LSS</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha">
+               <property name="toolTip">
+                <string>Этот параметр контролирует общую силу регуляризации.</string>
+               </property>
+               <property name="decimals">
+                <number>1</number>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.500000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_l1_ratio">
+               <property name="toolTip">
+                <string>Этот параметр определяет смешивание регрессии L1 и L2 в ElasticNet. Значение l1_ratio находится в диапазоне от 0 до 1. Когда l1_ratio = 0, это эквивалентно регрессии L2 (Ridge). Когда l1_ratio = 1, это эквивалентно регрессии L1 (Lasso). При значениях между 0 и 1, это комбинация обеих регрессий.</string>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.010000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.500000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QGroupBox" name="groupBox_8">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>LinearRegression</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_20">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_13">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_lr">
+               <property name="toolTip">
+                <string/>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(252, 222, 222);</string>
+               </property>
+               <property name="text">
+                <string>LR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QCheckBox" name="checkBox_fit_intercept">
+               <property name="toolTip">
+                <string>fit_intercept, Определяет, нужно ли добавлять свободный член (пересечение) в модель. Если fit_intercept включен, то модель будет иметь угол наклона и свободный член (смещение). Если fit_intercept отключен, то угол наклона будет определен без свободного члена.</string>
+               </property>
+               <property name="text">
+                <string>fit</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QGroupBox" name="groupBox_4">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>DecisionTree</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_35">
+           <item row="0" column="0">
+            <widget class="QRadioButton" name="radioButton_dtr">
+             <property name="toolTip">
+              <string>Decision Tree Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(202, 251, 201);</string>
+             </property>
+             <property name="text">
+              <string>DTR</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_splitter_rnd">
+             <property name="toolTip">
+              <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
+             </property>
+             <property name="text">
+              <string>rnd</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="0">
+       <layout class="QGridLayout" name="gridLayout_66">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>GaussianProcess Regressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_41">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_40">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_gpr">
+               <property name="toolTip">
+                <string>Gaussian Process Regressor</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(251, 228, 170);</string>
+               </property>
+               <property name="text">
+                <string>GPR</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QGridLayout" name="gridLayout_39">
+               <item row="0" column="0">
+                <layout class="QGridLayout" name="gridLayout_26">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_37">
+                   <property name="text">
+                    <string>constant</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_const">
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000100000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>10000.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.100000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="0" column="1">
+                <layout class="QGridLayout" name="gridLayout_3">
+                 <item row="0" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_scale">
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>10000.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>2.500000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_26">
+                   <property name="text">
+                    <string>scale</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="0">
+                <layout class="QGridLayout" name="gridLayout_36">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_40">
+                   <property name="toolTip">
+                    <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+                   </property>
+                   <property name="text">
+                    <string>n_restart_optim:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QSpinBox" name="spinBox_gpr_n_restart">
+                   <property name="toolTip">
+                    <string>Определяет количество повторных запусков оптимизации параметров для выбора наилучшего значения. Это может помочь избежать локальных оптимумов.</string>
+                   </property>
+                   <property name="value">
+                    <number>5</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item row="1" column="1">
+                <layout class="QGridLayout" name="gridLayout_38">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_27">
+                   <property name="text">
+                    <string>alpha</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QDoubleSpinBox" name="doubleSpinBox_gpr_alpha">
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="decimals">
+                    <number>5</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000100000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1000.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000100000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_14">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>XGBoostRegressor</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_18">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_14">
+             <item row="0" column="0" colspan="2">
+              <widget class="QRadioButton" name="radioButton_gbc_7">
+               <property name="toolTip">
+                <string>Gradient Boosting Regressor</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(187, 227, 250);</string>
+               </property>
+               <property name="text">
+                <string>XGB</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="2" colspan="2">
+              <widget class="QLabel" name="label_19">
+               <property name="toolTip">
+                <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+               </property>
+               <property name="text">
+                <string>learning_rate:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4" colspan="2">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate_xgb">
+               <property name="toolTip">
+                <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+               </property>
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0" colspan="3">
+              <widget class="QLabel" name="label_20">
+               <property name="toolTip">
+                <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+               </property>
+               <property name="text">
+                <string>n_estimators:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QSpinBox" name="spinBox_n_estimators_xgb">
+               <property name="toolTip">
+                <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>10000</number>
+               </property>
+               <property name="singleStep">
+                <number>50</number>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>depth</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="5">
+              <widget class="QSpinBox" name="spinBox_depth_xgb">
+               <property name="toolTip">
+                <string>Это количество базовых моделей (например, деревьев решений), которые будут объединены для создания финальной модели. Большее количество деревьев может улучшить точность модели, но также увеличит время обучения. </string>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>10000</number>
+               </property>
+               <property name="singleStep">
+                <number>50</number>
+               </property>
+               <property name="value">
+                <number>10</number>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>alpha</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1" colspan="3">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_xgb">
+               <property name="toolTip">
+                <string>Этот параметр контролирует величину шага при обновлении весов моделей на каждой итерации бустинга. Меньшие значения learning_rate требуют большего числа деревьев для достижения хорошей точности, но могут улучшить устойчивость модели.</string>
+               </property>
+               <property name="decimals">
+                <number>5</number>
+               </property>
+               <property name="minimum">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>0.100000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QGroupBox" name="groupBox_19">
+          <property name="title">
+           <string>PyTorchModel</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_64">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_62">
+             <item row="0" column="0">
+              <widget class="QRadioButton" name="radioButton_torch">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(227, 200, 255);</string>
+               </property>
+               <property name="text">
+                <string>TORCH</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item row="0" column="1" rowspan="3">
+              <layout class="QGridLayout" name="gridLayout_71">
+               <item row="3" column="1">
+                <widget class="QLineEdit" name="lineEdit_layers_torch">
+                 <property name="toolTip">
+                  <string>количество и размер скрытых слоев в нейронной сети.</string>
+                 </property>
+                 <property name="text">
+                  <string>50 100 150 50</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label___">
+                 <property name="toolTip">
+                  <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+                 </property>
+                 <property name="text">
+                  <string>learning rate</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_24">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация - добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск переобучения.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>weight decay</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_decay_torch">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;L2-регуляризация, это добавляет штраф к функции потерь, побуждая модель изучать более мелкие веса и снижая риск &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="decimals">
+                  <number>6</number>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.001000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_45">
+                 <property name="toolTip">
+                  <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+                 </property>
+                 <property name="text">
+                  <string>dropout</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_torch">
+                 <property name="toolTip">
+                  <string>Этот параметр контролирует размер шага, с которым обновляются веса модели во время обучения. Более высокая скорость обучения может привести к более быстрой сходимости, но также может вызвать перепрыгивание через оптимальное решение.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>6</number>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.000100000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_dropout_torch">
+                 <property name="toolTip">
+                  <string>Это техника регуляризации, используемая для предотвращения переобучения. Она случайным образом отключает (обнуляет) определенный процент входных данных слоя во время обучения, делая модель более устойчивой.</string>
+                 </property>
+                 <property name="decimals">
+                  <number>6</number>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.010000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.010000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="0">
+                <widget class="QLabel" name="label_46">
+                 <property name="toolTip">
+                  <string>количество и размер скрытых слоев в нейронной сети.</string>
+                 </property>
+                 <property name="text">
+                  <string extracomment="50 100 50">hidden layers</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="2" rowspan="2">
+              <layout class="QGridLayout" name="gridLayout_30">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_17">
+                 <property name="toolTip">
+                  <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+                 </property>
+                 <property name="text">
+                  <string>epochs</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="spinBox_epochs_torch">
+                 <property name="toolTip">
+                  <string>Количество раз, когда вся обучающая выборка проходит через модель во время обучения.</string>
+                 </property>
+                 <property name="maximum">
+                  <number>10000</number>
+                 </property>
+                 <property name="value">
+                  <number>100</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="1" column="0" rowspan="2">
+              <layout class="QGridLayout" name="gridLayout_42">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_23">
+                 <property name="toolTip">
+                  <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>optimizer</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QComboBox" name="comboBox_optimizer_torch">
+                 <property name="toolTip">
+                  <string>&lt;p&gt;Алгоритм оптимизации:&lt;/p&gt;
+&lt;p&gt;Adam показывает хорошие результаты во многих случаях и является удачным выбором по умолчанию.&lt;/p&gt;
+&lt;p&gt;SGD может быть полезен, если вы работаете с очень большими наборами данных.&lt;/p&gt;
+&lt;p&gt;L-BFGS может быть целесообразен, если у вас небольшое количество параметров и вам необходима высокая точность.&lt;/p&gt;</string>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>Adam</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>SGD</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_18">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>loss function</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_21">
+                 <property name="toolTip">
+                  <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>activation func</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QComboBox" name="comboBox_activation_torch">
+                 <property name="toolTip">
+                  <string>&lt;p&gt;Функция активации, используемая в скрытых слоях нейронной сети&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;&lt;b&gt;ReLU&lt;/b&gt; является отличным выбором по умолчанию и хорошо работает во многих случаях &lt;i&gt;(возвращает значение x, если x больше 0, и 0 в противном случае)&lt;i/&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Sigmoid&lt;/b&gt; лучше всего подходит для двоичной классификации, где необходимо получить вероятностные прогнозы &lt;i&gt;(S-образная функция, которая отображает входные значения в диапазон от 0 до 1)&lt;/i&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;Tanh&lt;/b&gt; может быть предпочтительнее, чем sigmoid, когда требуется, чтобы выходы были центрированы вокруг нуля &lt;i&gt;(похожая на сигмоид функция, но она отображает входные значения в диапазон от -1 до 1)&lt;/i&gt;. &lt;/li&gt;&lt;/ul&gt;</string>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>ReLU</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QComboBox" name="comboBox_loss_torch">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Функция, используемая для вычисления ошибки между предсказаниями и истинными метками:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCELoss (Binary Cross-Entropy Loss)&lt;/span&gt;: Это функция потерь, используемая для задач двоичной классификации&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;BCEWithLogitsLoss&lt;/span&gt;: Этот вариант функции потерь объединяет вычисление двоичной перекрестной энтропии с применением сигмоидной активации на выходном слое. &lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;CrossEntropyLoss&lt;/span&gt;: Эта функция потерь используется для задач многоклассовой классификации, где выходы модели должны быть вероятностями принадлежности к каждому классу.&lt;/p&gt;</string>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>MSE</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>MAE</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>HuberLoss</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>SmoothL1Loss</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="2" column="2">
+              <layout class="QGridLayout" name="gridLayout_33">
+               <item row="0" column="0">
+                <widget class="QCheckBox" name="checkBox_estop_torch">
+                 <property name="text">
+                  <string>e-stop</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="spinBox_stop_patience">
+                 <property name="maximum">
+                  <number>100</number>
+                 </property>
+                 <property name="value">
+                  <number>20</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="1">
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0" colspan="3">
+       <widget class="QGroupBox" name="groupBox_12">
+        <property name="title">
+         <string>Выбросы</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_17">
+         <item row="0" column="0">
+          <widget class="QSpinBox" name="spinBox_lof_neighbor">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>100000</number>
+           </property>
+           <property name="value">
+            <number>20</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QPushButton" name="pushButton_lof">
+           <property name="text">
+            <string>LOF</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="3">
+       <widget class="QGroupBox" name="groupBox_5">
+        <property name="title">
+         <string>Stacking/Voting Regressor</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_10">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_4">
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_knnr">
+             <property name="toolTip">
+              <string>K-Nearest Neighbors Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(252, 249, 206);</string>
+             </property>
+             <property name="text">
+              <string>KNNR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QRadioButton" name="radioButton_voting">
+             <property name="text">
+              <string>Voting</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup_stack_vote</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_gbr">
+             <property name="toolTip">
+              <string>Gradient Boosting Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(187, 227, 250);</string>
+             </property>
+             <property name="text">
+              <string>GBR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_stack_vote">
+             <property name="text">
+              <string>ON</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_mlpr">
+             <property name="toolTip">
+              <string>Multi-layer Perceptron Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(252, 226, 251);</string>
+             </property>
+             <property name="text">
+              <string>MLPR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_gpr">
+             <property name="toolTip">
+              <string>Gaussian Process Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(251, 228, 170);</string>
+             </property>
+             <property name="text">
+              <string>GPR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_rfr">
+             <property name="toolTip">
+              <string>Random Forest Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(186, 253, 233);</string>
+             </property>
+             <property name="text">
+              <string>RFR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_svr">
+             <property name="toolTip">
+              <string>Support Vector Machines</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(206, 185, 167);</string>
+             </property>
+             <property name="text">
+              <string>SVR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QRadioButton" name="radioButton_stacking">
+             <property name="text">
+              <string>Stacking</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup_stack_vote</string>
+             </attribute>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_dtr">
+             <property name="toolTip">
+              <string>Decision Tree Regressor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(202, 251, 201);</string>
+             </property>
+             <property name="text">
+              <string>DTR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_lasso">
+             <property name="toolTip">
+              <string>Lasso</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(233, 216, 252);</string>
+             </property>
+             <property name="text">
+              <string>LSS</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_en">
+             <property name="toolTip">
+              <string>ElasticNet</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(227, 200, 255);</string>
+             </property>
+             <property name="text">
+              <string>EN</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_etr">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(161, 245, 173);</string>
+             </property>
+             <property name="text">
+              <string>ETR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QCheckBox" name="checkBox_stv_lr">
+             <property name="toolTip">
+              <string>LinearRegression</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(252, 222, 222);</string>
+             </property>
+             <property name="text">
+              <string>LR</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QCheckBox" name="checkBox_stv_abr">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(208, 253, 151);</string>
+             </property>
+             <property name="text">
+              <string>ABR</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox_9">
+        <property name="title">
+         <string>Cross Validate</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_9">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="checkBox_cross_val">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="spinBox_n_cross_val">
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QGroupBox" name="groupBox_16">
+        <property name="title">
+         <string>Bagging</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_32">
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="spinBox_bagging">
+           <property name="minimum">
+            <number>5</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
+           <property name="value">
+            <number>10</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="checkBox_baggig">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="QGroupBox" name="groupBox_11">
+        <property name="title">
+         <string>PCA</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_8">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="checkBox_pca">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="spinBox_pca">
+           <property name="maximum">
+            <number>1000</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QCheckBox" name="checkBox_pca_mle">
+           <property name="text">
+            <string>mle</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="pushButton_calc">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 204, 121);</string>
+        </property>
+        <property name="text">
+         <string>CALC</string>
+        </property>
+        <property name="autoRepeatInterval">
+         <number>100</number>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="pushButton_add_to_lineup">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(252, 204, 165);</string>
+        </property>
+        <property name="text">
+         <string>ADD TO LINEUP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QSplitter" name="splitter">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <widget class="QCheckBox" name="checkBox_save_model">
          <property name="text">
-          <string>RndPrm</string>
+          <string>save</string>
          </property>
         </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QPushButton" name="pushButton_search_param">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 85, 0);</string>
-         </property>
-         <property name="text">
-          <string>RndSearchParam</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </item>
-  </layout>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QGroupBox" name="groupBox_17">
+        <property name="title">
+         <string>PreProcess</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_37">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_31">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_stdscaler_reg">
+             <property name="text">
+              <string>StandardScaler</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_robscaler_reg">
+             <property name="text">
+              <string>RobustScaler</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="checkBox_mnmxscaler_reg">
+             <property name="text">
+              <string>MinMaxScaler</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_mxabsscaler_reg">
+             <property name="text">
+              <string>MaxAbsScaler</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QPushButton" name="pushButton_random_param">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(220, 80, 221);</string>
+        </property>
+        <property name="text">
+         <string>RndPrm</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QPushButton" name="pushButton_search_param">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 85, 0);</string>
+        </property>
+        <property name="text">
+         <string>RndSearchParam</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="1">
+     <widget class="Line" name="line_2">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
  </widget>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_stack_vote"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_stack_vote"/>
  </buttongroups>
 </ui>

@@ -94,12 +94,23 @@ import matplotlib.patches as patches
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE, RFECV
 from sklearn.pipeline import Pipeline
+from sklearn.pipeline import FeatureUnion
+from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, CategoricalNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import mean_squared_error, roc_curve, auc
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.metrics import r2_score, precision_score, recall_score, f1_score, accuracy_score
 from imblearn.over_sampling import SMOTE, ADASYN
+
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
+from skorch import NeuralNetClassifier, NeuralNetRegressor
+
+
+from skorch.dataset import ValidSplit
+from skorch.callbacks import EarlyStopping
 
 from yellowbrick.classifier import DiscriminationThreshold
 
