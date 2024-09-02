@@ -39,8 +39,6 @@ class Ui_FeatureSelection(object):
         self.comboBox_method.addItem("")
         self.comboBox_method.addItem("")
         self.comboBox_method.addItem("")
-        self.comboBox_method.addItem("")
-        self.comboBox_method.addItem("")
         self.gridLayout.addWidget(self.comboBox_method, 1, 0, 1, 1)
         self.doubleSpinBox_threshold = QtWidgets.QDoubleSpinBox(FeatureSelection)
         self.doubleSpinBox_threshold.setMaximum(1.0)
@@ -65,9 +63,7 @@ class Ui_FeatureSelection(object):
         self.comboBox_method.setItemText(0, _translate("FeatureSelection", "Quasi-constant"))
         self.comboBox_method.setItemText(1, _translate("FeatureSelection", "SelectKBest"))
         self.comboBox_method.setItemText(2, _translate("FeatureSelection", "SelectPercentile"))
-        self.comboBox_method.setItemText(3, _translate("FeatureSelection", "FisherScore"))
-        self.comboBox_method.setItemText(4, _translate("FeatureSelection", "F-value"))
-        self.comboBox_method.setItemText(5, _translate("FeatureSelection", "Correlation"))
+        self.comboBox_method.setItemText(3, _translate("FeatureSelection", "Correlation"))
         self.pushButton_select_features.setText(_translate("FeatureSelection", "calc"))
 
 
