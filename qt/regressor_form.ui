@@ -13,12 +13,12 @@
   <property name="windowTitle">
    <string>Regression</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>14</x>
      <y>12</y>
-     <width>967</width>
+     <width>968</width>
      <height>704</height>
     </rect>
    </property>
@@ -2247,6 +2247,16 @@
         </property>
         <property name="text">
          <string>RndSearchParam</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QPushButton" name="pushButton_feature_selection">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(252, 204, 165);</string>
+        </property>
+        <property name="text">
+         <string>FeatureSelection</string>
         </property>
        </widget>
       </item>

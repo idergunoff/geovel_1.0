@@ -41,6 +41,7 @@ from qt.torch_regressor import *
 from qt.rename_model import *
 from qt.random_param import *
 from qt.random_search_reg import *
+from qt.feature_selection import *
 
 import numpy as np
 import pyqtgraph as pg

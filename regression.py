@@ -3,7 +3,7 @@ from func import *
 from build_table import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
-
+from feature_selection import *
 
 
 class RegressionModel(nn.Module):
@@ -1829,11 +1829,15 @@ def train_regression_model():
 
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
+    def call_feature_selection():
+        feature_selection(data_train[list_param_reg], data_train['target_value'])
+
     ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     ui_r.pushButton_search_param.clicked.connect(random_search_reg)
     ui_r.pushButton_random_param.clicked.connect(push_random_param_reg)
+    ui_r.pushButton_feature_selection.clicked.connect(call_feature_selection)
     Regressor.exec_()
 
 
