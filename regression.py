@@ -1,3 +1,5 @@
+import json
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from build_table import *
@@ -1654,6 +1656,7 @@ def train_regression_model():
 
         colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
 
+
         Form_LOF = QtWidgets.QDialog()
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
@@ -1712,11 +1715,13 @@ def train_regression_model():
                 ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
                 session.commit()
 
+            new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
             Regressor.close()
             Form_LOF.close()
-            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
+                {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
             session.commit()
-            build_table_train(False, 'regmod')
+            # build_table_train(False, 'regmod')
             update_list_well_markup_reg()
             # show_regression_form(data_train_clean, list_param)
 
