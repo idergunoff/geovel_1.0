@@ -952,9 +952,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
                 Classifier.close()
                 Form_LOF.close()
-                session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+
+                new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
+
+                session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update(
+                    {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
                 session.commit()
-                build_table_train(False, 'mlp')
+
                 update_list_well_markup_mlp()
             if type_case == 'geochem':
                 for ix in lof_index:

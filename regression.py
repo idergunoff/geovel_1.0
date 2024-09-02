@@ -1,3 +1,5 @@
+import json
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from build_table import *
@@ -311,10 +313,11 @@ def add_param_geovel_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_reg.currentText()
-    for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
-        if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
-            set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
-            return
+    if not param in list_all_additional_features:
+        for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+                set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                return
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
             parameter= param
@@ -327,7 +330,7 @@ def add_param_geovel_reg():
 
 
 def add_all_param_geovel_reg():
-    new_list_param = list_param_geovel.copy()
+    new_list_param = list_param_geovel + list_all_additional_features
     for param in list_param_geovel:
         for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
@@ -509,12 +512,17 @@ def train_regression_model():
     """ Расчет регрессионной модели """
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
-    list_nan_param, count_nan = [], 0
+    list_nan_param, count_nan = set(), 0
     for i in data_train.index:
         for param in list_param_reg:
             if pd.isna(data_train[param][i]):
                 count_nan += 1
-                list_nan_param.append(param)
+                list_nan_param.add(param)
+            if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
+                data_train[param][i] = 0
+                count_nan += 1
+                list_nan_param.add(param)
+
     if count_nan > 0:
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
@@ -1648,6 +1656,7 @@ def train_regression_model():
 
         colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
 
+
         Form_LOF = QtWidgets.QDialog()
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
@@ -1706,11 +1715,13 @@ def train_regression_model():
                 ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
                 session.commit()
 
+            new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
             Regressor.close()
             Form_LOF.close()
-            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
+                {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
             session.commit()
-            build_table_train(False, 'regmod')
+            # build_table_train(False, 'regmod')
             update_list_well_markup_reg()
             # show_regression_form(data_train_clean, list_param)
 
