@@ -1211,32 +1211,12 @@ def set_param_lda_to_combobox():
 
 
 def set_param_mlp_to_combobox():
-    for param in list_param_geovel:
+    for param in list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_mlp.addItem(param)
-    for i in list_wavelet_features:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_fractal_features:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_entropy_features:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_nonlinear_features:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_morphology_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_frequency_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_envelope_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_autocorr_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_emd_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
-    for i in list_hht_feature:
-        ui.comboBox_geovel_param_mlp.addItem(i)
 
 
 def set_param_regmod_to_combobox():
-    for param in list_param_geovel:
+    for param in list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_reg.addItem(param)
 
 

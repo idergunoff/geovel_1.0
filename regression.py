@@ -284,10 +284,11 @@ def add_param_geovel_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_reg.currentText()
-    for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
-        if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
-            set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
-            return
+    if not param in list_all_additional_features:
+        for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+                set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                return
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
             parameter= param
@@ -300,7 +301,7 @@ def add_param_geovel_reg():
 
 
 def add_all_param_geovel_reg():
-    new_list_param = list_param_geovel.copy()
+    new_list_param = list_param_geovel + list_all_additional_features
     for param in list_param_geovel:
         for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
