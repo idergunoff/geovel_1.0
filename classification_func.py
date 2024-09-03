@@ -621,7 +621,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         # Оценка точности на всей обучающей выборке
         test_accuracy = pipe.score(training_sample_test, markup_test)
         if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
-            train_accuracy = pipe.score(training_sample, np.array([labels[i] for i in markup]), dtype=np.float32)
+            train_accuracy = pipe.score(training_sample, np.array([labels[i] for i in markup], dtype=np.float32))
         else:
             train_accuracy = pipe.score(training_sample, markup)
         train_time = datetime.datetime.now() - start_time
