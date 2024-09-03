@@ -323,35 +323,70 @@ def updatePlot():
     ui.signal.getAxis('left').setLabel('Время, нсек')
 
 
+
+
+
+@lru_cache(maxsize=None)
+def get_grid_data(grid_id):
+    grid = session.query(CommonGrid).filter(CommonGrid.id == grid_id).first()
+    return np.array(json.loads(grid.grid_table))[:, :2]
+
+
+@lru_cache(maxsize=None)
+def get_profile_coords(profile_id):
+    profile = session.query(Profile.x_pulc, Profile.y_pulc).filter(Profile.id == profile_id).first()
+    x_prof, y_prof = json.loads(profile.x_pulc), json.loads(profile.y_pulc)
+    return np.array([[x_prof[0], y_prof[0]], [x_prof[-1], y_prof[-1]]])
+
+
+def check_profile_grid_by_start_stop(p_id, g_id, min_dist=100):
+    grid_data = get_grid_data(g_id)
+    profile_coords = get_profile_coords(p_id)
+
+    tree = cKDTree(grid_data)
+    distances, _ = tree.query(profile_coords, k=1)
+    return np.all(distances < min_dist)
+
+
 def update_profile_combobox():
     """ Обновление списка профилей в выпадающем списке """
-
-    ui.label_4.setText(f'Объект ({calc_object_measures()} изм)')
+    n_measures = calc_object_measures()
+    ui.label_4.setText(f'Объект ({n_measures} изм)')
+    ui.label_4.setToolTip(f'{str(n_measures * 2.5)} м')
 
     # Очистка выпадающего списка
     ui.comboBox_profile.clear()
-    try:
-        # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
-        for i in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
-            count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == i.id).first()[0]))
-            ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
-        # Обновление списка формирований
-        update_formation_combobox()
-        update_layers()
-    except ValueError:
-        # Если возникла ошибка при обновлении списка профилей, просто проигнорировать ее
-        pass
-    # Если в объекте есть график, изменить цвет кнопок на зеленый
-    if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-        ui.pushButton_uf.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_m.setStyleSheet('background: rgb(191, 255, 191)')
-        ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)')
-    else:
-        # Если в объекте нет графика, изменить цвет кнопок на красный
-        ui.pushButton_uf.setStyleSheet('background: rgb(255, 185, 185)')
-        ui.pushButton_m.setStyleSheet('background:  rgb(255, 185, 185)')
-        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
 
+    # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
+    for i in profiles:
+        count_measure = len(json.loads(i.signal))
+        ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
+
+    # Обновление списка формирований
+    update_formation_combobox()
+    update_layers()
+
+    grids = {
+        'r': session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all(),
+        'm': session.query(CommonGrid.id).filter(CommonGrid.type == 'm').all(),
+        'uf': session.query(CommonGrid.id).filter(CommonGrid.type == 'uf').all()
+    }
+
+    for grid_type, grid_list in grids.items():
+        if not grid_list:
+            getattr(ui, f'pushButton_{grid_type}').setStyleSheet('background: rgb(255, 185, 185)')
+            continue
+
+        flag = True
+        for profile in profiles:
+            if not any(check_profile_grid_by_start_stop(profile.id, grid.id) for grid in grid_list):
+                flag = False
+                break
+
+        getattr(ui, f'pushButton_{grid_type}').setStyleSheet(
+            'background: rgb(191, 255, 191)' if flag else 'background: rgb(255, 185, 185)'
+        )
     check_coordinates_profile()
     check_grid_relief()
 

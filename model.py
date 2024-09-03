@@ -185,6 +185,15 @@ class Grid(Base):
     object = relationship('GeoradarObject', back_populates='grid')
 
 
+class CommonGrid(Base):
+    __tablename__ = 'common_grid'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    type = Column(String)
+    grid_table = Column(Text)
+
+
 class FFTSpectr(Base):
     __tablename__ = 'fft_spectr'
 

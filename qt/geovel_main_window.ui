@@ -94,113 +94,34 @@
               <string>Main</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
-              <item row="20" column="0">
-               <widget class="QLabel" name="label_26">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_7">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
                   <italic>true</italic>
+                  <underline>false</underline>
+                  <strikeout>false</strikeout>
+                  <kerning>true</kerning>
                  </font>
                 </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
                 <property name="text">
-                 <string>Карты</string>
+                 <string>Фурье</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
                 </property>
                </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Другие</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_3">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                  <underline>true</underline>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Фильтрация</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="15" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QCheckBox" name="checkBox_2degree">
-                  <property name="text">
-                   <string>^2</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_type_dct">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>4</number>
-                  </property>
-                  <property name="value">
-                   <number>2</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_ceps_koef">
-                  <property name="text">
-                   <string>koef</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="21" column="0">
-               <layout class="QGridLayout" name="gridLayout_88">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_map">
-                  <property name="text">
-                   <string>MAP</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_get_attributes">
-                  <property name="text">
-                   <string>GET ATTRIBUTES</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
               </item>
               <item row="22" column="0">
-               <layout class="QGridLayout" name="gridLayout_94">
+               <layout class="QGridLayout" name="gridLayout_94" columnstretch="2,1,1,0">
+                <item row="0" column="2">
+                 <widget class="QCheckBox" name="checkBox_common_grid_for_map">
+                  <property name="text">
+                   <string>common grid</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="0" column="0">
                  <widget class="QPushButton" name="pushButton_profiles">
                   <property name="text">
@@ -491,24 +412,54 @@
                 </item>
                </layout>
               </item>
-              <item row="14" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
-                <property name="text">
-                 <string>Кепструм</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
+              <item row="15" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QCheckBox" name="checkBox_2degree">
+                  <property name="text">
+                   <string>^2</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_type_dct">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>4</number>
+                  </property>
+                  <property name="value">
+                   <number>2</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_ceps_koef">
+                  <property name="text">
+                   <string>koef</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="21" column="0">
+               <layout class="QGridLayout" name="gridLayout_88">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_map">
+                  <property name="text">
+                   <string>MAP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_get_attributes">
+                  <property name="text">
+                   <string>GET ATTRIBUTES</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item row="16" column="0">
                <layout class="QGridLayout" name="gridLayout_9">
@@ -556,13 +507,22 @@
                 </item>
                </layout>
               </item>
-              <item row="17" column="0">
-               <widget class="QPushButton" name="pushButton_secret_filter">
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(255, 163, 72);</string>
+              <item row="20" column="0">
+               <widget class="QLabel" name="label_26">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
                 </property>
                 <property name="text">
-                 <string>CRL-filter</string>
+                 <string>Карты</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
@@ -573,18 +533,46 @@
                 </property>
                </widget>
               </item>
-              <item row="25" column="0">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
+              <item row="13" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_13">
+                <item>
+                 <widget class="QPushButton" name="pushButton_slide">
+                  <property name="text">
+                   <string>moving avg</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_window">
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="Line" name="line_7">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
                 </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
+                <property name="text">
+                 <string>Другие</string>
                 </property>
-               </spacer>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
               </item>
               <item row="6" column="0">
                <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0,0,0,0">
@@ -830,44 +818,21 @@
                 </item>
                </layout>
               </item>
-              <item row="13" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_13">
-                <item>
-                 <widget class="QPushButton" name="pushButton_slide">
-                  <property name="text">
-                   <string>moving avg</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_window">
-                  <property name="value">
-                   <number>3</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="Line" name="line_7">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_7">
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_3">
                 <property name="font">
                  <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                  <underline>false</underline>
-                  <strikeout>false</strikeout>
-                  <kerning>true</kerning>
+                  <pointsize>10</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                  <underline>true</underline>
                  </font>
                 </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
                 <property name="text">
-                 <string>Фурье</string>
+                 <string>Фильтрация</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -953,6 +918,48 @@
                  </layout>
                 </item>
                </layout>
+              </item>
+              <item row="17" column="0">
+               <widget class="QPushButton" name="pushButton_secret_filter">
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 163, 72);</string>
+                </property>
+                <property name="text">
+                 <string>CRL-filter</string>
+                </property>
+               </widget>
+              </item>
+              <item row="25" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="14" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Кепструм</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -1117,8 +1124,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>58</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">

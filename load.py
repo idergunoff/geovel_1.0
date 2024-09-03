@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib.pyplot import title
 
 from func import *
 from wgs_to_pulc import wgs84_to_pulc42
@@ -534,16 +535,19 @@ def load_uf_grid():
             caption=f'Выберите grid-файл структурной карты по кровле продуктивного пласта по объекту {get_object_name()}',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
+        fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
-        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
-                {'grid_table_uf': json.dumps(tab_grid)}, synchronize_session="fetch"
-            )
-        else:
-            new_grid = Grid(object_id=get_object_id(), grid_table_uf=json.dumps(tab_grid))
-            session.add(new_grid)
+        new_common_grid = CommonGrid(title = fn, type='uf', grid_table=json.dumps(tab_grid))
+        session.add(new_common_grid)
+        # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+        #     session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+        #         {'grid_table_uf': json.dumps(tab_grid)}, synchronize_session="fetch"
+        #     )
+        # else:
+        #     new_grid = Grid(object_id=get_object_id(), grid_table_uf=json.dumps(tab_grid))
+        #     session.add(new_grid)
         session.commit()
-        set_info(f'Загружен grid-файл структурной карты по кровле продуктивного пласта по объекту {get_object_name()}', 'green')
+        set_info(f'Загружен grid-файл структурной карты по кровле продуктивного пласта', 'green')
     except FileNotFoundError:
         return
 
@@ -554,16 +558,19 @@ def load_m_grid():
             caption=f'Выберите grid-файл карты мощности продуктивного пласта по объекту {get_object_name()}',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
+        fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
-        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
-                {'grid_table_m': json.dumps(tab_grid)}, synchronize_session="fetch"
-            )
-        else:
-            new_grid = Grid(object_id=get_object_id(), grid_table_m=json.dumps(tab_grid))
-            session.add(new_grid)
+        new_common_grid = CommonGrid(title = fn, type='m', grid_table=json.dumps(tab_grid))
+        session.add(new_common_grid)
+        # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+        #     session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+        #         {'grid_table_m': json.dumps(tab_grid)}, synchronize_session="fetch"
+        #     )
+        # else:
+        #     new_grid = Grid(object_id=get_object_id(), grid_table_m=json.dumps(tab_grid))
+        #     session.add(new_grid)
         session.commit()
-        set_info(f'Загружен grid-файл карты мощности продуктивного пласта по объекту {get_object_name()}', 'green')
+        set_info(f'Загружен grid-файл карты мощности продуктивного пласта', 'green')
     except FileNotFoundError:
         return
 
@@ -574,16 +581,19 @@ def load_r_grid():
             caption=f'Выберите grid-файл карты рельефа по объекту {get_object_name()}',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
+        fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
-        if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-            session.query(Grid).filter(Grid.object_id == get_object_id()).update(
-                {'grid_table_r': json.dumps(tab_grid)}, synchronize_session="fetch"
-            )
-        else:
-            new_grid = Grid(object_id=get_object_id(), grid_table_r=json.dumps(tab_grid))
-            session.add(new_grid)
+        new_common_grid = CommonGrid(title = fn, type='r', grid_table=json.dumps(tab_grid))
+        session.add(new_common_grid)
+        # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
+        #     session.query(Grid).filter(Grid.object_id == get_object_id()).update(
+        #         {'grid_table_r': json.dumps(tab_grid)}, synchronize_session="fetch"
+        #     )
+        # else:
+        #     new_grid = Grid(object_id=get_object_id(), grid_table_r=json.dumps(tab_grid))
+        #     session.add(new_grid)
         session.commit()
-        set_info(f'Загружен grid-файл карты рельефа по объекту {get_object_name()}', 'green')
+        set_info(f'Загружен grid-файл карты рельефа', 'green')
     except FileNotFoundError:
         return
 

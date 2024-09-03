@@ -64,6 +64,7 @@ from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from scipy.special import softmax
+from scipy.spatial import cKDTree
 from scipy.spatial.distance import pdist, squareform
 from scipy.ndimage import binary_erosion, binary_dilation
 
@@ -108,7 +109,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
 from skorch import NeuralNetClassifier, NeuralNetRegressor
-
 
 from skorch.dataset import ValidSplit
 from skorch.callbacks import EarlyStopping
