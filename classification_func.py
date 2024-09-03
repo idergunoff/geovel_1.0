@@ -678,7 +678,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             else:
                 scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
-        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC':
+        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or \
+                model_name == 'ABC' or model_name == 'LGBM':
             if not ui_cls.checkBox_baggig.isChecked():
                 imp_name_params, imp_params = [], []
                 if not ui_cls.checkBox_calibr.isChecked():

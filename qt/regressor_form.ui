@@ -840,11 +840,6 @@
                  <widget class="QComboBox" name="comboBox_max_features_rfr">
                   <item>
                    <property name="text">
-                    <string>none</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
                     <string>sqrt</string>
                    </property>
                   </item>
@@ -1831,6 +1826,26 @@
      </item>
      <item row="0" column="1">
       <layout class="QGridLayout" name="gridLayout">
+       <item row="5" column="1">
+        <widget class="QPushButton" name="pushButton_random_param">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(220, 80, 221);</string>
+         </property>
+         <property name="text">
+          <string>RndPrm</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QPushButton" name="pushButton_search_param">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 85, 0);</string>
+         </property>
+         <property name="text">
+          <string>RndSearchParam</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0" colspan="3">
         <widget class="QGroupBox" name="groupBox_12">
          <property name="title">
@@ -2108,6 +2123,18 @@
          </layout>
         </widget>
        </item>
+       <item row="4" column="2">
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <widget class="QCheckBox" name="checkBox_save_model">
+          <property name="text">
+           <string>save</string>
+          </property>
+         </widget>
+        </widget>
+       </item>
        <item row="3" column="0" colspan="3">
         <widget class="QGroupBox" name="groupBox_11">
          <property name="title">
@@ -2167,18 +2194,6 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
-        <widget class="QSplitter" name="splitter">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <widget class="QCheckBox" name="checkBox_save_model">
-          <property name="text">
-           <string>save</string>
-          </property>
-         </widget>
-        </widget>
-       </item>
        <item row="2" column="1">
         <widget class="QGroupBox" name="groupBox_17">
          <property name="title">
@@ -2223,23 +2238,13 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QPushButton" name="pushButton_random_param">
+       <item row="5" column="2">
+        <widget class="QPushButton" name="pushButton_feature_selection">
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(220, 80, 221);</string>
+          <string notr="true">background-color: rgb(252, 204, 165);</string>
          </property>
          <property name="text">
-          <string>RndPrm</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QPushButton" name="pushButton_search_param">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 85, 0);</string>
-         </property>
-         <property name="text">
-          <string>RndSearchParam</string>
+          <string>PushButton</string>
          </property>
         </widget>
        </item>

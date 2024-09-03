@@ -838,7 +838,8 @@ def calc_class_profile():
     Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
-
+        labels = set_marks()
+        labels_dict = {value: key for key, value in labels.items()}
         model = session.query(TrainedModelClass).filter_by(
             id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
 
@@ -887,6 +888,11 @@ def calc_class_profile():
         # Добавление предсказанных меток и вероятностей в рабочие данные
         working_data_result = pd.concat([working_data_class, pd.DataFrame(probability)], axis=1)
         working_data_result['mark'] = mark
+        if 'TORCH' in model.title:
+            working_data_result['mark'] = working_data_result['mark'].map(labels_dict)
+
+        pd.set_option('display.max_columns', None)
+        print('working_data_result ', working_data_result)
 
         draw_result_mlp(working_data_result, curr_form, ui_rm.checkBox_color_marker.isChecked())
 
@@ -904,6 +910,9 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
 
     col = working_data.columns[-3]
+    print('col ', col)
+    print(working_data[col])
+
 
     previous_element = None
     list_dupl = []
@@ -986,8 +995,18 @@ def get_color_rainbow(probability):
     ]
     try:
         return rainbow_colors[int(probability * 10)]
-    except IndexError:
+    except (IndexError, ValueError):
         return '#FF0000'
+
+def set_marks():
+    list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
+    labels = {}
+    labels[list_cat[0]] = 0
+    labels[list_cat[1]] = 1
+    if len(list_cat) > 2:
+        for index, i in enumerate(list_cat[2:]):
+            labels[i] = index
+    return labels
 
 
 def calc_object_class():
