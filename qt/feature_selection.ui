@@ -11,78 +11,133 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Feature Selection</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_3">
+  <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout_2">
+    <widget class="QLabel" name="label_params">
+     <property name="text">
+      <string>Параметры:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="label_info">
+     <property name="text">
+      <string>Отчет:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QListWidget" name="listWidget_features"/>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPlainTextEdit" name="plainTextEdit_results"/>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <layout class="QGridLayout" name="gridLayout">
      <item row="0" column="0">
-      <widget class="QListWidget" name="listWidget_features"/>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>method</string>
+       </property>
+      </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QPlainTextEdit" name="plainTextEdit_results"/>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>threshold</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>params</string>
+       </property>
+      </widget>
      </item>
      <item row="1" column="0">
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>method</string>
-         </property>
-        </widget>
+      <widget class="QComboBox" name="comboBox_method">
+       <item>
+        <property name="text">
+         <string>Quasi-constant</string>
+        </property>
        </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>threshold</string>
-         </property>
-        </widget>
+       <item>
+        <property name="text">
+         <string>SelectKBest</string>
+        </property>
        </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="comboBox_method">
-         <item>
-          <property name="text">
-           <string>Quasi-constant</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>SelectKBest</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>SelectPercentile</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Correlation</string>
-          </property>
-         </item>
-        </widget>
+       <item>
+        <property name="text">
+         <string>SelectPercentile</string>
+        </property>
        </item>
-       <item row="1" column="1">
-        <widget class="QDoubleSpinBox" name="doubleSpinBox_threshold">
-         <property name="maximum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>0.010000000000000</double>
-         </property>
-        </widget>
+       <item>
+        <property name="text">
+         <string>Correlation</string>
+        </property>
        </item>
-       <item row="1" column="2">
-        <widget class="QPushButton" name="pushButton_select_features">
-         <property name="text">
-          <string>calc</string>
-         </property>
-        </widget>
+       <item>
+        <property name="text">
+         <string>Forward Selection</string>
+        </property>
        </item>
-      </layout>
+       <item>
+        <property name="text">
+         <string>Backward Selection</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>LASSO</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Random Forest</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Boruta</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBox_threshold">
+       <property name="maximum">
+        <double>1.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.010000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QSpinBox" name="spinBox_num_param">
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QPushButton" name="pushButton_select_features">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 255, 191);</string>
+       </property>
+       <property name="text">
+        <string>calc</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
