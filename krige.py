@@ -1,4 +1,7 @@
+from cProfile import label
+
 import matplotlib.pyplot as plt
+import numpy as np
 from sqlalchemy.exc import OperationalError
 
 from func import *
@@ -19,7 +22,9 @@ dist_func_list = ['euclidean', 'braycurtis', 'canberra', 'chebyshev', 'cityblock
                   'rogerstanimoto', 'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean', 'yule']
 
 
-
+def convex_hull_boundary(points):
+    hull = ConvexHull(points)
+    return hull
 
 def show_map():
     global list_z
@@ -270,15 +275,26 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
 
 def show_profiles():
     r_id = get_research_id()
-    r = session.query(Research).filter_by(id=r_id).first()
     list_x, list_y = [], []
-    for profile in r.profiles:
-        try:
-            list_x += (json.loads(profile.x_pulc))
-            list_y += (json.loads(profile.y_pulc))
-        except TypeError:
-            set_info(f'Не загружены координаты {profile.title}', 'red')
-            pass
+    if ui.checkBox_prof_all.isChecked():
+       for r in session.query(Research).all():
+           for profile in r.profiles:
+               try:
+                   list_x += (json.loads(profile.x_pulc))
+                   list_y += (json.loads(profile.y_pulc))
+               except TypeError:
+                   set_info(f'Не загружены координаты {profile.title}', 'red')
+                   pass
+    else:
+
+        r = session.query(Research).filter_by(id=r_id).first()
+        for profile in r.profiles:
+            try:
+                list_x += (json.loads(profile.x_pulc))
+                list_y += (json.loads(profile.y_pulc))
+            except TypeError:
+                set_info(f'Не загружены координаты {profile.title}', 'red')
+                pass
 
     x = np.array(list_x)
     y = np.array(list_y)
@@ -301,8 +317,35 @@ def show_profiles():
         plt.plot([min_x_uf, max_x_uf, max_x_uf, min_x_uf, min_x_uf], [min_y_uf, min_y_uf, max_y_uf, max_y_uf, min_y_uf], color='red', label='сетка уфы')
 
 
+    if ui.checkBox_common_grid_for_map.isChecked():
+        grid_types = {
+            'uf': ('red', 'сетка уфы'),
+            'm': ('green', 'сетка мощности'),
+            'r': ('blue', 'сетка рельефа')
+        }
+
+        for g in session.query(CommonGrid).all():
+            if g.type in grid_types:
+                color, label = grid_types[g.type]
+                points = np.array(json.loads(g.grid_table))[:, :2]
+                hull = convex_hull_boundary(points)
+
+                # Рисуем границу
+                for simplex in hull.simplices:
+                    plt.plot(points[simplex, 0], points[simplex, 1], color=color, linestyle='-', label=label)
+
+                # Убираем дубликаты в легенде
+                handles, labels = plt.gca().get_legend_handles_labels()
+                by_label = dict(zip(labels, handles))
+                plt.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1, 0.5))
+
+
+
+
+
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
     if ui.checkBox_profile_title.isChecked():
+        r = session.query(Research).filter_by(id=r_id).first()
         for profile in r.profiles:
             try:
                 plt.text(json.loads(profile.x_pulc)[0] + 20, json.loads(profile.y_pulc)[0] + 20, profile.title, fontsize=10, color='green')
@@ -323,7 +366,7 @@ def show_profiles():
 
     plt.xlabel('X')
     plt.ylabel('Y')
-    plt.legend()
+    # plt.legend()
 
     plt.title('Профили')
     plt.tight_layout()

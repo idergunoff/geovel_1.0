@@ -537,6 +537,7 @@ def load_uf_grid():
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        tab_grid = [row for row in tab_grid if not is_invalid(row[2])]
         new_common_grid = CommonGrid(title = fn, type='uf', grid_table=json.dumps(tab_grid))
         session.add(new_common_grid)
         # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
@@ -560,6 +561,7 @@ def load_m_grid():
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        tab_grid = [row for row in tab_grid if not is_invalid(row[2])]
         new_common_grid = CommonGrid(title = fn, type='m', grid_table=json.dumps(tab_grid))
         session.add(new_common_grid)
         # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
@@ -583,6 +585,7 @@ def load_r_grid():
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
         tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
+        tab_grid = [row for row in tab_grid if not is_invalid(row[2])]
         new_common_grid = CommonGrid(title = fn, type='r', grid_table=json.dumps(tab_grid))
         session.add(new_common_grid)
         # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:

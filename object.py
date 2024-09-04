@@ -64,7 +64,7 @@ from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
 from scipy.interpolate import splrep, splev
 from scipy.signal.windows import cosine
 from scipy.special import softmax
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, ConvexHull
 from scipy.spatial.distance import pdist, squareform
 from scipy.ndimage import binary_erosion, binary_dilation
 

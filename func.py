@@ -1,4 +1,5 @@
 # from torch.cuda import graph
+import numpy as np
 
 from object import *
 
@@ -144,6 +145,9 @@ def get_profile_name():
 def query_to_list(query):
     """ результаты запроса в список """
     return sum(list(map(list, query)), [])
+
+def is_invalid(value, threshold=1.7e38):
+    return math.isnan(value) or math.isinf(value) or value > threshold
 
 
 # Функция отображения радарограммы
@@ -346,6 +350,25 @@ def check_profile_grid_by_start_stop(p_id, g_id, min_dist=100):
     tree = cKDTree(grid_data)
     distances, _ = tree.query(profile_coords, k=1)
     return np.all(distances < min_dist)
+
+
+def check_profile_all_grid(p_id, type_grid, min_dist=100):
+    grids = session.query(CommonGrid).filter(CommonGrid.type == type_grid).all()
+    for g in grids:
+        if check_profile_grid_by_start_stop(p_id, g.id, min_dist):
+            return json.loads(g.grid_table)
+    return False
+
+
+def idw_interpolation(tree, x, y, grid):
+    distances, indices = tree.query(np.array([x, y]), k=4)
+            # Вычисляем веса
+    weights = 1.0 / distances ** 2
+    weights /= np.sum(weights)
+            # Выполняем интерполяцию
+    idw = np.sum(weights * np.array(grid)[indices])
+
+    return idw
 
 
 def update_profile_combobox():
@@ -600,7 +623,12 @@ def draw_param():
                     HHTFeature.formation_id == get_formation_id()
                 ).first()[0])
             else:
-                graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])
+                try:
+                    graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])
+                except Exception as e:
+                    print(e)
+                    set_info(e, 'red')
+                    return
         number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
         # cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
         cc = (120, 120, 120, 255)

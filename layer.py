@@ -1,3 +1,5 @@
+import numpy as np
+
 from func import *
 from qt.add_layer_dialog import *
 from qt.add_formation_dialog import *
@@ -194,17 +196,31 @@ def add_param_in_new_formation(new_formation_id):
         ui.progressBar.setMaximum(len(layer_up))
         x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
         y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+
+        grid_uf = check_profile_all_grid(formation.profile_id, 'uf')
+        grid_m = check_profile_all_grid(formation.profile_id, 'm')
+        grid_r = check_profile_all_grid(formation.profile_id, 'r')
+        tree_grid_uf, tree_grid_m, tree_grid_r = None, None, None
+        if grid_uf:
+            tree_grid_uf = cKDTree(np.array(grid_uf)[:, :2])
+            grid_val_uf = np.array(grid_uf)[:, 2]
+        if grid_m:
+            tree_grid_m = cKDTree(np.array(grid_m)[:, :2])
+            grid_val_m = np.array(grid_m)[:, 2]
+        if grid_r:
+            tree_grid_r = cKDTree(np.array(grid_r)[:, :2])
+            grid_val_r = np.array(grid_r)[:, 2]
         # width_json = session.query(Formation.width).filter(Formation.profile_id == get_profile_id()).first()[0]
         # top_json = session.query(Formation.top).filter(Formation.profile_id == get_profile_id()).first()[0]
         # land_json = session.query(Formation.land).filter(Formation.profile_id == get_profile_id()).first()[0]
         # if width_json and top_json and land_json:
         #     width, top, land = json.loads(width_json), json.loads(top_json), json.loads(land_json)
-        grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-        if grid_db:
-            # считываем сетку грида из БД
-            pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
-            pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
-            pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+        # grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+        # if grid_db:
+            # # считываем сетку грида из БД
+            # pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
+            # pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
+            # pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
         T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
         Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
         Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
@@ -391,30 +407,42 @@ def add_param_in_new_formation(new_formation_id):
             Wt_Sn_wmf_l.append(Wt_Sn_wmf)
             list_param_2.append(Wt_Sn_wmf_l[-1])
 
-            if grid_db:
-                pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc[i])
-                pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc[i])
-                pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc[i])
-                pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc[i])
-                pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc[i])
-                pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc[i])
-                i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
-                    pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
-                i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
-                    pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
-                i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
-                    pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
-                im = i_m if i_m > 0 else 0
-                width_l.append(im)
-                list_param_2.append(width_l[-1])
+            if grid_uf:
+                i_uf = idw_interpolation(tree_grid_uf, x_pulc[i], y_pulc[i], grid_val_uf)
                 top_l.append(i_uf)
                 list_param_2.append(top_l[-1])
+            if grid_m:
+                i_m = idw_interpolation(tree_grid_m, x_pulc[i], y_pulc[i], grid_val_m)
+                width_l.append(i_m)
+                list_param_2.append(width_l[-1])
+                speed_l.append(i_m * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
+                list_param_2.append(speed_l[-1])
+            if grid_r:
+                i_r = idw_interpolation(tree_grid_r, x_pulc[i], y_pulc[i], grid_val_r)
                 land_l.append(i_r)
                 list_param_2.append(land_l[-1])
-                speed_l.append(im * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
-                list_param_2.append(speed_l[-1])
-                speed_cover_l.append((i_r - i_uf) * 100 / (layer_up[i] * 8))
-                list_param_2.append(speed_cover_l[-1])
+                if grid_uf:
+                    speed_cover_l.append((i_r - i_uf) * 100 / (layer_up[i] * 8))
+                    list_param_2.append(speed_cover_l[-1])
+            # if grid_db:
+            #     pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc[i])
+            #     pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc[i])
+            #     pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc[i])
+            #     pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc[i])
+            #     pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc[i])
+            #     pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc[i])
+            #     i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
+            #         pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
+            #     i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
+            #         pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
+            #     i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
+            #         pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+            #     im = i_m if i_m > 0 else 0
+
+
+
+
+
             if len(list_param_1) == len(list_param_2):
                 k_r_l.append(np.corrcoef(list_param_1, list_param_2)[0, 1])
             list_param_1 = list_param_2.copy()
@@ -494,12 +522,15 @@ def add_param_in_new_formation(new_formation_id):
                        'CRL_k_var': json.dumps(CRL_k_var_l),
                        'k_r': json.dumps(k_r_l)}
 
-        if grid_db:
+        if grid_m:
             dict_signal['width'] = json.dumps(width_l)
-            dict_signal['top'] = json.dumps(top_l)
-            dict_signal['land'] = json.dumps(land_l)
             dict_signal['speed'] = json.dumps(speed_l)
-            dict_signal['speed_cover'] = json.dumps(speed_cover_l)
+        if grid_uf:
+            dict_signal['top'] = json.dumps(top_l)
+        if grid_r:
+            dict_signal['land'] = json.dumps(land_l)
+            if grid_uf:
+                dict_signal['speed_cover'] = json.dumps(speed_cover_l)
 
         session.query(Formation).filter(Formation.id == new_formation_id).update(dict_signal,
                                                                                  synchronize_session="fetch")

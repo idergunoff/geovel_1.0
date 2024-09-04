@@ -15,6 +15,7 @@ def calc_all_params():
             calc_autocorr_feature(f.id)
             calc_emd_feature(f.id)
             calc_hht_features(f.id)
+            calc_grid_features(f.id)
 
 
 
@@ -30,8 +31,63 @@ def calc_add_features_profile():
         calc_autocorr_feature(f.id)
         calc_emd_feature(f.id)
         calc_hht_features(f.id)
+        calc_grid_features(f.id)
 
 
+# Grid features
+
+def calc_grid_features(f_id):
+    formation = session.query(Formation).filter(Formation.id == f_id).first()
+    set_info(f'Расчет GRID параметров для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
+    layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
+
+    x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == formation.profile_id).first()[0])
+    y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == formation.profile_id).first()[0])
+
+    grid_uf = check_profile_all_grid(formation.profile_id, 'uf')
+    grid_m = check_profile_all_grid(formation.profile_id, 'm')
+    grid_r = check_profile_all_grid(formation.profile_id, 'r')
+    tree_grid_uf, tree_grid_m, tree_grid_r = None, None, None
+    if grid_uf:
+        tree_grid_uf = cKDTree(np.array(grid_uf)[:, :2])
+        grid_val_uf = np.array(grid_uf)[:, 2]
+    if grid_m:
+        tree_grid_m = cKDTree(np.array(grid_m)[:, :2])
+        grid_val_m = np.array(grid_m)[:, 2]
+    if grid_r:
+        tree_grid_r = cKDTree(np.array(grid_r)[:, :2])
+        grid_val_r = np.array(grid_r)[:, 2]
+    width_l, top_l, land_l, speed_l, speed_cover_l = [], [], [], [], []
+
+    ui.progressBar.setMaximum(len(layer_up))
+    for i in range(len(layer_up)):
+        ui.progressBar.setValue(i)
+        if grid_uf:
+            i_uf = idw_interpolation(tree_grid_uf, x_pulc[i], y_pulc[i], grid_val_uf)
+            top_l.append(i_uf)
+        if grid_m:
+            i_m = idw_interpolation(tree_grid_m, x_pulc[i], y_pulc[i], grid_val_m)
+            width_l.append(i_m)
+            speed_l.append(i_m * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
+        if grid_r:
+            i_r = idw_interpolation(tree_grid_r, x_pulc[i], y_pulc[i], grid_val_r)
+            land_l.append(i_r)
+            if grid_uf:
+                speed_cover_l.append((i_r - i_uf) * 100 / (layer_up[i] * 8))
+    dict_feature = {}
+    if grid_m:
+        dict_feature['width'] = json.dumps(width_l)
+        dict_feature['speed'] = json.dumps(speed_l)
+    if grid_uf:
+        dict_feature['top'] = json.dumps(top_l)
+    if grid_r:
+        dict_feature['land'] = json.dumps(land_l)
+        if grid_uf:
+            dict_feature['speed_cover'] = json.dumps(speed_cover_l)
+
+        session.query(Formation).filter(Formation.id == f_id).update(dict_feature, synchronize_session="fetch")
+        session.commit()
 
 # Вейвлет преобразования
 
