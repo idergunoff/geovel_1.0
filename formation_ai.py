@@ -394,11 +394,65 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
             text_model = f'**KNNR**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, '
 
         elif model == 'GBR':
-            est = ui_r.spinBox_n_estimators.value()
-            l_rate = ui_r.doubleSpinBox_learning_rate.value()
+            est = ui_r.spinBox_n_estimators_gbr.value()
+            l_rate = ui_r.doubleSpinBox_learning_rate_gbr.value()
             model_reg_top = GradientBoostingRegressor(n_estimators=est, learning_rate=l_rate, random_state=0)
             model_reg_bottom = GradientBoostingRegressor(n_estimators=est, learning_rate=l_rate, random_state=0)
             text_model = f'**GBR**: \nn estimators: {round(est, 2)}, \nlearning rate: {round(l_rate, 2)}, '
+
+        elif model == 'XGB':
+            model_reg_top = XGBRegressor(n_estimators=ui_r.spinBox_n_estimators_xgb.value(),
+                                     learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(),
+                                     max_depth=ui_r.spinBox_depth_xgb.value(),
+                                     alpha=ui_r.doubleSpinBox_alpha_xgb.value(), booster='gbtree', random_state=0)
+            model_reg_bottom = XGBRegressor(n_estimators=ui_r.spinBox_n_estimators_xgb.value(),
+                                         learning_rate=ui_r.doubleSpinBox_learning_rate_xgb.value(),
+                                         max_depth=ui_r.spinBox_depth_xgb.value(),
+                                         alpha=ui_r.doubleSpinBox_alpha_xgb.value(), booster='gbtree', random_state=0)
+            text_model = f'**XGB**: \nn estimators: {ui_r.spinBox_n_estimators_xgb.value()}, ' \
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, ' \
+                         f'\nmax_depth: {ui_r.spinBox_depth_xgb.value()} \nalpha: {ui_r.doubleSpinBox_alpha_xgb.value()}'
+
+        elif model == 'LGBM':
+            model_reg_top = lgb.LGBMRegressor(
+                objective='regression',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=ui_r.doubleSpinBox_l1_lgbm.value(),
+                reg_lambda=ui_r.doubleSpinBox_l2_lgbm.value(),
+                num_leaves=ui_r.spinBox_lgbm_num_leaves.value(),
+                colsample_bytree=ui_r.doubleSpinBox_lgbm_feature.value(),
+                subsample=ui_r.doubleSpinBox_lgbm_subsample.value(),
+                subsample_freq=ui_r.spinBox_lgbm_sub_freq.value(),
+                min_child_samples=ui_r.spinBox_lgbm_child.value(),
+                learning_rate=ui_r.doubleSpinBox_lr_lgbm.value(),
+                n_estimators=ui_r.spinBox_estim_lgbm.value(),
+            )
+
+            model_reg_bottom = lgb.LGBMRegressor(
+                objective='regression',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=ui_r.doubleSpinBox_l1_lgbm.value(),
+                reg_lambda=ui_r.doubleSpinBox_l2_lgbm.value(),
+                num_leaves=ui_r.spinBox_lgbm_num_leaves.value(),
+                colsample_bytree=ui_r.doubleSpinBox_lgbm_feature.value(),
+                subsample=ui_r.doubleSpinBox_lgbm_subsample.value(),
+                subsample_freq=ui_r.spinBox_lgbm_sub_freq.value(),
+                min_child_samples=ui_r.spinBox_lgbm_child.value(),
+                learning_rate=ui_r.doubleSpinBox_lr_lgbm.value(),
+                n_estimators=ui_r.spinBox_estim_lgbm.value(),
+            )
+
+            text_model = f'**LGBM**: \nlambda_1: {ui_r.doubleSpinBox_l1_lgbm.value()}, ' \
+                         f'\nlambda_2: {ui_r.doubleSpinBox_l2_lgbm.value()}, ' \
+                         f'\nnum_leaves: {ui_r.spinBox_lgbm_num_leaves.value()}, ' \
+                         f'\nfeature_fraction: {ui_r.doubleSpinBox_lgbm_feature.value()}, ' \
+                         f'\nsubsample: {ui_r.doubleSpinBox_lgbm_subsample.value()}, ' \
+                         f'\nsubsample_freq: {ui_r.spinBox_lgbm_sub_freq.value()}, ' \
+                         f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
+                         f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
 
         elif model == 'LR':
             model_reg_top = LinearRegression(fit_intercept=ui_r.checkBox_fit_intercept.isChecked())
@@ -917,8 +971,8 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
     ui_r.pushButton_lof.clicked.connect(calc_lof)
-    ui_r.checkBox_rfr_extra.clicked.connect(push_checkbutton_extra)
-    ui_r.checkBox_rfr_ada.clicked.connect(push_checkbutton_ada)
+    # ui_r.checkBox_rfr_extra.clicked.connect(push_checkbutton_extra)
+    # ui_r.checkBox_rfr_ada.clicked.connect(push_checkbutton_ada)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     Regressor.exec_()
 
