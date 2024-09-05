@@ -197,9 +197,9 @@ def add_param_in_new_formation(new_formation_id):
         x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
         y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
 
-        grid_uf = check_profile_all_grid(formation.profile_id, 'uf')
-        grid_m = check_profile_all_grid(formation.profile_id, 'm')
-        grid_r = check_profile_all_grid(formation.profile_id, 'r')
+        grid_uf = check_profile_all_grid(formation.profile_id, 'uf', min_dist=ui.spinBox_calc_dist_grid.value())
+        grid_m = check_profile_all_grid(formation.profile_id, 'm', min_dist=ui.spinBox_calc_dist_grid.value())
+        grid_r = check_profile_all_grid(formation.profile_id, 'r', min_dist=ui.spinBox_calc_dist_grid.value())
         tree_grid_uf, tree_grid_m, tree_grid_r = None, None, None
         if grid_uf:
             tree_grid_uf = cKDTree(np.array(grid_uf)[:, :2])

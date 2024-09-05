@@ -403,7 +403,7 @@ def update_profile_combobox():
 
         flag = True
         for profile in profiles:
-            if not any(check_profile_grid_by_start_stop(profile.id, grid.id) for grid in grid_list):
+            if not any(check_profile_grid_by_start_stop(profile.id, grid.id, min_dist=ui.spinBox_calc_dist_grid.value()) for grid in grid_list):
                 flag = False
                 break
 

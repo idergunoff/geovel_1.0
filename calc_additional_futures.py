@@ -45,9 +45,9 @@ def calc_grid_features(f_id):
     x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == formation.profile_id).first()[0])
     y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == formation.profile_id).first()[0])
 
-    grid_uf = check_profile_all_grid(formation.profile_id, 'uf')
-    grid_m = check_profile_all_grid(formation.profile_id, 'm')
-    grid_r = check_profile_all_grid(formation.profile_id, 'r')
+    grid_uf = check_profile_all_grid(formation.profile_id, 'uf', min_dist=ui.spinBox_calc_dist_grid.value())
+    grid_m = check_profile_all_grid(formation.profile_id, 'm', min_dist=ui.spinBox_calc_dist_grid.value())
+    grid_r = check_profile_all_grid(formation.profile_id, 'r', min_dist=ui.spinBox_calc_dist_grid.value())
     tree_grid_uf, tree_grid_m, tree_grid_r = None, None, None
     if grid_uf:
         tree_grid_uf = cKDTree(np.array(grid_uf)[:, :2])
@@ -240,17 +240,28 @@ def calc_fractal_features(f_id):
         dict_frl_ftr_list['fractal_dim_l'].append(box_counting_dim(form_signal))
         dict_frl_ftr_list['hurst_exp_l'].append(hurst_rs(form_signal))
         dict_frl_ftr_list['lacunarity_l'].append(lacunarity(form_signal))
-        alpha, f_alpha = mfdfa(form_signal)
-        (width_alpha, max_position_alpha, asymmetry_alpha, max_height_alpha, mean_alpha, mean_f_alpha, std_alpha,
-         std_f_alpha) = calc_character_mfdfa(alpha, f_alpha)
-        dict_frl_ftr_list['mf_width_l'].append(width_alpha)
-        dict_frl_ftr_list['mf_max_position_l'].append(max_position_alpha)
-        dict_frl_ftr_list['mf_asymmetry_l'].append(asymmetry_alpha)
-        dict_frl_ftr_list['mf_max_height_l'].append(max_height_alpha)
-        dict_frl_ftr_list['mf_mean_alpha_l'].append(mean_alpha)
-        dict_frl_ftr_list['mf_mean_f_alpha_l'].append(mean_f_alpha)
-        dict_frl_ftr_list['mf_std_alpha_l'].append(std_alpha)
-        dict_frl_ftr_list['mf_std_f_alpha_l'].append(std_f_alpha)
+        try:
+            alpha, f_alpha = mfdfa(form_signal)
+            (width_alpha, max_position_alpha, asymmetry_alpha, max_height_alpha, mean_alpha, mean_f_alpha, std_alpha,
+             std_f_alpha) = calc_character_mfdfa(alpha, f_alpha)
+            dict_frl_ftr_list['mf_width_l'].append(width_alpha)
+            dict_frl_ftr_list['mf_max_position_l'].append(max_position_alpha)
+            dict_frl_ftr_list['mf_asymmetry_l'].append(asymmetry_alpha)
+            dict_frl_ftr_list['mf_max_height_l'].append(max_height_alpha)
+            dict_frl_ftr_list['mf_mean_alpha_l'].append(mean_alpha)
+            dict_frl_ftr_list['mf_mean_f_alpha_l'].append(mean_f_alpha)
+            dict_frl_ftr_list['mf_std_alpha_l'].append(std_alpha)
+            dict_frl_ftr_list['mf_std_f_alpha_l'].append(std_f_alpha)
+        except (ValueError, LinAlgError):
+
+            dict_frl_ftr_list['mf_width_l'].append(None)
+            dict_frl_ftr_list['mf_max_position_l'].append(None)
+            dict_frl_ftr_list['mf_asymmetry_l'].append(None)
+            dict_frl_ftr_list['mf_max_height_l'].append(None)
+            dict_frl_ftr_list['mf_mean_alpha_l'].append(None)
+            dict_frl_ftr_list['mf_mean_f_alpha_l'].append(None)
+            dict_frl_ftr_list['mf_std_alpha_l'].append(None)
+            dict_frl_ftr_list['mf_std_f_alpha_l'].append(None)
 
     dict_frl_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_frl_ftr_list.items()}
 
@@ -333,7 +344,10 @@ def calc_entropy_features(f_id):
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
         dict_ent_ftr_list['ent_sh_l'].append(shannon_entropy(form_signal))
         dict_ent_ftr_list['ent_perm_l'].append(permutation_entropy(form_signal))
-        dict_ent_ftr_list['ent_appr_l'].append(approx_entropy(form_signal))
+        try:
+            dict_ent_ftr_list['ent_appr_l'].append(approx_entropy(form_signal))
+        except ZeroDivisionError:
+            dict_ent_ftr_list['ent_appr_l'].append(None)
         for n_se, i_se in enumerate(sample_ent(form_signal)):
             dict_ent_ftr_list[f'ent_sample{n_se + 1}_l'].append(i_se)
         for n_me, i_me in enumerate(multiscale_entropy(form_signal)):
@@ -406,10 +420,16 @@ def calc_nonlinear_features(f_id):
         ui.progressBar.setValue(meas)
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
         dict_nln_ftr_list['nln_corr_dim_l'].append(correlation_dimension(form_signal))
-        rec_plot = recurrence_plot_features(form_signal)
-        dict_nln_ftr_list['nln_rec_rate_l'].append(rec_plot['recurrence_rate'])
-        dict_nln_ftr_list['nln_determin_l'].append(rec_plot['determinism'])
-        dict_nln_ftr_list['nln_avg_diag_l'].append(rec_plot['avg_diagonal_line'])
+        try:
+            rec_plot = recurrence_plot_features(form_signal)
+            dict_nln_ftr_list['nln_rec_rate_l'].append(rec_plot['recurrence_rate'])
+            dict_nln_ftr_list['nln_determin_l'].append(rec_plot['determinism'])
+            dict_nln_ftr_list['nln_avg_diag_l'].append(rec_plot['avg_diagonal_line'])
+        except ValueError:
+            dict_nln_ftr_list['nln_rec_rate_l'].append(None)
+            dict_nln_ftr_list['nln_determin_l'].append(None)
+            dict_nln_ftr_list['nln_avg_diag_l'].append(None)
+
         dict_nln_ftr_list['nln_hirsh_l'].append(hirschman_index(form_signal))
 
     dict_nln_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_nln_ftr_list.items()}
@@ -605,10 +625,17 @@ def calc_frequency_features(f_id):
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
         freqs, ps = power_spectrum(form_signal)
         dict_freq_ftr_list['frq_central_l'].append(central_frequency(freqs, ps))
-        dict_freq_ftr_list['frq_bandwidth_l'].append(bandwidth(freqs, ps))
+        try:
+            dict_freq_ftr_list['frq_bandwidth_l'].append(bandwidth(freqs, ps))
+        except ValueError:
+            dict_freq_ftr_list['frq_bandwidth_l'].append(np.nan)
+
         dict_freq_ftr_list['frq_hl_ratio_l'].append(high_low_frequency_ratio(freqs, ps))
         dict_freq_ftr_list['frq_spec_centroid_l'].append(spectral_centroid(freqs, ps))
-        dict_freq_ftr_list['frq_spec_slope_l'].append(spectral_slope(freqs, ps))
+        try:
+            dict_freq_ftr_list['frq_spec_slope_l'].append(spectral_slope(freqs, ps))
+        except ValueError:
+            dict_freq_ftr_list['frq_spec_slope_l'].append(np.nan)
         dict_freq_ftr_list['frq_spec_entr_l'].append(spectral_entropy(ps))
         for n_freq, f in enumerate(dominant_frequencies(freqs, ps)):
             dict_freq_ftr_list[f'frq_dom{n_freq+1}_l'].append(f)
@@ -770,12 +797,20 @@ def calc_autocorr_feature(f_id):
         ui.progressBar.setValue(meas)
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
         acf = autocorrelation(form_signal)
-        dict_acf_list['acf_first_min_l'].append(float(first_minimum(acf)))
-        dict_acf_list['acf_lag_10_l'].append(float(autocorrelation_at_lag(acf)))
-        dict_acf_list['acf_decay_l'].append(autocorrelation_decay(acf))
-        dict_acf_list['acf_integral_l'].append(acf_integral(acf))
-        dict_acf_list['acf_peak_width_l'].append(float(acf_main_peak_width(acf)))
-        dict_acf_list['acf_ratio_l'].append(acf_ratio(acf))
+        try:
+            dict_acf_list['acf_first_min_l'].append(float(first_minimum(acf)))
+            dict_acf_list['acf_lag_10_l'].append(float(autocorrelation_at_lag(acf)))
+            dict_acf_list['acf_decay_l'].append(autocorrelation_decay(acf))
+            dict_acf_list['acf_integral_l'].append(acf_integral(acf))
+            dict_acf_list['acf_peak_width_l'].append(float(acf_main_peak_width(acf)))
+            dict_acf_list['acf_ratio_l'].append(acf_ratio(acf))
+        except TypeError:
+            dict_acf_list['acf_first_min_l'].append(None)
+            dict_acf_list['acf_lag_10_l'].append(None)
+            dict_acf_list['acf_decay_l'].append(None)
+            dict_acf_list['acf_integral_l'].append(None)
+            dict_acf_list['acf_peak_width_l'].append(None)
+            dict_acf_list['acf_ratio_l'].append(None)
 
     dict_acf_json = {key[:-2]: json.dumps(value) for key, value in dict_acf_list.items()}
     session.add(AutocorrFeature(formation_id=f_id, **dict_acf_json))
@@ -901,38 +936,42 @@ def calc_emd_feature(f_id):
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
-        imfs = perform_emd(form_signal)
-        dict_emd_ftr_list['emd_num_imfs_l'].append(float(count_imfs(imfs)))
-        emd_energ = imf_energies(imfs)
-        dict_emd_ftr_list['emd_energ_mean_l'].append(emd_energ['mean_energy'])
-        dict_emd_ftr_list['emd_energ_med_l'].append(emd_energ['median_energy'])
-        dict_emd_ftr_list['emd_energ_max_l'].append(emd_energ['max_energy'])
-        dict_emd_ftr_list['emd_energ_min_l'].append(emd_energ['min_energy'])
-        dict_emd_ftr_list['emd_energ_std_l'].append(emd_energ['std_energy'])
-        emd_rel_energ = relative_imf_energies(imfs)
-        dict_emd_ftr_list['emd_rel_energ_mean_l'].append(emd_rel_energ['mean_energy'])
-        dict_emd_ftr_list['emd_rel_energ_med_l'].append(emd_rel_energ['median_energy'])
-        dict_emd_ftr_list['emd_rel_energ_max_l'].append(emd_rel_energ['max_energy'])
-        dict_emd_ftr_list['emd_rel_energ_min_l'].append(emd_rel_energ['min_energy'])
-        dict_emd_ftr_list['emd_rel_energ_std_l'].append(emd_rel_energ['std_energy'])
-        emd_dom_freqs = emd_dominant_frequencies(imfs)
-        dict_emd_ftr_list['emd_dom_freqs_mean_l'].append(float(emd_dom_freqs['mean_freq']))
-        dict_emd_ftr_list['emd_dom_freqs_med_l'].append(float(emd_dom_freqs['median_freq']))
-        dict_emd_ftr_list['emd_dom_freqs_max_l'].append(float(emd_dom_freqs['max_freq']))
-        dict_emd_ftr_list['emd_dom_freqs_min_l'].append(float(emd_dom_freqs['min_freq']))
-        dict_emd_ftr_list['emd_dom_freqs_std_l'].append(float(emd_dom_freqs['std_freq']))
-        emd_corr = imf_correlations(imfs)
-        dict_emd_ftr_list['emd_mean_corr_l'].append(float(emd_corr['mean_corr']))
-        dict_emd_ftr_list['emd_median_corr_l'].append(float(emd_corr['median_corr']))
-        dict_emd_ftr_list['emd_max_corr_l'].append(float(emd_corr['max_corr']))
-        dict_emd_ftr_list['emd_min_corr_l'].append(float(emd_corr['min_corr']))
-        dict_emd_ftr_list['emd_std_corr_l'].append(float(emd_corr['std_corr']))
-        dict_emd_ftr_list['emd_corr_25_l'].append(float(emd_corr['corr_25']))
-        dict_emd_ftr_list['emd_corr_50_l'].append(float(emd_corr['corr_50']))
-        dict_emd_ftr_list['emd_corr_75_l'].append(float(emd_corr['corr_75']))
-        dict_emd_ftr_list['emd_energ_entropy_l'].append(float(imf_energy_entropy(imfs)))
-        dict_emd_ftr_list['emd_oi_l'].append(float(orthogonality_index(imfs)))
-        dict_emd_ftr_list['emd_hi_l'].append(float(emd_hilbert_index(imfs)))
+        try:
+            imfs = perform_emd(form_signal)
+            dict_emd_ftr_list['emd_num_imfs_l'].append(float(count_imfs(imfs)))
+            emd_energ = imf_energies(imfs)
+            dict_emd_ftr_list['emd_energ_mean_l'].append(emd_energ['mean_energy'])
+            dict_emd_ftr_list['emd_energ_med_l'].append(emd_energ['median_energy'])
+            dict_emd_ftr_list['emd_energ_max_l'].append(emd_energ['max_energy'])
+            dict_emd_ftr_list['emd_energ_min_l'].append(emd_energ['min_energy'])
+            dict_emd_ftr_list['emd_energ_std_l'].append(emd_energ['std_energy'])
+            emd_rel_energ = relative_imf_energies(imfs)
+            dict_emd_ftr_list['emd_rel_energ_mean_l'].append(emd_rel_energ['mean_energy'])
+            dict_emd_ftr_list['emd_rel_energ_med_l'].append(emd_rel_energ['median_energy'])
+            dict_emd_ftr_list['emd_rel_energ_max_l'].append(emd_rel_energ['max_energy'])
+            dict_emd_ftr_list['emd_rel_energ_min_l'].append(emd_rel_energ['min_energy'])
+            dict_emd_ftr_list['emd_rel_energ_std_l'].append(emd_rel_energ['std_energy'])
+            emd_dom_freqs = emd_dominant_frequencies(imfs)
+            dict_emd_ftr_list['emd_dom_freqs_mean_l'].append(float(emd_dom_freqs['mean_freq']))
+            dict_emd_ftr_list['emd_dom_freqs_med_l'].append(float(emd_dom_freqs['median_freq']))
+            dict_emd_ftr_list['emd_dom_freqs_max_l'].append(float(emd_dom_freqs['max_freq']))
+            dict_emd_ftr_list['emd_dom_freqs_min_l'].append(float(emd_dom_freqs['min_freq']))
+            dict_emd_ftr_list['emd_dom_freqs_std_l'].append(float(emd_dom_freqs['std_freq']))
+            emd_corr = imf_correlations(imfs)
+            dict_emd_ftr_list['emd_mean_corr_l'].append(float(emd_corr['mean_corr']))
+            dict_emd_ftr_list['emd_median_corr_l'].append(float(emd_corr['median_corr']))
+            dict_emd_ftr_list['emd_max_corr_l'].append(float(emd_corr['max_corr']))
+            dict_emd_ftr_list['emd_min_corr_l'].append(float(emd_corr['min_corr']))
+            dict_emd_ftr_list['emd_std_corr_l'].append(float(emd_corr['std_corr']))
+            dict_emd_ftr_list['emd_corr_25_l'].append(float(emd_corr['corr_25']))
+            dict_emd_ftr_list['emd_corr_50_l'].append(float(emd_corr['corr_50']))
+            dict_emd_ftr_list['emd_corr_75_l'].append(float(emd_corr['corr_75']))
+            dict_emd_ftr_list['emd_energ_entropy_l'].append(float(imf_energy_entropy(imfs)))
+            dict_emd_ftr_list['emd_oi_l'].append(float(orthogonality_index(imfs)))
+            dict_emd_ftr_list['emd_hi_l'].append(float(emd_hilbert_index(imfs)))
+        except ValueError:
+            for key in dict_emd_ftr_list.keys():
+                dict_emd_ftr_list[key].append(None)
 
     dict_emd_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_emd_ftr_list.items()}
     session.add(EMDFeature(formation_id=f_id, **dict_emd_ftr_json))
@@ -1050,7 +1089,12 @@ def calc_hht_features(f_id):
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
         form_signal = np.array(s[layer_up[meas]:layer_down[meas]])
-        imfs, hht = perform_hht(form_signal)
+        try:
+            imfs, hht = perform_hht(form_signal)
+        except ValueError:
+            for key in dict_hht_ftr_list.keys():
+                dict_hht_ftr_list[key].append(None)
+            continue
 
         inst_freq, inst_amp = instantaneous_frequency_amplitude(hht)
         hht_inst_freq = calc_stat_list(inst_freq, 'hht_inst_freq')
