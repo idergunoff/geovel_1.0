@@ -31,7 +31,7 @@ def calc_add_features_profile():
         calc_autocorr_feature(f.id)
         calc_emd_feature(f.id)
         calc_hht_features(f.id)
-        calc_grid_features(f.id)
+        # calc_grid_features(f.id)
 
 
 # Grid features
