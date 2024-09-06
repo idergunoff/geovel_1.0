@@ -79,7 +79,7 @@ def remove_reg():
 def update_list_reg():
     """Обновить список наборов для обучения регрессионной модели"""
     ui.comboBox_regmod.clear()
-    for i in session.query(AnalysisReg).order_by(AnalysisReg.title).all():
+    for i in session.query(AnalysisReg.id, AnalysisReg.title).order_by(AnalysisReg.title).all():
         ui.comboBox_regmod.addItem(f'{i.title} id{i.id}')
     update_list_well_markup_reg()
     update_list_param_regmod(db=True)
