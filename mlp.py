@@ -155,7 +155,6 @@ def update_list_mlp(db=False):
     ui.comboBox_mlp_analysis.clear()
     for i in session.query(AnalysisMLP.id, AnalysisMLP.title).order_by(AnalysisMLP.title).all():
         ui.comboBox_mlp_analysis.addItem(f'{i.title} id{i.id}')
-        print(f'{i.title} id{i.id}')
     if db:
         update_list_marker_mlp_db()
     else:
