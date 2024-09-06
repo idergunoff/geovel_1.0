@@ -152,19 +152,15 @@ def remove_mlp():
 
 def update_list_mlp(db=False):
     """Обновить список анализов MLP"""
-    time = datetime.datetime.now()
     ui.comboBox_mlp_analysis.clear()
     for i in session.query(AnalysisMLP.id, AnalysisMLP.title).order_by(AnalysisMLP.title).all():
         ui.comboBox_mlp_analysis.addItem(f'{i.title} id{i.id}')
         print(f'{i.title} id{i.id}')
-    print(f'13-1 {datetime.datetime.now() - time}')
     if db:
         update_list_marker_mlp_db()
     else:
         update_list_marker_mlp()
-    print(f'13-2 {datetime.datetime.now() - time}')
     update_list_trained_models_class()
-    print(f'13-3 {datetime.datetime.now() - time}')
 
 
 def add_marker_mlp():
