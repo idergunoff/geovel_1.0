@@ -45,6 +45,15 @@
      </item>
      <item row="0" column="1">
       <widget class="QLabel" name="label_2">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Для Quasi-constant выбирайте маленький порог &lt;/p&gt;&lt;p&gt;Для Correlation выбирайте порог &amp;gt; 0.75&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="whatsThis">
+        <string/>
+       </property>
+       <property name="accessibleDescription">
+        <string/>
+       </property>
        <property name="text">
         <string>threshold</string>
        </property>
@@ -52,6 +61,9 @@
      </item>
      <item row="0" column="2">
       <widget class="QLabel" name="label_3">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Количество параметров для отбора&lt;br/&gt;Для Boruta -- количество итераций&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>params</string>
        </property>
@@ -67,11 +79,6 @@
        <item>
         <property name="text">
          <string>SelectKBest</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>SelectPercentile</string>
         </property>
        </item>
        <item>
@@ -136,6 +143,16 @@
        </property>
        <property name="text">
         <string>calc</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QPushButton" name="pushButton_import_param">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(227, 200, 255);</string>
+       </property>
+       <property name="text">
+        <string>import param</string>
        </property>
       </widget>
      </item>

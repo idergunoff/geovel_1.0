@@ -718,19 +718,26 @@ def push_random_param():
             predict_df.index = data_test.index
             data_test[list_cat[0]] = predict_df[list_cat[0]]
             data_test[list_cat[1]] = predict_df[list_cat[1]]
-            data_test['mark_probability'] = [labels[item] for item in mark]
+            if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+                data_test['mark_probability'] = [labels[item] for item in mark]
+            else:
+                data_test['mark_probability'] = mark
             data_test['совпадение'] = data_test['mark'].eq(data_test['mark_probability']).astype(int)
             correct_matches = data_test['совпадение'].sum()
             y_prob = np.array([i[0] for i in probability])
-            y_val = data_test['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
-            y_pred = data_test['mark_probability'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
-            fpr, tpr, thresholds = roc_curve(y_val, y_prob)
+            if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+                y_val = data_test['mark'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
+                y_pred = data_test['mark_probability'].replace({list_cat[0]: 1, list_cat[1]: 0}).to_list()
+            else:
+                y_val = data_test['mark'].to_list()
+                y_pred = data_test['mark_probability'].to_list()
+            fpr, tpr, thresholds = roc_curve(y_val, y_prob, pos_label=list_cat[0])
             roc_auc = auc(fpr, tpr)
             print('roc_auc ', roc_auc)
             list_estimator_roc.append(roc_auc)
-            recall = recall_score(y_val, y_pred)
-            precision = precision_score(y_val, y_pred)
-            f1 = f1_score(y_val, y_pred)
+            recall = recall_score(y_val, y_pred, pos_label=list_cat[0])
+            precision = precision_score(y_val, y_pred, pos_label=list_cat[0])
+            f1 = f1_score(y_val, y_pred, pos_label=list_cat[0])
             list_estimator_recall.append(recall)
             list_estimator_precision.append(precision)
             list_estimator_f1.append(f1)

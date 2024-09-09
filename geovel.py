@@ -19,6 +19,7 @@ from test_model import *
 from lineup_train_models import *
 from nn_torch_classifier import *
 from nn_torch_regression import *
+from feature_selection import *
 
 MainWindow.show()
 

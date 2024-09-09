@@ -4,9 +4,11 @@ import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
 from func import *
+
 from build_table import *
 from random_search import push_random_search
 from random_param import push_random_param
+from feature_selection import *
 
 
 class Model(nn.Module):
@@ -1106,6 +1108,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         return colors_lof, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
+    def call_feature_selection():
+        labels = set_marks()
+        data_train['mark'] = data_train['mark'].replace(labels)
+        feature_selection_calc(data_train[list_param], data_train['mark'], mode='classif')
+
 
     def class_exit():
         Classifier.close()
@@ -1121,6 +1128,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_add_to_lineup.clicked.connect(add_model_class_to_lineup)
     ui_cls.pushButton_cvw.clicked.connect(calc_model_class_by_cvw)
     ui_cls.pushButton_yellow_brick.clicked.connect(draw_yellow_brick)
+    ui_cls.pushButton_feature_selection.clicked.connect(call_feature_selection)
     Classifier.exec_()
 
 

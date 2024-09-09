@@ -8,6 +8,8 @@ from random_param_reg import push_random_param_reg
 from feature_selection import *
 
 
+
+
 class RegressionModel(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
         super(RegressionModel, self).__init__()
@@ -1853,7 +1855,7 @@ def train_regression_model():
         return colors, data_pca_pd, data_tsne_pd, factor_lof, label_lof
 
     def call_feature_selection():
-        feature_selection(data_train[list_param_reg], data_train['target_value'])
+        feature_selection_calc(data_train[list_param_reg], data_train['target_value'], mode='reg')
 
     ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)

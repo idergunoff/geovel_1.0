@@ -1,8 +1,6 @@
 from func import *
-
-from regression import *
 from sklearn.feature_selection import VarianceThreshold
-from sklearn.feature_selection import SelectKBest, SelectPercentile, f_regression
+from sklearn.feature_selection import SelectKBest, f_regression, chi2, mutual_info_classif
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
@@ -11,72 +9,135 @@ from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
 from boruta import BorutaPy
+from collections import defaultdict
+
+from build_table import *
 
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
+def update_list_param_mlp(db=False):
+    start_time = datetime.datetime.now()
+    data_train, list_param = build_table_train(db, 'mlp')
+    list_marker = get_list_marker_mlp('georadar')
+    ui.listWidget_param_mlp.clear()
+    list_param_mlp = data_train.columns.tolist()[2:]
+    print('list_param_mlp', list_param_mlp)
+    for param in list_param_mlp:
+        if ui.checkBox_kf.isChecked():
+            groups = []
+            for mark in list_marker:
+                groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+            F, p = f_oneway(*groups)
+            if np.isnan(F) or np.isnan(p):
+                ui.listWidget_param_mlp.addItem(param)
+                continue
+            ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
+            if F < 1 or p > 0.05:
+                i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
+                i_item.setBackground(QBrush(QColor('red')))
+        else:
+            ui.listWidget_param_mlp.addItem(param)
+    ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
+    set_color_button_updata()
 
-# def plot_correlation_subplots(corr_matrix, step=50):
-#     n_features = corr_matrix.shape[0]
-#     n_plots = (n_features // step) + (1 if n_features % step != 0 else 0)  # Количество графиков
-#
-#     fig, axes = plt.subplots(n_plots, 1, figsize=(20, 20 * n_plots))
-#     fig.suptitle('Correlation Heatmap Subplots', fontsize=20)
-#
-#     for i in range(n_plots):
-#         start_idx = i * step
-#         end_idx = min((i + 1) * step, n_features)
-#         sub_corr = corr_matrix.iloc[start_idx:end_idx, start_idx:end_idx]
-#
-#         ax = axes[i] if n_plots > 1 else axes  # если график один, `axes` не является списком
-#         sns.heatmap(sub_corr, square=True, annot=True, fmt='.2f', linecolor='black', ax=ax)
-#         ax.set_title(f'Features {start_idx} to {end_idx - 1}')
-#         ax.set_xticklabels(sub_corr.columns, rotation=45)
-#         ax.set_yticklabels(sub_corr.index, rotation=45)
-#
-#     plt.tight_layout(rect=(0, 0.03, 1, 0.95)) # чтобы разместить заголовок сверху
-#     plt.show()
+
+
+def set_color_button_updata():
+    mlp = session.query(AnalysisMLP).filter(AnalysisMLP.id == get_MLP_id()).first()
+    btn_color = 'background-color: rgb(191, 255, 191);' if mlp.up_data else 'background-color: rgb(255, 185, 185);'
+    ui.pushButton_updata_mlp.setStyleSheet(btn_color)
+
+def update_all_params(list_param):
+    session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+
+    count = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).count()
+    print('clean count', count)
+
+    for param in list_param:
+        new_param = f'{param}'
+        print(new_param)
+        new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
+        session.add(new_param_mlp)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+
+    count = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).count()
+    print('added count', count)
+
+    set_color_button_updata()
+    update_list_param_mlp()
 
 def add_param_to_list(list_param, ui_fs):
     ui_fs.listWidget_features.clear()
     for i in list_param:
         ui_fs.listWidget_features.addItem(i)
 
+def train_model(X_train, X_test, y_train, y_test, mode):
+    if mode == 'reg':
+        rf = RandomForestRegressor(n_estimators=1000, random_state=0)
+        rf.fit(X_train, y_train)
+        res = r2_score(y_test, rf.predict(X_test))
+    elif mode == 'classif':
+        rf = RandomForestClassifier(n_estimators=1000, random_state=0)
+        rf.fit(X_train, y_train)
+        res = accuracy_score(y_test, rf.predict(X_test))
 
-def feature_selection(data, target):
+    return(res, rf)
+
+list_param = []
+
+def feature_selection_calc(data, target, mode):
     FeatSelect = QtWidgets.QDialog()
     ui_fs = Ui_FeatureSelection()
     ui_fs.setupUi(FeatSelect)
     FeatSelect.show()
     FeatSelect.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+    data = data.replace([np.inf, -np.inf], np.nan)
     data = data.fillna(data.median())
-    print('missing values', data.isna().sum())
-    print('shape:', data.shape)
+    target = pd.to_numeric(target, errors='coerce')
+    target = target.replace([np.inf, -np.inf], np.nan)
+    list_param = []
+
+    if mode == 'reg':
+        metric = f_regression
+    else:
+        metric = mutual_info_classif
 
     def choose_method():
+        global list_param
         if ui_fs.comboBox_method.currentText() == 'Quasi-constant':
+            threshold = ui_fs.doubleSpinBox_threshold.value()
             print('Quasi-constant: ')
-            sel = VarianceThreshold(threshold=0.01)
+            sel = VarianceThreshold(threshold=threshold)
             sel.fit(data)
 
             print('get support')
             print(len(data.columns[sel.get_support()]))
 
             print('print the constant features')
-            print(
-                len([
+            num_null = len([
                     x for x in data.columns
                     if x not in data.columns[sel.get_support()]
-                ]))
+                ])
 
-            print([x for x in data.columns if x not in data.columns[sel.get_support()]])
+            null_param = [x for x in data.columns if x not in data.columns[sel.get_support()]]
+            list_param = [x for x in data.columns if x in data.columns[sel.get_support()]]
+            ui_fs.label_params.setText(f'Отобранные параметры с дисперсией больше погора ({len(list_param)})')
+            add_param_to_list(list_param, ui_fs)
+            ui_fs.plainTextEdit_results.setPlainText(f'Параметры с низкой дисперсией ({num_null}):\n{null_param}')
             print('\n\n')
 
         elif ui_fs.comboBox_method.currentText() == 'SelectKBest':
+            ui_fs.plainTextEdit_results.clear()
             print('SelectKBest: ')
-            sel = SelectKBest(f_regression, k=20)
+            param = ui_fs.spinBox_num_param.value()
+            sel = SelectKBest(metric, k=param)
             sel.fit(data, target)
 
             selected_indices = sel.get_support(indices=True)
@@ -88,73 +149,89 @@ def feature_selection(data, target):
 
             print("Индексы отобранных признаков:", selected_indices)
             print("Имена отобранных признаков:", sorted_feature_names.to_list())
-            print('\n\n')
+            list_param = sorted_feature_names.to_list()
 
-        elif ui_fs.comboBox_method.currentText() == 'SelectPercentile':
-            print('SelectPercentile: ')
-            sel = SelectPercentile(f_regression, percentile=20)
-            sel.fit(data, target)
-
-            selected_indices = sel.get_support(indices=True)
-            selected_feature_names = data.columns[selected_indices]
-            selected_scores = sel.scores_[selected_indices]
-
-            sorted_indices = np.argsort(selected_scores)[::-1]
-            sorted_feature_names = selected_feature_names[sorted_indices]
-
-            print("Индексы отобранных признаков:", selected_indices)
-            print("Имена отобранных признаков:", sorted_feature_names.to_list())
+            ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
+            add_param_to_list(list_param, ui_fs)
             print('\n\n')
 
         elif ui_fs.comboBox_method.currentText() == 'Correlation':
+            ui_fs.plainTextEdit_results.clear()
             print('Correlation: ')
+            data_c = data.copy()
+            data_no_target = data.copy()
 
-            data['target'] = target
-            corr = data.corr()
+            data_c['target'] = target
+            corr = data_c.corr()
             corr_with_target = corr['target']
 
-            k = 15
-            top_k = corr_with_target.abs().sort_values(ascending=True)[:k].index
-            selected_features = data[top_k]
-            print("Отобранные признаки:", top_k.to_list())
+            top_k = corr_with_target.abs().sort_values(ascending=False)[:ui_fs.spinBox_num_param.value()].index
+            selected_features = data_c[top_k]
+            print("Отобранные признаки с высокой корреляцией с target:", top_k.to_list())
             print(len(top_k.to_list()))
 
             selected_corr_matrix = selected_features.corr()
             plt.figure(figsize=(10, 8))
-            sns.heatmap(selected_corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
-            plt.title('Heatmap for Top Selected Features')
+            sns.heatmap(selected_corr_matrix, annot=False, cmap='coolwarm', fmt='.1f', linewidths=0.1)
+            plt.title('Тепловая карта корреляции k признаков с target с наиболее высокой корреляцией')
             plt.xticks(rotation=45)
             plt.yticks(rotation=45)
             plt.show()
 
+            corr_no_target = data_no_target.corr()
+
+            threshold = 0.95
+            strong_corr = np.where((corr_no_target > threshold) | (corr_no_target < -threshold))
+            strong_pairs = set([(data.columns[i], data.columns[j], corr_no_target.iloc[i, j])
+                                for i, j in zip(*strong_corr) if i != j and i < j])
+
+            print("Признаки с сильной корреляцией (выше порога):")
+            for pair in strong_pairs:
+                print(f"{pair[0]} и {pair[1]}: корреляция = {pair[2]:.2f}")
+
+            print('Количество уникальных пар с сильной корреляцией:', len(strong_pairs))
+            print('\n\n')
+
+            correlation_counts = defaultdict(int)
+            for col1, col2, _ in strong_pairs:
+                correlation_counts[col1] += 1
+                correlation_counts[col2] += 1
+
+            columns_to_drop = {col for col, count in correlation_counts.items() if count >= 2}
+
+            data_reduced = data.drop(columns=columns_to_drop)
+            list_param = data_reduced.columns.to_list()
+            corr_reduced = data_reduced.iloc[:, :ui_fs.spinBox_num_param.value()].corr()
+
+            print('Оставшиеся признаки после удаления коррелированных больше чем с n признаками:', data_reduced.columns.to_list())
+            print('Количество оставшихся признаков:', len(data_reduced.columns))
+            print(f'Количество элементов в columns_to_drop: {len(columns_to_drop)}')
+
+            corr_sum = corr_reduced.abs().sum().sort_values(ascending=False)
+            top_features = corr_sum.index[:ui_fs.spinBox_num_param.value()]
+            corr_top_reduced = data_reduced[top_features].corr()
+
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(corr_top_reduced, annot=False, cmap='coolwarm', linewidths=0.1)
+            plt.title('Тепловая карта сильной корреляции для признаков после удаления коррелированных больше чем с n признаками:')
+            plt.xticks(rotation=45)
+            plt.yticks(rotation=45)
+            plt.show()
+
+            ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
+            add_param_to_list(list_param, ui_fs)
 
 
-            # print(corr)
-            #
-            # threshold = 0.95
-            # strong_corr = np.where((corr > threshold) | (corr < -threshold))
-            # strong_pairs = set([(data.columns[i], data.columns[j], corr.iloc[i, j])
-            #                     for i, j in zip(*strong_corr) if i != j and i < j])
-            #
-            # print("Признаки с сильной корреляцией (выше порога):")
-            # for pair in strong_pairs:
-            #     print(f"{pair[0]} и {pair[1]}: корреляция = {pair[2]:.2f}")
-            #
-            # print('Количество уникальных пар с сильной корреляцией:', len(strong_pairs))
-            # print('\n\n')
-            #
-            # columns_to_drop = set()
-            # for col1, col2, _ in strong_pairs:
-            #     if col1 not in columns_to_drop and col2 not in columns_to_drop:
-            #         columns_to_drop.add(col2)
-            # data_reduced = data.drop(columns=columns_to_drop)
-            #
-            # print('Оставшиеся признаки после удаления коррелированных:', data_reduced.columns.to_list())
-            # print('Количество оставшихся признаков:', len(data_reduced.columns))
+            # plt.figure(figsize=(10, 8))
+            # sns.heatmap(corr_reduced, annot=False, cmap='coolwarm', linewidths=0.1)
+            # plt.title('Тепловая карта корреляции после удаления признаков')
+            # plt.xticks(rotation=45)
+            # plt.yticks(rotation=45)
+            # plt.show()
 
         elif ui_fs.comboBox_method.currentText() == 'Forward Selection':
             print('Forward Selection: ')
-
+            param = ui_fs.spinBox_num_param.value()
             X_train, X_test, y_train, y_test = train_test_split(
                 data,
                 target,
@@ -165,14 +242,15 @@ def feature_selection(data, target):
             X_train.fillna(X_train.median(), inplace=True)
             X_test.fillna(X_train.median(), inplace=True)
 
-            rf = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf.fit(X_train, y_train)
+            r2_all, _ = train_model(X_train, X_test, y_train, y_test, mode)
+            print('R^2:', r2_all)
 
-            y_pred = rf.predict(X_test)
-            print('R^2:', r2_score(y_test, y_pred))
-
-            sfs1 = SFS(RandomForestRegressor(),
-                       k_features=50,
+            if mode == 'reg':
+                model = RandomForestRegressor()
+            elif mode == 'classif':
+                model = RandomForestClassifier()
+            sfs1 = SFS(model,
+                       k_features=param,
                        forward=True,
                        floating=False,
                        verbose=2,
@@ -185,17 +263,24 @@ def feature_selection(data, target):
             print('sfs1.k_feature_names_:', sfs1.k_feature_names_)
             print('sfs1.k_feature_idx_:', sfs1.k_feature_idx_)
 
-            rf1 = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf1.fit(X_new, y_train)
+            r2_param, rf1 = train_model(X_new, X_test_new, y_train, y_test, mode)
 
-            y_pred = rf1.predict(X_test_new)
-            print('R^2 after feature selection:', r2_score(y_test, y_pred))
+            feature_importances = pd.Series(rf1.feature_importances_, index=list(sfs1.k_feature_names_))
+            list_param = feature_importances.sort_values(ascending=False)
+            list_param = list(list_param.index)
+
+            print('R^2 after feature selection:', r2_param)
+            add_param_to_list(list_param, ui_fs)
+            ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
+            ui_fs.plainTextEdit_results.setPlainText('Все параметры R^2: ' + str(round(r2_all, 4)) + \
+                                                     '\n' + 'Отобранные параметры R^2: ' + str(
+                round(r2_param, 4)))
 
         elif ui_fs.comboBox_method.currentText() == 'Backward Selection':
             print('Backward Selection: ')
-
+            param = ui_fs.spinBox_num_param.value()
             X_train, X_test, y_train, y_test = train_test_split(
-                data.iloc[:, :100],
+                data,
                 target,
                 test_size=0.3,
                 random_state=0)
@@ -204,14 +289,15 @@ def feature_selection(data, target):
             X_train.fillna(X_train.median(), inplace=True)
             X_test.fillna(X_train.median(), inplace=True)
 
-            rf = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf.fit(X_train, y_train)
+            r2_all, _ = train_model(X_train, X_test, y_train, y_test, mode)
+            print('R^2:', r2_all)
 
-            y_pred = rf.predict(X_test)
-            print('R^2:', r2_score(y_test, y_pred))
-
-            sfs1 = SFS(RandomForestRegressor(),
-                       k_features=20,
+            if mode == 'reg':
+                model = RandomForestRegressor()
+            elif mode == 'classif':
+                model = RandomForestClassifier()
+            sfs1 = SFS(model,
+                       k_features=param,
                        forward=False,
                        floating=False,
                        verbose=2,
@@ -224,12 +310,18 @@ def feature_selection(data, target):
             print('sfs1.k_feature_names_:', sfs1.k_feature_names_)
             print('sfs1.k_feature_idx_:', sfs1.k_feature_idx_)
 
-            rf1 = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf1.fit(X_new, y_train)
+            r2_param, rf1 = train_model(X_new, X_test_new, y_train, y_test, mode)
+            feature_importances = pd.Series(rf1.feature_importances_, index=list(sfs1.k_feature_names_))
+            list_param = feature_importances.sort_values(ascending=False)
+            list_param = list(list_param.index)
 
-            y_pred = rf1.predict(X_test_new)
-            print('R^2 after feature selection:', r2_score(y_test, y_pred))
+            print('R^2 after feature selection:', r2_param)
 
+            add_param_to_list(list_param, ui_fs)
+            ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
+            ui_fs.plainTextEdit_results.setPlainText('Все параметры R^2: ' + str(round(r2_all, 4)) + \
+                                                     '\n' + 'Отобранные параметры R^2: ' + str(
+                round(r2_param, 4)))
 
         elif ui_fs.comboBox_method.currentText() == 'LASSO':
             print('LASSO Regression: ')
@@ -248,17 +340,17 @@ def feature_selection(data, target):
             sel_ = SelectFromModel(Lasso(alpha=10))
             sel_.fit(scaler.transform(X_train.fillna(0)), y_train)
 
-            selected_feat = X_train.columns[(sel_.get_support())]
+            list_param = X_train.columns[(sel_.get_support())]
 
             print('total features: {}'.format((X_train.shape[1])))
-            print('selected features: {}'.format(len(selected_feat)))
+            print('selected features: {}'.format(len(list_param)))
             print('features with coefficients shrank to zero: {}'.format(
                 np.sum(sel_.estimator_.coef_ == 0)))
 
-            add_param_to_list(selected_feat, ui_fs)
-            ui_fs.label_params.setText(f'Отобранные параметры ({len(selected_feat)})')
+            add_param_to_list(list_param, ui_fs)
+            ui_fs.label_params.setText(f'Отобранные параметры ({len(list_param)})')
             ui_fs.plainTextEdit_results.setPlainText(f'total features: {X_train.shape[1]}\n'
-                                                     f'selected features: {len(selected_feat)}\n'
+                                                     f'selected features: {len(list_param)}\n'
                                                      f'features with coefficients shrank to zero: '
                                                      f'{np.sum(sel_.estimator_.coef_ == 0)}')
 
@@ -270,11 +362,7 @@ def feature_selection(data, target):
                 test_size=0.3,
                 random_state=0)
 
-            rf = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf.fit(X_train, y_train)
-
-            y_pred = rf.predict(X_test)
-            r2_all = r2_score(y_test, y_pred)
+            r2_all, rf = train_model(X_train, X_test, y_train, y_test, mode)
             print('R^2:', r2_all)
 
             plt.figure(num=None, figsize=(15, 10), dpi=80, facecolor='w', edgecolor='k')
@@ -290,18 +378,16 @@ def feature_selection(data, target):
             X_train_top = X_train[top_features]
             X_test_top = X_test[top_features]
 
-            rf1 = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf1.fit(X_train_top, y_train)
-            y_pred = rf1.predict(X_test_top)
-
-            print('R^2 after feature selection:', r2_score(y_test, y_pred))
+            r2_param, _ = train_model(X_train_top, X_test_top, y_train, y_test, mode)
+            print('R^2 after feature selection:', r2_param)
             add_param_to_list(list_param, ui_fs)
             ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
             ui_fs.plainTextEdit_results.setPlainText('Все параметры R^2: ' + str(round(r2_all, 4)) + \
-                                        '\n' + 'Отобранные параметры R^2: ' + str(round(r2_score(y_test, y_pred), 4)))
+                                        '\n' + 'Отобранные параметры R^2: ' + str(round(r2_param, 4)))
 
         elif ui_fs.comboBox_method.currentText() == 'Boruta':
             print('Boruta: ')
+            iter = ui_fs.spinBox_num_param.value()
 
             X_train, X_test, y_train, y_test = train_test_split(
                 data,
@@ -309,13 +395,14 @@ def feature_selection(data, target):
                 test_size=0.3,
                 random_state=0)
 
-            rf_all_features = RandomForestRegressor(random_state=123, n_estimators=1000, max_depth=5)
-            rf_all_features.fit(X_train, y_train)
-            r2_all = r2_score(y_test, rf_all_features.predict(X_test))
+            r2_all, _ = train_model(X_train, X_test, y_train, y_test, mode)
             print('All features R^2: ', r2_all)
 
-            rfc = RandomForestRegressor(random_state=1, n_estimators=1000, max_depth=5)
-            boruta_selector = BorutaPy(rfc, n_estimators='auto', verbose=1, random_state=1, max_iter=10)
+            if mode == 'reg':
+                rfc = RandomForestRegressor(random_state=1, n_estimators=1000, max_depth=5)
+            elif mode =='classif':
+                rfc = RandomForestClassifier(random_state=1, n_estimators=1000, max_depth=5)
+            boruta_selector = BorutaPy(rfc, n_estimators='auto', verbose=1, random_state=1, max_iter=iter)
             boruta_selector.fit(np.array(data), np.array(target))
 
             print("No. of significant features: ", boruta_selector.n_features_)
@@ -328,6 +415,10 @@ def feature_selection(data, target):
             print(list_param)
 
             new_columns = selected_rf_features[selected_rf_features["Ranking"] == 1].index
+            if len(selected_rf_features[selected_rf_features["Ranking"] == 1]) == 0:
+                ui_fs.plainTextEdit_results.appendPlainText('Количество отобранных параметров равно 0')
+                return
+
             X_new = data.iloc[:, new_columns]
 
             X_train, X_test, y_train, y_test = train_test_split(
@@ -336,11 +427,10 @@ def feature_selection(data, target):
                 test_size=0.3,
                 random_state=0)
 
-            rf = RandomForestRegressor(n_estimators=100, random_state=0)
-            rf.fit(X_train, y_train)
 
-            y_pred = rf.predict(X_test)
-            print('Final R^2:', r2_score(y_test, y_pred))
+            r2_param, _ = train_model(X_train, X_test, y_train, y_test, mode)
+
+            print('Final R^2:', r2_param)
             print('columns: ', new_columns)
 
             ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
@@ -350,11 +440,14 @@ def feature_selection(data, target):
             rejected = len(boruta_selector.support_) - confirmed - tentative
             ui_fs.plainTextEdit_results.setPlainText(f'confirmed: {confirmed}\ntentative: {tentative}\nrejected: {rejected}\n')
             ui_fs.plainTextEdit_results.appendPlainText('Все параметры R^2: ' + str(round(r2_all, 4)) + \
-                                                    '\n' + 'Отобранные параметры R^2: ' + str(round(r2_score(y_test, y_pred), 4)))
+                                                    '\n' + 'Отобранные параметры R^2: ' + str(round(r2_param, 4)))
 
-
-
+    def import_params():
+        global list_param
+        print('list_param: ', list_param)
+        update_all_params(list_param)
 
     ui_fs.pushButton_select_features.clicked.connect(choose_method)
+    ui_fs.pushButton_import_param.clicked.connect(import_params)
     FeatSelect.exec_()
 
