@@ -393,9 +393,6 @@ def remove_well_markup_mlp():
         pass
 
 
-
-
-
 def choose_marker_mlp():
     # Функция выбора маркера MLP
     # Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
@@ -715,6 +712,7 @@ def remove_all_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_mlp()
+
 
 def update_list_param_mlp(db=False):
     start_time = datetime.datetime.now()

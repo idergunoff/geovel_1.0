@@ -513,15 +513,27 @@ def train_regression_model():
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
     list_nan_param, count_nan = set(), 0
-    for i in data_train.index:
-        for param in list_param_reg:
-            if pd.isna(data_train[param][i]):
-                count_nan += 1
-                list_nan_param.add(param)
-            if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
-                data_train[param][i] = 0
-                count_nan += 1
-                list_nan_param.add(param)
+    # for i in data_train.index:
+    #     for param in list_param_reg:
+    #         if pd.isna(data_train[param][i]):
+    #             count_nan += 1
+    #             list_nan_param.add(param)
+    #         if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
+    #             data_train[param][i] = 0
+    #             count_nan += 1
+    #             list_nan_param.add(param)
+    # Используем vectorized операции вместо циклов
+    nan_mask = data_train[list_param_reg].isna()
+    inf_mask = np.isinf(data_train[list_param_reg])
+
+    # Подсчет NaN и inf значений
+    count_nan = nan_mask.sum().sum() + inf_mask.sum().sum()
+
+    # Добавление параметров с NaN или inf в set
+    list_nan_param = set(nan_mask.columns[nan_mask.any() | inf_mask.any()])
+
+    # Замена inf на 0
+    data_train[list_param_reg] = data_train[list_param_reg].replace([np.inf, -np.inf], 0)
 
     if count_nan > 0:
         list_col = data_train.columns.tolist()

@@ -57,21 +57,38 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
     """
-    list_nan_param, count_nan = set(), 0
-    for i in data_train.index:
-        for param in list_param:
-            if pd.isna(data_train[param][i]):
-                count_nan += 1
-                list_nan_param.add(param)
-            if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
-                data_train[param][i] = 0
-                count_nan += 1
-                list_nan_param.add(param)
+    #### старая не оптимизированная версия кода. Работает долго
+    # list_nan_param, count_nan = set(), 0
+    # for i in data_train.index:
+    #     for param in list_param:
+    #         if pd.isna(data_train[param][i]):
+    #             count_nan += 1
+    #             list_nan_param.add(param)
+    #         if data_train[param][i] == np.inf or data_train[param][i] == -np.inf:
+    #             data_train[param][i] = 0
+    #             count_nan += 1
+    #             list_nan_param.add(param)
+
+    list_nan_param = set()
+    count_nan = 0
+
+    # Используем vectorized операции вместо циклов
+    nan_mask = data_train[list_param].isna()
+    inf_mask = np.isinf(data_train[list_param])
+
+    # Подсчет NaN и inf значений
+    count_nan = nan_mask.sum().sum() + inf_mask.sum().sum()
+
+    # Добавление параметров с NaN или inf в set
+    list_nan_param = set(nan_mask.columns[nan_mask.any() | inf_mask.any()])
+
+    # Замена inf на 0
+    data_train[list_param] = data_train[list_param].replace([np.inf, -np.inf], 0)
+
     if count_nan > 0:
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
         set_info(f'Заполнены пропуски в {count_nan} образцах в параметрах {", ".join(list_nan_param)}', 'red')
-
     training_sample = np.array(data_train[list_param].values.tolist())
     markup = np.array(sum(data_train[[mark]].values.tolist(), []))
     list_marker = get_list_marker_mlp(type_case)
