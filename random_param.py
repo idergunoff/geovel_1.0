@@ -1001,7 +1001,7 @@ def push_random_param():
 
     def update_test_analysis_combobox():
         ui_rp.comboBox_test_analysis.clear()
-        for i in session.query(AnalysisMLP).order_by(AnalysisMLP.title).all():
+        for i in session.query(AnalysisMLP.title, AnalysisMLP.id).order_by(AnalysisMLP.title).all():
             ui_rp.comboBox_test_analysis.addItem(f'{i.title} id{i.id}')
             update_list_test_well()
 
@@ -1098,7 +1098,7 @@ def push_random_param():
         return common_param, percent_result
 
     update_test_analysis_combobox()
-    update_list_test_well()
+    # update_list_test_well()
 
     ui_rp.comboBox_test_analysis.activated.connect(update_list_test_well)
     ui_rp.pushButton_start.clicked.connect(start_random_param)
