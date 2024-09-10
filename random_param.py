@@ -733,7 +733,7 @@ def push_random_param():
                 y_pred = data_test['mark_probability'].to_list()
             fpr, tpr, thresholds = roc_curve(y_val, y_prob, pos_label=list_cat[0])
             roc_auc = auc(fpr, tpr)
-            print('roc_auc ', roc_auc)
+            # print('roc_auc ', roc_auc)
             list_estimator_roc.append(roc_auc)
             recall = recall_score(y_val, y_pred, pos_label=list_cat[0])
             precision = precision_score(y_val, y_pred, pos_label=list_cat[0])
@@ -803,7 +803,7 @@ def push_random_param():
 
             data_test.reset_index(drop=True, inplace=True)
             percent = correct_matches / len(data_test) * 100
-            print('percent ', percent)
+            # print('percent ', percent)
             result_percent = correct_matches / len(data_test)
             list_estimator_percent.append(result_percent)
             time_end = datetime.datetime.now() - time_start
