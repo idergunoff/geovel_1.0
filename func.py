@@ -390,27 +390,27 @@ def update_profile_combobox():
     # Обновление списка формирований
     update_formation_combobox()
     update_layers()
+    if ui.checkBox_check_grid.isChecked():
+        grids = {
+            'r': session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all(),
+            'm': session.query(CommonGrid.id).filter(CommonGrid.type == 'm').all(),
+            'uf': session.query(CommonGrid.id).filter(CommonGrid.type == 'uf').all()
+        }
 
-    grids = {
-        'r': session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all(),
-        'm': session.query(CommonGrid.id).filter(CommonGrid.type == 'm').all(),
-        'uf': session.query(CommonGrid.id).filter(CommonGrid.type == 'uf').all()
-    }
+        for grid_type, grid_list in grids.items():
+            if not grid_list:
+                getattr(ui, f'pushButton_{grid_type}').setStyleSheet('background: rgb(255, 185, 185)')
+                continue
 
-    for grid_type, grid_list in grids.items():
-        if not grid_list:
-            getattr(ui, f'pushButton_{grid_type}').setStyleSheet('background: rgb(255, 185, 185)')
-            continue
+            flag = True
+            for profile in profiles:
+                if not any(check_profile_grid_by_start_stop(profile.id, grid.id, min_dist=ui.spinBox_calc_dist_grid.value()) for grid in grid_list):
+                    flag = False
+                    break
 
-        flag = True
-        for profile in profiles:
-            if not any(check_profile_grid_by_start_stop(profile.id, grid.id, min_dist=ui.spinBox_calc_dist_grid.value()) for grid in grid_list):
-                flag = False
-                break
-
-        getattr(ui, f'pushButton_{grid_type}').setStyleSheet(
-            'background: rgb(191, 255, 191)' if flag else 'background: rgb(255, 185, 185)'
-        )
+            getattr(ui, f'pushButton_{grid_type}').setStyleSheet(
+                'background: rgb(191, 255, 191)' if flag else 'background: rgb(255, 185, 185)'
+            )
     check_coordinates_profile()
     check_grid_relief()
 

@@ -1,8 +1,8 @@
 from func import *
-from calc_additional_futures import (calc_hht_features, calc_emd_feature, calc_autocorr_feature, calc_nonlinear_features,
-                                     calc_envelope_feature, calc_frequency_features, calc_morphology_features,
-                                     calc_entropy_features, calc_fractal_features,
-                                     calc_wavelet_features)
+from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_autocorr_feature, calc_nonlinear_features,
+                                      calc_envelope_feature, calc_frequency_features, calc_morphology_features,
+                                      calc_entropy_features, calc_fractal_features,
+                                      calc_wavelet_features)
 
 
 def build_table_train(db=False, analisis='lda'):

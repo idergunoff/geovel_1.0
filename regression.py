@@ -1861,6 +1861,7 @@ def train_regression_model():
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     ui_r.pushButton_search_param.clicked.connect(random_search_reg)
+    ui_r.pushButton_random_param.clicked.connect(Regressor.close)
     ui_r.pushButton_random_param.clicked.connect(push_random_param_reg)
     ui_r.pushButton_feature_selection.clicked.connect(call_feature_selection)
     Regressor.exec_()

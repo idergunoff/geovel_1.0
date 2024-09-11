@@ -147,6 +147,216 @@
               </item>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_6">
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_2">
+                  <property name="text">
+                   <string>Загрузка GRID</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,9,0,0,1,1">
+                  <item>
+                   <widget class="QLabel" name="label_4">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>Объект:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_object">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_check_grid">
+                    <property name="toolTip">
+                     <string>проверка загруженных карт для объекта</string>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_research"/>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_add_obj">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>add</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_del_obj">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>del</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="3" column="0">
+                 <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,1,1,0">
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_r">
+                    <property name="text">
+                     <string>рельеф</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_m">
+                    <property name="text">
+                     <string>мощность</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_uf">
+                    <property name="text">
+                     <string>P2uf</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <widget class="QSpinBox" name="spinBox_calc_dist_grid">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>99999</number>
+                    </property>
+                    <property name="value">
+                     <number>100</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="4" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,0,1,1">
+                  <item>
+                   <widget class="QLabel" name="label_6">
+                    <property name="text">
+                     <string>Пласт:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_plast"/>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_param_plast">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_all_formation">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_load_plast">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>load</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_del_plast">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>del</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,0,1,1">
+                  <item>
+                   <widget class="QLabel" name="label_5">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>Профиль:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QComboBox" name="comboBox_profile">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_calc_all_features">
+                    <property name="toolTip">
+                     <string>расчет всех атрибутов для профиля</string>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_load_prof">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>load</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_del_prof">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>del</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
                 <item row="5" column="0">
                  <layout class="QGridLayout" name="gridLayout_5">
                   <item row="0" column="0">
@@ -235,196 +445,6 @@
                     </property>
                     <property name="text">
                      <string>calc all param</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="0" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,9,0,1,1">
-                  <item>
-                   <widget class="QLabel" name="label_4">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>Объект:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_object">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_research"/>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_add_obj">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>add</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_del_obj">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
-                    </property>
-                    <property name="text">
-                     <string>del</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="4" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,0,1,1">
-                  <item>
-                   <widget class="QLabel" name="label_6">
-                    <property name="text">
-                     <string>Пласт:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_plast"/>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_param_plast">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QCheckBox" name="checkBox_all_formation">
-                    <property name="text">
-                     <string/>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_load_plast">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>load</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_del_plast">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
-                    </property>
-                    <property name="text">
-                     <string>del</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,1,1">
-                  <item>
-                   <widget class="QLabel" name="label_5">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>Профиль:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_profile">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_load_prof">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>load</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_del_prof">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
-                    </property>
-                    <property name="text">
-                     <string>del</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QLabel" name="label_2">
-                  <property name="text">
-                   <string>Загрузка GRID</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,1,1,0">
-                  <item row="1" column="2">
-                   <widget class="QPushButton" name="pushButton_r">
-                    <property name="text">
-                     <string>рельеф</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QPushButton" name="pushButton_m">
-                    <property name="text">
-                     <string>мощность</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="pushButton_uf">
-                    <property name="text">
-                     <string>P2uf</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="3">
-                   <widget class="QSpinBox" name="spinBox_calc_dist_grid">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>99999</number>
-                    </property>
-                    <property name="value">
-                     <number>100</number>
                     </property>
                    </widget>
                   </item>
@@ -1144,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">

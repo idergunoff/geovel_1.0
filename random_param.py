@@ -1,4 +1,4 @@
-from calc_additional_futures import calc_wavelet_features, calc_fractal_features, calc_entropy_features, \
+from calc_additional_features import calc_wavelet_features, calc_fractal_features, calc_entropy_features, \
     calc_nonlinear_features, calc_morphology_features, calc_frequency_features, calc_envelope_feature, \
     calc_autocorr_feature, calc_emd_feature, calc_hht_features
 from func import *

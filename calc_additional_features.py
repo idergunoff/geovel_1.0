@@ -20,6 +20,8 @@ def calc_all_params():
 
 
 def calc_add_features_profile():
+    if not ui.checkBox_calc_all_features.isChecked():
+        return
     for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
         calc_wavelet_features(f.id)
         calc_fractal_features(f.id)
