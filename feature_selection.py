@@ -70,7 +70,8 @@ def update_all_params(list_param):
     print('added count', count)
 
     set_color_button_updata()
-    update_list_param_mlp()
+    # update_list_param_mlp()
+
 
 def add_param_to_list(list_param, ui_fs):
     ui_fs.listWidget_features.clear()
@@ -101,7 +102,7 @@ def feature_selection_calc(data, target, mode):
     data = data.replace([np.inf, -np.inf], np.nan)
     data = data.fillna(data.median())
     target = pd.to_numeric(target, errors='coerce')
-    target = target.replace([np.inf, -np.inf], np.nan)
+    target = target.replace([np.inf, -np.inf], 0)
     list_param = []
 
     if mode == 'reg':

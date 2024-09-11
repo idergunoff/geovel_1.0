@@ -604,10 +604,21 @@ def push_random_param_reg():
             text_model = f'**KNNR**: \nn_neighbors: {n_knn}, \nweights: {weights_knn}, '
 
         elif model == 'GBR':
-            est = ui_r.spinBox_n_estimators.value()
-            l_rate = ui_r.doubleSpinBox_learning_rate.value()
-            model_reg = GradientBoostingRegressor(n_estimators=est, learning_rate=l_rate, random_state=0)
-            text_model = f'**GBR**: \nn estimators: {round(est, 2)}, \nlearning rate: {round(l_rate, 2)}, '
+            est = ui_r.spinBox_n_estimators_gbr.value()
+            l_rate = ui_r.doubleSpinBox_learning_rate_gbr.value()
+            model_reg = GradientBoostingRegressor(n_estimators=est,
+                                                  learning_rate=l_rate,
+                                                  max_depth=ui_r.spinBox_depth_gbr.value(),
+                                                  min_samples_split=ui_r.spinBox_min_sample_split_gbr.value(),
+                                                  min_samples_leaf=ui_r.spinBox_min_sample_leaf_gbr.value(),
+                                                  subsample=ui_r.doubleSpinBox_subsample_gbr.value(),
+                                                  random_state=0)
+            text_model = f'**GBR**: \nn estimators: {round(est, 2)}, \nlearning rate: {round(l_rate, 2)}, ' \
+                         f'max_depth: {ui_r.spinBox_depth_gbr.value()}, \nmin_samples_split: ' \
+                         f'{ui_r.spinBox_min_sample_split_gbr.value()}, \nmin_samples_leaf: ' \
+                         f'{ui_r.spinBox_min_sample_leaf_gbr.value()} \nsubsample: ' \
+                         f'{round(ui_r.doubleSpinBox_subsample_gbr.value(), 2)}, '
+
 
         elif model == 'LR':
             model_reg = LinearRegression(fit_intercept=ui_r.checkBox_fit_intercept.isChecked())
@@ -641,18 +652,21 @@ def push_random_param_reg():
             text_model = f'**ETR**: \nn estimators: {ui_r.spinBox_rfr_n.value()}, '
 
         elif model == 'GPR':
-            gpc_kernel_width = ui_r.doubleSpinBox_gpc_width.value()
-            gpc_kernel_scale = ui_r.doubleSpinBox_gpc_scale.value()
-            n_restart_optimization = ui_r.spinBox_gpc_n_restart.value()
-            kernel = gpc_kernel_scale * RBF(gpc_kernel_width)
+            constant = ui_r.doubleSpinBox_gpr_const.value()
+            scale = ui_r.doubleSpinBox_gpr_scale.value()
+            n_restart_optimization = ui_r.spinBox_gpr_n_restart.value()
+            kernel = ConstantKernel(constant) * RBF(scale)
             model_reg = GaussianProcessRegressor(
                 kernel=kernel,
+                alpha=ui_r.doubleSpinBox_gpr_alpha.value(),
                 n_restarts_optimizer=n_restart_optimization,
                 random_state=0
             )
-            text_model = (
-                f'**GPR**: \nwidth kernal: {round(gpc_kernel_width, 2)}, \nscale kernal: {round(gpc_kernel_scale, 2)}, '
-                f'\nn restart: {n_restart_optimization} ,')
+            text_model = (f'**GPR**: '
+                          f'\nkernal: {kernel}, '
+                          f'\nscale: {round(scale, 3)}, '
+                          f'\nconstant: {round(constant, 3)}, '
+                          f'\nn restart: {n_restart_optimization} ,')
 
         elif model == 'SVR':
             model_reg = SVR(kernel=ui_r.comboBox_svr_kernel.currentText(), C=ui_r.doubleSpinBox_svr_c.value(),
@@ -682,6 +696,34 @@ def push_random_param_reg():
             text_model = f'**XGB**: \nn estimators: {ui_r.spinBox_n_estimators_xgb.value()}, ' \
                          f'\nlearning_rate: {ui_r.doubleSpinBox_learning_rate_xgb.value()}, ' \
                          f'\nmax_depth: {ui_r.spinBox_depth_xgb.value()} \nalpha: {ui_r.doubleSpinBox_alpha_xgb.value()}'
+
+
+        elif model == 'LGBM':
+            model_reg = lgb.LGBMRegressor(
+                objective='binary',
+                verbosity=-1,
+                boosting_type='gbdt',
+                reg_alpha=ui_r.doubleSpinBox_l1_lgbm.value(),
+                reg_lambda=ui_r.doubleSpinBox_l2_lgbm.value(),
+                num_leaves=ui_r.spinBox_lgbm_num_leaves.value(),
+                colsample_bytree=ui_r.doubleSpinBox_lgbm_feature.value(),
+                subsample=ui_r.doubleSpinBox_lgbm_subsample.value(),
+                subsample_freq=ui_r.spinBox_lgbm_sub_freq.value(),
+                min_child_samples=ui_r.spinBox_lgbm_child.value(),
+                learning_rate=ui_r.doubleSpinBox_lr_lgbm.value(),
+                n_estimators=ui_r.spinBox_estim_lgbm.value(),
+            )
+
+            text_model = f'**LGBM**: \nlambda_1: {ui_r.doubleSpinBox_l1_lgbm.value()}, ' \
+                         f'\nlambda_2: {ui_r.doubleSpinBox_l2_lgbm.value()}, ' \
+                         f'\nnum_leaves: {ui_r.spinBox_lgbm_num_leaves.value()}, ' \
+                         f'\nfeature_fraction: {ui_r.doubleSpinBox_lgbm_feature.value()}, ' \
+                         f'\nsubsample: {ui_r.doubleSpinBox_lgbm_subsample.value()}, ' \
+                         f'\nsubsample_freq: {ui_r.spinBox_lgbm_sub_freq.value()}, ' \
+                         f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
+                         f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
+                         f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
+
         else:
             model_reg = QuadraticDiscriminantAnalysis()
             text_model = ''
