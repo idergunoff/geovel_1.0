@@ -1,3 +1,5 @@
+from numba.typed.listobject import new_list
+
 from calc_additional_features import calc_wavelet_features, calc_fractal_features, calc_entropy_features, \
     calc_nonlinear_features, calc_morphology_features, calc_frequency_features, calc_envelope_feature, \
     calc_autocorr_feature, calc_emd_feature, calc_hht_features
@@ -638,6 +640,7 @@ def push_random_param():
                     if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                         if param.startswith('sig'):
                             p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 512 - int(param.split('_')[3])
+
                         else:
                             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
 
@@ -675,7 +678,22 @@ def push_random_param():
 
             ui.progressBar.setValue(nm + 1)
 
-        return data_train, list_param
+        new_list_param = []
+        for param in list_param:
+            if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
+                if param.startswith('sig'):
+                    p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 512 - int(param.split('_')[3])
+                    for i_sig in range(up, down):
+                        new_list_param.append(f'sig_{atr}_{i_sig}')
+                else:
+                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                    for i_sig in range(n):
+                        new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
+            else:
+                new_list_param.append(param)
+
+
+        return data_train, new_list_param
 
     def test_classif_estimator(estimators, data_val, list_param, labels, filename):
         list_estimator_roc = []
