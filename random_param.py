@@ -637,7 +637,7 @@ def push_random_param():
                 for param in list_param:
                     if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                         if param.startswith('sig'):
-                            p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 512 - int(param.split('_')[3])
+                            p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 511 - int(param.split('_')[3])
 
                         else:
                             p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
@@ -680,7 +680,7 @@ def push_random_param():
         for param in list_param:
             if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 if param.startswith('sig'):
-                    p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 512 - int(param.split('_')[3])
+                    p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 511 - int(param.split('_')[3])
                     for i_sig in range(up, down):
                         new_list_param.append(f'sig_{atr}_{i_sig + 1}')
                 else:
