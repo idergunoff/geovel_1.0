@@ -333,7 +333,7 @@ def push_random_param():
             if n_sig_top + n_sig_bot > 505:
                 n_sig_bot = 0
             else:
-                n_sig_bot = 512 - (n_sig_top + n_sig_bot)
+                n_sig_bot = 511 - (n_sig_top + n_sig_bot)
         else:
             if n_sig_bot + n_sig_top > 505:
                 n_sig_bot = random.randint(0, 505 - n_sig_top)
