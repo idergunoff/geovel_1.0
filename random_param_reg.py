@@ -341,7 +341,24 @@ def push_random_param_reg():
                 data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
 
             ui.progressBar.setValue(nm + 1)
-        return data_train, list_param
+
+        new_list_param = []
+        for param in list_param:
+            if param.startswith('sig') or param.startswith('distr') or param.startswith('sep') or param.startswith(
+                    'mfcc'):
+                if param.startswith('sig'):
+                    p, atr, up, down = param.split('_')[0], param.split('_')[1], int(param.split('_')[2]), 512 - int(
+                        param.split('_')[3])
+                    for i_sig in range(up, down):
+                        new_list_param.append(f'sig_{atr}_{i_sig + 1}')
+                else:
+                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                    for i_sig in range(n):
+                        new_list_param.append(f'{p}_{atr}_{i_sig + 1}')
+            else:
+                new_list_param.append(param)
+
+        return data_train, new_list_param
 
 
 
@@ -909,10 +926,10 @@ def push_random_param_reg():
                 text_scaler += '\nMaxAbsScaler'
 
             list_param = build_list_param()
-            data_train, list_param = build_table_random_param_reg(get_regmod_id(), list_param)
+            data_train, new_list_param = build_table_random_param_reg(get_regmod_id(), list_param)
 
             # Замена inf на 0
-            data_train[list_param] = data_train[list_param].replace([np.inf, -np.inf], 0)
+            data_train[new_list_param] = data_train[new_list_param].replace([np.inf, -np.inf], 0)
 
             list_col = data_train.columns.tolist()
             data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
@@ -920,10 +937,10 @@ def push_random_param_reg():
             y_train = data_train['target_value'].values
             if not np.issubdtype(y_train.dtype, np.number):
                 y_train = pd.to_numeric(y_train, errors='coerce')
-            data_test, list_param = build_table_random_param_reg(get_regmod_test_id(), list_param)
+            data_test, new_list_param = build_table_random_param_reg(get_regmod_test_id(), list_param)
 
             # Замена inf на 0
-            data_test[list_param] = data_test[list_param].replace([np.inf, -np.inf], 0)
+            data_test[new_list_param] = data_test[new_list_param].replace([np.inf, -np.inf], 0)
 
             list_col = data_test.columns.tolist()
             data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
