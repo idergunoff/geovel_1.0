@@ -1,4 +1,6 @@
 # from torch.cuda import graph
+import os.path
+
 import numpy as np
 
 from object import *
@@ -1376,7 +1378,8 @@ def update_list_trained_models_class():
         item_text = model.title
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, model.id)
-        item.setToolTip(f'{model.comment}\n'
+        item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+                        f'{model.comment}\n'
                         f'Количество параметров: '
                         f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n'
                         f'{model.list_params}\nSignal: {model.except_signal}')
