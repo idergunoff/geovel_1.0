@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>354</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4243,7 +4243,7 @@ Therm</string>
                     </item>
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_80">
-                      <item row="0" column="1">
+                      <item row="0" column="2">
                        <widget class="QPushButton" name="pushButton_clear_params_reg">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 185, 185);</string>
@@ -4253,13 +4253,26 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="0">
+                      <item row="0" column="1">
                        <widget class="QPushButton" name="pushButton_rem_param_reg">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
                          <string>- remove parameter</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_reg_add_param_list">
+                        <property name="toolTip">
+                         <string>скопируйте строку списка параметров в поле ввода в верхней части программы</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>from list</string>
                         </property>
                        </widget>
                       </item>
@@ -5344,7 +5357,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

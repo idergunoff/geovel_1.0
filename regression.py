@@ -44,6 +44,29 @@ class RegressionModel(nn.Module):
         return self.model(x).squeeze(1).float()
 
 
+def rename_model_reg():
+    print('rename model')
+    """Переименовать модель"""
+    model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
+        Qt.UserRole)).first()
+    RenameModel = QtWidgets.QDialog()
+    ui_rnm = Ui_FormRenameModel()
+    ui_rnm.setupUi(RenameModel)
+    RenameModel.show()
+    RenameModel.setAttribute(Qt.WA_DeleteOnClose)
+    ui_rnm.lineEdit.setText(model.title)
+
+    def rename_model():
+        model.title = ui_rnm.lineEdit.text()
+        session.commit()
+        update_list_trained_models_class()
+        RenameModel.close()
+
+    ui_rnm.buttonBox.accepted.connect(rename_model)
+    ui_rnm.buttonBox.rejected.connect(RenameModel.close)
+
+    RenameModel.exec_()
+
 
 def add_regression_model():
     """Добавить новый набор для обучения регрессионной модели"""
@@ -502,6 +525,68 @@ def set_color_button_updata_regmod():
     reg = session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first()
     btn_color = 'background-color: rgb(191, 255, 191);' if reg.up_data else 'background-color: rgb(255, 185, 185);'
     ui.pushButton_updata_regmod.setStyleSheet(btn_color)
+
+def add_param_list_reg():
+    analysis_id = get_regmod_id()
+    session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
+    session.query(AnalysisReg).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    check_except = False
+    for i in ui.lineEdit_string.text().split('//'):
+        param = i.split('_')
+        if param[0] == 'sig':
+            if param[1] == 'CRL':
+                if session.query(ParameterReg).filter_by(
+                        analysis_id=analysis_id,
+                        parameter='CRL'
+                ).count() == 0:
+
+                    new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter='CRL')
+                    session.add(new_param_reg)
+                    session.commit()
+
+                else:
+                    set_info(f'Параметр CRL уже добавлен', 'red')
+            elif param[1] == 'CRLNF':
+                if session.query(ParameterReg).filter_by(
+                        analysis_id=analysis_id,
+                        parameter='CRL_NF'
+                ).count() == 0:
+                    new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter='CRL_NF')
+                    session.add(new_param_reg)
+                    session.commit()
+                else:
+                    set_info(f'Параметр CRL_NF уже добавлен', 'red')
+            else:
+                if session.query(ParameterReg).filter_by(
+                        analysis_id=analysis_id,
+                        parameter=f'Signal_{param[1]}'
+                ).count() == 0:
+                    new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=f'Signal_{param[1]}')
+                    session.add(new_param_reg)
+                    session.commit()
+                else:
+                    set_info(f'Параметр Signal_{param[1]} уже добавлен', 'red')
+            if not check_except:
+                str_exeption = f'1-{param[2]},{f"{str(512 - int(param[3]))}-512" if int(param[3]) > 0  else ""}'
+                session.query(ExceptionReg).filter_by(analysis_id=analysis_id).update({'except_signal': str_exeption,
+                                                                              'except_crl': str_exeption},
+                                                                             synchronize_session='fetch')
+                session.commit()
+                check_except = True
+        else:
+            if session.query(ParameterReg).filter_by(
+                    analysis_id=analysis_id,
+                    parameter=i
+            ).count() == 0:
+                new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=i)
+                session.add(new_param_reg)
+                session.commit()
+            else:
+                set_info(f'Параметр {i} уже добавлен', 'red')
+    set_color_button_updata_regmod()
+    update_line_edit_exception_reg()
+
 
 def str_to_interval(string):
     if string == '':
