@@ -264,7 +264,7 @@ ui.pushButton_import_model_reg.clicked.connect(import_model_reg)
 ui.pushButton_test_model_reg.clicked.connect(regression_test)
 ui.lineEdit_signal_except_reg.returnPressed.connect(add_signal_except_reg)
 ui.lineEdit_crl_except_reg.returnPressed.connect(add_crl_except_reg)
-ui.listWidget_trained_model_reg.customContextMenuRequested.connect(rename_model_reg)
+ui.listWidget_trained_model_reg.itemDoubleClicked.connect(rename_model_reg)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)

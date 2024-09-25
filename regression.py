@@ -45,7 +45,6 @@ class RegressionModel(nn.Module):
 
 
 def rename_model_reg():
-    print('rename model')
     """Переименовать модель"""
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
         Qt.UserRole)).first()
@@ -59,7 +58,7 @@ def rename_model_reg():
     def rename_model():
         model.title = ui_rnm.lineEdit.text()
         session.commit()
-        update_list_trained_models_class()
+        update_list_trained_models_regmod()
         RenameModel.close()
 
     ui_rnm.buttonBox.accepted.connect(rename_model)
