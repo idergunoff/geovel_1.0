@@ -5,6 +5,7 @@ from filtering import *
 from draw import *
 from layer import *
 from calc_additional_features import *
+from calc_profile_features import *
 from well import *
 from lda import *
 from mlp import *
@@ -282,6 +283,7 @@ ui.comboBox_profile.activated.connect(check_coordinates_profile)
 ui.comboBox_profile.currentTextChanged.connect(update_list_binding)
 ui.comboBox_profile.currentTextChanged.connect(update_list_velocity_model)
 ui.comboBox_profile.activated.connect(calc_add_features_profile)
+ui.comboBox_profile.activated.connect(calc_profile_features)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)

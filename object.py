@@ -7,7 +7,8 @@ import re
 import inspect
 import chardet
 
-from model import *
+from models_db.model import *
+from models_db.model_profile_features import *
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
@@ -173,3 +174,5 @@ radarogramma.addItem(roi)
 
 imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0) # заполнение пропусков для LDA
 
+
+Base.metadata.create_all(engine)

@@ -1,5 +1,3 @@
-import numpy as np
-
 from func import *
 
 def calc_all_params():

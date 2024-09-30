@@ -448,7 +448,26 @@ def update_param_combobox():
     current_text = ui.comboBox_param_plast.currentText()  # сохраняем текущий текст в комбобоксе
     ui.comboBox_param_plast.clear()  # очищаем комбобокс
     if ui.comboBox_plast.currentText() == '-----':  # если выбрана пустая строка, то ничего не делаем
-        pass
+        for i in list_wavelet_features:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_fractal_features:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_entropy_features:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_nonlinear_features:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_morphology_feature:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_frequency_feature:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_envelope_feature:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_autocorr_feature:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_emd_feature:
+            ui.comboBox_param_plast.addItem(i)
+        for i in list_hht_feature:
+            ui.comboBox_param_plast.addItem(i)
     # elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
     #     list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
     #     # удаляем не нужные колонки
@@ -580,9 +599,53 @@ def draw_param():
             ui.graph.addItem(curve_filter)
     # Если выбран конкретный пласт
     else:
-        # если текущий выбранный элемент равен '-----', то ничего не делаем и выходим из функции
+        # если текущий выбранный элемент равен '-----', то получаем отрисовываем параметры профиля
         if ui.comboBox_plast.currentText() == '-----':
-            return
+            if param in list_param_geovel:
+                return
+            if param in list_wavelet_features:
+                graph = session.query(literal_column(f'wavelet_feature_profile.{param}')).filter(
+                    WaveletFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_fractal_features:
+                graph = session.query(literal_column(f'fractal_feature_profile.{param}')).filter(
+                    FractalFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_entropy_features:
+                graph = session.query(literal_column(f'entropy_feature_profile.{param}')).filter(
+                    EntropyFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_nonlinear_features:
+                graph = session.query(literal_column(f'nonlinear_feature_profile.{param}')).filter(
+                    NonlinearFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_morphology_feature:
+                graph = session.query(literal_column(f'morphology_feature_profile.{param}')).filter(
+                    MorphologyFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_frequency_feature:
+                graph = session.query(literal_column(f'frequency_feature_profile.{param}')).filter(
+                    FrequencyFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_envelope_feature:
+                graph = session.query(literal_column(f'envelope_feature_profile.{param}')).filter(
+                    EnvelopeFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_autocorr_feature:
+                graph = session.query(literal_column(f'autocorr_feature_profile.{param}')).filter(
+                    AutocorrFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_emd_feature:
+                graph = session.query(literal_column(f'emd_feature_profile.{param}')).filter(
+                    EMDFeatureProfile.profile_id == get_profile_id()
+                ).first()
+            if param in list_hht_feature:
+                graph = session.query(literal_column(f'hht_feature_profile.{param}')).filter(
+                    HHTFeatureProfile.profile_id == get_profile_id()
+                ).first()
+
+            if graph:
+                graph = json.loads(graph[0])
         else:  # в остальных случаях получаем данные для формации
             # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
             if param in list_wavelet_features:
@@ -632,7 +695,11 @@ def draw_param():
                     print(e)
                     set_info(e, 'red')
                     return
-        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+        try:
+            number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+        except Exception as e:
+            set_info(e, 'red')
+            return
         # cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
         cc = (120, 120, 120, 255)
         curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
@@ -1381,8 +1448,8 @@ def update_list_trained_models_class():
         item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '
-                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n'
-                        f'{model.list_params}\nSignal: {model.except_signal}')
+                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
+                        # f'{model.list_params}\nSignal: {model.except_signal}')
         ui.listWidget_trained_model_class.addItem(item)
     ui.listWidget_trained_model_class.setCurrentRow(0)
 

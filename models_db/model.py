@@ -71,6 +71,17 @@ class Profile(Base):
     markups_reg = relationship('MarkupReg', back_populates='profile')
     intersections = relationship('Intersection', back_populates='profile')
 
+    wavelet_feature = relationship('WaveletFeatureProfile', back_populates='profile')
+    fractal_feature = relationship('FractalFeatureProfile', back_populates='profile')
+    entropy_feature = relationship('EntropyFeatureProfile', back_populates='profile')
+    nonlinear_feature = relationship('NonlinearFeatureProfile', back_populates='profile')
+    morphology_feature = relationship('MorphologyFeatureProfile', back_populates='profile')
+    frequency_feature = relationship('FrequencyFeatureProfile', back_populates='profile')
+    envelope_feature = relationship('EnvelopeFeatureProfile', back_populates='profile')
+    autocorr_feature = relationship('AutocorrFeatureProfile', back_populates='profile')
+    emd_feature = relationship('EMDFeatureProfile', back_populates='profile')
+    hht_feature = relationship('HHTFeatureProfile', back_populates='profile')
+
 
 class DeepProfile(Base):
     __tablename__ = 'deep_profile'
@@ -1387,6 +1398,5 @@ class GeochemTrainedModel(Base):
     maket = relationship('GeochemMaket', back_populates='g_trained_models')
 
 
-Base.metadata.create_all(engine)
 
 
