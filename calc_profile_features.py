@@ -53,7 +53,7 @@ def calc_wavelet_features_profile(p_id, wavelet='db4', level=5):
         dict_wvt_ftr_list['wvt_energ_D5A5_l'].append(np.sum(coeffs[1] ** 2) / np.sum(coeffs[0] ** 2))
 
 
-    dict_wvt_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_wvt_ftr_list.items()}
+    dict_wvt_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_wvt_ftr_list.items()}
 
     new_wavelet_formation = WaveletFeatureProfile(profile_id=p_id, **dict_wvt_ftr_json)
     session.add(new_wavelet_formation)
@@ -67,12 +67,12 @@ def calc_fractal_features_profile(p_id):
     set_info(f'Расчет фрактальных параметров для профиля {profile.title}.'
              f' {profile.research.object.title}', 'blue')
     signal = json.loads(profile.signal)
-    dict_frl_ftr_list = {f'{frl}_l': [] for frl in list_fractal_features}
+    dict_frl_ftr_list = {f'{frl}_l': [] for frl in list_fractal_features if frl != 'fractal_dim'}
     ui.progressBar.setMaximum(len(signal))
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
         s = np.array(s)
-        dict_frl_ftr_list['fractal_dim_l'].append(box_counting_dim(s))
+        # dict_frl_ftr_list['fractal_dim_l'].append(box_counting_dim(s))
         dict_frl_ftr_list['hurst_exp_l'].append(hurst_rs(s))
         dict_frl_ftr_list['lacunarity_l'].append(lacunarity(s))
         try:
@@ -98,7 +98,7 @@ def calc_fractal_features_profile(p_id):
             dict_frl_ftr_list['mf_std_alpha_l'].append(None)
             dict_frl_ftr_list['mf_std_f_alpha_l'].append(None)
 
-    dict_frl_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_frl_ftr_list.items()}
+    dict_frl_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_frl_ftr_list.items()}
 
     new_fractal_formation = (FractalFeatureProfile(profile_id=p_id, **dict_frl_ftr_json))
     session.add(new_fractal_formation)
@@ -129,7 +129,7 @@ def calc_entropy_features_profile(p_id):
             dict_ent_ftr_list[f'ent_ms{n_me + 1}_l'].append(i_me)
         dict_ent_ftr_list['ent_fft_l'].append(fourier_entropy(form_signal))
 
-    dict_ent_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_ent_ftr_list.items()}
+    dict_ent_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_ent_ftr_list.items()}
 
     new_entropy_formation = (EntropyFeatureProfile(profile_id=p_id, **dict_ent_ftr_json))
     session.add(new_entropy_formation)
@@ -160,7 +160,7 @@ def calc_nonlinear_features_profile(p_id):
 
         dict_nln_ftr_list['nln_hirsh_l'].append(hirschman_index(form_signal))
 
-    dict_nln_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_nln_ftr_list.items()}
+    dict_nln_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_nln_ftr_list.items()}
     session.add(NonlinearFeatureProfile(profile_id=p_id, **dict_nln_ftr_json))
     session.commit()
 
@@ -187,7 +187,7 @@ def calc_morphology_features_profile(p_id):
         dict_mph_ftr_list['mph_erosion_l'].append(morph_feature['erosion_ratio'])
         dict_mph_ftr_list['mph_dilation_l'].append(morph_feature['dilation_ratio'])
 
-    dict_mph_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_mph_ftr_list.items()}
+    dict_mph_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_mph_ftr_list.items()}
     session.add(MorphologyFeatureProfile(profile_id=p_id, **dict_mph_ftr_json))
     session.commit()
 
@@ -224,7 +224,7 @@ def calc_frequency_features_profile(p_id):
             dict_freq_ftr_list[f'frq_mmt{n_freq+1}_l'].append(f)
         dict_freq_ftr_list['frq_attn_coef_l'].append(attenuation_coefficient(form_signal, depth=range(len(form_signal)), freqs_rate=freqs))
 
-    dict_freq_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_freq_ftr_list.items()}
+    dict_freq_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_freq_ftr_list.items()}
     session.add(FrequencyFeatureProfile(profile_id=p_id, **dict_freq_ftr_json))
     session.commit()
 
@@ -253,7 +253,7 @@ def calc_envelope_feature_profile(p_id):
         dict_env_ftr_list['env_peak_width_l'].append(float(main_peak_width_env(envelope)))
         for n_inv, i_env in enumerate(envelope_energy_windows(envelope)):
             dict_env_ftr_list[f'env_energy_win{n_inv+1}_l'].append(i_env)
-    dict_env_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_env_ftr_list.items()}
+    dict_env_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_env_ftr_list.items()}
     session.add(EnvelopeFeatureProfile(profile_id=p_id, **dict_env_ftr_json))
     session.commit()
 
@@ -286,7 +286,7 @@ def calc_autocorr_feature_profile(p_id):
             dict_acf_list['acf_peak_width_l'].append(None)
             dict_acf_list['acf_ratio_l'].append(None)
 
-    dict_acf_json = {key[:-2]: json.dumps(value) for key, value in dict_acf_list.items()}
+    dict_acf_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_acf_list.items()}
     session.add(AutocorrFeatureProfile(profile_id=p_id, **dict_acf_json))
     session.commit()
 
@@ -339,7 +339,7 @@ def calc_emd_feature_profile(p_id):
             for key in dict_emd_ftr_list.keys():
                 dict_emd_ftr_list[key].append(None)
 
-    dict_emd_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_emd_ftr_list.items()}
+    dict_emd_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_emd_ftr_list.items()}
     session.add(EMDFeatureProfile(profile_id=p_id, **dict_emd_ftr_json))
     session.commit()
 
@@ -351,7 +351,7 @@ def calc_hht_features_profile(p_id):
     set_info(f'Расчет характеристик HHT для профиля {profile.title}.'
              f' {profile.research.object.title}', 'blue')
     signal = json.loads(profile.signal)
-    dict_hht_ftr_list = {f'{hht}_l': [] for hht in list_hht_feature}
+    dict_hht_ftr_list = {f'{hht}_l': [] for hht in list_hht_feature if hht != 'hht_marg_spec_min'}
     ui.progressBar.setMaximum(len(signal))
     for meas, s in enumerate(tqdm(signal)):
         ui.progressBar.setValue(meas)
@@ -398,7 +398,7 @@ def calc_hht_features_profile(p_id):
         dict_hht_ftr_list['hht_marg_spec_mean_l'].append(hht_marg_spec['hht_marg_spec_mean'])
         dict_hht_ftr_list['hht_marg_spec_med_l'].append(hht_marg_spec['hht_marg_spec_med'])
         dict_hht_ftr_list['hht_marg_spec_max_l'].append(hht_marg_spec['hht_marg_spec_max'])
-        dict_hht_ftr_list['hht_marg_spec_min_l'].append(hht_marg_spec['hht_marg_spec_min'])
+        # dict_hht_ftr_list['hht_marg_spec_min_l'].append(hht_marg_spec['hht_marg_spec_min'])
         dict_hht_ftr_list['hht_marg_spec_std_l'].append(hht_marg_spec['hht_marg_spec_std'])
 
         teager_energ = teager_energies(imfs)
@@ -434,6 +434,6 @@ def calc_hht_features_profile(p_id):
         ci = complexity_index(hht)
         dict_hht_ftr_list['hht_ci_l'].append(ci)
 
-    dict_hht_ftr_json = {key[:-2]: json.dumps(value) for key, value in dict_hht_ftr_list.items()}
+    dict_hht_ftr_json = {key[:-2]: json.dumps(interpolate_nones(value)) for key, value in dict_hht_ftr_list.items()}
     session.add(HHTFeatureProfile(profile_id=p_id, **dict_hht_ftr_json))
     session.commit()

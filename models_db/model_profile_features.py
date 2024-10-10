@@ -97,7 +97,7 @@ class FractalFeatureProfile(Base):
     id = Column(Integer, primary_key=True)
     profile_id = Column(Integer, ForeignKey('profile.id'))
 
-    fractal_dim = Column(Text)
+    # fractal_dim = Column(Text)
     hurst_exp = Column(Text)
     lacunarity = Column(Text)
     mf_width = Column(Text)
@@ -301,7 +301,7 @@ class HHTFeatureProfile(Base):
     hht_marg_spec_mean = Column(Text)
     hht_marg_spec_med = Column(Text)
     hht_marg_spec_max = Column(Text)
-    hht_marg_spec_min = Column(Text)
+    # hht_marg_spec_min = Column(Text)
     hht_marg_spec_std = Column(Text)
 
     hht_teager_energ_mean = Column(Text)

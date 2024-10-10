@@ -451,6 +451,8 @@ def update_param_combobox():
         for i in list_wavelet_features:
             ui.comboBox_param_plast.addItem(i)
         for i in list_fractal_features:
+            if i == 'fractal_dim':
+                continue
             ui.comboBox_param_plast.addItem(i)
         for i in list_entropy_features:
             ui.comboBox_param_plast.addItem(i)
@@ -467,6 +469,8 @@ def update_param_combobox():
         for i in list_emd_feature:
             ui.comboBox_param_plast.addItem(i)
         for i in list_hht_feature:
+            if i == 'hht_marg_spec_min':
+                continue
             ui.comboBox_param_plast.addItem(i)
     # elif ui.comboBox_plast.currentText() == 'KROT':  # если выбран КРОТ, то добавляем в комбобокс параметры профиля
     #     list_columns = Profile.__table__.columns.keys()  # список параметров таблицы профиля
@@ -1346,11 +1350,21 @@ def set_param_lda_to_combobox():
 def set_param_mlp_to_combobox():
     for param in list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_mlp.addItem(param)
+    for param in list_all_additional_features:
+        if param in ['fractal_dim', 'hht_marg_spec_min']:
+            continue
+        else:
+            ui.comboBox_prof_ftr_mlp.addItem(f'prof_{param}')
 
 
 def set_param_regmod_to_combobox():
     for param in list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_reg.addItem(param)
+    for param in list_all_additional_features:
+        if param in ['fractal_dim', 'hht_marg_spec_min']:
+            continue
+        else:
+            ui.comboBox_prof_ftr_reg.addItem(f'prof_{param}')
 
 
 def set_param_expl_to_combobox():
@@ -2395,3 +2409,19 @@ def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_
     return training_sample_train, training_sample_test, markup_train, markup_test
 
 
+def interpolate_nones(data):
+    # Преобразуем список в numpy array
+    arr = np.array(data, dtype=float)
+
+    # Находим индексы не-None значений
+    valid_indices = np.where(~np.isnan(arr))[0]
+
+    if len(valid_indices) < 2:
+        # Если меньше двух валидных значений, интерполяция невозможна
+        return data
+
+    # Выполняем интерполяцию
+    interpolated = np.interp(np.arange(len(arr)), valid_indices, arr[valid_indices])
+
+    # Преобразуем обратно в список
+    return list(interpolated)
