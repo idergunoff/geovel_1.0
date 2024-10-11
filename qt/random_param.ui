@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>815</width>
+    <width>817</width>
     <height>709</height>
    </rect>
   </property>
@@ -87,6 +87,115 @@
              <layout class="QGridLayout" name="gridLayout_60">
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_61">
+                <item row="0" column="2">
+                 <widget class="QGroupBox" name="groupBox_18">
+                  <property name="title">
+                   <string>Formation</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_69">
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_70">
+                     <item row="6" column="0">
+                      <widget class="QCheckBox" name="checkBox_mrph">
+                       <property name="text">
+                        <string>Morphology</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QCheckBox" name="checkBox_nnl">
+                       <property name="text">
+                        <string>Nonlinear</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="0">
+                      <widget class="QCheckBox" name="checkBox_freq">
+                       <property name="text">
+                        <string>Frequency</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="checkBox_grid">
+                       <property name="toolTip">
+                        <string>width, top, land, speed, speed_cover</string>
+                       </property>
+                       <property name="text">
+                        <string>GRID</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="10" column="0">
+                      <widget class="QCheckBox" name="checkBox_emd">
+                       <property name="text">
+                        <string>EMD</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_form_t">
+                       <property name="font">
+                        <font>
+                         <weight>50</weight>
+                         <bold>false</bold>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>Ttop, Tbottom, dT</string>
+                       </property>
+                       <property name="text">
+                        <string>T</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QCheckBox" name="checkBox_wvt">
+                       <property name="text">
+                        <string>Wavelet</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QCheckBox" name="checkBox_fract">
+                       <property name="text">
+                        <string>Fractal</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="9" column="0">
+                      <widget class="QCheckBox" name="checkBox_atc">
+                       <property name="text">
+                        <string>Autocorr</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QCheckBox" name="checkBox_entr">
+                       <property name="text">
+                        <string>Entropy</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="8" column="0">
+                      <widget class="QCheckBox" name="checkBox_env">
+                       <property name="text">
+                        <string>Envelope</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="11" column="0">
+                      <widget class="QCheckBox" name="checkBox_hht">
+                       <property name="text">
+                        <string>HHT</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
                 <item row="0" column="1">
                  <widget class="QGroupBox" name="groupBox_16">
                   <property name="title">
@@ -342,107 +451,81 @@
                   </layout>
                  </widget>
                 </item>
-                <item row="0" column="2">
-                 <widget class="QGroupBox" name="groupBox_18">
+                <item row="0" column="3">
+                 <widget class="QGroupBox" name="groupBox">
                   <property name="title">
-                   <string>Formation</string>
+                   <string>Profile</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_69">
+                  <layout class="QGridLayout" name="gridLayout_7">
                    <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_70">
-                     <item row="6" column="0">
-                      <widget class="QCheckBox" name="checkBox_mrph">
-                       <property name="text">
-                        <string>Morphology</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="5" column="0">
-                      <widget class="QCheckBox" name="checkBox_nnl">
-                       <property name="text">
-                        <string>Nonlinear</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="7" column="0">
-                      <widget class="QCheckBox" name="checkBox_freq">
-                       <property name="text">
-                        <string>Frequency</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="0">
-                      <widget class="QCheckBox" name="checkBox_grid">
-                       <property name="toolTip">
-                        <string>width, top, land, speed, speed_cover</string>
-                       </property>
-                       <property name="text">
-                        <string>GRID</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="10" column="0">
-                      <widget class="QCheckBox" name="checkBox_emd">
+                    <layout class="QGridLayout" name="gridLayout_86">
+                     <item row="8" column="0">
+                      <widget class="QCheckBox" name="checkBox_emd_prof">
                        <property name="text">
                         <string>EMD</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="0" column="0">
-                      <widget class="QCheckBox" name="checkBox_form_t">
-                       <property name="font">
-                        <font>
-                         <weight>50</weight>
-                         <bold>false</bold>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>Ttop, Tbottom, dT</string>
-                       </property>
-                       <property name="text">
-                        <string>T</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="2" column="0">
-                      <widget class="QCheckBox" name="checkBox_wvt">
-                       <property name="text">
-                        <string>Wavelet</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="3" column="0">
-                      <widget class="QCheckBox" name="checkBox_fract">
-                       <property name="text">
-                        <string>Fractal</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="9" column="0">
-                      <widget class="QCheckBox" name="checkBox_atc">
-                       <property name="text">
-                        <string>Autocorr</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="4" column="0">
-                      <widget class="QCheckBox" name="checkBox_entr">
+                      <widget class="QCheckBox" name="checkBox_entr_prof">
                        <property name="text">
                         <string>Entropy</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="8" column="0">
-                      <widget class="QCheckBox" name="checkBox_env">
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_wvt_prof">
+                       <property name="text">
+                        <string>Wavelet</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QCheckBox" name="checkBox_mrph_prof">
+                       <property name="text">
+                        <string>Morphology</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="checkBox_fract_prof">
+                       <property name="text">
+                        <string>Fractal</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="0">
+                      <widget class="QCheckBox" name="checkBox_atc_prof">
+                       <property name="text">
+                        <string>Autocorr</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QCheckBox" name="checkBox_freq_prof">
+                       <property name="text">
+                        <string>Frequency</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="0">
+                      <widget class="QCheckBox" name="checkBox_env_prof">
                        <property name="text">
                         <string>Envelope</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="11" column="0">
-                      <widget class="QCheckBox" name="checkBox_hht">
+                     <item row="9" column="0">
+                      <widget class="QCheckBox" name="checkBox_hht_prof">
                        <property name="text">
                         <string>HHT</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QCheckBox" name="checkBox_nnl_prof">
+                       <property name="text">
+                        <string>Nonlinear</string>
                        </property>
                       </widget>
                      </item>

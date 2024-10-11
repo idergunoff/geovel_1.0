@@ -1,6 +1,10 @@
 from calc_additional_features import calc_wavelet_features, calc_fractal_features, calc_entropy_features, \
     calc_nonlinear_features, calc_morphology_features, calc_frequency_features, calc_envelope_feature, \
     calc_autocorr_feature, calc_emd_feature, calc_hht_features
+
+from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, calc_entropy_features_profile, \
+    calc_nonlinear_features_profile, calc_morphology_features_profile, calc_frequency_features_profile, calc_envelope_feature_profile, \
+    calc_autocorr_feature_profile, calc_emd_feature_profile, calc_hht_features_profile
 from func import *
 
 class Model(nn.Module):
@@ -314,6 +318,16 @@ def push_random_param():
         ui_rp.checkBox_freq.setChecked(push)
         ui_rp.checkBox_emd.setChecked(push)
         ui_rp.checkBox_hht.setChecked(push)
+        ui_rp.checkBox_wvt_prof.setChecked(push)
+        ui_rp.checkBox_fract_prof.setChecked(push)
+        ui_rp.checkBox_entr_prof.setChecked(push)
+        ui_rp.checkBox_mrph_prof.setChecked(push)
+        ui_rp.checkBox_env_prof.setChecked(push)
+        ui_rp.checkBox_nnl_prof.setChecked(push)
+        ui_rp.checkBox_atc_prof.setChecked(push)
+        ui_rp.checkBox_freq_prof.setChecked(push)
+        ui_rp.checkBox_emd_prof.setChecked(push)
+        ui_rp.checkBox_hht_prof.setChecked(push)
 
 
     def get_MLP_test_id():
@@ -436,6 +450,40 @@ def push_random_param():
             list_param_attr += list_emd_feature
         if ui_rp.checkBox_hht.isChecked():
             list_param_attr += list_hht_feature
+        if ui_rp.checkBox_wvt_prof.isChecked():
+            for iwvt in list_wavelet_features:
+                list_param_attr.append(f'prof_{iwvt}')
+        if ui_rp.checkBox_fract_prof.isChecked():
+            for ifract in list_fractal_features:
+                if ifract == 'fractal_dim':
+                    continue
+                list_param_attr.append(f'prof_{ifract}')
+        if ui_rp.checkBox_entr_prof.isChecked():
+            for ient in list_entropy_features:
+                list_param_attr.append(f'prof_{ient}')
+        if ui_rp.checkBox_nnl_prof.isChecked():
+            for innl in list_nonlinear_features:
+                list_param_attr.append(f'prof_{innl}')
+        if ui_rp.checkBox_mrph_prof.isChecked():
+            for imrph in list_morphology_feature:
+                list_param_attr.append(f'prof_{imrph}')
+        if ui_rp.checkBox_freq_prof.isChecked():
+            for ifreq in list_frequency_feature:
+                list_param_attr.append(f'prof_{ifreq}')
+        if ui_rp.checkBox_env_prof.isChecked():
+            for ienv in list_envelope_feature:
+                list_param_attr.append(f'prof_{ienv}')
+        if ui_rp.checkBox_atc_prof.isChecked():
+            for iatc in list_autocorr_feature:
+                list_param_attr.append(f'prof_{iatc}')
+        if ui_rp.checkBox_emd_prof.isChecked():
+            for iemd in list_emd_feature:
+                list_param_attr.append(f'prof_{iemd}')
+        if ui_rp.checkBox_hht_prof.isChecked():
+            for ihht in list_hht_feature:
+                if ihht == 'hht_marg_spec_min':
+                    continue
+                list_param_attr.append(f'prof_{ihht}')
 
         n_param = random.randint(1, len(list_param_attr))
         list_param_all = random_combination(list_param_attr, n_param)
@@ -539,6 +587,15 @@ def push_random_param():
                                        WaveletFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
+                    if i[5:] in list_wavelet_features:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_wavelet_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'wavelet_feature_profile.{i[5:]}')).filter(
+                                       WaveletFeatureProfile.profile_id == markup.profile.id
+                                   ).first()[0])}
+                            )
                     if i in list_fractal_features:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             calc_fractal_features(markup.formation_id)
@@ -548,6 +605,16 @@ def push_random_param():
                                        FractalFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
+
+                    if i[5:] in list_fractal_features:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_fractal_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                     json.loads(session.query(literal_column(f'fractal_feature_profile.{i[5:]}')).filter(
+                                         FractalFeatureProfile.profile_id == markup.profile.id
+                                     ).first()[0])}
+                            )
                     if i in list_entropy_features:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             calc_entropy_features(markup.formation_id)
@@ -555,6 +622,15 @@ def push_random_param():
                                 {str(markup.profile.id) + '_' + i:
                                    json.loads(session.query(literal_column(f'entropy_feature.{i}')).filter(
                                        EntropyFeature.formation_id == markup.formation_id
+                                   ).first()[0])}
+                            )
+                    if i[5:] in list_entropy_features:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_entropy_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'entropy_feature_profile.{i[5:]}')).filter(
+                                       EntropyFeatureProfile.profile_id == markup.profile.id
                                    ).first()[0])}
                             )
                     if i in list_nonlinear_features:
@@ -566,6 +642,15 @@ def push_random_param():
                                        NonlinearFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
+                    if i[5:] in list_nonlinear_features:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_nonlinear_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'nonlinear_feature_profile.{i[5:]}')).filter(
+                                       NonlinearFeatureProfile.profile_id == markup.profile.id
+                                   ).first()[0])}
+                            )
                     if i in list_morphology_feature:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             calc_morphology_features(markup.formation_id)
@@ -573,6 +658,15 @@ def push_random_param():
                                 {str(markup.profile.id) + '_' + i:
                                    json.loads(session.query(literal_column(f'morphology_feature.{i}')).filter(
                                        MorphologyFeature.formation_id == markup.formation_id
+                                   ).first()[0])}
+                            )
+                    if i[5:] in list_morphology_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_morphology_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'morphology_feature_profile.{i[5:]}')).filter(
+                                       MorphologyFeatureProfile.profile_id == markup.profile.id
                                    ).first()[0])}
                             )
                     if i in list_frequency_feature:
@@ -584,6 +678,15 @@ def push_random_param():
                                        FrequencyFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
+                    if i[5:] in list_frequency_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_frequency_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'frequency_feature_profile.{i[5:]}')).filter(
+                                       FrequencyFeatureProfile.profile_id == markup.profile.id
+                                   ).first()[0])}
+                            )
                     if i in list_envelope_feature:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             calc_envelope_feature(markup.formation_id)
@@ -591,6 +694,15 @@ def push_random_param():
                                 {str(markup.profile.id) + '_' + i:
                                    json.loads(session.query(literal_column(f'envelope_feature.{i}')).filter(
                                        EnvelopeFeature.formation_id == markup.formation_id
+                                   ).first()[0])}
+                            )
+                    if i[5:] in list_envelope_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_envelope_feature_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'envelope_feature_profile.{i[5:]}')).filter(
+                                       EnvelopeFeatureProfile.profile_id == markup.profile.id
                                    ).first()[0])}
                             )
                     if i in list_autocorr_feature:
@@ -602,6 +714,15 @@ def push_random_param():
                                        AutocorrFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
+                    if i[5:] in list_autocorr_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_autocorr_feature_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'autocorr_feature_profile.{i[5:]}')).filter(
+                                       AutocorrFeatureProfile.profile_id == markup.profile.id
+                                   ).first()[0])}
+                            )
                     if i in list_emd_feature:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             calc_emd_feature(markup.formation_id)
@@ -609,6 +730,15 @@ def push_random_param():
                                 {str(markup.profile.id) + '_' + i:
                                    json.loads(session.query(literal_column(f'emd_feature.{i}')).filter(
                                        EMDFeature.formation_id == markup.formation_id
+                                   ).first()[0])}
+                            )
+                    if i[5:] in list_emd_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_emd_feature_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'emd_feature_profile.{i[5:]}')).filter(
+                                       EMDFeatureProfile.profile_id == markup.profile.id
                                    ).first()[0])}
                             )
                     if i in list_hht_feature:
@@ -620,8 +750,15 @@ def push_random_param():
                                        HHTFeature.formation_id == markup.formation_id
                                    ).first()[0])}
                             )
-
-
+                    if i[5:] in list_hht_feature:
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            calc_hht_features_profile(markup.profile.id)
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                   json.loads(session.query(literal_column(f'hht_feature_profile.{i[5:]}')).filter(
+                                       HHTFeatureProfile.profile_id == markup.profile.id
+                                   ).first()[0])}
+                            )
 
             # Обработка каждого измерения в разметке
             for measure in json.loads(markup.list_measure):
