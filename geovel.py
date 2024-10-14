@@ -5,6 +5,7 @@ from filtering import *
 from draw import *
 from layer import *
 from calc_additional_features import *
+from calc_profile_features import *
 from well import *
 from lda import *
 from mlp import *
@@ -186,6 +187,8 @@ ui.pushButton_add_signal_mlp.clicked.connect(add_param_signal_mlp)
 ui.pushButton_add_all_signal_mlp.clicked.connect(add_all_param_signal_mlp)
 ui.pushButton_add_geovel_mlp.clicked.connect(add_param_geovel_mlp)
 ui.pushButton_add_all_geovel_mlp.clicked.connect(add_all_param_geovel_mlp)
+ui.pushButton_add_prof_ftr_mlp.clicked.connect(add_param_profile_mlp)
+ui.pushButton_add_all_prof_ftr_mlp.clicked.connect(add_all_param_profile_mlp)
 ui.pushButton_add_distr_mlp.clicked.connect(add_param_distr_mlp)
 ui.pushButton_add_sep_mlp.clicked.connect(add_param_sep_mlp)
 ui.pushButton_add_all_distr_mlp.clicked.connect(add_all_param_distr_mlp)
@@ -284,6 +287,7 @@ ui.comboBox_profile.activated.connect(check_coordinates_profile)
 ui.comboBox_profile.currentTextChanged.connect(update_list_binding)
 ui.comboBox_profile.currentTextChanged.connect(update_list_velocity_model)
 ui.comboBox_profile.activated.connect(calc_add_features_profile)
+ui.comboBox_profile.activated.connect(calc_profile_features)
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
 ui.comboBox_param_plast.activated.connect(draw_param)

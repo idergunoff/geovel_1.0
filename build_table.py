@@ -1,3 +1,7 @@
+from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, \
+    calc_entropy_features_profile, calc_nonlinear_features_profile, calc_morphology_features_profile, \
+    calc_frequency_features_profile, calc_envelope_feature_profile, calc_autocorr_feature_profile, \
+    calc_emd_feature_profile, calc_hht_features_profile
 from func import *
 from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_autocorr_feature, calc_nonlinear_features,
                                       calc_envelope_feature, calc_frequency_features, calc_morphology_features,
@@ -90,6 +94,54 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
                 if not str(markup.profile.id) + '_CRL_NF' in locals():
                     locals()[str(markup.profile.id) + '_CRL_NF'] = calc_CRL(json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+            elif param.startswith('prof'):
+                if param[5:] in list_wavelet_features:
+                    calc_wavelet_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature_profile.{param[5:]}')).filter(
+                        WaveletFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_fractal_features:
+                    calc_fractal_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature_profile.{param[5:]}')).filter(
+                        FractalFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_entropy_features:
+                    calc_entropy_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature_profile.{param[5:]}')).filter(
+                        EntropyFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_nonlinear_features:
+                    calc_nonlinear_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(
+                        session.query(literal_column(f'nonlinear_feature_profile.{param[5:]}')).filter(
+                            NonlinearFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_morphology_feature:
+                    calc_morphology_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(
+                        session.query(literal_column(f'morphology_feature_profile.{param[5:]}')).filter(
+                            MorphologyFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_frequency_feature:
+                    calc_frequency_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(
+                        session.query(literal_column(f'frequency_feature_profile.{param[5:]}')).filter(
+                            FrequencyFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_envelope_feature:
+                    calc_envelope_feature_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(
+                        session.query(literal_column(f'envelope_feature_profile.{param[5:]}')).filter(
+                            EnvelopeFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_autocorr_feature:
+                    calc_autocorr_feature_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(
+                        session.query(literal_column(f'autocorr_feature_profile.{param[5:]}')).filter(
+                            AutocorrFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_emd_feature:
+                    calc_emd_feature_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature_profile.{param[5:]}')).filter(
+                        EMDFeatureProfile.profile_id == markup.profile_id).first()[0])
+                elif param[5:] in list_hht_feature:
+                    calc_hht_features_profile(markup.profile_id)
+                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature_profile.{param[5:]}')).filter(
+                        HHTFeatureProfile.profile_id == markup.profile_id).first()[0])
+                else:
+                    pass
             # Если параметр сохранён в базе
             else:
                 if param in list_wavelet_features:
@@ -256,6 +308,54 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_CRL_NF' in locals():
                 locals()[str(curr_form.profile.id) + '_CRL_NF'] = calc_CRL_filter(json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
+        elif param.startswith('prof'):
+            if param[5:] in list_wavelet_features:
+                calc_wavelet_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature_profile.{param[5:]}')).filter(
+                    WaveletFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_fractal_features:
+                calc_fractal_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature_profile.{param[5:]}')).filter(
+                    FractalFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_entropy_features:
+                calc_entropy_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature_profile.{param[5:]}')).filter(
+                    EntropyFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_nonlinear_features:
+                calc_nonlinear_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(
+                    session.query(literal_column(f'nonlinear_feature_profile.{param[5:]}')).filter(
+                        NonlinearFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_morphology_feature:
+                calc_morphology_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(
+                    session.query(literal_column(f'morphology_feature_profile.{param[5:]}')).filter(
+                        MorphologyFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_frequency_feature:
+                calc_frequency_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(
+                    session.query(literal_column(f'frequency_feature_profile.{param[5:]}')).filter(
+                        FrequencyFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_envelope_feature:
+                calc_envelope_feature_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(
+                    session.query(literal_column(f'envelope_feature_profile.{param[5:]}')).filter(
+                        EnvelopeFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_autocorr_feature:
+                calc_autocorr_feature_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(
+                    session.query(literal_column(f'autocorr_feature_profile.{param[5:]}')).filter(
+                        AutocorrFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_emd_feature:
+                calc_emd_feature_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature_profile.{param[5:]}')).filter(
+                    EMDFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            elif param[5:] in list_hht_feature:
+                calc_hht_features_profile(curr_form.profile_id)
+                locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature_profile.{param[5:]}')).filter(
+                    HHTFeatureProfile.profile_id == curr_form.profile_id).first()[0])
+            else:
+                pass
         else:
             if param in list_wavelet_features:
                 calc_wavelet_features(curr_form.id)

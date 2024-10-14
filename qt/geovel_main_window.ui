@@ -3693,33 +3693,6 @@ Therm</string>
                   </item>
                   <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_49">
-                    <item row="1" column="0">
-                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,0,0">
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_all_geovel_mlp">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(148, 255, 232);</string>
-                        </property>
-                        <property name="text">
-                         <string>add all</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_geovel_mlp">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
-                        </property>
-                        <property name="text">
-                         <string>add</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="0">
-                       <widget class="QComboBox" name="comboBox_geovel_param_mlp"/>
-                      </item>
-                     </layout>
-                    </item>
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_106" columnstretch="2,0,0,0,0">
                       <item row="0" column="2">
@@ -3795,6 +3768,60 @@ Therm</string>
                          <string>CRL NF</string>
                         </property>
                        </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="1" column="0">
+                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,0,0">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_all_geovel_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
+                        </property>
+                        <property name="text">
+                         <string>add all</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_geovel_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QComboBox" name="comboBox_geovel_param_mlp"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="2" column="0">
+                     <layout class="QGridLayout" name="gridLayout_prof_ftr" columnstretch="3,0,0">
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_all_prof_ftr_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(148, 255, 232);</string>
+                        </property>
+                        <property name="text">
+                         <string>add all prof</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_prof_ftr_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add prof</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QComboBox" name="comboBox_prof_ftr_mlp"/>
                       </item>
                      </layout>
                     </item>
@@ -4458,6 +4485,33 @@ Therm</string>
                            <string>add all</string>
                           </property>
                          </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="2" column="0">
+                       <layout class="QGridLayout" name="gridLayout_prof_ftr_reg" columnstretch="3,0,0">
+                        <item row="0" column="2">
+                         <widget class="QPushButton" name="pushButton_add_all_prof_ftr_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(148, 255, 232);</string>
+                          </property>
+                          <property name="text">
+                           <string>add all prof</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_add_prof_ftr_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>add prof</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QComboBox" name="comboBox_prof_ftr_reg"/>
                         </item>
                        </layout>
                       </item>

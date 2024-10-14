@@ -596,6 +596,35 @@ def add_all_param_geovel_mlp():
     # update_list_param_mlp()
 
 
+def add_param_profile_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    param = ui.comboBox_prof_ftr_mlp.currentText()
+    if session.query(ParameterMLP).filter_by(
+            analysis_id=get_MLP_id(),
+            parameter= param
+    ).count() == 0:
+        add_param_mlp(param)
+        set_color_button_updata()
+        # update_list_param_mlp()
+    else:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+
+
+def add_all_param_profile_mlp():
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    for param in list_all_additional_features:
+        if param in ['fractal_dim', 'hht_marg_spec_min']:
+            continue
+        if session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).filter(
+                ParameterMLP.parameter == f'prof_{param}').count() > 0:
+            set_info(f'Параметр "prof_{param}" уже добавлен', 'red')
+            continue
+        add_param_mlp(f'prof_{param}')
+    set_color_button_updata()
+
+
 def add_param_distr_mlp():
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith(f'distr_{ui.comboBox_atrib_distr_mlp.currentText()}'):
