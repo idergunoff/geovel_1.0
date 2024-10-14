@@ -2734,3 +2734,37 @@ def add_crl_except_reg():
     session.commit()
     set_color_button_updata_regmod()
     set_info('Исключения добавлены', 'green')
+
+
+def list_param_reg_to_lineEdit():
+    model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
+        Qt.UserRole)).first()
+
+    if not model:
+        return
+    ex_sig, ex_crl = model.except_signal.split(','), model.except_crl.split(',')
+    sig_up = ex_sig[0].split('-')[1] if model.except_signal else '0'
+    crl_up = ex_crl[0].split('-')[1] if model.except_crl else '0'
+    sig_down = str(int(ex_sig[-1].split('-')[1]) - int(ex_sig[-1].split('-')[0])) if model.except_signal else '512'
+    crl_down = str(int(ex_sig[-1].split('-')[1]) - int(ex_sig[-1].split('-')[0])) if model.except_crl else '512'
+
+
+    list_param_model = []
+    for param in json.loads(model.list_params):
+        parts = param.split('_')
+        if param.startswith('Signal'):
+            list_param_model.append(f'sig_{parts[1]}_{sig_up}_{sig_down}')
+        elif param == 'CRL':
+            list_param_model.append(f'sig_CRL_{crl_up}_{crl_down}')
+        elif param == 'CRL_NF':
+            list_param_model.append(f'sig_CRLNF_{crl_up}_{crl_down}')
+        else:
+            list_param_model.append(param)
+    print(list_param_model)
+    line_param = '//'.join(list_param_model)
+    print(line_param)
+    ui.lineEdit_string.setText(line_param)
+
+
+
+
