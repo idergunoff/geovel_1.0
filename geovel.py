@@ -221,6 +221,7 @@ ui.pushButton_edit_marker_mlp.clicked.connect(edit_marker_mlp)
 ui.listWidget_trained_model_class.setContextMenuPolicy(Qt.CustomContextMenu)
 ui.listWidget_trained_model_class.customContextMenuRequested.connect(rename_model_class)
 ui.toolButton_list_param_to_line.clicked.connect(list_param_to_lineEdit)
+ui.toolButton_feature_importance.clicked.connect(get_feature_importance_cls)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)

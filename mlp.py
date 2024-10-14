@@ -1551,3 +1551,31 @@ def list_param_to_lineEdit():
     line_param = '//'.join(list_param_model)
     print(line_param)
     ui.lineEdit_string.setText(line_param)
+
+def get_feature_importance_cls():
+    model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
+        Qt.UserRole)).first()
+
+    if not model:
+        return
+
+    if 'GBC' in model.title or 'LGBM' in model.title or 'RFC' in model.title:
+        with open(model.path_model, 'rb') as f:
+            class_model = pickle.load(f)
+
+        params = json.loads(model.list_params)
+
+        full_params = get_list_param_numerical(params, model)
+        feature_importances = class_model.named_steps['model'].feature_importances_
+
+        # Вывод важности признаков вместе с названиями признаков
+        feature_importance_df = pd.DataFrame({
+            'Feature': full_params,
+            'Importance': feature_importances
+        }).sort_values(by='Importance', ascending=False)
+
+        print(feature_importance_df.head(30))
+
+
+
+    pass

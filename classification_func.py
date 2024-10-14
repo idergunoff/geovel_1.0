@@ -1234,4 +1234,3 @@ def get_text_train_param_geochem(list_param):
 
 
 
-
