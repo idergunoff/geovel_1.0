@@ -1841,9 +1841,11 @@ def train_regression_model():
                 ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
                 session.commit()
 
-            new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
             Regressor.close()
             Form_LOF.close()
+
+            new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
+
             session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
                 {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
             session.commit()
