@@ -1467,7 +1467,9 @@ def update_list_trained_models_class():
         ui.listWidget_trained_model_class.addItem(item)
     ui.listWidget_trained_model_class.setCurrentRow(0)
 
+
 def get_list_param_numerical(list_param, train_model):
+    """ сборка списка параметров из сокращенного в полный """
     new_list_param = []
     # train_model = session.query(TrainedModelClass).filter_by(
     #         id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
@@ -1503,6 +1505,7 @@ def get_list_param_numerical(list_param, train_model):
 
 
 def get_list_param_numerical_for_train(list_param):
+    """ сборка списка параметров из сокращенного в полный для регрессии """
     new_list_param = []
     except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
 
