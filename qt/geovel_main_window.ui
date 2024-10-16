@@ -3897,7 +3897,7 @@ Therm</string>
                        <number>1000</number>
                       </property>
                       <property name="value">
-                       <number>13</number>
+                       <number>295</number>
                       </property>
                      </widget>
                     </item>
@@ -4375,7 +4375,7 @@ Therm</string>
                          <number>1000</number>
                         </property>
                         <property name="value">
-                         <number>13</number>
+                         <number>295</number>
                         </property>
                        </widget>
                       </item>
@@ -5434,7 +5434,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
