@@ -328,6 +328,7 @@ def push_random_param():
         ui_rp.checkBox_freq_prof.setChecked(push)
         ui_rp.checkBox_emd_prof.setChecked(push)
         ui_rp.checkBox_hht_prof.setChecked(push)
+        ui_rp.checkBox_land.setChecked(push)
 
 
     def get_MLP_test_id():
@@ -429,7 +430,9 @@ def push_random_param():
         if ui_rp.checkBox_form_t.isChecked():
             list_param_attr += ['T_top', 'T_bottom', 'dT']
         if ui_rp.checkBox_grid.isChecked():
-            list_param_attr += ['width', 'top', 'land', 'speed', 'speed_cover']
+            list_param_attr += ['width', 'top', 'speed', 'speed_cover']
+        if ui_rp.checkBox_land.isChecked():
+            list_param_attr += ['land']
         if ui_rp.checkBox_wvt.isChecked():
             list_param_attr += list_wavelet_features
         if ui_rp.checkBox_fract.isChecked():

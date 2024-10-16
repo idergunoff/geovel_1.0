@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>817</width>
+    <width>957</width>
     <height>709</height>
    </rect>
   </property>
@@ -95,17 +95,10 @@
                   <layout class="QGridLayout" name="gridLayout_69">
                    <item row="0" column="0">
                     <layout class="QGridLayout" name="gridLayout_70">
-                     <item row="6" column="0">
-                      <widget class="QCheckBox" name="checkBox_mrph">
+                     <item row="8" column="0">
+                      <widget class="QCheckBox" name="checkBox_env">
                        <property name="text">
-                        <string>Morphology</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="5" column="0">
-                      <widget class="QCheckBox" name="checkBox_nnl">
-                       <property name="text">
-                        <string>Nonlinear</string>
+                        <string>Envelope</string>
                        </property>
                       </widget>
                      </item>
@@ -116,20 +109,31 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="1" column="0">
-                      <widget class="QCheckBox" name="checkBox_grid">
-                       <property name="toolTip">
-                        <string>width, top, land, speed, speed_cover</string>
-                       </property>
-                       <property name="text">
-                        <string>GRID</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="10" column="0">
                       <widget class="QCheckBox" name="checkBox_emd">
                        <property name="text">
                         <string>EMD</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="11" column="0">
+                      <widget class="QCheckBox" name="checkBox_hht">
+                       <property name="text">
+                        <string>HHT</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="0">
+                      <widget class="QCheckBox" name="checkBox_mrph">
+                       <property name="text">
+                        <string>Morphology</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QCheckBox" name="checkBox_wvt">
+                       <property name="text">
+                        <string>Wavelet</string>
                        </property>
                       </widget>
                      </item>
@@ -149,24 +153,10 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="2" column="0">
-                      <widget class="QCheckBox" name="checkBox_wvt">
-                       <property name="text">
-                        <string>Wavelet</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="3" column="0">
                       <widget class="QCheckBox" name="checkBox_fract">
                        <property name="text">
                         <string>Fractal</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="9" column="0">
-                      <widget class="QCheckBox" name="checkBox_atc">
-                       <property name="text">
-                        <string>Autocorr</string>
                        </property>
                       </widget>
                      </item>
@@ -177,17 +167,27 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="8" column="0">
-                      <widget class="QCheckBox" name="checkBox_env">
+                     <item row="5" column="0">
+                      <widget class="QCheckBox" name="checkBox_nnl">
                        <property name="text">
-                        <string>Envelope</string>
+                        <string>Nonlinear</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="11" column="0">
-                      <widget class="QCheckBox" name="checkBox_hht">
+                     <item row="9" column="0">
+                      <widget class="QCheckBox" name="checkBox_atc">
                        <property name="text">
-                        <string>HHT</string>
+                        <string>Autocorr</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="checkBox_grid">
+                       <property name="toolTip">
+                        <string>width, top, land, speed, speed_cover</string>
+                       </property>
+                       <property name="text">
+                        <string>GRID</string>
                        </property>
                       </widget>
                      </item>
@@ -202,13 +202,6 @@
                    <string>Attribute</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_62">
-                   <item row="1" column="0">
-                    <widget class="QCheckBox" name="checkBox_stat">
-                     <property name="text">
-                      <string>stat</string>
-                     </property>
-                    </widget>
-                   </item>
                    <item row="0" column="0">
                     <layout class="QGridLayout" name="gridLayout_63">
                      <item row="0" column="0">
@@ -441,10 +434,24 @@
                      </item>
                     </layout>
                    </item>
+                   <item row="1" column="0">
+                    <widget class="QCheckBox" name="checkBox_stat">
+                     <property name="text">
+                      <string>stat</string>
+                     </property>
+                    </widget>
+                   </item>
                    <item row="2" column="0">
                     <widget class="QCheckBox" name="checkBox_crl_stat">
                      <property name="text">
                       <string>CRL stat</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="0">
+                    <widget class="QCheckBox" name="checkBox_land">
+                     <property name="text">
+                      <string>land</string>
                      </property>
                     </widget>
                    </item>
