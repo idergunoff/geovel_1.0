@@ -1576,6 +1576,3 @@ def get_feature_importance_cls():
 
         print(feature_importance_df.head(30))
 
-
-
-    pass

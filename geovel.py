@@ -280,6 +280,7 @@ ui.toolButton_load_plast.clicked.connect(load_param)
 ui.toolButton_del_plast.clicked.connect(remove_formation)
 ui.toolButton_crop_up.clicked.connect(crop_up)
 ui.toolButton_crop_down.clicked.connect(crop_down)
+ui.toolButton_feature_importance_reg.clicked.connect(get_feature_importance_reg)
 
 
 

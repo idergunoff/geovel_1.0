@@ -43,6 +43,7 @@ from qt.rename_model import *
 from qt.random_param import *
 from qt.random_search_reg import *
 from qt.feature_selection import *
+from qt.parameter_dependence import *
 
 import numpy as np
 import pyqtgraph as pg
@@ -115,6 +116,9 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
+from sklearn.inspection import PartialDependenceDisplay
+import pdpbox.pdp as pdp
+
 from boruta import BorutaPy
 from collections import defaultdict
 

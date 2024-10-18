@@ -1731,6 +1731,39 @@ def train_regression_model():
                 pass
             fig.tight_layout()
             fig.show()
+
+
+        # if 'GBR' in model_name or 'LGBM' in model_name or 'XGB' in model_name or 'RFR' in model_name:
+            print('find dependence')
+        Form_PDP = QtWidgets.QDialog()
+        ui_pdp = Ui_Dialog_PDP()
+        ui_pdp.setupUi(Form_PDP)
+        Form_PDP.show()
+        Form_PDP.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+
+        for p in list_param_reg:
+            ui_pdp.comboBox_pdp.addItem(f'{p}')
+
+        for p in list_param_reg:
+            ui_pdp.comboBox_pdp_2.addItem(f'{p}')
+        def draw_dependence():
+            param = ui_pdp.comboBox_pdp.currentText()
+            param_2 = ui_pdp.comboBox_pdp_2.currentText()
+            if ui_pdp.checkBox_2_params.isChecked():
+                PartialDependenceDisplay.from_estimator(pipe, x_test, [(param, param_2)], feature_names=list_param_reg,
+                                                        kind='average')
+            else:
+                PartialDependenceDisplay.from_estimator(pipe, x_test, [param], feature_names=list_param_reg, kind='both')
+            plt.show()
+
+
+
+        ui_pdp.pushButton_pdp.clicked.connect(draw_dependence)
+        Form_PDP.exec_()
+
+
+
         if not ui_r.checkBox_save_model.isChecked():
             return
         result = QtWidgets.QMessageBox.question(
@@ -2796,5 +2829,30 @@ def list_param_reg_to_lineEdit():
     ui.lineEdit_string.setText(line_param)
 
 
+def get_feature_importance_reg():
+    model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
+        Qt.UserRole)).first()
+
+    if not model:
+        return
+
+    if 'GBC' in model.title or 'LGBM' in model.title or 'RFC' in model.title or 'XGB' in model.title:
+        with open(model.path_model, 'rb') as f:
+            reg_model = pickle.load(f)
+
+        params = json.loads(model.list_params)
+
+        full_params = get_list_param_numerical(params, model)
+        feature_importances = reg_model.named_steps['model'].feature_importances_
+
+        feature_importance_df = pd.DataFrame({
+            'Feature': full_params,
+            'Importance': feature_importances
+        }).sort_values(by='Importance', ascending=False)
+
+        print(feature_importance_df.head(30))
+
+
+    pass
 
 
