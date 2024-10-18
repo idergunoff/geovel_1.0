@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3425,13 +3425,23 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_44">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_45">
-                      <item row="0" column="4">
-                       <widget class="QPushButton" name="pushButton_rem_well_mlp">
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_update_well_mlp">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                         <string notr="true">background-color: rgb(255, 255, 191);</string>
                         </property>
                         <property name="text">
-                         <string>remove well</string>
+                         <string>update well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="pushButton_add_profile_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add profile</string>
                         </property>
                        </widget>
                       </item>
@@ -3451,13 +3461,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="3">
-                       <widget class="QPushButton" name="pushButton_update_well_mlp">
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_rem_well_mlp">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 255, 191);</string>
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
-                         <string>update well</string>
+                         <string>remove well</string>
                         </property>
                        </widget>
                       </item>
@@ -3471,13 +3481,16 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_add_profile_mlp">
+                      <item row="0" column="5">
+                       <widget class="QToolButton" name="toolButton_excel_markup_mlp">
+                        <property name="toolTip">
+                         <string>Выгрузить обучающие точки в Excel</string>
+                        </property>
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(220, 138, 221);</string>
                         </property>
                         <property name="text">
-                         <string>add profile</string>
+                         <string>^</string>
                         </property>
                        </widget>
                       </item>
@@ -4123,16 +4136,6 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_73">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_74">
-                      <item row="0" column="4">
-                       <widget class="QPushButton" name="pushButton_rem_well_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
-                        </property>
-                        <property name="text">
-                         <string>remove well</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <widget class="QSpinBox" name="spinBox_well_dist_reg">
                         <property name="minimum">
@@ -4149,13 +4152,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_well_reg">
+                      <item row="0" column="4">
+                       <widget class="QPushButton" name="pushButton_rem_well_reg">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
-                         <string>add_well</string>
+                         <string>remove well</string>
                         </property>
                        </widget>
                       </item>
@@ -4169,6 +4172,16 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_well_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add_well</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="5">
                        <widget class="QPushButton" name="pushButton_exp_well_reg">
                         <property name="toolTip">
@@ -4179,6 +4192,19 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>export well</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="6">
+                       <widget class="QToolButton" name="toolButton_excel_markup_reg">
+                        <property name="toolTip">
+                         <string>Выгрузить обучающие точки в Excel</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(220, 138, 221);</string>
+                        </property>
+                        <property name="text">
+                         <string>^</string>
                         </property>
                        </widget>
                       </item>
@@ -4689,12 +4715,15 @@ Therm</string>
                      </widget>
                     </item>
                     <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_sum_regmod">
+                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
+                      <property name="toolTip">
+                       <string>Добавить все скважины объекта</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>
                       <property name="text">
-                       <string>sum RegMod</string>
+                       <string>add all well RegMod</string>
                       </property>
                      </widget>
                     </item>

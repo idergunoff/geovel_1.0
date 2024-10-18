@@ -2862,3 +2862,31 @@ def list_param_reg_to_lineEdit():
 
 
 
+def markup_to_excel_reg():
+    list_col = ['целевое значение', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
+                'альтитуда', 'удаленность', 'X', 'Y']
+    analisis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+    pd_markup = pd.DataFrame(columns=list_col)
+    ui.progressBar.setMaximum(len(analisis.markups))
+    n = 1
+    for mrp in analisis.markups:
+        ui.progressBar.setValue(n)
+        mrp_dict = dict()
+        mrp_dict['целевое значение'] = mrp.target_value
+        mrp_dict['объект'] = f'{mrp.profile.research.object.title}_{mrp.profile.research.date_research.year}'
+        mrp_dict['профиль'] = mrp.profile.title
+        mrp_dict['интервал'] = mrp.formation.title
+        mrp_dict['измерения'] = mrp.list_measure
+        mrp_dict['выбросы'] = mrp.list_fake
+        mrp_dict['скважина'] = mrp.well.name
+        mrp_dict['альтитуда'] = mrp.well.alt
+        mrp_dict['X'] = mrp.well.x_coord
+        mrp_dict['Y'] = mrp.well.y_coord
+        mrp_dict['удаленность'] = closest_point(mrp.well.x_coord, mrp.well.y_coord, json.loads(mrp.profile.x_pulc), json.loads(mrp.profile.y_pulc))[1]
+
+        pd_markup = pd.concat([pd_markup, pd.DataFrame(data=mrp_dict, columns=list_col, index=[0])], axis = 0, ignore_index=True)
+        n += 1
+
+    file_name = QFileDialog.getSaveFileName()[0]
+    if file_name:
+        pd_markup.to_excel(file_name, index=False)

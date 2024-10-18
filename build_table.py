@@ -36,11 +36,11 @@ def build_table_train(db=False, analisis='lda'):
             data_train = pd.DataFrame(json.loads(data[0]))
             return data_train, list_param
 
-    data_train, _ = build_table_test_no_db(analisis, analisis_id, list_param)
+    data_train, _ = build_table_train_no_db(analisis, analisis_id, list_param)
     return data_train, list_param
 
 
-def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) -> (pd.DataFrame, list):
+def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -> (pd.DataFrame, list):
 
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     if analisis == 'regmod':
@@ -48,7 +48,7 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
     else:
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
     except_param = False
-    # Получаем размеченные участкf'{param.parameter}'и
+    # Получаем размеченные участки
     if analisis == 'lda':
         markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
     elif analisis == 'mlp':

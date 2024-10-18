@@ -41,7 +41,7 @@ def copy_lda():
                 type_markup=old_markup.type_markup
             )
             session.add(new_markup)
-    build_table_test_no_db('lda', new_lda.id, [])
+    build_table_train_no_db('lda', new_lda.id, [])
     session.commit()
     update_list_lda()
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
@@ -74,7 +74,7 @@ def copy_lda_to_mlp():
             )
             session.add(new_markup)
     session.commit()
-    build_table_test_no_db('mlp', new_mlp.id, [])
+    build_table_train_no_db('mlp', new_mlp.id, [])
     update_list_mlp()
     set_info(f'Скопирован анализ LDA - "{old_lda.title}"', 'green')
 
