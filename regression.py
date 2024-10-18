@@ -283,6 +283,28 @@ def choose_markup_regmod():
     draw_fake(list_fake, list_up, list_down)
 
 
+def update_all_well_markup_reg():
+    for mrp in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
+        if mrp.type_markup == 'intersection':
+            return
+
+        x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == mrp.profile_id).first()[0])
+        well_dist = ui.spinBox_well_dist_reg.value()
+        form_id = get_formation_id()
+        well = session.query(Well).filter(Well.id == mrp.well_id).first()
+        y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == mrp.profile_id).first()[0])
+        index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+        start = index - well_dist if index - well_dist > 0 else 0
+        stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+        list_measure = list(range(start, stop))
+        session.query(MarkupReg).filter(MarkupReg.id == mrp.id).update(
+            {'list_measure': json.dumps(list_measure)},
+            synchronize_session='fetch')
+    session.commit()
+    update_list_well_markup_reg()
+
+
+
 def update_well_markup_reg():
     markup = session.query(MarkupReg).filter(MarkupReg.id == get_markup_regmod_id()).first()
     if not markup:
