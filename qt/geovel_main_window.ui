@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4619,16 +4619,6 @@ Therm</string>
                           </property>
                          </widget>
                         </item>
-                        <item row="1" column="2">
-                         <widget class="QToolButton" name="toolButton_feature_importance_reg">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(207, 252, 162);</string>
-                          </property>
-                          <property name="text">
-                           <string>FI</string>
-                          </property>
-                         </widget>
-                        </item>
                        </layout>
                       </item>
                       <item row="0" column="0">
@@ -5444,7 +5434,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -134,7 +134,7 @@ def test_start():
             ui_cm.pushButton_calc_model.clicked.connect(update_markers)
             ChooseMark.exec()
 
-        data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(), list_param)
+        data_table, params = build_table_train_no_db("mlp", get_test_MLP_id(), list_param)
         data_test = data_table.copy()
         try:
             working_sample = data_test[list_param_num].values.tolist()
@@ -304,7 +304,7 @@ def test_start():
             if curr_list_param == list_param_num:
                 data_table = curr_data_table.copy()
             else:
-                data_table, params = build_table_test_no_db("mlp", get_test_MLP_id(), list_param)
+                data_table, params = build_table_train_no_db("mlp", get_test_MLP_id(), list_param)
             curr_list_param = list_param_num.copy()
             curr_data_table = data_table.copy()
             data_test = data_table.copy()
@@ -511,7 +511,7 @@ def regression_test():
         list_param = json.loads(model.list_params)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
-        working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
+        working_data, curr_form = build_table_train_no_db('regmod', get_test_regmod_id(), list_param)
         working_sample = working_data[list_param_num].values.tolist()
 
         with open(model.path_model, 'rb') as f:
@@ -638,7 +638,7 @@ def regression_test():
             if curr_list_param == list_param_num:
                 working_data = current_data_table.copy()
             else:
-                working_data, curr_form = build_table_test_no_db('regmod', get_test_regmod_id(), list_param)
+                working_data, curr_form = build_table_train_no_db('regmod', get_test_regmod_id(), list_param)
             curr_list_param = list_param_num.copy()
             current_data_table = working_data.copy()
 

@@ -222,6 +222,7 @@ ui.listWidget_trained_model_class.setContextMenuPolicy(Qt.CustomContextMenu)
 ui.listWidget_trained_model_class.customContextMenuRequested.connect(rename_model_class)
 ui.toolButton_list_param_to_line.clicked.connect(list_param_to_lineEdit)
 ui.toolButton_feature_importance.clicked.connect(get_feature_importance_cls)
+ui.toolButton_excel_markup_mlp.clicked.connect(markup_to_excel_mlp)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
@@ -260,6 +261,9 @@ ui.pushButton_corr_regmod.clicked.connect(calc_corr_regmod)
 ui.pushButton_updata_regmod.clicked.connect(update_list_param_regmod)
 ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
 ui.pushButton_reg_add_param_list.clicked.connect(add_param_list_reg)
+ui.pushButton_add_all_well_regmod.clicked.connect(add_all_well_markup_reg)
+ui.toolButton_excel_markup_reg.clicked.connect(markup_to_excel_reg)
+
 
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.doubleClicked.connect(choose_markup_regmod)
