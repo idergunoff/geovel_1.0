@@ -1,3 +1,5 @@
+import pandas as pd
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from formation_ai import get_model_id
 from func import *
@@ -77,7 +79,7 @@ def copy_mlp_to_lda():
             )
             session.add(new_markup)
     session.commit()
-    build_table_test_no_db('lda', new_lda.id, [])
+    build_table_train_no_db('lda', new_lda.id, [])
     update_list_lda()
     set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
@@ -1552,6 +1554,7 @@ def list_param_to_lineEdit():
     print(line_param)
     ui.lineEdit_string.setText(line_param)
 
+
 def get_feature_importance_cls():
     model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
         Qt.UserRole)).first()
@@ -1577,5 +1580,36 @@ def get_feature_importance_cls():
         print(feature_importance_df.head(30))
 
 
+def markup_to_excel_mlp():
+    list_col = ['маркер', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
+                                      'альтитуда', 'удаленность', 'X', 'Y']
+    analisis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    pd_markup = pd.DataFrame(columns=list_col)
+    ui.progressBar.setMaximum(len(analisis.markups))
+    n = 1
+    for mrp in analisis.markups:
+        ui.progressBar.setValue(n)
+        mrp_dict = dict()
+        mrp_dict['маркер'] = mrp.marker.title
+        mrp_dict['объект'] = f'{mrp.profile.research.object.title}_{mrp.profile.research.date_research.year}'
+        mrp_dict['профиль'] = mrp.profile.title
+        mrp_dict['интервал'] = mrp.formation.title
+        mrp_dict['измерения'] = mrp.list_measure
+        mrp_dict['выбросы'] = mrp.list_fake
+        if not mrp.type_markup:
+            mrp_dict['скважина'] = mrp.well.name
+            mrp_dict['альтитуда'] = mrp.well.alt
+            mrp_dict['X'] = mrp.well.x_coord
+            mrp_dict['Y'] = mrp.well.y_coord
+            mrp_dict['удаленность'] = closest_point(mrp.well.x_coord, mrp.well.y_coord, json.loads(mrp.profile.x_pulc), json.loads(mrp.profile.y_pulc))[1]
 
-    pass
+        pd_markup = pd.concat([pd_markup, pd.DataFrame(data=mrp_dict, columns=list_col, index=[0])], axis = 0, ignore_index=True)
+        n += 1
+
+    file_name = QFileDialog.getSaveFileName()[0]
+    if file_name:
+        pd_markup.to_excel(file_name, index=False)
+
+
+
+

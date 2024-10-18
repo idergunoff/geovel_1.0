@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3666,16 +3666,6 @@ Therm</string>
                  <layout class="QGridLayout" name="gridLayout_48">
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_53">
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_clear_params_mlp">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>--- clear parameters</string>
-                      </property>
-                     </widget>
-                    </item>
                     <item row="0" column="1">
                      <widget class="QPushButton" name="pushButton_rem_param_mlp">
                       <property name="styleSheet">
@@ -3696,6 +3686,26 @@ Therm</string>
                       </property>
                       <property name="text">
                        <string>from list</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_clear_params_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>--- clear parameters</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="3">
+                     <widget class="QToolButton" name="toolButton_excel_markup_mlp">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(220, 138, 221);</string>
+                      </property>
+                      <property name="text">
+                       <string>^</string>
                       </property>
                      </widget>
                     </item>
@@ -4290,16 +4300,6 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_rem_param_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
-                        </property>
-                        <property name="text">
-                         <string>- remove parameter</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_reg_add_param_list">
                         <property name="toolTip">
@@ -4310,6 +4310,26 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>from list</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_rem_param_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
+                        </property>
+                        <property name="text">
+                         <string>- remove parameter</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QToolButton" name="toolButton_excel_markup_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(220, 138, 221);</string>
+                        </property>
+                        <property name="text">
+                         <string>^</string>
                         </property>
                        </widget>
                       </item>
@@ -4619,6 +4639,16 @@ Therm</string>
                           </property>
                          </widget>
                         </item>
+                        <item row="1" column="2">
+                         <widget class="QToolButton" name="toolButton_feature_importance_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(143, 240, 164);</string>
+                          </property>
+                          <property name="text">
+                           <string>FI</string>
+                          </property>
+                         </widget>
+                        </item>
                        </layout>
                       </item>
                       <item row="0" column="0">
@@ -4689,12 +4719,12 @@ Therm</string>
                      </widget>
                     </item>
                     <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_sum_regmod">
+                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(191, 255, 191);</string>
                       </property>
                       <property name="text">
-                       <string>sum RegMod</string>
+                       <string>add_all_well</string>
                       </property>
                      </widget>
                     </item>
