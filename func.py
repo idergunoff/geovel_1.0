@@ -2428,3 +2428,57 @@ def interpolate_nones(data):
 
     # Преобразуем обратно в список
     return list(interpolated)
+
+
+def get_list_formation():
+    global flag_break
+    list_formation = []
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    flag_break = []
+    for n, prof in enumerate(profiles):
+        if flag_break:
+            if flag_break[0] == 'stop':
+                break
+            else:
+                set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
+                                                           f'{flag_break[0]}, выберите пласты для каждого профиля.')
+                return False
+
+        if len(prof.formations) == 1:
+            list_formation.append(f'{prof.formations[0].title} id{prof.formations[0].id}')
+        elif len(prof.formations) > 1:
+            Choose_Formation = QtWidgets.QDialog()
+            ui_cf = Ui_FormationLDA()
+            ui_cf.setupUi(Choose_Formation)
+            Choose_Formation.show()
+            Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+            for f in prof.formations:
+                ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+            ui_cf.listWidget_form_lda.setCurrentRow(0)
+
+            def form_mlp_ok():
+                global flag_break
+                if ui_cf.checkBox_to_all.isChecked():
+                    title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                    for prof in profiles:
+                        prof_form = session.query(Formation).filter_by(
+                            profile_id=prof.id,
+                            title=title_form
+                        ).first()
+                        if prof_form:
+                            list_formation.append(f'{prof_form.title} id{prof_form.id}')
+                        else:
+                            flag_break = [prof.title, title_form]
+                            Choose_Formation.close()
+                            return
+                    flag_break = ['stop', 'stop']
+                    Choose_Formation.close()
+                else:
+                    list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
+                    Choose_Formation.close()
+
+            ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
+            Choose_Formation.exec_()
+
+    return list_formation

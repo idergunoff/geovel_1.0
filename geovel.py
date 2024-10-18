@@ -260,6 +260,8 @@ ui.pushButton_corr_regmod.clicked.connect(calc_corr_regmod)
 ui.pushButton_updata_regmod.clicked.connect(update_list_param_regmod)
 ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
 ui.pushButton_reg_add_param_list.clicked.connect(add_param_list_reg)
+ui.pushButton_add_all_well_regmod.clicked.connect(add_all_well_markup_reg)
+
 
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
 ui.listWidget_well_regmod.doubleClicked.connect(choose_markup_regmod)

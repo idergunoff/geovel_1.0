@@ -153,6 +153,43 @@ def add_well_markup_reg():
         QMessageBox.critical(MainWindow, 'Ошибка', 'выберите все параметры для добавления обучающей скважины!')
 
 
+def add_all_well_markup_reg():
+    """Добавить все скважины объекта для обучения регрессионной модели"""
+    analysis_id = get_regmod_id()
+
+    list_formation = get_list_formation()
+    if not list_formation:
+        return
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    ui.progressBar.setMaximum(len(profiles))
+    for np, p in enumerate(profiles):
+        ui.progressBar.setValue(np + 1)
+        wells = get_list_nearest_well(p.id)
+        if wells:
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == p.id).first()[0])
+            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == p.id).first()[0])
+            for w in wells:
+                if session.query(MarkupReg).filter(MarkupReg.analysis_id == analysis_id,
+                                                   MarkupReg.well_id == w[0].id,
+                                                   MarkupReg.profile_id == p.id).count() > 0:
+                    set_info(f'Скважина {w[0].name} на профиле {p.title} уже добавлена', 'red')
+                    continue
+                index, _ = closest_point(w[0].x_coord, w[0].y_coord, x_prof, y_prof)
+                well_dist = ui.spinBox_well_dist_reg.value()
+                start = index - well_dist if index - well_dist > 0 else 0
+                stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+                list_measure = list(range(start, stop))
+                new_markup_reg = MarkupReg(analysis_id=analysis_id, well_id=w[0].id, profile_id=p.id,
+                                           formation_id=list_formation[np].split(' id')[-1], target_value=0,
+                                           list_measure=json.dumps(list_measure))
+                session.add(new_markup_reg)
+                set_info(f'Добавлена новая обучающая скважина для регрессионной модели - "{w[0].name} - {p.title}"', 'green')
+    session.commit()
+    update_list_well_markup_reg()
+
+
+
+
 def update_list_well_markup_reg():
     """Обновить список обучающих скважин"""
     ui.listWidget_well_regmod.clear()
@@ -185,6 +222,7 @@ def update_list_well_markup_reg():
     ui.label_count_markup_reg.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> '
                                       f'измерений; <i><u>{count_fake}</u></i> выбросов')
     update_list_param_regmod(db=True)
+    update_list_param_reg_no_update()
 
 
 def remove_well_markup_reg():
@@ -283,6 +321,7 @@ def add_param_signal_reg():
         add_param_regmod(param)
         # update_list_param_regmod()
         set_color_button_updata_regmod()
+        update_list_param_reg_no_update()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -297,6 +336,7 @@ def add_param_crl_reg():
         add_param_regmod('CRL')
         # update_list_param_mlp()
         set_color_button_updata_regmod()
+        update_list_param_reg_no_update()
         set_info(f'Параметр CRL добавлен', 'green')
     else:
         set_info(f'Параметр CRL уже добавлен', 'red')
@@ -313,6 +353,7 @@ def add_param_crl_nf_reg():
         # update_list_param_mlp()
         set_color_button_updata_regmod()
         set_info(f'Параметр CRL_NF добавлен', 'green')
+        update_list_param_reg_no_update()
     else:
         set_info(f'Параметр CRL_NF уже добавлен', 'red')
 
@@ -331,6 +372,7 @@ def add_all_param_signal_reg():
             set_info(f'Параметр {param} уже добавлен', 'red')
     # update_list_param_regmod()
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
 
 
 def add_param_geovel_reg():
@@ -349,6 +391,7 @@ def add_param_geovel_reg():
         add_param_regmod(param)
         # update_list_param_regmod()
         set_color_button_updata_regmod()
+        update_list_param_reg_no_update()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -370,6 +413,7 @@ def add_all_param_geovel_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     # update_list_param_regmod()
+    update_list_param_reg_no_update()
     set_color_button_updata_regmod()
 
 
@@ -383,6 +427,7 @@ def add_param_profile_reg():
     ).count() == 0:
         add_param_regmod(param)
         set_color_button_updata_regmod()
+        update_list_param_reg_no_update()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -399,6 +444,7 @@ def add_all_param_profile_reg():
             continue
         add_param_regmod(f'prof_{param}')
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
 
 
 def add_param_distr_reg():
@@ -415,7 +461,7 @@ def add_param_distr_reg():
     add_param_regmod('distr')
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
-    # update_list_param_regmod()
+    update_list_param_reg_no_update()
     set_color_button_updata_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_reg.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
@@ -437,6 +483,7 @@ def add_param_sep_reg():
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_reg.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
 
@@ -457,6 +504,7 @@ def add_all_param_distr_reg():
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
 
 
@@ -476,6 +524,7 @@ def add_param_mfcc_reg():
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_reg.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_reg.currentText()}', 'green')
 
@@ -495,6 +544,7 @@ def add_all_param_mfcc_reg():
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
@@ -518,6 +568,7 @@ def remove_param_geovel_reg():
         session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
         session.commit()
         set_color_button_updata_regmod()
+    update_list_param_reg_no_update()
 
 
 def remove_all_param_geovel_reg():
@@ -525,6 +576,19 @@ def remove_all_param_geovel_reg():
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_regmod()
+    update_list_param_reg_no_update()
+
+
+def update_list_param_reg_no_update():
+    data = session.query(AnalysisReg.up_data).filter_by(id=get_regmod_id()).first()
+    if data[0]:
+        return
+    list_param_reg = session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).all()
+    ui.listWidget_param_reg.clear()
+    for param in list_param_reg:
+        i_item = QListWidgetItem(f'{param.parameter}')
+        ui.listWidget_param_reg.addItem(i_item)
+        i_item.setBackground(QBrush(QColor('#FFFAD5')))
 
 
 def update_list_param_regmod(db=False):

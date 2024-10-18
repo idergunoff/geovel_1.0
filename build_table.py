@@ -48,7 +48,7 @@ def build_table_test_no_db(analisis: str, analisis_id: int, list_param: list) ->
     else:
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
     except_param = False
-    # Получаем размеченные участки
+    # Получаем размеченные участкf'{param.parameter}'и
     if analisis == 'lda':
         markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
     elif analisis == 'mlp':
