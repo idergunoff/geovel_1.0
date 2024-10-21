@@ -1348,7 +1348,7 @@ def set_param_lda_to_combobox():
 
 
 def set_param_mlp_to_combobox():
-    for param in list_param_geovel + list_all_additional_features:
+    for param in ['X', 'Y'] + list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_mlp.addItem(param)
     for param in list_all_additional_features:
         if param in ['fractal_dim', 'hht_marg_spec_min']:
@@ -1358,7 +1358,7 @@ def set_param_mlp_to_combobox():
 
 
 def set_param_regmod_to_combobox():
-    for param in list_param_geovel + list_all_additional_features:
+    for param in ['X', 'Y'] + list_param_geovel + list_all_additional_features:
         ui.comboBox_geovel_param_reg.addItem(param)
     for param in list_all_additional_features:
         if param in ['fractal_dim', 'hht_marg_spec_min']:

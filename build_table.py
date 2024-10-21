@@ -1,3 +1,5 @@
+import json
+
 from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, \
     calc_entropy_features_profile, calc_nonlinear_features_profile, calc_morphology_features_profile, \
     calc_frequency_features_profile, calc_envelope_feature_profile, calc_autocorr_feature_profile, \
@@ -94,6 +96,12 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                 if not str(markup.profile.id) + '_CRL_NF' in locals():
                     locals()[str(markup.profile.id) + '_CRL_NF'] = calc_CRL(json.loads(
                         session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+            elif param == 'X':
+                locals()['list_X'] = json.loads(session.query(Profile.x_pulc).filter(
+                        Profile.id == markup.profile_id).first()[0])
+            elif param == 'Y':
+                locals()['list_Y'] = json.loads(session.query(Profile.y_pulc).filter(
+                        Profile.id == markup.profile_id).first()[0])
             elif param.startswith('prof'):
                 if param[5:] in list_wavelet_features:
                     calc_wavelet_features_profile(markup.profile_id)
@@ -308,6 +316,10 @@ def build_table_test(analisis='lda'):
             if not str(curr_form.profile.id) + '_CRL_NF' in locals():
                 locals()[str(curr_form.profile.id) + '_CRL_NF'] = calc_CRL_filter(json.loads(
                     session.query(Profile.signal).filter(Profile.id == curr_form.profile_id).first()[0]))
+        elif param == 'X':
+            locals()['list_X'] = json.loads(session.query(Profile.x_pulc).filter(Profile.id == curr_form.profile_id).first()[0])
+        elif param == 'Y':
+            locals()['list_Y'] = json.loads(session.query(Profile.y_pulc).filter(Profile.id == curr_form.profile_id).first()[0])
         elif param.startswith('prof'):
             if param[5:] in list_wavelet_features:
                 calc_wavelet_features_profile(curr_form.profile_id)

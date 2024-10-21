@@ -500,7 +500,7 @@ def add_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_mlp.currentText()
-    if not param in list_all_additional_features:
+    if not param in list_all_additional_features + ['X', 'Y']:
         for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
                 set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
@@ -579,7 +579,7 @@ def add_param_list_mlp():
 
 
 def add_all_param_geovel_mlp():
-    new_list_param = list_param_geovel + list_all_additional_features
+    new_list_param = ['X', 'Y'] + list_param_geovel + list_all_additional_features
     for param in list_param_geovel:
         for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
             if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
