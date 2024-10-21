@@ -112,6 +112,7 @@ def push_random_param_reg():
         ui_rp.checkBox_emd_prof.setChecked(push)
         ui_rp.checkBox_hht_prof.setChecked(push)
         ui_rp.checkBox_land.setChecked(push)
+        ui_rp.checkBox_xy.setChecked(push)
 
     def get_test_reg_id():
         return ui_rp.comboBox_test_analysis.currentText().split(' id')[-1]
@@ -206,6 +207,24 @@ def push_random_param_reg():
                     )
 
                 for i in list_param:
+
+                    if i == 'X':
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                     json.loads(session.query(Profile.x_pulc).filter(
+                                         Profile.id == markup.profile_id
+                                     ).first()[0])}
+                            )
+                    if i == 'Y':
+                        if not str(markup.profile.id) + '_' + i in locals_dict:
+                            locals_dict.update(
+                                {str(markup.profile.id) + '_' + i:
+                                     json.loads(session.query(Profile.y_pulc).filter(
+                                         Profile.id == markup.profile_id
+                                     ).first()[0])}
+                            )
+
                     if i in list_param_geovel:
                         if not str(markup.profile.id) + '_' + i in locals_dict:
                             locals_dict.update(
@@ -565,6 +584,8 @@ def push_random_param_reg():
             list_param_attr += ['width', 'top', 'speed', 'speed_cover']
         if ui_rp.checkBox_land.isChecked():
             list_param_attr += ['land']
+        if ui_rp.checkBox_xy.isChecked():
+            list_param_attr += ['X', 'Y']
         if ui_rp.checkBox_wvt.isChecked():
             list_param_attr += list_wavelet_features
         if ui_rp.checkBox_fract.isChecked():
@@ -859,7 +880,7 @@ def push_random_param_reg():
 
         elif model == 'LGBM':
             model_reg = lgb.LGBMRegressor(
-                objective='binary',
+                objective='regression',
                 verbosity=-1,
                 boosting_type='gbdt',
                 reg_alpha=ui_r.doubleSpinBox_l1_lgbm.value(),

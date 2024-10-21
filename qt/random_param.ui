@@ -202,6 +202,20 @@
                    <string>Attribute</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_62">
+                   <item row="2" column="0">
+                    <widget class="QCheckBox" name="checkBox_crl_stat">
+                     <property name="text">
+                      <string>CRL stat</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QCheckBox" name="checkBox_stat">
+                     <property name="text">
+                      <string>stat</string>
+                     </property>
+                    </widget>
+                   </item>
                    <item row="0" column="0">
                     <layout class="QGridLayout" name="gridLayout_63">
                      <item row="0" column="0">
@@ -434,24 +448,17 @@
                      </item>
                     </layout>
                    </item>
-                   <item row="1" column="0">
-                    <widget class="QCheckBox" name="checkBox_stat">
-                     <property name="text">
-                      <string>stat</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="0">
-                    <widget class="QCheckBox" name="checkBox_crl_stat">
-                     <property name="text">
-                      <string>CRL stat</string>
-                     </property>
-                    </widget>
-                   </item>
                    <item row="3" column="0">
                     <widget class="QCheckBox" name="checkBox_land">
                      <property name="text">
                       <string>land</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QCheckBox" name="checkBox_xy">
+                     <property name="text">
+                      <string>X Y</string>
                      </property>
                     </widget>
                    </item>
