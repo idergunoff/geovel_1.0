@@ -435,6 +435,110 @@ def choose_marker_mlp():
     draw_fake(list_fake, list_up, list_down)
 
 
+def split_well_train_test_mlp():
+    markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
+    list_markers = [mrk.id for mrk in session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).all()]
+    list_mkp_id = [mkp.id for mkp in markups if not mkp.type_markup]
+    list_data = [[mkp.well.x_coord, mkp.well.y_coord, list_markers.index(mkp.marker.id)] for mkp in markups if not mkp.type_markup]
+
+    scaler = MinMaxScaler()
+    data_scaled = scaler.fit_transform(list_data)
+    if ui.radioButton_clusters_mlp.isChecked():
+        kmeans = KMeans(n_clusters=5, random_state=42).fit(data_scaled)
+        labels = kmeans.labels_
+
+        test_ids, train_ids = [], []
+        for label in np.unique(labels):
+            cluster_indices = np.where(labels == label)[0]
+            np.random.shuffle(cluster_indices)
+            test_size = int(len(cluster_indices) * 0.2)
+            test_cluster_indices = cluster_indices[:test_size]
+            train_cluster_indices = cluster_indices[test_size:]
+
+            test_ids.extend([list_mkp_id[i] for i in test_cluster_indices])
+            train_ids.extend([list_mkp_id[i] for i in train_cluster_indices])
+
+    else:
+        def min_distance_to_selected(point, selected_points):
+            if not selected_points:
+                return np.inf
+            distance = np.linalg.norm(point - data_scaled[selected_points], axis=1)
+            return np.min(distance)
+
+        selected_indices = [np.random.choice(range(len(data_scaled)))]
+
+        while len(selected_indices) < len(data_scaled) * 0.2:
+            distances = np.array([min_distance_to_selected(point, selected_indices) for point in data_scaled])
+            next_point_index = np.argmax(distances)
+            selected_indices.append(next_point_index)
+
+        test_ids = [list_mkp_id[i] for i in selected_indices]
+        train_ids = [list_mkp_id[i] for i in range(len(list_mkp_id)) if i not in selected_indices]
+
+    x_coords = [mkp.well.x_coord for mkp in markups if not mkp.type_markup]
+    y_coords = [mkp.well.y_coord for mkp in markups if not mkp.type_markup]
+    values = [list_markers.index(mkp.marker.id) for mkp in markups if not mkp.type_markup]
+
+
+    test_x = [mkp.well.x_coord for mkp in markups if mkp.id in test_ids]
+    test_y = [mkp.well.y_coord for mkp in markups if mkp.id in test_ids]
+    test_values = [list_markers.index(mkp.marker.id) for mkp in markups if mkp.id in test_ids]
+
+    plt.figure(figsize=(15, 12))
+
+    sc = plt.scatter(x_coords, y_coords, c=values, cmap='viridis', s=200, alpha=0.7, label='TRAIN')
+    plt.scatter(test_x, test_y, c=test_values, cmap='viridis', s=200, edgecolors='red', linewidths=2.5, alpha=0.7, label='TEST')
+
+    plt.colorbar(sc, label='value')
+
+    plt.legend()
+    plt.show()
+
+
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Train/Test',
+        f'Разделить выборку?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+
+    if result == QtWidgets.QMessageBox.Yes:
+        if ui.lineEdit_string.text() == '':
+            set_info('Введите название для разделении выборки', 'red')
+            return
+        old_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+        new_mlp_train = AnalysisMLP(title=f'{ui.lineEdit_string.text()}_train')
+        new_mlp_test = AnalysisMLP(title=f'{ui.lineEdit_string.text()}_test')
+        session.add(new_mlp_train)
+        session.add(new_mlp_test)
+        session.commit()
+        for old_marker in old_mlp.markers:
+            new_marker_train = MarkerMLP(analysis_id=new_mlp_train.id, title=old_marker.title, color=old_marker.color)
+            new_marker_test = MarkerMLP(analysis_id=new_mlp_test.id, title=old_marker.title, color=old_marker.color)
+            session.add(new_marker_train)
+            session.add(new_marker_test)
+            session.commit()
+
+            for old_markup in session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id(), marker_id=old_marker.id):
+                if old_markup.type_markup:
+                    continue
+                new_markup = MarkupMLP(
+                    analysis_id=new_mlp_test.id if old_markup.id in test_ids else new_mlp_train.id,
+                    well_id=old_markup.well_id,
+                    profile_id=old_markup.profile_id,
+                    formation_id=old_markup.formation_id,
+                    marker_id=new_marker_test.id if old_markup.id in test_ids else new_marker_train.id,
+                    list_measure=old_markup.list_measure
+                )
+                session.add(new_markup)
+        session.commit()
+        update_list_mlp()
+        set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
+
+
+
+
+
 def add_param_signal_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()

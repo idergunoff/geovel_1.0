@@ -117,6 +117,7 @@ from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import PartialDependenceDisplay
+from sklearn.cluster import KMeans
 
 from boruta import BorutaPy
 from collections import defaultdict

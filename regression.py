@@ -1,5 +1,11 @@
 import json
 
+import matplotlib.pyplot as plt
+import numpy as np
+from mlxtend.cluster import Kmeans
+from pandas.core.common import random_state
+from scipy.cluster.vq import kmeans
+
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
 from func import *
 from build_table import *
@@ -330,6 +336,100 @@ def update_well_markup_reg():
     session.commit()
     set_info(f'Изменена обучающая скважина для регрессионной модели - "{well.name}"', 'green')
     update_list_well_markup_reg()
+
+
+def split_well_train_test():
+    markups = session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()).all()
+    list_mkp_id = [mkp.id for mkp in markups]
+    list_data = [[mkp.well.x_coord, mkp.well.y_coord, mkp.target_value] for mkp in markups]
+
+    scaler = MinMaxScaler()
+    data_scaled = scaler.fit_transform(list_data)
+    if ui.radioButton_clusters.isChecked():
+        kmeans = KMeans(n_clusters=5, random_state=42).fit(data_scaled)
+        labels = kmeans.labels_
+
+        test_ids, train_ids = [], []
+        for label in np.unique(labels):
+            cluster_indices = np.where(labels == label)[0]
+            np.random.shuffle(cluster_indices)
+            test_size = int(len(cluster_indices) * 0.2)
+            test_cluster_indices = cluster_indices[:test_size]
+            train_cluster_indices = cluster_indices[test_size:]
+
+            test_ids.extend([list_mkp_id[i] for i in test_cluster_indices])
+            train_ids.extend([list_mkp_id[i] for i in train_cluster_indices])
+
+    else:
+        def min_distance_to_selected(point, selected_points):
+            if not selected_points:
+                return np.inf
+            distance = np.linalg.norm(point - data_scaled[selected_points], axis=1)
+            return np.min(distance)
+
+        selected_indices = [np.random.choice(range(len(data_scaled)))]
+
+        while len(selected_indices) < len(data_scaled) * 0.2:
+            distances = np.array([min_distance_to_selected(point, selected_indices) for point in data_scaled])
+            next_point_index = np.argmax(distances)
+            selected_indices.append(next_point_index)
+
+        test_ids = [list_mkp_id[i] for i in selected_indices]
+        train_ids = [list_mkp_id[i] for i in range(len(list_mkp_id)) if i not in selected_indices]
+
+    x_coords = [mkp.well.x_coord for mkp in markups]
+    y_coords = [mkp.well.y_coord for mkp in markups]
+    values = [mkp.target_value for mkp in markups]
+
+
+    test_x = [mkp.well.x_coord for mkp in markups if mkp.id in test_ids]
+    test_y = [mkp.well.y_coord for mkp in markups if mkp.id in test_ids]
+    test_values = [mkp.target_value for mkp in markups if mkp.id in test_ids]
+
+    plt.figure(figsize=(15, 12))
+
+    sc = plt.scatter(x_coords, y_coords, c=values, cmap='viridis', s=200, alpha=0.7, label='TRAIN')
+    plt.scatter(test_x, test_y, c=test_values, cmap='viridis', s=200, edgecolors='red', linewidths=2.5, alpha=0.7, label='TEST')
+
+    plt.colorbar(sc, label='value')
+
+    plt.legend()
+    plt.show()
+
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Train/Test',
+        f'Разделить выборку?',
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No)
+
+    if result == QtWidgets.QMessageBox.Yes:
+        if ui.lineEdit_string.text() == '':
+            set_info('Введите название для разделении выборки', 'red')
+            return
+        old_regmod = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+        new_regmod_train = AnalysisReg(title=f'{ui.lineEdit_string.text()}_train')
+        new_regmod_test = AnalysisReg(title=f'{ui.lineEdit_string.text()}_test')
+        session.add(new_regmod_train)
+        session.add(new_regmod_test)
+        session.commit()
+        for old_markup in session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()):
+            new_markup = MarkupReg(
+                analysis_id=new_regmod_test.id if old_markup.id in test_ids else new_regmod_train.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id,
+                formation_id=old_markup.formation_id,
+                target_value=old_markup.target_value,
+                list_measure=old_markup.list_measure,
+                type_markup=old_markup.type_markup
+            )
+            session.add(new_markup)
+        session.commit()
+        update_list_reg()
+        set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
+
+
+
 
 
 def add_param_signal_reg():
