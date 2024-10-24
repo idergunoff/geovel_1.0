@@ -1,4 +1,5 @@
 import pandas as pd
+from PyQt5.QtWidgets import QDialog
 
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fill_result, remove_poly_item
 from formation_ai import get_model_id
@@ -962,7 +963,10 @@ def remove_trained_model_class():
 
 def calc_class_profile():
     """  Расчет профиля по выбранной модели классификатора """
-    working_data, curr_form = build_table_test('mlp')
+    try:
+        working_data, curr_form = build_table_test('mlp')
+    except TypeError:
+        return
     working_data_class = working_data.copy()
 
     Choose_RegModel = QtWidgets.QDialog()
@@ -1029,6 +1033,23 @@ def calc_class_profile():
         print('working_data_result ', working_data_result)
 
         draw_result_mlp(working_data_result, curr_form, ui_rm.checkBox_color_marker.isChecked())
+
+        result = QtWidgets.QMessageBox.question(ui.listWidget_well_mlp, 'Сохранение результата',
+                                                'Вы хотите сохранить результат модели?',
+                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if result == QtWidgets.QMessageBox.Yes:
+            list_result = [round(p[0], 6) for p in probability]
+            new_prof_model_pred = ProfileModelPrediction(
+                profile_id = get_profile_id(),
+                type_model = 'cls',
+                model_id = model.id,
+                prediction = json.dumps(list_result)
+            )
+
+            session.add(new_prof_model_pred)
+            session.commit()
+            set_info(f'Результат расчета модели "{model.title}" для профиля {get_profile_name()} сохранен', 'green')
+            update_list_model_prediction()
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
     Choose_RegModel.exec_()

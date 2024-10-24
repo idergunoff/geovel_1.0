@@ -2482,3 +2482,20 @@ def get_list_formation():
             Choose_Formation.exec_()
 
     return list_formation
+
+
+def update_list_model_prediction():
+    ui.listWidget_model_pred.clear()
+    for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id()).all():
+        if p.type_model == 'cls':
+            model = session.query(TrainedModelClass).filter_by(id=p.model_id).first()
+        else:
+            model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
+        ui.listWidget_model_pred.addItem(f'{p.type_model} {model.title} id{p.id}')
+
+
+def remove_model_prediction():
+    model = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+    session.delete(model)
+    session.commit()
+    update_list_model_prediction()

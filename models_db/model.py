@@ -70,6 +70,7 @@ class Profile(Base):
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
     markups_reg = relationship('MarkupReg', back_populates='profile')
     intersections = relationship('Intersection', back_populates='profile')
+    predictions = relationship('ProfileModelPrediction', back_populates='profile')
 
     wavelet_feature = relationship('WaveletFeatureProfile', back_populates='profile')
     fractal_feature = relationship('FractalFeatureProfile', back_populates='profile')
@@ -81,6 +82,18 @@ class Profile(Base):
     autocorr_feature = relationship('AutocorrFeatureProfile', back_populates='profile')
     emd_feature = relationship('EMDFeatureProfile', back_populates='profile')
     hht_feature = relationship('HHTFeatureProfile', back_populates='profile')
+
+
+class ProfileModelPrediction(Base):
+    __tablename__ = 'profile_model_prediction'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile.id'))
+    model_id = Column(Integer)
+    type_model = Column(String)
+    prediction = Column(Text)
+
+    profile = relationship('Profile', back_populates='predictions')
 
 
 class DeepProfile(Base):

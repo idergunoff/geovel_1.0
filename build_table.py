@@ -295,8 +295,13 @@ def build_table_test(analisis='lda'):
         list_param, analisis_title = json.loads(model.list_params), model.title
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
-    list_up = json.loads(curr_form.layer_up.layer_line)
-    list_down = json.loads(curr_form.layer_down.layer_line)
+    try:
+        list_up = json.loads(curr_form.layer_up.layer_line)
+        list_down = json.loads(curr_form.layer_down.layer_line)
+    except AttributeError:
+        set_info('Не выбран пласт', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Не выбран пласт')
+        return
     x_pulc = json.loads(curr_form.profile.x_pulc)
     y_pulc = json.loads(curr_form.profile.y_pulc)
     for param in list_param:
