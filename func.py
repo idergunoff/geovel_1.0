@@ -2,7 +2,6 @@
 import os.path
 
 import numpy as np
-
 from object import *
 
 
@@ -2198,7 +2197,6 @@ def calc_CRL(radar):
     radar_idct = idctn(radar_log, type=2, norm='ortho', axes=1)
     radar_rang2 = rankdata(radar_idct, axis=1)
     return radar_rang2
-
 
 def parse_range_exception(input_str):
     if input_str == '':

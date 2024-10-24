@@ -670,6 +670,26 @@ def add_all_param_mfcc_reg():
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
+def add_model_param_reg():
+    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
+        Qt.UserRole)).first()
+    param = 'model_' + str(model.id) + '_' + str(model.title).split('_')[0]
+
+    if session.query(ParameterReg).filter_by(
+            analysis_id=get_regmod_id(),
+            parameter= param
+    ).count() == 0:
+        new_param = ParameterReg(analysis_id=get_regmod_id(), parameter=param)
+        session.add(new_param)
+        session.commit()
+        set_color_button_updata_regmod()
+        update_list_param_reg_no_update()
+    else:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+
+
 def remove_param_geovel_reg():
     try:
         param = ui.listWidget_param_reg.currentItem().text().split(' ')[0]
@@ -2487,6 +2507,21 @@ def calc_profile_model_regmod():
         # Добавляем кривую и отфильтрованную кривую на график для всех пластов
         ui.graph.addItem(curve)
         ui.graph.addItem(curve_filter)
+
+        result = QtWidgets.QMessageBox.question(ui.listWidget_well_regmod, 'Сохранение результата',
+                                                'Вы хотите сохранить результат модели?',
+                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if result == QtWidgets.QMessageBox.Yes:
+            new_prof_model_pred = ProfileModelPrediction(
+                profile_id=get_profile_id(),
+                type_model='reg',
+                model_id=model.id,
+                prediction=json.dumps(y_pred)
+            )
+            session.add(new_prof_model_pred)
+            session.commit()
+            set_info(f'Результат расчета модели "{model.title}" для профиля {get_profile_name()} сохранен', 'green')
+            update_list_model_prediction()
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
     Choose_RegModel.exec_()
