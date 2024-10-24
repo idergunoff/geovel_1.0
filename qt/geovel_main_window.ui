@@ -4423,27 +4423,17 @@ Therm</string>
                     </item>
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_80">
-                      <item row="0" column="3">
+                      <item row="0" column="2">
                        <widget class="QPushButton" name="pushButton_clear_params_reg">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
                          <string>--- clear parameters</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="2">
-                       <widget class="QPushButton" name="pushButton_rem_param_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 185, 185);</string>
-                        </property>
-                        <property name="text">
-                         <string>- remove parameter</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="4">
+                      <item row="0" column="3">
                        <widget class="QToolButton" name="toolButton_excel_markup_reg">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(220, 138, 221);</string>
@@ -4467,12 +4457,12 @@ Therm</string>
                        </widget>
                       </item>
                       <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_model_param_reg">
+                       <widget class="QPushButton" name="pushButton_rem_param_reg">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 185, 185);</string>
                         </property>
                         <property name="text">
-                         <string>model_param</string>
+                         <string>- remove parameter</string>
                         </property>
                        </widget>
                       </item>
@@ -5668,7 +5658,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>
