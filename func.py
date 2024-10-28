@@ -717,6 +717,35 @@ def draw_param():
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
 
 
+def draw_profile_model_prediction():
+    ui.graph.clear()
+    try:
+        graph = json.loads(session.query(ProfileModelPrediction.prediction).filter_by(
+            id = ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+        ).first()[0])
+    except AttributeError:
+        return
+
+    try:
+        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+    except Exception as e:
+        set_info(e, 'red')
+        return
+
+    cc = (120, 120, 120, 255)
+    curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
+    # m для отображения графика данных
+    # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
+    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+    ui.graph.addItem(curve)  # добавляем график данных на график
+    ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+    ui.graph.getAxis('bottom').setScale(2.5)
+    ui.graph.getAxis('bottom').setLabel('Профиль, м')
+    set_info(f'Отрисовка предсказания модели "{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}" '
+             f'для текущего профиля', 'blue')
+
+
 def save_max_min(radar):
     radar_max_min = []
     ui.progressBar.setMaximum(len(radar))
@@ -2489,7 +2518,13 @@ def update_list_model_prediction():
             model = session.query(TrainedModelClass).filter_by(id=p.model_id).first()
         else:
             model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
-        ui.listWidget_model_pred.addItem(f'{p.type_model} {model.title} id{p.id}')
+        item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
+        item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+                        f'{model.comment}\n'
+                        f'Количество параметров: '
+                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
+
+        ui.listWidget_model_pred.addItem(item)
 
 
 def remove_model_prediction():
@@ -2497,3 +2532,4 @@ def remove_model_prediction():
     session.delete(model)
     session.commit()
     update_list_model_prediction()
+

@@ -187,13 +187,13 @@ def test_start():
         ui_tm.textEdit_test_result.append(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                                         f"Тестирование модели {model.title}:\n{model.comment}\n"
                                         f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
-                                        f"ROC AUC: {roc_auc:.3f} \n\n")
+                                        f"ROC AUC: {roc_auc:.5f} \n\n")
         if save:
             with open(filename, 'w') as f:
                 print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                       f"Тестирование модели {model.title}:\n{model.comment}\n"
                         f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))} \n"
-                        f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
+                        f"ROC AUC: {roc_auc:.5f} \n\n", file=f)
         index = 0
         while index + 1 < len(result_df):
             comp, total = 0, 0
@@ -222,12 +222,12 @@ def test_start():
 
             ui_tm.textEdit_test_result.setTextColor(color_text)
             ui_tm.textEdit_test_result.insertPlainText(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                                                       f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
+                                                       f'  {list_cat[0]} {ones/total:.5f} | {list_cat[1]} {nulls/total:.5f} | '
                                                        f'{comp}/{total}\n')
             if save:
                 with open(filename, 'a') as f:
                     print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                            f'  {list_cat[0]} {ones/total:.3f} | {list_cat[1]} {nulls/total:.3f} | '
+                            f'  {list_cat[0]} {ones/total:.5f} | {list_cat[1]} {nulls/total:.5f} | '
                             f'{comp}/{total}\n', file=f)
             index += 1
 
@@ -240,7 +240,7 @@ def test_start():
         if percent < 50:
             color_text = Qt.red
         ui_tm.textEdit_test_result.setTextColor(color_text)
-        ui_tm.textEdit_test_result.insertPlainText(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
+        ui_tm.textEdit_test_result.insertPlainText(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.5f}%\n\n')
         if save:
             with open(filename, 'a') as f:
                 print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
@@ -366,7 +366,7 @@ def test_start():
                     print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                             f"Тестирование модели {model.title}:\n{model.comment}\n"
                             f"Количество параметров: {len(get_list_param_numerical(json.loads(model.list_params), model))}\n"
-                            f"ROC AUC: {roc_auc:.3f} \n\n", file=f)
+                            f"ROC AUC: {roc_auc:.5f} \n\n", file=f)
 
             index = 0
             while index + 1 < len(result_df):
@@ -402,11 +402,11 @@ def test_start():
                 ui_tm.textEdit_test_result.setTextColor(color_text)
                 ui_tm.textEdit_test_result.append(
                     f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                    f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}')
+                    f'  {list_cat[0]} {ones / total:.5f} | {list_cat[1]} {nulls / total:.5f} | {comp}/{total}')
                 if save:
                     with open(filename, 'a') as f:
                         print(f'{profile.research.object.title} - {profile.title} | {well.name} |'
-                                f'  {list_cat[0]} {ones / total:.3f} | {list_cat[1]} {nulls / total:.3f} | {comp}/{total}',
+                                f'  {list_cat[0]} {ones / total:.5f} | {list_cat[1]} {nulls / total:.5f} | {comp}/{total}',
                                 file=f)
                 index += 1
             percent = correct_matches / len(result_df) * 100
@@ -420,7 +420,7 @@ def test_start():
             time_end = datetime.datetime.now() - time_start
             ui_tm.textEdit_test_result.setTextColor(color_text)
             ui_tm.textEdit_test_result.append(
-                f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\n\n')
+                f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.5f}%\n\n')
             if save:
                 with open(filename, 'a') as f:
                     print(f'\nВсего совпало: {correct_matches}/{len(result_df)} - {percent:.1f}%\nВремя выполнения: {time_end}\n', file=f)
@@ -520,6 +520,7 @@ def regression_test():
         try:
             y_pred = reg_model.predict(working_sample)
         except ValueError:
+            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             working_sample = imputer.fit_transform(working_sample)
             y_pred = reg_model.predict(working_sample)
 
@@ -539,12 +540,12 @@ def regression_test():
 
         ui_tr.textEdit_test_result.setTextColor(Qt.black)
         ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
-        ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)}\n Mean Squared Error: {round(mse, 2)}\n\n')
+        ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 5)}\n Mean Squared Error: {round(mse, 5)}\n\n')
         if save:
             with open(filename, 'w') as f:
                 print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                     f"Тестирование модели {model.title}:"
-                      f'Точность: {round(accuracy, 2)} \nMean Squared Error: {round(mse, 2)}\n\n', file=f)
+                      f'Точность: {round(accuracy, 5)} \nMean Squared Error: {round(mse, 5)}\n\n', file=f)
 
         index = 0
         while index + 1 < len(working_data):
@@ -649,6 +650,7 @@ def regression_test():
             try:
                 y_pred = reg_model.predict(working_sample)
             except ValueError:
+                working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
                 working_sample = imputer.fit_transform(working_sample)
                 y_pred = reg_model.predict(working_sample)
 
@@ -668,12 +670,12 @@ def regression_test():
 
             ui_tr.textEdit_test_result.setTextColor(Qt.black)
             ui_tr.textEdit_test_result.append(f"Тестирование модели {model.title}:")
-            ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 2)} Mean Squared Error: {round(mse, 2)}\n\n')
+            ui_tr.textEdit_test_result.append(f'Точность: {round(accuracy, 5)} Mean Squared Error: {round(mse, 5)}\n\n')
             if save:
                 with open(filename, 'a') as f:
                     print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                           f"Тестирование модели {model.title}:"
-                          f'Точность: {round(accuracy, 2)} \nMean Squared Error: {round(mse, 2)}\n\n', file=f)
+                          f'Точность: {round(accuracy, 5)} \nMean Squared Error: {round(mse, 5)}\n\n', file=f)
             index = 0
             while index + 1 < len(working_data):
                 comp, total = 0, 0
@@ -725,7 +727,7 @@ def regression_test():
                 'y_pred': working_data['y_pred'].values.tolist(),
             })
 
-            axes[nc, nr].set_title(f'Модель {model.title}:\n точность: {round(accuracy, 2)}')
+            axes[nc, nr].set_title(f'Модель {model.title}:\n точность: {round(accuracy, 5)}')
             sns.scatterplot(data=data_graph, x='y_test', y='y_pred', ax=axes[nc, nr])
             sns.regplot(data=data_graph, x='y_test', y='y_pred', ax=axes[nc, nr])
             nr += 1

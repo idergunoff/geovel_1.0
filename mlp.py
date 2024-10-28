@@ -146,6 +146,10 @@ def remove_mlp():
         session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).delete()
         session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).delete()
         session.query(AnalysisMLP).filter_by(id=get_MLP_id()).delete()
+        session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).delete()
+        for model in session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all():
+            os.remove(model.path_model)
+            session.delete(model)
         session.commit()
         set_info(f'Удалена модель MLP - "{mlp_title}"', 'green')
         update_list_mlp()
@@ -828,6 +832,27 @@ def add_all_param_mfcc_mlp():
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
+def add_predict_mlp():
+    try:
+        predict = session.query(ProfileModelPrediction).filter_by(
+            id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+        ).first()
+    except AttributeError:
+        set_info('Выберите модель в Model Prediction', 'red')
+        return
+    param = f'model_{predict.type_model}_id{predict.model_id}'
+    if session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).count() > 0:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+        return
+    else:
+        new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=param)
+        session.add(new_param_mlp)
+        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+        session.commit()
+        set_color_button_updata()
+        set_info(f'Добавлен параметр {param}', 'green')
+
+
 def remove_param_geovel_mlp():
     param = ui.listWidget_param_mlp.currentItem().text().split(' ')[0]
     if param:
@@ -1153,15 +1178,6 @@ def get_color_rainbow(probability):
     except (IndexError, ValueError):
         return '#FF0000'
 
-def set_marks():
-    list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-    labels = {}
-    labels[list_cat[0]] = 0
-    labels[list_cat[1]] = 1
-    if len(list_cat) > 2:
-        for index, i in enumerate(list_cat[2:]):
-            labels[i] = index
-    return labels
 
 
 def calc_object_class():

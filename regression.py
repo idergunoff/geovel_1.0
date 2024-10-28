@@ -96,6 +96,7 @@ def remove_reg():
         session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
         session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()).delete()
         session.query(AnalysisReg).filter_by(id=get_regmod_id()).delete()
+        session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).delete()
         for model in session.query(TrainedModelReg).filter_by(analysis_id=get_regmod_id()).all():
             os.remove(model.path_model)
             session.delete(model)
@@ -670,24 +671,27 @@ def add_all_param_mfcc_reg():
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
-def add_model_param_reg():
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
-    model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
-        Qt.UserRole)).first()
-    param = 'model_' + str(model.id) + '_' + str(model.title).split('_')[0]
+def add_predict_reg():
+    try:
+        predict = session.query(ProfileModelPrediction).filter_by(
+            id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+        ).first()
+    except AttributeError:
+        set_info('Выберите модель в Model Prediction', 'red')
+        return
+    param = f'model_{predict.type_model}_id{predict.model_id}'
 
-    if session.query(ParameterReg).filter_by(
-            analysis_id=get_regmod_id(),
-            parameter= param
-    ).count() == 0:
-        new_param = ParameterReg(analysis_id=get_regmod_id(), parameter=param)
-        session.add(new_param)
+    if session.query(ParameterReg).filter_by(analysis_id=get_regmod_id(), parameter=param).count() > 0:
+        set_info(f'Параметр {param} уже добавлен', 'red')
+        return
+    else:
+        new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=param)
+        session.add(new_param_reg)
+        session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
         session.commit()
         set_color_button_updata_regmod()
         update_list_param_reg_no_update()
-    else:
-        set_info(f'Параметр {param} уже добавлен', 'red')
+        set_info(f'Добавлен параметр {param}', 'green')
 
 
 def remove_param_geovel_reg():
@@ -726,6 +730,7 @@ def update_list_param_reg_no_update():
     if data[0]:
         return
     list_param_reg = session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).all()
+    list_param_reg.sort(key=lambda x: x.parameter)
     ui.listWidget_param_reg.clear()
     for param in list_param_reg:
         i_item = QListWidgetItem(f'{param.parameter}')
@@ -758,6 +763,7 @@ def set_color_button_updata_regmod():
     reg = session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first()
     btn_color = 'background-color: rgb(191, 255, 191);' if reg.up_data else 'background-color: rgb(255, 185, 185);'
     ui.pushButton_updata_regmod.setStyleSheet(btn_color)
+
 
 def add_param_list_reg():
     analysis_id = get_regmod_id()
@@ -819,6 +825,7 @@ def add_param_list_reg():
                 set_info(f'Параметр {i} уже добавлен', 'red')
     set_color_button_updata_regmod()
     update_line_edit_exception_reg()
+    update_list_param_reg_no_update()
 
 
 def str_to_interval(string):
@@ -2516,7 +2523,7 @@ def calc_profile_model_regmod():
                 profile_id=get_profile_id(),
                 type_model='reg',
                 model_id=model.id,
-                prediction=json.dumps(y_pred)
+                prediction=json.dumps(y_pred.tolist())
             )
             session.add(new_prof_model_pred)
             session.commit()

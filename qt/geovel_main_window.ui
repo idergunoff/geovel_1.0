@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1408</width>
+    <width>1600</width>
     <height>1080</height>
    </rect>
   </property>
@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3915,7 +3915,17 @@ Therm</string>
                      </layout>
                     </item>
                     <item row="1" column="0">
-                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,0,0">
+                     <layout class="QGridLayout" name="gridLayout_50" columnstretch="3,0,0,0">
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_add_geovel_mlp">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>add</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="2">
                        <widget class="QPushButton" name="pushButton_add_all_geovel_mlp">
                         <property name="styleSheet">
@@ -3926,13 +3936,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_add_geovel_mlp">
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="pushButton_add_predict_mlp">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(189, 172, 240);</string>
                         </property>
                         <property name="text">
-                         <string>add</string>
+                         <string>predict</string>
                         </property>
                        </widget>
                       </item>
@@ -4210,6 +4220,9 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidget_well_regmod"/>
+                  </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_99">
                     <item row="0" column="1">
@@ -4326,9 +4339,6 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
-                  <item row="1" column="0">
-                   <widget class="QListWidget" name="listWidget_well_regmod"/>
-                  </item>
                  </layout>
                 </item>
                 <item row="3" column="0">
@@ -4433,16 +4443,6 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="3">
-                       <widget class="QToolButton" name="toolButton_excel_markup_reg">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(220, 138, 221);</string>
-                        </property>
-                        <property name="text">
-                         <string>^</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_reg_add_param_list">
                         <property name="toolTip">
@@ -4463,6 +4463,16 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>- remove parameter</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QToolButton" name="toolButton_excel_markup_reg">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(220, 138, 221);</string>
+                        </property>
+                        <property name="text">
+                         <string>^</string>
                         </property>
                        </widget>
                       </item>
@@ -4625,17 +4635,17 @@ Therm</string>
                        </layout>
                       </item>
                       <item row="1" column="0">
-                       <layout class="QGridLayout" name="gridLayout_83" columnstretch="3,1,1">
+                       <layout class="QGridLayout" name="gridLayout_83" columnstretch="3,0,0,0">
                         <item row="0" column="0">
                          <widget class="QComboBox" name="comboBox_geovel_param_reg"/>
                         </item>
-                        <item row="0" column="1">
-                         <widget class="QPushButton" name="pushButton_add_geovel_reg">
+                        <item row="0" column="3">
+                         <widget class="QPushButton" name="pushButton_add_predict_reg">
                           <property name="styleSheet">
-                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                           <string notr="true">background-color: rgb(189, 172, 240);</string>
                           </property>
                           <property name="text">
-                           <string>add</string>
+                           <string>predict</string>
                           </property>
                          </widget>
                         </item>
@@ -4646,6 +4656,16 @@ Therm</string>
                           </property>
                           <property name="text">
                            <string>add all</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_add_geovel_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(191, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>add</string>
                           </property>
                          </widget>
                         </item>
@@ -4929,13 +4949,13 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="3">
-                   <widget class="QPushButton" name="pushButton_updata_regmod">
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_test_model_reg">
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 255, 191);</string>
+                     <string notr="true">background-color: rgb(200, 171, 252);</string>
                     </property>
                     <property name="text">
-                     <string>UP DATA</string>
+                     <string>TEST</string>
                     </property>
                    </widget>
                   </item>
@@ -4949,13 +4969,13 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_test_model_reg">
+                  <item row="0" column="3">
+                   <widget class="QPushButton" name="pushButton_updata_regmod">
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(200, 171, 252);</string>
+                     <string notr="true">background-color: rgb(255, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>TEST</string>
+                     <string>UP DATA</string>
                     </property>
                    </widget>
                   </item>
@@ -5636,8 +5656,8 @@ Therm</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1408</width>
-     <height>21</height>
+     <width>1600</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -5658,7 +5678,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
