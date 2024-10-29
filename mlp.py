@@ -238,7 +238,7 @@ def update_list_marker_mlp_db():
         ui.comboBox_mark_mlp.setItemData(ui.comboBox_mark_mlp.findText(item), QBrush(QColor(i.color)),
                                          Qt.BackgroundRole)
     update_list_well_markup_mlp()
-    update_list_param_mlp(True)
+    # update_list_param_mlp(True)
 
 
 def add_well_markup_mlp():
@@ -541,9 +541,6 @@ def split_well_train_test_mlp():
         set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
 
 
-
-
-
 def add_param_signal_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -553,7 +550,7 @@ def add_param_signal_mlp():
             parameter=param
     ).count() == 0:
         add_param_mlp(param)
-        # update_list_param_mlp()
+        update_list_param_mlp_no_update()
         set_color_button_updata()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
@@ -571,7 +568,7 @@ def add_all_param_signal_mlp():
             add_param_mlp(param)
         else:
             set_info(f'Параметр {param} уже добавлен', 'red')
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_color_button_updata()
 
 
@@ -583,7 +580,7 @@ def add_param_crl_mlp():
             parameter='CRL'
     ).count() == 0:
         add_param_mlp('CRL')
-        # update_list_param_mlp()
+        update_list_param_mlp_no_update()
         set_color_button_updata()
         set_info(f'Параметр CRL добавлен', 'green')
     else:
@@ -598,7 +595,7 @@ def add_param_crl_nf_mlp():
             parameter='CRL_NF'
     ).count() == 0:
         add_param_mlp('CRL_NF')
-        # update_list_param_mlp()
+        update_list_param_mlp_no_update()
         set_color_button_updata()
         set_info(f'Параметр CRL_NF добавлен', 'green')
     else:
@@ -620,7 +617,7 @@ def add_param_geovel_mlp():
     ).count() == 0:
         add_param_mlp(param)
         set_color_button_updata()
-        # update_list_param_mlp()
+        update_list_param_mlp_no_update()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -684,6 +681,7 @@ def add_param_list_mlp():
             else:
                 set_info(f'Параметр {i} уже добавлен', 'red')
     set_color_button_updata()
+    update_list_param_mlp_no_update()
     update_line_edit_exception_mlp()
 
 
@@ -704,7 +702,7 @@ def add_all_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
 
 
 def add_param_profile_mlp():
@@ -717,7 +715,7 @@ def add_param_profile_mlp():
     ).count() == 0:
         add_param_mlp(param)
         set_color_button_updata()
-        # update_list_param_mlp()
+        update_list_param_mlp_no_update()
     else:
         set_info(f'Параметр {param} уже добавлен', 'red')
 
@@ -734,6 +732,7 @@ def add_all_param_profile_mlp():
             continue
         add_param_mlp(f'prof_{param}')
     set_color_button_updata()
+    update_list_param_mlp_no_update()
 
 
 def add_param_distr_mlp():
@@ -751,7 +750,7 @@ def add_param_distr_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_mlp.value()} интервалов распределения по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
@@ -771,7 +770,7 @@ def add_param_sep_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_mlp.value()} интервалов по '
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
@@ -790,7 +789,7 @@ def add_all_param_distr_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
 
 
@@ -809,7 +808,7 @@ def add_param_mfcc_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_mlp.value()} кепстральных коэффициентов '
              f'{ui.comboBox_atrib_mfcc_mlp.currentText()}', 'green')
 
@@ -828,7 +827,7 @@ def add_all_param_mfcc_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     set_color_button_updata()
-    # update_list_param_mlp()
+    update_list_param_mlp_no_update()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
 
 
@@ -849,6 +848,7 @@ def add_predict_mlp():
         session.add(new_param_mlp)
         session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
         session.commit()
+        update_list_param_mlp_no_update()
         set_color_button_updata()
         set_info(f'Добавлен параметр {param}', 'green')
 
@@ -869,6 +869,7 @@ def remove_param_geovel_mlp():
         session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
         session.commit()
         set_color_button_updata()
+        update_list_param_mlp_no_update()
 
 
 def remove_all_param_geovel_mlp():
@@ -876,6 +877,62 @@ def remove_all_param_geovel_mlp():
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     update_list_param_mlp()
+    update_list_param_mlp_no_update()
+
+
+def update_list_well_markup_mlp():
+    """Обновление списка обучающих скважин MLP"""
+    print('update_list_well_markup_mlp')
+    ui.listWidget_well_mlp.clear()
+    count_markup, count_measure, count_fake = 0, 0, 0
+    for i in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
+        try:
+            fake = len(json.loads(i.list_fake)) if i.list_fake else 0
+            measure = len(json.loads(i.list_measure))
+            if i.type_markup == 'intersection':
+                try:
+                    inter_name = session.query(Intersection.name).filter(Intersection.id == i.well_id).first()[0]
+                except TypeError:
+                    session.query(MarkupMLP).filter(MarkupMLP.id == i.id).delete()
+                    set_info(f'Обучающая скважина удалена из-за отсутствия пересечения', 'red')
+                    session.commit()
+                    continue
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {inter_name} | {measure - fake} из {measure} | id{i.id}'
+            elif i.type_markup == 'profile':
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | | {measure - fake} из {measure} | id{i.id}'
+            else:
+                item = f'{i.profile.research.object.title} - {i.profile.title} | {i.formation.title} | {i.well.name} | {measure - fake} из {measure} | id{i.id}'
+            ui.listWidget_well_mlp.addItem(item)
+            i_item = ui.listWidget_well_mlp.findItems(item, Qt.MatchContains)[0]
+            i_item.setBackground(QBrush(QColor(i.marker.color)))
+            count_markup += 1
+            count_measure += measure - fake
+            count_fake += fake
+            # ui.listWidget_well_mlp.setItemData(ui.listWidget_well_mlp.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
+        except AttributeError:
+            set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+            session.delete(i)
+            session.commit()
+    ui.label_count_markup_mlp.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; '
+                                      f'<i><u>{count_measure}</u></i> измерений; '
+                                      f'<i><u>{count_fake}</u></i> выбросов')
+    update_list_param_mlp(db=True)
+    update_list_param_mlp_no_update()
+
+
+def update_list_param_mlp_no_update():
+    data = session.query(AnalysisMLP.up_data).filter_by(id=get_MLP_id()).first()
+    if data[0]:
+        return
+    print('update_list_param_mlp_no_update')
+    list_param_mlp = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
+    list_param_mlp.sort(key=lambda x: x.parameter)
+    ui.listWidget_param_mlp.clear()
+    for param in list_param_mlp:
+        i_item = QListWidgetItem(f'{param.parameter}')
+        ui.listWidget_param_mlp.addItem(i_item)
+        i_item.setBackground(QBrush(QColor('#FFFAD5')))
+
 
 def update_list_param_mlp(db=False):
     start_time = datetime.datetime.now()

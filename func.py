@@ -1476,6 +1476,21 @@ def update_list_well_markup_mlp():
     ui.label_count_markup_mlp.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; '
                                       f'<i><u>{count_measure}</u></i> измерений; '
                                       f'<i><u>{count_fake}</u></i> выбросов')
+    # update_list_param_mlp(db=True)
+    update_list_param_mlp_no_update()
+
+
+def update_list_param_mlp_no_update():
+    data = session.query(AnalysisMLP.up_data).filter_by(id=get_MLP_id()).first()
+    if data[0]:
+        return
+    list_param_mlp = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
+    list_param_mlp.sort(key=lambda x: x.parameter)
+    ui.listWidget_param_mlp.clear()
+    for param in list_param_mlp:
+        i_item = QListWidgetItem(f'{param.parameter}')
+        ui.listWidget_param_mlp.addItem(i_item)
+        i_item.setBackground(QBrush(QColor('#FFFAD5')))
 
 
 def update_list_trained_models_class():
