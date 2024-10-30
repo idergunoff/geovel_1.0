@@ -542,14 +542,14 @@ def build_table_profile_model_predict():
 
 def draw_profile_model_predict():
     pd_predict = build_table_profile_model_predict()
-    if not pd_predict:
+    if pd_predict.empty:
         return
     draw_map(pd_predict['x_pulc'], pd_predict['y_pulc'], pd_predict['prediction'], ui.listWidget_model_pred.currentItem().text().split(' id')[0])
 
 
 def save_excel_profile_model_predict():
     pd_predict = build_table_profile_model_predict()
-    if not pd_predict:
+    if pd_predict.empty:
         return
     filename = QtWidgets.QFileDialog.getSaveFileName(
         MainWindow,
@@ -557,6 +557,8 @@ def save_excel_profile_model_predict():
         directory=f'{get_object_name()}_{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}.xlsx',
         filter='Excel files (*.xlsx)'
     )[0]
-
-    pd_predict.to_excel(filename)
-    set_info(f'Файл {filename} сохранен', 'green')
+    try:
+        pd_predict.to_excel(filename)
+        set_info(f'Файл {filename} сохранен', 'green')
+    except ValueError:
+        set_info('Файл не сохранен', 'red')
