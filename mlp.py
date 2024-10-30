@@ -1576,6 +1576,7 @@ def clear_fake_mlp():
 #     test_accuracy = mlp.score(train_test, mark_test)
 #     print(f'Test accuracy: {test_accuracy}')
 
+
 def get_model_param_list():
     try:
         model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
@@ -1590,9 +1591,59 @@ def get_model_param_list():
     FormParams.show()
     FormParams.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    ui_p.label.setText(model.title + ' parameters: ')
+    ui_p.label.setText(ui_p.label.text() + model.title)
+    ui_p.label_crl.setText(ui_p.label_crl.text() + model.except_crl)
+    ui_p.label_signal.setText(ui_p.label_signal.text() + model.except_signal)
     params = json.loads(model.list_params)
     ui_p.listWidget_parameters.addItems(sorted(params))
+    ui_p.label_count.setText(ui_p.label_count.text() + str(len(params)))
+
+    def highlight_common_items(list_widget, common_params):
+        for index in range(list_widget.count()):
+            item = list_widget.item(index)
+            if item.text() in common_params:
+                item.setBackground(QtGui.QColor("green"))
+
+    def add_and_compare_models(type_model):
+        ui_p.listWidget_parameters_2.clear()
+        ui_p.label_2.setText('Model: ')
+        ui_p.label_crl_2.setText('Except CRL: ')
+        ui_p.label_signal_2.setText('Except Signal: ')
+        ui_p.label_count_2.setText('Params count: ')
+        [ui_p.listWidget_parameters.item(i).setBackground(QtGui.QColor("white"))
+            for i in range(ui_p.listWidget_parameters.count())]
+
+        try:
+            if type_model == 'cls':
+                model_compare = session.query(TrainedModelClass).filter_by(
+                    id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+            elif type_model == 'reg':
+                model_compare = session.query(TrainedModelReg).filter_by(
+                    id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        except AttributeError:
+            QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+            set_info('Не выбрана модель', 'red')
+            return
+
+        if not model_compare:
+            set_info('Не выбрана модель', 'red')
+            return
+
+        ui_p.label_2.setText(ui_p.label_2.text() + model_compare.title)
+        ui_p.label_crl_2.setText(ui_p.label_crl_2.text() + model_compare.except_crl)
+        ui_p.label_signal_2.setText(ui_p.label_signal_2.text() + model_compare.except_signal)
+        params_compare = json.loads(model_compare.list_params)
+        ui_p.listWidget_parameters_2.addItems(sorted(params_compare))
+        ui_p.label_count_2.setText(ui_p.label_count_2.text() + str(len(params_compare)))
+
+        common_params = list(filter(lambda x: x in params_compare, params))
+        highlight_common_items(ui_p.listWidget_parameters_2, common_params)
+        highlight_common_items(ui_p.listWidget_parameters, common_params)
+
+        ui_p.label_common_param.setText('Совпало параметров: ' + str(len(common_params)))
+
+    ui_p.pushButton_add_class.clicked.connect(lambda: add_and_compare_models('cls'))
+    ui_p.pushButton_add_reg.clicked.connect(lambda: add_and_compare_models('reg'))
 
     FormParams.exec_()
 

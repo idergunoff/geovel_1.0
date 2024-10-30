@@ -4778,16 +4778,6 @@ Therm</string>
                           </property>
                          </widget>
                         </item>
-                        <item row="0" column="0">
-                         <widget class="QPushButton" name="pushButton_import_model_reg">
-                          <property name="styleSheet">
-                           <string notr="true">background-color: rgb(207, 252, 162);</string>
-                          </property>
-                          <property name="text">
-                           <string>Import</string>
-                          </property>
-                         </widget>
-                        </item>
                         <item row="0" column="1">
                          <widget class="QPushButton" name="pushButton_export_model_reg">
                           <property name="styleSheet">
@@ -4795,6 +4785,16 @@ Therm</string>
                           </property>
                           <property name="text">
                            <string>Export</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QPushButton" name="pushButton_import_model_reg">
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(207, 252, 162);</string>
+                          </property>
+                          <property name="text">
+                           <string>Import</string>
                           </property>
                          </widget>
                         </item>
@@ -4818,6 +4818,19 @@ Therm</string>
                           </property>
                           <property name="text">
                            <string>FI</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QToolButton" name="toolButton_get_param_list_reg">
+                          <property name="toolTip">
+                           <string>получить список параметров</string>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 255, 191);</string>
+                          </property>
+                          <property name="text">
+                           <string>...</string>
                           </property>
                          </widget>
                         </item>

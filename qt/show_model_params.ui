@@ -6,25 +6,119 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>296</width>
-    <height>493</height>
+    <width>567</width>
+    <height>504</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Model Parameters</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
+  <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
      <item row="0" column="0">
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Model params:</string>
+        <string>Model: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_count">
+       <property name="text">
+        <string>Params count: </string>
        </property>
       </widget>
      </item>
      <item row="1" column="0">
+      <widget class="QLabel" name="label_crl">
+       <property name="text">
+        <string>Exception CRL: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_signal">
+       <property name="text">
+        <string>Exception Signal: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
       <widget class="QListWidget" name="listWidget_parameters"/>
+     </item>
+     <item row="4" column="1">
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="1">
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_crl_2">
+       <property name="text">
+        <string>Exception CRL: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_signal_2">
+       <property name="text">
+        <string>Exception Signal: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Model: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_count_2">
+       <property name="text">
+        <string>Params count: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QListWidget" name="listWidget_parameters_2"/>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_common_param">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <layout class="QGridLayout" name="gridLayout_3">
+     <item row="0" column="0">
+      <widget class="QPushButton" name="pushButton_add_reg">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 255, 191);</string>
+       </property>
+       <property name="text">
+        <string>add model_reg</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="pushButton_add_class">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 163, 72);</string>
+       </property>
+       <property name="text">
+        <string>add model class</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
