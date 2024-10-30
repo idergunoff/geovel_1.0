@@ -1576,6 +1576,26 @@ def clear_fake_mlp():
 #     test_accuracy = mlp.score(train_test, mark_test)
 #     print(f'Test accuracy: {test_accuracy}')
 
+def get_model_param_list():
+    try:
+        model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    FormParams = QtWidgets.QDialog()
+    ui_p = Ui_Form_ModelParams()
+    ui_p.setupUi(FormParams)
+    FormParams.show()
+    FormParams.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    ui_p.label.setText(model.title + ' parameters: ')
+    params = json.loads(model.list_params)
+    ui_p.listWidget_parameters.addItems(sorted(params))
+
+    FormParams.exec_()
+
 
 def update_trained_model_comment():
     """ Изменить комментарий обученной модели """

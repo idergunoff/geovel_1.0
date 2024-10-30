@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>354</width>
+                       <height>171</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3688,16 +3688,6 @@ Therm</string>
                    <layout class="QGridLayout" name="gridLayout_96">
                     <item row="1" column="0">
                      <layout class="QGridLayout" name="gridLayout_98">
-                      <item row="0" column="0">
-                       <widget class="QPushButton" name="pushButton_import_model_class">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(207, 252, 162);</string>
-                        </property>
-                        <property name="text">
-                         <string>Import</string>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="1" column="0">
                        <widget class="QPushButton" name="pushButton_comment">
                         <property name="styleSheet">
@@ -3708,6 +3698,16 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
+                      <item row="0" column="0">
+                       <widget class="QPushButton" name="pushButton_import_model_class">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(207, 252, 162);</string>
+                        </property>
+                        <property name="text">
+                         <string>Import</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="1">
                        <widget class="QPushButton" name="pushButton_export_model_class">
                         <property name="styleSheet">
@@ -3715,6 +3715,16 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>Export</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QToolButton" name="toolButton_feature_importance">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                        </property>
+                        <property name="text">
+                         <string>FI</string>
                         </property>
                        </widget>
                       </item>
@@ -3741,13 +3751,16 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="1" column="2">
-                       <widget class="QToolButton" name="toolButton_feature_importance">
+                      <item row="0" column="3">
+                       <widget class="QToolButton" name="toolButton_get_param_list">
+                        <property name="toolTip">
+                         <string>получить список параметров</string>
+                        </property>
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(191, 255, 191);</string>
+                         <string notr="true">background-color: rgb(255, 255, 191);</string>
                         </property>
                         <property name="text">
-                         <string>FI</string>
+                         <string>...</string>
                         </property>
                        </widget>
                       </item>
@@ -5663,7 +5676,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
