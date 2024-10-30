@@ -2495,7 +2495,6 @@ def calc_profile_model_regmod():
 
         except ValueError:
             working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
-            # working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
             y_pred = reg_model.predict(data)
 
@@ -2617,14 +2616,48 @@ def calc_object_model_regmod():
     #
     #         ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
     #         Choose_Formation.exec_()
+    if ui.checkBox_save_prof_reg.isChecked():
+
+        model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        with open(model.path_model, 'rb') as f:
+            reg_model = pickle.load(f)
+
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
         update_formation_combobox()
         ui.comboBox_plast.setCurrentText(list_formation[n])
         working_data, curr_form = build_table_test('regmod')
+
+        if ui.checkBox_save_prof_reg.isChecked():
+
+            if session.query(ProfileModelPrediction).filter_by(
+                    profile_id=get_profile_id(), model_id=model.id, type_model='reg').count() == 0:
+                working_data_profile = working_data.copy()
+                working_sample_profile = working_data_profile[list_param_num].values.tolist()
+
+                try:
+                    y_pred = reg_model.predict(working_sample_profile)
+                except ValueError:
+                    working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+                    data = imputer.fit_transform(working_sample)
+                    y_pred = reg_model.predict(data)
+
+                new_prof_model_pred = ProfileModelPrediction(
+                    profile_id=prof.id,
+                    type_model='reg',
+                    model_id=model.id,
+                    prediction=json.dumps(y_pred.tolist())
+                )
+                session.add(new_prof_model_pred)
+                session.commit()
+                set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
+
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
 
+    update_list_model_prediction()
     working_data_result_copy = working_data_result.copy()
 
     Choose_RegModel = QtWidgets.QDialog()
@@ -2759,7 +2792,7 @@ def anova_regmod():
     ui_anova.horizontalLayout.addWidget(canvas)
 
 
-    for i in data_plot.columns.tolist()[2:]:
+    for i in sorted(data_plot.columns.tolist()[2:]):
         ui_anova.listWidget.addItem(i)
 
     def draw_graph_anova():

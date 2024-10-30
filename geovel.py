@@ -486,6 +486,8 @@ ui.listWidget_model_pred.currentItemChanged.connect(draw_profile_model_predictio
 ui.listWidget_model_pred.activated.connect(draw_profile_model_prediction)
 ui.pushButton_add_predict_mlp.clicked.connect(add_predict_mlp)
 ui.pushButton_add_predict_reg.clicked.connect(add_predict_reg)
+ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
+ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
 
 
 time = datetime.datetime.now()

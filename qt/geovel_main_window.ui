@@ -1784,16 +1784,22 @@
                        </widget>
                       </item>
                       <item row="1" column="0">
-                       <widget class="QPushButton" name="pushButton_6">
+                       <widget class="QPushButton" name="pushButton_draw_predict">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 204, 121);</string>
+                        </property>
                         <property name="text">
-                         <string/>
+                         <string>draw</string>
                         </property>
                        </widget>
                       </item>
                       <item row="2" column="0">
-                       <widget class="QPushButton" name="pushButton_7">
+                       <widget class="QPushButton" name="pushButton_save_excel_predict">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(153, 193, 241);</string>
+                        </property>
                         <property name="text">
-                         <string/>
+                         <string>excel</string>
                         </property>
                        </widget>
                       </item>

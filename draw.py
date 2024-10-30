@@ -1,6 +1,13 @@
+from fileinput import filename
+
+import pandas as pd
+
 from func import *
 from pyqtgraph.exporters import ImageExporter
 from PIL import Image
+
+from krige import draw_map
+
 
 def draw_radarogram():
     global l_up, l_down
@@ -512,3 +519,44 @@ def draw_fill_model(x, y1, y2, color):
     poly_item.setOpacity(0.5)
     poly_item.setZValue(1)
     globals()[f'fill_form_{color}_{y1[0]}_{y2[0]}_{x[0]}'] = poly_item
+
+def build_table_profile_model_predict():
+    predict = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+    if not predict:
+        set_info('Выберите модель в Model Prediction', 'red')
+        return
+    pd_predict = pd.DataFrame(columns=['x_pulc', 'y_pulc', 'prediction'])
+    for prof in session.query(Profile).filter_by(research_id=predict.profile.research_id).all():
+        pred = session.query(ProfileModelPrediction).filter_by(profile_id=prof.id, model_id=predict.model_id).first()
+        if not pred:
+            set_info(f'Модель не расчитана для профиля {prof.title}', 'red')
+            QtWidgets.QMessageBox.critical(MainWindow, 'Error', f'Модель не расчитана для профиля {prof.title}')
+            return
+        x_pulc = json.loads(prof.x_pulc)
+        y_pulc = json.loads(prof.y_pulc)
+        value = json.loads(pred.prediction)
+        pd_predict = pd.concat([pd_predict, pd.DataFrame({'x_pulc': x_pulc, 'y_pulc': y_pulc, 'prediction': value})], ignore_index=True)
+
+    return pd_predict
+
+
+def draw_profile_model_predict():
+    pd_predict = build_table_profile_model_predict()
+    if not pd_predict:
+        return
+    draw_map(pd_predict['x_pulc'], pd_predict['y_pulc'], pd_predict['prediction'], ui.listWidget_model_pred.currentItem().text().split(' id')[0])
+
+
+def save_excel_profile_model_predict():
+    pd_predict = build_table_profile_model_predict()
+    if not pd_predict:
+        return
+    filename = QtWidgets.QFileDialog.getSaveFileName(
+        MainWindow,
+        caption='Save file',
+        directory=f'{get_object_name()}_{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}.xlsx',
+        filter='Excel files (*.xlsx)'
+    )[0]
+
+    pd_predict.to_excel(filename)
+    set_info(f'Файл {filename} сохранен', 'green')

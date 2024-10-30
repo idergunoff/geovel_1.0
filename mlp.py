@@ -1294,14 +1294,52 @@ def calc_object_class():
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
+
+    if ui.checkBox_save_prof_mlp.isChecked():
+        model = session.query(TrainedModelClass).filter_by(
+            id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+
+        with open(model.path_model, 'rb') as f:
+            class_model = pickle.load(f)
+
+        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
         update_formation_combobox()
         ui.comboBox_plast.setCurrentText(list_formation[n])
         working_data, curr_form = build_table_test('mlp')
+
+        if ui.checkBox_save_prof_mlp.isChecked():
+            if session.query(ProfileModelPrediction).filter_by(
+                    profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
+
+                working_data_profile = working_data.copy()
+                working_sample_profile = working_data_profile[list_param_num].values.tolist()
+
+                try:
+                    probability = class_model.predict_proba(working_sample_profile)
+                except ValueError:
+                    working_sample_profile = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample_profile]
+                    data = imputer.fit_transform(working_sample_profile)
+                    probability = class_model.predict_proba(data)
+
+                list_result = [round(p[0], 6) for p in probability]
+                new_prof_model_pred = ProfileModelPrediction(
+                    profile_id=get_profile_id(),
+                    type_model='cls',
+                    model_id=model.id,
+                    prediction=json.dumps(list_result)
+                )
+
+                session.add(new_prof_model_pred)
+                session.commit()
+                set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
+
         working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
 
+    update_list_model_prediction()
     working_data_result_copy = working_data_result.copy()
 
     Choose_RegModel = QtWidgets.QDialog()
@@ -1458,7 +1496,7 @@ def anova_mlp():
     ui_anova.horizontalLayout.addWidget(canvas)
 
 
-    for i in data_plot.columns.tolist()[2:]:
+    for i in sorted(data_plot.columns.tolist()[2:]):
         ui_anova.listWidget.addItem(i)
 
     def draw_graph_anova():

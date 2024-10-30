@@ -391,6 +391,7 @@ def update_profile_combobox():
     # Обновление списка формирований
     update_formation_combobox()
     update_layers()
+    update_list_model_prediction()
     if ui.checkBox_check_grid.isChecked():
         grids = {
             'r': session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all(),
