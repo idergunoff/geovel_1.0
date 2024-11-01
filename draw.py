@@ -85,10 +85,8 @@ def crop_from_right(image):
             break
     return combined_image
 
-def resize_image(image, width):
+def resize_image(image, width, new_height):
     """Изменить размер изображения до заданной ширины, сохраняя пропорции."""
-    aspect_ratio = image.height / image.width
-    new_height = int(aspect_ratio * width)
     return image.resize((width, new_height), Image.Resampling.LANCZOS)
 
 def concatenate_images_vertically(image1, image2):
@@ -107,7 +105,9 @@ def process_images(images, graphs):
         img1 = images[i]
         img2 = graphs[i]
         img2_cropped = crop_from_right(img2)
-        img2_resized = resize_image(img2_cropped, img1.width)
+        aspect_ratio = crop_from_right(graphs[1]).height / crop_from_right(graphs[1]).width
+        new_height = int(aspect_ratio * images[1].width)
+        img2_resized = resize_image(img2_cropped, img1.width, new_height)
         combined_image = concatenate_images_vertically(img1, img2_resized)
         combined_images.append(combined_image)
     return combined_images
