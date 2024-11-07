@@ -1133,7 +1133,11 @@ def calc_class_profile():
             set_info(f'Результат расчета модели "{model.title}" для профиля {get_profile_name()} сохранен', 'green')
             update_list_model_prediction()
 
+
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
+    # ui.checkBox_relief.stateChanged.connect(calc_class_model)
+
+
     Choose_RegModel.exec_()
 
 
@@ -1146,6 +1150,13 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
 
+    if ui.checkBox_relief.isChecked():
+        profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
+        if profile.depth_relief:
+            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            coeff = 512 / (512 + np.max(depth))
+            list_up = [int((x + y) * coeff) for x, y in zip(list_up, depth)]
+            list_down = [int((x + y) * coeff) for x, y in zip(list_down, depth)]
 
     col = working_data.columns[-3]
     print('col ', col)

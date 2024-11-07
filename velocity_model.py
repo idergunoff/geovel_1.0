@@ -393,7 +393,7 @@ def draw_relief():
         depth_relief = json.loads(prof.depth_relief)
         bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
         prof_signal = json.loads(prof.signal)
-        relief_signal = [[0 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [0 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
+        relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
         relief_signal = [interpolate_list(i, 512) for i in relief_signal]
         draw_image(relief_signal)
     else:

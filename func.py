@@ -157,24 +157,52 @@ def draw_image(radar):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     if ui.checkBox_seismic.isChecked():
-        colors = [
-            '#0000FF',  # Синий,
-            '#000000', # Черный
-            '#FF0000'  # Ярко-красный
-        ]
+        if ui.checkBox_relief.isChecked():
+            colors = [
+                '#FFFFFF',
+                '#0000FF',  # Синий,
+                '#000000',  # Черный
+                '#FF0000'  # Ярко-красный
+            ]
+        else:
+            colors = [
+                '#0000FF',  # Синий,
+                '#000000', # Черный
+                '#FF0000'  # Ярко-красный
+            ]
     else:
-        colors = [
-            "#FF0000", # Ярко-красный
-            "#FF8C00", # Темно-оранжевый
-            "#FFD700", # Золотой
-            "#00FF00", # Ярко-зеленый
-            "#008000", # Зеленый
-            "#00FFFF", # Голубой
-            "#000080", # Темно-синий
-            "#8B008B", # Темно-фиолетовый
-            "#FF00FF", # Фуксия
-            "#A52A2A"  # Коричневый
-        ]
+        if ui.checkBox_relief.isChecked():
+            colors = [
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                "#FF0000",  # Ярко-красный
+                "#FF8C00",  # Темно-оранжевый
+                "#FFD700",  # Золотой
+                "#00FF00",  # Ярко-зеленый
+                "#008000",  # Зеленый
+                "#00FFFF",  # Голубой
+                "#000080",  # Темно-синий
+                "#8B008B",  # Темно-фиолетовый
+                "#FF00FF",  # Фуксия
+                "#A52A2A"  # Коричневый
+            ]
+        else:
+            colors = [
+                "#FF0000",  # Ярко-красный
+                "#FF8C00",  # Темно-оранжевый
+                "#FFD700",  # Золотой
+                "#00FF00",  # Ярко-зеленый
+                "#008000",  # Зеленый
+                "#00FFFF",  # Голубой
+                "#000080",  # Темно-синий
+                "#8B008B",  # Темно-фиолетовый
+                "#FF00FF",  # Фуксия
+                "#A52A2A"  # Коричневый
+            ]
+
 
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
@@ -185,7 +213,14 @@ def draw_image(radar):
     radarogramma.getAxis('bottom').setScale(2.5)
 
     radarogramma.getAxis('left').setLabel('Время, нсек')
-    radarogramma.getAxis('left').setScale(8)
+    if ui.checkBox_relief.isChecked():
+        profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
+        if profile.depth_relief:
+            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            coeff = 512 / (512 + np.max(depth))
+            radarogramma.getAxis('left').setScale(8 / coeff)
+    else:
+        radarogramma.getAxis('left').setScale(8)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
 
@@ -193,24 +228,52 @@ def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
     if ui.checkBox_seismic.isChecked():
-        colors = [
-            '#0000FF',  # Синий,
-            '#000000', # Черный
-            '#FF0000'  # Ярко-красный
-        ]
+        if ui.checkBox_relief.isChecked():
+            colors = [
+                '#FFFFFF',
+                '#0000FF',  # Синий,
+                '#000000',  # Черный
+                '#FF0000'  # Ярко-красный
+            ]
+        else:
+            colors = [
+                '#0000FF',  # Синий,
+                '#000000',  # Черный
+                '#FF0000'  # Ярко-красный
+            ]
     else:
-        colors = [
-            "#FF0000", # Ярко-красный
-            "#FF8C00", # Темно-оранжевый
-            "#FFD700", # Золотой
-            "#00FF00", # Ярко-зеленый
-            "#008000", # Зеленый
-            "#00FFFF", # Голубой
-            "#000080", # Темно-синий
-            "#8B008B", # Темно-фиолетовый
-            "#FF00FF", # Фуксия
-            "#A52A2A"  # Коричневый
-        ]
+        if ui.checkBox_relief.isChecked():
+            colors = [
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                '#FFFFFF',
+                "#FF0000",  # Ярко-красный
+                "#FF8C00",  # Темно-оранжевый
+                "#FFD700",  # Золотой
+                "#00FF00",  # Ярко-зеленый
+                "#008000",  # Зеленый
+                "#00FFFF",  # Голубой
+                "#000080",  # Темно-синий
+                "#8B008B",  # Темно-фиолетовый
+                "#FF00FF",  # Фуксия
+                "#A52A2A"  # Коричневый
+            ]
+        else:
+            colors = [
+                "#FF0000",  # Ярко-красный
+                "#FF8C00",  # Темно-оранжевый
+                "#FFD700",  # Золотой
+                "#00FF00",  # Ярко-зеленый
+                "#008000",  # Зеленый
+                "#00FFFF",  # Голубой
+                "#000080",  # Темно-синий
+                "#8B008B",  # Темно-фиолетовый
+                "#FF00FF",  # Фуксия
+                "#A52A2A"  # Коричневый
+            ]
+    # cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
