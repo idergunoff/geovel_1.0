@@ -1146,6 +1146,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
 
+
     col = working_data.columns[-3]
     print('col ', col)
     print(working_data[col])

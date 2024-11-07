@@ -447,6 +447,14 @@ def draw_formation():
             layer_up = calc_line_by_vel_model(vel_mod.vel_model_id, layer_up, vel_mod.scale)
             layer_down = calc_line_by_vel_model(vel_mod.vel_model_id, layer_down, vel_mod.scale)
 
+    if ui.checkBox_relief.isChecked():
+        profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
+        if profile.depth_relief:
+            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            coeff = 512 / (512 + np.max(depth))
+            layer_up = [int((x + y) * coeff) for x, y in zip(layer_up, depth)]
+            layer_down = [int((x + y) * coeff) for x, y in zip(layer_down, depth)]
+
     # Создаем объект линии и добавляем его на радарограмму
     curve_up = pg.PlotCurveItem(x=x, y=layer_up, pen=pg.mkPen(width=2))
     curve_down = pg.PlotCurveItem(x=x, y=layer_down, pen=pg.mkPen(width=2))

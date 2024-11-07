@@ -1032,22 +1032,45 @@ def calc_relief_profile(profile: Profile) -> None:
     if profile.abs_relief:
         return
 
-    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-    if not grid:
+    # grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    # if not grid:
+    #     return
+
+    grid_list = session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all()
+
+    if not grid_list:
+        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
         return
+    else:
+        flag = True
+        grid_id = None
+
+        for check_grid in grid_list:
+            if check_profile_grid_by_start_stop(profile.id, check_grid.id, min_dist=ui.spinBox_calc_dist_grid.value()):
+                flag = False
+                grid_id = check_grid
+                break
+            else:
+                print('no grid')
+        ui.pushButton_r.setStyleSheet(
+            'background: rgb(191, 255, 191)' if flag else 'background: rgb(255, 185, 185)'
+        )
 
     set_info('Расчёт рельейфа для профиля...', 'blue')
-    pd_grid = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'value'])
+    grid = session.query(CommonGrid).filter(CommonGrid.id == grid_id.id).first()
+    pd_grid = pd.DataFrame(json.loads(grid.grid_table), columns=['x', 'y', 'value'])
 
     list_x = json.loads(profile.x_pulc)
     list_y = json.loads(profile.y_pulc)
 
     list_abs_relief = []
-
+    tree_grid = cKDTree(np.array(json.loads(grid.grid_table))[:, :2])
+    grid_val = np.array(json.loads(grid.grid_table))[:, 2]
     ui.progressBar.setMaximum(len(list_x))
     for i in range(len(list_x)):
         ui.progressBar.setValue(i)
-        list_abs_relief.append(interpolate_relief_pd(pd_grid, list_x[i], list_y[i]))
+        i_r = idw_interpolation(tree_grid, list_x[i], list_y[i], grid_val)
+        list_abs_relief.append(round(i_r, 2))
 
     list_depth_relief = [max(list_abs_relief) - i for i in list_abs_relief]
     profile.abs_relief = json.dumps(list_abs_relief)
