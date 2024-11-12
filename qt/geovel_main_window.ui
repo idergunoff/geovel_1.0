@@ -1600,154 +1600,6 @@
              <layout class="QGridLayout" name="gridLayout_104">
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_90">
-                <item row="5" column="0">
-                 <layout class="QGridLayout" name="gridLayout_105">
-                  <item row="1" column="2">
-                   <widget class="QPushButton" name="pushButton_rem_trained_model">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 153, 153);</string>
-                    </property>
-                    <property name="text">
-                     <string>remove trained model</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="pushButton_model_calc_profile">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>calc profile</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QPushButton" name="pushButton_model_calc_object">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(175, 255, 243);</string>
-                    </property>
-                    <property name="text">
-                     <string>calc object</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="pushButton_import_model_f_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(207, 252, 162);</string>
-                    </property>
-                    <property name="text">
-                     <string>Import</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_export_model_f_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(206, 186, 249);</string>
-                    </property>
-                    <property name="text">
-                     <string>Export</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QListWidget" name="listWidget_trained_model"/>
-                </item>
-                <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_102">
-                  <item row="1" column="1">
-                   <widget class="QPushButton" name="pushButton_add_model">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(170, 255, 127);</string>
-                    </property>
-                    <property name="text">
-                     <string>add model</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QComboBox" name="comboBox_model_ai"/>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QPushButton" name="pushButton_add_formation_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(170, 255, 127);</string>
-                    </property>
-                    <property name="text">
-                     <string>add</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="QPushButton" name="pushButton_rem_formation_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 153, 153);</string>
-                    </property>
-                    <property name="text">
-                     <string>remove</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QPushButton" name="pushButton_rem_model">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 153, 153);</string>
-                    </property>
-                    <property name="text">
-                     <string>remove model</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="2">
-                   <widget class="QPushButton" name="pushButton_clear_formation_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 153, 153);</string>
-                    </property>
-                    <property name="text">
-                     <string>clear</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0" colspan="3">
-                   <widget class="QLabel" name="label_37">
-                    <property name="font">
-                     <font>
-                      <pointsize>13</pointsize>
-                      <italic>true</italic>
-                      <underline>true</underline>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>Formation AI</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item row="2" column="0">
-                 <layout class="QGridLayout" name="gridLayout_103">
-                  <item row="0" column="2">
-                   <widget class="QPushButton" name="pushButton_model_ai">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>learn model</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QComboBox" name="comboBox_comb_data"/>
-                  </item>
-                 </layout>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QListWidget" name="listWidget_formation_ai"/>
-                </item>
                 <item row="6" column="0">
                  <layout class="QGridLayout" name="gridLayout_158">
                   <item row="2" column="0">
@@ -1833,6 +1685,212 @@
                    </layout>
                   </item>
                  </layout>
+                </item>
+                <item row="8" column="0">
+                 <layout class="QGridLayout" name="gridLayout_155">
+                  <item row="0" column="0" colspan="4">
+                   <widget class="QListWidget" name="listWidget_bind_vel"/>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_add_bind_vel_pred">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(170, 255, 127);</string>
+                    </property>
+                    <property name="text">
+                     <string>add bind</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_rmv_bind_vel_pred">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>rmv bind</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_draw_vel_pred">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>draw</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <widget class="QPushButton" name="pushButton_4">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QListWidget" name="listWidget_trained_model"/>
+                </item>
+                <item row="5" column="0">
+                 <layout class="QGridLayout" name="gridLayout_105">
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_rem_trained_model">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>remove trained model</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_model_calc_profile">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>calc profile</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_model_calc_object">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(175, 255, 243);</string>
+                    </property>
+                    <property name="text">
+                     <string>calc object</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="pushButton_import_model_f_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(207, 252, 162);</string>
+                    </property>
+                    <property name="text">
+                     <string>Import</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_export_model_f_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(206, 186, 249);</string>
+                    </property>
+                    <property name="text">
+                     <string>Export</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="2" column="0">
+                 <layout class="QGridLayout" name="gridLayout_103">
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton_model_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>learn model</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QComboBox" name="comboBox_comb_data"/>
+                  </item>
+                 </layout>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QListWidget" name="listWidget_formation_ai"/>
+                </item>
+                <item row="0" column="0">
+                 <layout class="QGridLayout" name="gridLayout_102">
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_add_model">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(170, 255, 127);</string>
+                    </property>
+                    <property name="text">
+                     <string>add model</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QComboBox" name="comboBox_model_ai"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QPushButton" name="pushButton_add_formation_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(170, 255, 127);</string>
+                    </property>
+                    <property name="text">
+                     <string>add</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QPushButton" name="pushButton_rem_formation_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>remove</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_rem_model">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>remove model</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="2">
+                   <widget class="QPushButton" name="pushButton_clear_formation_ai">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>clear</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" colspan="3">
+                   <widget class="QLabel" name="label_37">
+                    <property name="font">
+                     <font>
+                      <pointsize>13</pointsize>
+                      <italic>true</italic>
+                      <underline>true</underline>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Formation AI</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="7" column="0">
+                 <widget class="QLabel" name="label_35">
+                  <property name="font">
+                   <font>
+                    <pointsize>13</pointsize>
+                    <italic>true</italic>
+                    <underline>true</underline>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>Velocity - Prediction</string>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>

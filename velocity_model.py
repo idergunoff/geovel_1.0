@@ -38,6 +38,7 @@ def remove_bind_point():
         if key == 'bind_scatter_id{}'.format(ui.listWidget_bind.currentItem().text().split(' id')[-1]):
             radarogramma.removeItem(globals()[key])
 
+
 def draw_bind_point():
     for key, value in globals().items():
         if key.startswith('bind_'):
@@ -162,8 +163,6 @@ def interpolate_speed(L, index_list, speed_list):
     result = [speed_list[0] if x == 0 else x for x in result ]
 
     return result
-
-
 
 
 def calc_velocity_model():

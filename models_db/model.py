@@ -94,6 +94,18 @@ class ProfileModelPrediction(Base):
     prediction = Column(Text)
 
     profile = relationship('Profile', back_populates='predictions')
+    binding_layer_predictions = relationship('BindingLayerPrediction', back_populates='prediction')
+
+
+class BindingLayerPrediction(Base):
+    __tablename__ = 'binding_layer_prediction'
+
+    id = Column(Integer, primary_key=True)
+    prediction_id = Column(Integer, ForeignKey('profile_model_prediction.id'))
+    layer_id = Column(Integer, ForeignKey('layers.id'))
+
+    prediction = relationship('ProfileModelPrediction', back_populates='binding_layer_predictions')
+    layer = relationship('Layers', back_populates='binding_layer_predictions')
 
 
 class DeepProfile(Base):
@@ -248,6 +260,7 @@ class Layers(Base):
     formation_up = relationship('Formation', back_populates='layer_up', foreign_keys='Formation.up')
     formation_down = relationship('Formation', back_populates='layer_down', foreign_keys='Formation.down')
     bindings = relationship('Binding', back_populates='layer')
+    binding_layer_predictions = relationship('BindingLayerPrediction', back_populates='layer')
 
 
 class PointsOfLayer(Base):

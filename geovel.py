@@ -16,6 +16,7 @@ from regression import *
 from exploration import *
 from geochem import *
 from velocity_model import *
+from velocity_prediction import *
 from test_model import *
 from lineup_train_models import *
 from nn_torch_classifier import *
@@ -303,6 +304,7 @@ ui.comboBox_profile.currentTextChanged.connect(update_list_binding)
 ui.comboBox_profile.currentTextChanged.connect(update_list_velocity_model)
 ui.comboBox_profile.activated.connect(calc_add_features_profile)
 ui.comboBox_profile.activated.connect(calc_profile_features)
+ui.comboBox_profile.currentTextChanged.connect(update_list_bind_vel_prediction)
 
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
@@ -492,6 +494,10 @@ ui.pushButton_add_predict_reg.clicked.connect(add_predict_reg)
 ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
 ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
 
+########## Velocity Prediction ############
+ui.pushButton_add_bind_vel_pred.clicked.connect(add_bind_vel_prediction)
+ui.pushButton_rmv_bind_vel_pred.clicked.connect(rmv_bind_vel_prediction)
+ui.pushButton_draw_vel_pred.clicked.connect(draw_radar_vel_pred)
 
 time = datetime.datetime.now()
 
@@ -531,6 +537,7 @@ check_and_create_folders()
 update_list_binding()
 update_list_velocity_model()
 update_list_model_prediction()
+update_list_bind_vel_prediction()
 
 time2 = datetime.datetime.now() - time
 print(time2)
