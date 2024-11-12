@@ -670,6 +670,14 @@ def add_param_list_mlp():
                                                                              synchronize_session='fetch')
                 session.commit()
                 check_except = True
+        elif param[0] in ['distr', 'sep', 'mfcc']:
+            if param[1] == 'CRL':
+                new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=f'{param[0]}_SigCRL_{param[2]}')
+                session.add(new_param_mlp)
+            else:
+                new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=i)
+                session.add(new_param_mlp)
+            session.commit()
         else:
             if session.query(ParameterMLP).filter_by(
                     analysis_id=analysis_id,

@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1750,22 +1750,6 @@
                 </item>
                 <item row="6" column="0">
                  <layout class="QGridLayout" name="gridLayout_158">
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="label_36">
-                    <property name="font">
-                     <font>
-                      <pointsize>13</pointsize>
-                      <weight>50</weight>
-                      <italic>true</italic>
-                      <bold>false</bold>
-                      <underline>true</underline>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>Model Prediction</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="2" column="0">
                    <layout class="QGridLayout" name="gridLayout_159">
                     <item row="0" column="0">
@@ -1820,6 +1804,33 @@
                      <enum>Qt::Vertical</enum>
                     </property>
                    </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0">
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_36">
+                      <property name="font">
+                       <font>
+                        <pointsize>13</pointsize>
+                        <weight>50</weight>
+                        <italic>true</italic>
+                        <bold>false</bold>
+                        <underline>true</underline>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Model Prediction</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QCheckBox" name="checkBox_use_land">
+                      <property name="text">
+                       <string>land</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </item>
                  </layout>
                 </item>
@@ -5689,7 +5700,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -5710,7 +5721,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

@@ -544,7 +544,12 @@ def build_table_profile_model_predict():
         x_pulc = json.loads(prof.x_pulc)
         y_pulc = json.loads(prof.y_pulc)
         value = json.loads(pred.prediction)
-        pd_predict = pd.concat([pd_predict, pd.DataFrame({'x_pulc': x_pulc, 'y_pulc': y_pulc, 'prediction': value})], ignore_index=True)
+        pd_dict = {'x_pulc': x_pulc, 'y_pulc': y_pulc, 'prediction': value}
+        if ui.checkBox_use_land.isChecked():
+            land = json.loads(prof.formations[0].land)
+            pd_dict['land'] = land
+            pd_dict['abs_uf'] = [i - j for i, j in zip(land, value)]
+        pd_predict = pd.concat([pd_predict, pd.DataFrame(pd_dict)], ignore_index=True)
 
     return pd_predict
 
@@ -553,13 +558,17 @@ def draw_profile_model_predict():
     pd_predict = build_table_profile_model_predict()
     if pd_predict.empty:
         return
-    draw_map(pd_predict['x_pulc'], pd_predict['y_pulc'], pd_predict['prediction'], ui.listWidget_model_pred.currentItem().text().split(' id')[0])
+    if ui.checkBox_use_land.isChecked():
+        draw_map(pd_predict['x_pulc'], pd_predict['y_pulc'], pd_predict['abs_uf'], ui.listWidget_model_pred.currentItem().text().split(' id')[0])
+    else:
+        draw_map(pd_predict['x_pulc'], pd_predict['y_pulc'], pd_predict['prediction'], ui.listWidget_model_pred.currentItem().text().split(' id')[0])
 
 
 def save_excel_profile_model_predict():
     pd_predict = build_table_profile_model_predict()
     if pd_predict.empty:
         return
+
     filename = QtWidgets.QFileDialog.getSaveFileName(
         MainWindow,
         caption='Save file',

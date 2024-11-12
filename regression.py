@@ -813,6 +813,13 @@ def add_param_list_reg():
                                                                              synchronize_session='fetch')
                 session.commit()
                 check_except = True
+        elif param[0] in ['distr', 'sep', 'mfcc']:
+            if param[1] == 'CRL':
+                new_param_mlp = ParameterReg(analysis_id=get_regmod_id(), parameter=f'{param[0]}_SigCRL_{param[2]}')
+            else:
+                new_param_mlp = ParameterReg(analysis_id=get_regmod_id(), parameter=i)
+            session.add(new_param_mlp)
+            session.commit()
         else:
             if session.query(ParameterReg).filter_by(
                     analysis_id=analysis_id,
