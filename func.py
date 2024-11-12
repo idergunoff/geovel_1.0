@@ -159,7 +159,7 @@ def draw_image(radar):
     if ui.checkBox_seismic.isChecked():
         if ui.checkBox_relief.isChecked():
             colors = [
-                '#FFFFFF',
+                '#FFFFFF',  # Белый,
                 '#0000FF',  # Синий,
                 '#000000',  # Черный
                 '#FF0000'  # Ярко-красный
@@ -177,7 +177,7 @@ def draw_image(radar):
                 '#FFFFFF',
                 '#FFFFFF',
                 '#FFFFFF',
-                '#FFFFFF',
+                '#FFFFFF',  # Белый,
                 "#FF0000",  # Ярко-красный
                 "#FF8C00",  # Темно-оранжевый
                 "#FFD700",  # Золотой
@@ -230,7 +230,7 @@ def draw_image_deep_prof(radar, scale):
     if ui.checkBox_seismic.isChecked():
         if ui.checkBox_relief.isChecked():
             colors = [
-                '#FFFFFF',
+                '#FFFFFF',  # Белый,
                 '#0000FF',  # Синий,
                 '#000000',  # Черный
                 '#FF0000'  # Ярко-красный
@@ -248,7 +248,7 @@ def draw_image_deep_prof(radar, scale):
                 '#FFFFFF',
                 '#FFFFFF',
                 '#FFFFFF',
-                '#FFFFFF',
+                '#FFFFFF',  # Белый,
                 "#FF0000",  # Ярко-красный
                 "#FF8C00",  # Темно-оранжевый
                 "#FFD700",  # Золотой
@@ -273,7 +273,6 @@ def draw_image_deep_prof(radar, scale):
                 "#FF00FF",  # Фуксия
                 "#A52A2A"  # Коричневый
             ]
-    # cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)

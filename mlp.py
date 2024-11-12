@@ -1143,8 +1143,6 @@ def calc_class_profile():
 
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
-    # ui.checkBox_relief.stateChanged.connect(calc_class_model)
-
 
     Choose_RegModel.exec_()
 
