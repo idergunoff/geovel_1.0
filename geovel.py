@@ -482,6 +482,7 @@ ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
 ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
 ui.pushButton_lineup.clicked.connect(model_lineup)
 ui.checkBox_relief.clicked.connect(draw_relief)
+ui.checkBox_vel.clicked.connect(draw_relief)
 ui.checkBox_relief.clicked.connect(draw_formation)
 
 ########## Profile Model Prediction ############

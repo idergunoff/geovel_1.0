@@ -1,7 +1,3 @@
-import json
-
-from sqlalchemy.ext.horizontal_shard import set_shard_id
-
 from func import *
 from velocity_model import check_intersection
 
@@ -111,3 +107,38 @@ def draw_radar_vel_pred():
     draw_image_deep_prof(deep_signal, l_max/512)
 
 
+def draw_relief():
+    if ui.checkBox_relief.isChecked():
+        if ui.checkBox_minmax.isChecked():
+            curr_prof = session.query(CurrentProfileMinMax).first()
+        else:
+            curr_prof = session.query(CurrentProfile).first()
+
+        prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
+        if ui.checkBox_vel.isChecked():
+            deep_signal = calc_deep_predict_current_profile()
+            l_max = 0
+            for i in deep_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
+            prof_signal = [interpolate_list(i, 512) for i in deep_signal]
+        else:
+
+            prof_signal = json.loads(curr_prof.signal)
+
+        depth_relief = json.loads(prof.depth_relief)
+        bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
+        relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
+        relief_signal = [interpolate_list(i, 512) for i in relief_signal]
+        draw_image(relief_signal)
+    else:
+        if ui.checkBox_vel.isChecked():
+            deep_signal = calc_deep_predict_current_profile()
+            l_max = 0
+            for i in deep_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
+            deep_signal = [interpolate_list(i, 512) for i in deep_signal]
+            draw_image_deep_prof(deep_signal, l_max / 512)
+        else:
+            draw_image(json.loads(session.query(CurrentProfile).first().signal))

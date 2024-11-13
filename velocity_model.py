@@ -385,18 +385,3 @@ def draw_vel_model_point():
             draw_fill_model(list(range(len(list_top))), list_top, list_bottom, i.color)
 
 
-def draw_relief():
-    if ui.checkBox_relief.isChecked():
-        if ui.checkBox_minmax.isChecked():
-            curr_prof = session.query(CurrentProfileMinMax).first()
-        else:
-            curr_prof = session.query(CurrentProfile).first()
-        prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
-        depth_relief = json.loads(prof.depth_relief)
-        bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
-        prof_signal = json.loads(curr_prof.signal)
-        relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
-        relief_signal = [interpolate_list(i, 512) for i in relief_signal]
-        draw_image(relief_signal)
-    else:
-        draw_image(json.loads(session.query(CurrentProfile).first().signal))
