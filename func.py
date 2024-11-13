@@ -360,13 +360,13 @@ def reset_spinbox_fft():
 
 def build_list(indexes_1, indexes_minus_1):
     # Создаем пустой список длины 512
-    result = [0] * 512
+    result = [128] * 512
     # Устанавливаем 1 в соответствующих индексах первого списка
     for i in indexes_1:
-        result[i] = 1
+        result[i] = 0
     # Устанавливаем -1 в соответствующих индексах второго списка
     for i in indexes_minus_1:
-        result[i] = -1
+        result[i] = 256
     return result
 
 
