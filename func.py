@@ -2619,13 +2619,19 @@ def update_list_model_prediction():
             model = session.query(TrainedModelClass).filter_by(id=p.model_id).first()
         else:
             model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
-        item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
-        item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+        try:
+            item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
+            item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '
                         f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
+            ui.listWidget_model_pred.addItem(item)
+        except AttributeError:
+            session.delete(p)
+            session.commit()
+            set_info('Модель удалена', 'red')
 
-        ui.listWidget_model_pred.addItem(item)
+
 
 
 def remove_model_prediction():
