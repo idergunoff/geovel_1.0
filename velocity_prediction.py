@@ -43,39 +43,42 @@ def calc_deep_predict_current_profile():
     for i in session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all():
 
         list_layer_line.append(json.loads(i.layer.layer_line))
-        list_predict.append(savgol_filter(json.loads(i.prediction.prediction), 31, 3))
+        list_predict.append(savgol_filter(json.loads(i.prediction.prediction), 175, 3))
 
     if not check_intersection(list_layer_line):
         set_info('Слои не должны пересекаться', 'red')
         return
 
-    curr_prof = session.query(CurrentProfile).filter_by(id=1).first()
+    if ui.checkBox_minmax.isChecked():
+        curr_prof = session.query(CurrentProfileMinMax).first()
+    else:
+        curr_prof = session.query(CurrentProfile).first()
 
     signal = json.loads(curr_prof.signal)
     deep_signal = [[] for _ in range(len(signal))]
     
-    for i in range(len(list_predict)):
+    for i in range(len(list_predict) + 1):
         if i == 0:
             list_layer_top = [0 for _ in range(len(signal))]
         else:
             list_layer_top = list_layer_line[i - 1]
+
         if i == len(list_predict):
             list_layer_bottom = [511 for _ in range(len(signal))]
         else:
             list_layer_bottom = list_layer_line[i]
+
         if i == 0:
             list_deep_line = list_predict[i]
         elif i == len(list_predict):
-            list_deep_line = [(5 * 8 * (list_layer_bottom[nv] - list_layer_top[nv])) / 10 for nv in range(len(signal))]
+            list_deep_line = [(5 * 8 * (511 - list_layer_top[nv])) / 100  for nv in range(len(signal))]
         else:
             list_deep_line = [list_predict[i][j] - list_predict[i-1][j] for j in range(len(signal))]
-
 
         for nm, measure in enumerate(signal):
             deep_signal[nm] = deep_signal[nm] + interpolate_list(
                 measure[list_layer_top[nm]:list_layer_bottom[nm]],
                 int(list_deep_line[nm]))
-
     return deep_signal
 
 
@@ -107,38 +110,6 @@ def draw_radar_vel_pred():
     draw_image_deep_prof(deep_signal, l_max/512)
 
 
-def draw_relief():
-    if ui.checkBox_relief.isChecked():
-        if ui.checkBox_minmax.isChecked():
-            curr_prof = session.query(CurrentProfileMinMax).first()
-        else:
-            curr_prof = session.query(CurrentProfile).first()
 
-        prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
-        if ui.checkBox_vel.isChecked():
-            deep_signal = calc_deep_predict_current_profile()
-            l_max = 0
-            for i in deep_signal:
-                l_max = len(i) if len(i) > l_max else l_max
-            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
-            prof_signal = [interpolate_list(i, 512) for i in deep_signal]
-        else:
 
-            prof_signal = json.loads(curr_prof.signal)
 
-        depth_relief = json.loads(prof.depth_relief)
-        bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
-        relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
-        relief_signal = [interpolate_list(i, 512) for i in relief_signal]
-        draw_image(relief_signal)
-    else:
-        if ui.checkBox_vel.isChecked():
-            deep_signal = calc_deep_predict_current_profile()
-            l_max = 0
-            for i in deep_signal:
-                l_max = len(i) if len(i) > l_max else l_max
-            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
-            deep_signal = [interpolate_list(i, 512) for i in deep_signal]
-            draw_image_deep_prof(deep_signal, l_max / 512)
-        else:
-            draw_image(json.loads(session.query(CurrentProfile).first().signal))

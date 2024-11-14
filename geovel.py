@@ -483,7 +483,7 @@ ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
 ui.pushButton_lineup.clicked.connect(model_lineup)
 ui.checkBox_relief.clicked.connect(draw_relief)
 ui.checkBox_vel.clicked.connect(draw_relief)
-ui.checkBox_relief.clicked.connect(draw_formation)
+# ui.checkBox_relief.clicked.connect(draw_formation)
 
 ########## Profile Model Prediction ############
 ui.comboBox_profile.activated.connect(update_list_model_prediction)

@@ -1,12 +1,15 @@
+import json
 from fileinput import filename
 
 import pandas as pd
+from sympy.physics.units import velocity
 
 from func import *
 from pyqtgraph.exporters import ImageExporter
 from PIL import Image
 
 from krige import draw_map
+from velocity_prediction import calc_deep_predict_current_profile
 
 
 def draw_radarogram():
@@ -580,3 +583,131 @@ def save_excel_profile_model_predict():
         set_info(f'Файл {filename} сохранен', 'green')
     except ValueError:
         set_info('Файл не сохранен', 'red')
+
+
+def draw_vel_model_point():
+    remove_fill_form()
+    try:
+        vel_model = session.query(VelocityModel).filter_by(id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
+    except AttributeError:
+        return
+
+    curr_vel_model = session.query(CurrentVelocityModel).first()
+    for i in vel_model.velocity_formations:
+        list_top = json.loads(i.layer_top)
+        list_bottom = json.loads(i.layer_bottom)
+        if curr_vel_model:
+            if curr_vel_model.active:
+                list_top = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_top, curr_vel_model.scale)
+                list_bottom = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_bottom, curr_vel_model.scale)
+        list_vel = json.loads(i.velocity)
+        if ui.checkBox_vel_color.isChecked():
+            list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in list_vel]
+            previous_element = None
+            list_dupl = []
+            for index, current_element in enumerate(list_color):
+                if current_element == previous_element:
+                    list_dupl.append(index)
+                else:
+                    if list_dupl:
+                        list_dupl.append(list_dupl[-1] + 1)
+                        y_up = [list_top[i] for i in list_dupl]
+                        y_down = [list_bottom[i] for i in list_dupl]
+                        draw_fill_model(list_dupl, y_up, y_down, previous_element)
+                    list_dupl = [index]
+                previous_element = current_element
+            if len(list_dupl) > 0:
+                y_up = [list_top[i] for i in list_dupl]
+                y_down = [list_bottom[i] for i in list_dupl]
+                draw_fill_model(list_dupl, y_up, y_down, previous_element)
+        else:
+            draw_fill_model(list(range(len(list_top))), list_top, list_bottom, i.color)
+
+
+def draw_relief():
+    remove_poly_item()
+    remove_curve_fake()
+    if 'curve_up' in globals():
+        radarogramma.removeItem(globals()['curve_up'])
+    if 'curve_down' in globals():
+        radarogramma.removeItem(globals()['curve_down'])
+    if 'text_item' in globals():
+        radarogramma.removeItem(globals()['text_item'])
+
+    if ui.checkBox_relief.isChecked():
+        if ui.checkBox_minmax.isChecked():
+            curr_prof = session.query(CurrentProfileMinMax).first()
+        else:
+            curr_prof = session.query(CurrentProfile).first()
+
+        prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
+        if ui.checkBox_vel.isChecked():
+            velocity_signal = calc_deep_predict_current_profile()
+            depth_relief = json.loads(prof.depth_relief)
+            relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in range(len(depth_relief))]
+            l_max = 0
+            for i in relief_velocity_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            result_signal = [i + [-128 for _ in range(l_max - len(i))] for i in relief_velocity_signal]
+            result_signal = [interpolate_list(i, 512) for i in result_signal]
+            draw_image_deep_prof(result_signal, l_max / 512)
+
+            bindings = session.query(BindingLayerPrediction).join(Layers).filter(
+                Layers.profile_id == get_profile_id()).all()
+            for n, b in enumerate(bindings):
+                layer = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
+                line = [(layer[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer))]
+                x = list(range(len(line)))
+                curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
+                radarogramma.addItem(curve)
+                globals()[f'curve_fake_{n}'] = curve
+        else:
+            prof_signal = json.loads(curr_prof.signal)
+
+            depth_relief = json.loads(prof.depth_relief)
+            bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
+            relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
+            max_sig = len(relief_signal)
+            relief_signal = [interpolate_list(i, 512) for i in relief_signal]
+            draw_image(relief_signal)
+        # if ui.checkBox_vel.isChecked():
+        #     depth = [i * 100 / 40 for i in json.loads(prof.depth_relief)]
+        #     print(depth)
+        #     # l_max = 0
+        #     # for rs in relief_signal:
+        #     #     l_max = len(rs) if len(rs) > l_max else l_max
+        #
+        #     coeff = 512 / (512 + np.max(depth))
+        #     bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
+        #     for n, b in enumerate(bindings):
+        #         l = json.loads(b.layer.layer_line)
+        #         p = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
+        #         v = [(p[i]*100)/(l[i]*8) for i in range(len(l))]
+        #         print('v', v)
+        #         layer = [p[i] * 100 / 8*v[i] for i in range(len(p))]
+        #         print(layer)
+        #         line = [int(x + y) * coeff for x, y in zip(layer, depth)]
+        #         x1 = list(range(len(line)))
+        #         curve = pg.PlotCurveItem(x=x1, y=line, pen=pg.mkPen(width=2))
+        #         radarogramma.addItem(curve)
+        #         globals()[f'curve_fake_{n}'] = curve
+    else:
+        if ui.checkBox_vel.isChecked():
+            deep_signal = calc_deep_predict_current_profile()
+            l_max = 0
+            for i in deep_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
+            deep_signal = [interpolate_list(i, 512) for i in deep_signal]
+            draw_image_deep_prof(deep_signal, l_max / 512)
+
+            bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
+            for n, b in enumerate(bindings):
+                line = [i / (l_max/512) for i in savgol_filter(json.loads(b.prediction.prediction), 175, 3)]
+                x = list(range(len(line)))
+                curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
+                radarogramma.addItem(curve)
+                globals()[f'curve_fake_{n}'] = curve
+
+        else:
+            draw_image(json.loads(session.query(CurrentProfile).first().signal))

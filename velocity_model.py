@@ -1,4 +1,3 @@
-from draw import remove_fill_form, draw_fill_model
 from func import *
 
 
@@ -346,42 +345,6 @@ def remove_velocity_model():
     update_list_velocity_model()
 
 
-def draw_vel_model_point():
-    remove_fill_form()
-    try:
-        vel_model = session.query(VelocityModel).filter_by(id=ui.listWidget_vel_model.currentItem().text().split(' id')[-1]).first()
-    except AttributeError:
-        return
 
-    curr_vel_model = session.query(CurrentVelocityModel).first()
-    for i in vel_model.velocity_formations:
-        list_top = json.loads(i.layer_top)
-        list_bottom = json.loads(i.layer_bottom)
-        if curr_vel_model:
-            if curr_vel_model.active:
-                list_top = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_top, curr_vel_model.scale)
-                list_bottom = calc_line_by_vel_model(curr_vel_model.vel_model_id, list_bottom, curr_vel_model.scale)
-        list_vel = json.loads(i.velocity)
-        if ui.checkBox_vel_color.isChecked():
-            list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in list_vel]
-            previous_element = None
-            list_dupl = []
-            for index, current_element in enumerate(list_color):
-                if current_element == previous_element:
-                    list_dupl.append(index)
-                else:
-                    if list_dupl:
-                        list_dupl.append(list_dupl[-1] + 1)
-                        y_up = [list_top[i] for i in list_dupl]
-                        y_down = [list_bottom[i] for i in list_dupl]
-                        draw_fill_model(list_dupl, y_up, y_down, previous_element)
-                    list_dupl = [index]
-                previous_element = current_element
-            if len(list_dupl) > 0:
-                y_up = [list_top[i] for i in list_dupl]
-                y_down = [list_bottom[i] for i in list_dupl]
-                draw_fill_model(list_dupl, y_up, y_down, previous_element)
-        else:
-            draw_fill_model(list(range(len(list_top))), list_top, list_bottom, i.color)
 
 
