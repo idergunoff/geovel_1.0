@@ -2954,7 +2954,9 @@ def export_model_reg():
         'analysis_title': analysis.title,
         'title': model.title,
         'list_params': model.list_params,
-        'comment': model.comment
+        'comment': model.comment,
+        'except_crl': model.except_crl,
+        'except_signal': model.except_signal
     }
 
     # Сохранение словаря с параметрами в файл *.pkl
@@ -2992,6 +2994,8 @@ def import_model_reg():
     model_name = loaded_parameters['title']
     list_params = loaded_parameters['list_params']
     comment = loaded_parameters['comment']
+    except_crl = loaded_parameters['except_crl']
+    except_signal = loaded_parameters['except_signal']
 
     path_model = f'models/regression/{model_name}.pkl'
 
@@ -3011,6 +3015,8 @@ def import_model_reg():
         title=model_name,
         path_model=path_model,
         list_params=list_params,
+        except_crl=except_crl,
+        except_signal=except_signal,
         comment=comment
     )
     session.add(new_trained_model)
