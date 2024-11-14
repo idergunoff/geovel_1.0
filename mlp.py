@@ -1165,10 +1165,6 @@ def draw_result_mlp(working_data, curr_form, color_marker):
             list_down = [int((x + y) * coeff) for x, y in zip(list_down, depth)]
 
     col = working_data.columns[-3]
-    print('col ', col)
-    print(working_data[col])
-
-
     previous_element = None
     list_dupl = []
 

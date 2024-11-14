@@ -780,34 +780,60 @@ def draw_param():
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
 
 
-def draw_profile_model_prediction():
-    ui.graph.clear()
-    try:
-        graph = json.loads(session.query(ProfileModelPrediction.prediction).filter_by(
-            id = ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
-        ).first()[0])
-    except AttributeError:
-        return
-
-    try:
-        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
-    except Exception as e:
-        set_info(e, 'red')
-        return
-
-    cc = (120, 120, 120, 255)
-    curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
-    # m для отображения графика данных
-    # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
-    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
-    ui.graph.addItem(curve)  # добавляем график данных на график
-    ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
-    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
-    ui.graph.getAxis('bottom').setScale(2.5)
-    ui.graph.getAxis('bottom').setLabel('Профиль, м')
-    set_info(f'Отрисовка предсказания модели "{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}" '
-             f'для текущего профиля', 'blue')
-
+# def draw_profile_model_prediction():
+#     ui.graph.clear()
+#     try:
+#         graph = json.loads(session.query(ProfileModelPrediction.prediction).filter_by(
+#             id = ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+#         ).first()[0])
+#     except AttributeError:
+#         return
+#
+#     curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+#     model_pred = session.query(ProfileModelPrediction.prediction).filter(
+#         ProfileModelPrediction.id == ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()[0]
+#
+#     list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
+#     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
+#
+#     previous_element = None
+#     list_dupl = []
+#     for index, pred in enumerate(model_pred):
+#         color = get_color_rainbow(pred)
+#         if color == previous_element:
+#             list_dupl.append(index)
+#         else:
+#             if list_dupl:
+#                 list_dupl.append(list_dupl[-1] + 1)
+#                 y_up = [list_up[i] for i in list_dupl]
+#                 y_down = [list_down[i] for i in list_dupl]
+#                 draw_fill_result(list_dupl, y_up, y_down, previous_element)
+#             list_dupl = [index]
+#         previous_element = color
+#     if len(list_dupl) > 0:
+#         y_up = [list_up[i] for i in list_dupl]
+#         y_down = [list_down[i] for i in list_dupl]
+#         draw_fill_result(list_dupl, y_up, y_down, get_color_rainbow(pred))
+#
+#     try:
+#         number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+#     except Exception as e:
+#         set_info(e, 'red')
+#         return
+#
+#     cc = (120, 120, 120, 255)
+#     curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
+#     # m для отображения графика данных
+#     # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
+#     curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+#     ui.graph.addItem(curve)  # добавляем график данных на график
+#     ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+#     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+#     ui.graph.getAxis('bottom').setScale(2.5)
+#     ui.graph.getAxis('bottom').setLabel('Профиль, м')
+#     set_info(f'Отрисовка предсказания модели "{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}" '
+#              f'для текущего профиля', 'blue')
+#
 
 def save_max_min(radar):
     radar_max_min = []

@@ -711,3 +711,111 @@ def draw_relief():
 
         else:
             draw_image(json.loads(session.query(CurrentProfile).first().signal))
+
+def get_color_rainbow(probability):
+
+    rainbow_colors =[
+        "#0000FF",  # Синий
+        "#0066FF",  # Голубой
+        "#00CCFF",  # Светло-голубой
+        "#00FFCC",  # Бирюзовый
+        "#00FF66",  # Зеленовато-голубой
+        "#33FF33",  # Ярко-зеленый
+        "#99FF33",  # Желто-зеленый
+        "#FFFF00",  # Желтый
+        "#FF6600",  # Оранжевый
+        "#FF0000"   # Красный
+    ]
+    try:
+        return rainbow_colors[int(probability * 10)]
+    except (IndexError, ValueError):
+        return '#FF0000'
+
+
+def draw_profile_model_prediction():
+    ui.graph.clear()
+    remove_poly_item()
+    try:
+        model = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+        graph = json.loads(model.prediction)
+    except AttributeError:
+        return
+
+    if ui.checkBox_vel.isChecked() and model.type_model == 'cls':
+        if ui.checkBox_relief.isChecked():
+            curr_prof = session.query(CurrentProfile).first()
+            prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
+
+            velocity_signal = calc_deep_predict_current_profile()
+            depth_relief = json.loads(prof.depth_relief)
+            relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
+                                      range(len(depth_relief))]
+            l_max = 0
+            for i in relief_velocity_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            result_signal = [i + [-128 for _ in range(l_max - len(i))] for i in relief_velocity_signal]
+            result_signal = [interpolate_list(i, 512) for i in result_signal]
+            draw_image_deep_prof(result_signal, l_max / 512)
+
+            bindings = session.query(BindingLayerPrediction).join(Layers).filter(
+                Layers.profile_id == get_profile_id()).all()
+
+            layer_up = savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)
+            list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
+            layer_down = savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)
+            list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
+
+        else:
+            deep_signal = calc_deep_predict_current_profile()
+            l_max = 0
+            for i in deep_signal:
+                l_max = len(i) if len(i) > l_max else l_max
+            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
+            deep_signal = [interpolate_list(i, 512) for i in deep_signal]
+            draw_image_deep_prof(deep_signal, l_max / 512)
+
+            bindings = session.query(BindingLayerPrediction).join(Layers).filter(
+                Layers.profile_id == get_profile_id()).all()
+
+            list_up = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)]
+            list_down = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)]
+
+        previous_element = None
+        list_dupl = []
+        for index, pred in enumerate(graph):
+            color = get_color_rainbow(pred)
+            if color == previous_element:
+                list_dupl.append(index)
+            else:
+                if list_dupl:
+                    list_dupl.append(list_dupl[-1] + 1)
+                    y_up = [list_up[i] for i in list_dupl]
+                    y_down = [list_down[i] for i in list_dupl]
+                    draw_fill_result(list_dupl, y_up, y_down, previous_element)
+                list_dupl = [index]
+            previous_element = color
+        if len(list_dupl) > 0:
+            y_up = [list_up[i] for i in list_dupl]
+            y_down = [list_down[i] for i in list_dupl]
+            draw_fill_result(list_dupl, y_up, y_down, get_color_rainbow(pred))
+
+    try:
+        number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
+    except Exception as e:
+        set_info(e, 'red')
+        return
+
+    cc = (120, 120, 120, 255)
+    curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
+    # m для отображения графика данных
+    # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
+    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+    ui.graph.addItem(curve)  # добавляем график данных на график
+    ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+    ui.graph.getAxis('bottom').setScale(2.5)
+    ui.graph.getAxis('bottom').setLabel('Профиль, м')
+    set_info(f'Отрисовка предсказания модели "{ui.listWidget_model_pred.currentItem().text().split(" id")[0]}" '
+             f'для текущего профиля', 'blue')
+
+
