@@ -55,8 +55,11 @@ def calc_deep_predict_current_profile():
         curr_prof = session.query(CurrentProfileMinMax).first()
     else:
         curr_prof = session.query(CurrentProfile).first()
-
-    signal = json.loads(curr_prof.signal)
+    try:
+        signal = json.loads(curr_prof.signal)
+    except AttributeError:
+        set_info('Не выбран профиль', 'red')
+        return
     deep_signal = [[] for _ in range(len(signal))]
     
     for i in range(len(list_predict) + 1):

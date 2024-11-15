@@ -627,6 +627,7 @@ def draw_vel_model_point():
 def draw_relief():
     remove_poly_item()
     remove_curve_fake()
+    remove_fill_form()
     if 'curve_up' in globals():
         radarogramma.removeItem(globals()['curve_up'])
     if 'curve_down' in globals():
@@ -639,6 +640,8 @@ def draw_relief():
             curr_prof = session.query(CurrentProfileMinMax).first()
         else:
             curr_prof = session.query(CurrentProfile).first()
+        if not curr_prof:
+            return
 
         prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
         if ui.checkBox_vel.isChecked():
@@ -695,8 +698,11 @@ def draw_relief():
         if ui.checkBox_vel.isChecked():
             deep_signal = calc_deep_predict_current_profile()
             l_max = 0
-            for i in deep_signal:
-                l_max = len(i) if len(i) > l_max else l_max
+            try:
+                for i in deep_signal:
+                    l_max = len(i) if len(i) > l_max else l_max
+            except:
+                return
             deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
             deep_signal = [interpolate_list(i, 512) for i in deep_signal]
             draw_image_deep_prof(deep_signal, l_max / 512)
@@ -710,7 +716,10 @@ def draw_relief():
                 globals()[f'curve_fake_{n}'] = curve
 
         else:
-            draw_image(json.loads(session.query(CurrentProfile).first().signal))
+            try:
+                draw_image(json.loads(session.query(CurrentProfile).first().signal))
+            except:
+                return
 
 def get_color_rainbow(probability):
 
@@ -735,13 +744,15 @@ def get_color_rainbow(probability):
 def draw_profile_model_prediction():
     ui.graph.clear()
     remove_poly_item()
+    if not ui.checkBox_velmod.isChecked():
+        remove_fill_form()
     try:
         model = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
         graph = json.loads(model.prediction)
     except AttributeError:
         return
 
-    if ui.checkBox_vel.isChecked() and model.type_model == 'cls':
+    if ui.checkBox_vel.isChecked() and model.type_model == 'cls' and not ui.checkBox_velmod.isChecked():
         if ui.checkBox_relief.isChecked():
             curr_prof = session.query(CurrentProfile).first()
             prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
@@ -820,5 +831,83 @@ def draw_profile_model_prediction():
 
 
 def draw_velocity_model_color():
-    list_vel = calc_list_velocity()
-    print(list_vel)
+    if ui.checkBox_velmod.isChecked():
+        if ui.checkBox_vel.isChecked():
+            draw_relief()
+            list_vel = calc_list_velocity()
+
+            # clear_current_profile()
+            # new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(list_vel))
+            # session.add(new_current)
+            # session.commit()
+            curr_prof = session.query(CurrentProfile).first()
+            if not curr_prof:
+                return
+
+            if ui.checkBox_relief.isChecked():
+                prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
+                velocity_signal = calc_deep_predict_current_profile()
+                depth_relief = json.loads(prof.depth_relief)
+                relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
+                                          range(len(depth_relief))]
+                l_max = 0
+                for i in relief_velocity_signal:
+                    l_max = len(i) if len(i) > l_max else l_max
+            else:
+                deep_signal = calc_deep_predict_current_profile()
+                l_max = 0
+                for i in deep_signal:
+                    l_max = len(i) if len(i) > l_max else l_max
+            bindings = session.query(BindingLayerPrediction).join(Layers).filter(
+                Layers.profile_id == get_profile_id()).all()
+
+            for index, b in enumerate(bindings):
+                if ui.checkBox_relief.isChecked():
+                    if index == 0:
+                        layer_down = savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)
+                        list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
+
+                        layer_up = [0 for _ in range(len(list_down))]
+                        list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
+
+                    else:
+                        layer_down = savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)
+                        list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
+
+                        layer_up = savgol_filter(json.loads(bindings[index - 1].prediction.prediction), 175, 3)
+                        list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
+
+                else:
+                    list_down = [i / (l_max / 512) for i in
+                                 savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)]
+                    if index == 0:
+                        list_up = [0 for _ in range(len(list_down))]
+                    else:
+                        list_up = [i / (l_max / 512) for i in
+                                 savgol_filter(json.loads(bindings[index - 1].prediction.prediction), 175, 3)]
+
+                list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in
+                              list_vel[index]]
+                previous_element = None
+                list_dupl = []
+                for index, current_element in enumerate(list_color):
+                    if current_element == previous_element:
+                        list_dupl.append(index)
+                    else:
+                        if list_dupl:
+                            list_dupl.append(list_dupl[-1] + 1)
+                            y_up = [list_up[i] for i in list_dupl]
+                            y_down = [list_down[i] for i in list_dupl]
+                            draw_fill_model(list_dupl, y_up, y_down, previous_element)
+                        list_dupl = [index]
+                    previous_element = current_element
+                if len(list_dupl) > 0:
+                    y_up = [list_up[i] for i in list_dupl]
+                    y_down = [list_down[i] for i in list_dupl]
+                    draw_fill_model(list_dupl, y_up, y_down, previous_element)
+
+
+        else:
+            remove_fill_form()
+    else:
+        remove_fill_form()
