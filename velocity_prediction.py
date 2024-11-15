@@ -1,3 +1,5 @@
+import json
+
 from func import *
 from velocity_model import check_intersection
 
@@ -110,6 +112,21 @@ def draw_radar_vel_pred():
     draw_image_deep_prof(deep_signal, l_max/512)
 
 
+def calc_list_velocity():
+    list_vel = []
+    bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
+    for b in range(len(bindings)):
+        if len(list_vel) == 0:
+            l = json.loads(bindings[b].layer.layer_line)
+            p = savgol_filter(json.loads(bindings[b].prediction.prediction), 175, 3)
+            list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
+        else:
+            l = [a - b for a, b in zip(json.loads(bindings[b].layer.layer_line), json.loads(bindings[b - 1].layer.layer_line))]
+            p = [a - b for a, b in zip(savgol_filter(json.loads(bindings[b].prediction.prediction), 175, 3),
+                 savgol_filter(json.loads(bindings[b - 1].prediction.prediction), 175, 3))]
+            list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
+
+    return list_vel
 
 
 

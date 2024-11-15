@@ -9,7 +9,7 @@ from pyqtgraph.exporters import ImageExporter
 from PIL import Image
 
 from krige import draw_map
-from velocity_prediction import calc_deep_predict_current_profile
+from velocity_prediction import calc_deep_predict_current_profile, calc_list_velocity
 
 
 def draw_radarogram():
@@ -819,3 +819,6 @@ def draw_profile_model_prediction():
              f'для текущего профиля', 'blue')
 
 
+def draw_velocity_model_color():
+    list_vel = calc_list_velocity()
+    print(list_vel)
