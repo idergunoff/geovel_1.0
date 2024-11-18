@@ -145,9 +145,16 @@ def save_image():
 
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
-        color_break = 0
-        while images[0].getpixel((color_break, 200)) == color:
+        color_break, color_break_0, count_color = 0, 0, 0
+        while images[0].getpixel((color_break, 200)) == color or count_color < 5:
+            if images[0].getpixel((color_break, 200)) != color:
+                count_color += 1
+                if count_color == 1:
+                    color_break_0 = color_break
+            else:
+                count_color = 0
             color_break += 1
+        color_break = color_break_0
 
         graph_break = 0
         while graphs[0].getpixel((graph_break, 2)) == color:
@@ -209,9 +216,16 @@ def save_image():
 
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
-        color_break = 0
-        while images[0].getpixel((color_break, 200)) == color:
+        color_break, color_break_0, count_color = 0, 0, 0
+        while images[0].getpixel((color_break, 200)) == color or count_color < 5:
+            if images[0].getpixel((color_break, 200)) != color:
+                count_color += 1
+                if count_color == 1:
+                    color_break_0 = color_break
+            else:
+                count_color = 0
             color_break += 1
+        color_break = color_break_0
 
         for i in range(len(images)):
             width, height = images[i].size
