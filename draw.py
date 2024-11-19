@@ -778,17 +778,27 @@ def draw_relief():
                     l_max = len(i) if len(i) > l_max else l_max
             except:
                 return
-            deep_signal = [i + [0 for _ in range(l_max - len(i))] for i in deep_signal]
+            deep_signal = [i + [-128 for _ in range(l_max - len(i))] for i in deep_signal]
             deep_signal = [interpolate_list(i, 512) for i in deep_signal]
             draw_image_deep_prof(deep_signal, l_max / 512)
 
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
             for n, b in enumerate(bindings):
-                line = [i / (l_max/512) for i in savgol_filter(json.loads(b.prediction.prediction), 175, 3)]
+                predict_layer = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
+                line = [i / (l_max/512) for i in predict_layer]
                 x = list(range(len(line)))
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
+
+                if ui.checkBox_model_nn.isChecked() and n == 0:
+                    predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                        id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
+                    ).first().prediction), 175, 3)
+                    line_nn = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
+                    curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
+                    radarogramma.addItem(curve_nn)
+                    globals()[f'curve_fake_{n}_nn'] = curve_nn
 
         else:
             try:
