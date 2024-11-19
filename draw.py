@@ -759,6 +759,8 @@ def draw_relief():
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
                     globals()[f'curve_fake_{n}_nn'] = curve_nn
+
+                    draw_fill_result(x, line, line_nn, QColor(ui.pushButton_color.text()))
         else:
             prof_signal = json.loads(curr_prof.signal)
 
@@ -799,6 +801,8 @@ def draw_relief():
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
                     globals()[f'curve_fake_{n}_nn'] = curve_nn
+
+                    draw_fill_result(x, line, line_nn, QColor(ui.pushButton_color.text()))
 
         else:
             try:
@@ -861,6 +865,11 @@ def draw_profile_model_prediction():
             layer_down = savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)
             list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
 
+            if ui.checkBox_model_nn.isChecked():
+                predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                    id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
+                ).first().prediction), 175, 3)
+                list_down = [(layer_up[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer_up))]
         else:
             deep_signal = calc_deep_predict_current_profile()
             l_max = 0
@@ -875,6 +884,13 @@ def draw_profile_model_prediction():
 
             list_up = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)]
             list_down = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)]
+
+            if ui.checkBox_model_nn.isChecked():
+                predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                    id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
+                ).first().prediction), 175, 3)
+                predict_layer = savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)
+                list_down = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
 
         previous_element = None
         list_dupl = []
