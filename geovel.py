@@ -499,6 +499,8 @@ ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predic
 ui.pushButton_add_bind_vel_pred.clicked.connect(add_bind_vel_prediction)
 ui.pushButton_rmv_bind_vel_pred.clicked.connect(rmv_bind_vel_prediction)
 ui.pushButton_draw_vel_pred.clicked.connect(draw_radar_vel_pred)
+ui.checkBox_model_nn.clicked.connect(update_list_model_nn)
+ui.listWidget_model_nn.currentItemChanged.connect(draw_relief)
 
 time = datetime.datetime.now()
 

@@ -132,4 +132,19 @@ def calc_list_velocity():
     return list_vel
 
 
+def update_list_model_nn():
+    ui.listWidget_model_nn.clear()
+    if not ui.checkBox_model_nn.isChecked():
+        return
+    for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id(), type_model='reg').all():
+
+        model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
+        item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
+        item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+                        f'{model.comment}\n'
+                        f'Количество параметров: '
+                        f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
+        ui.listWidget_model_nn.addItem(item)
+    ui.listWidget_model_nn.setCurrentRow(0)
+
 

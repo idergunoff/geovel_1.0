@@ -216,14 +216,22 @@ def save_image():
             combined_image.paste(img, (x_offset, 0))
             x_offset += img.width
 
-        back_break = 0
+        back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
-        for x in range(comb_width - 1, -1, -1):
-            if combined_image.getpixel((x, 100)) != color \
-                    and combined_image.getpixel((x, 100)) != color_short:
-                back_break = x
-                combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
-                break
+        color_pix = combined_image.getpixel((comb_width - 2, 450))
+        for x in range(comb_width - 2, -1, -1):
+            if combined_image.getpixel((x, 450)) != color_pix:
+                if count_pix == 5:
+                    back_break = back_break_0
+                    combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
+                    break
+                else:
+                    if count_pix == 1:
+                        back_break_0 = x
+                    count_pix += 1
+            else:
+                count_pix = 0
+
 
         bottom_comb = combined_image.height - 1
         color_pix = combined_image.getpixel((combined_image.width - 5, bottom_comb))
@@ -295,13 +303,21 @@ def save_image():
             combined_image.paste(img, (x_offset, 0))
             x_offset += img.width
 
-        back_break = 0
+        back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
-        for x in range(comb_width - 1, -1, -1):
-            if combined_image.getpixel((x, 100)) != color and combined_image.getpixel((x, 100)) != color_short:
-                back_break = x
-                combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
-                break
+        color_pix = combined_image.getpixel((comb_width - 2, 450))
+        for x in range(comb_width - 2, -1, -1):
+            if combined_image.getpixel((x, 450)) != color_pix:
+                if count_pix == 5:
+                    back_break = back_break_0
+                    combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
+                    break
+                else:
+                    if count_pix == 1:
+                        back_break_0 = x
+                    count_pix += 1
+            else:
+                count_pix = 0
 
         final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
                                       len(images), bottom_break)
@@ -734,6 +750,15 @@ def draw_relief():
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
+
+                if ui.checkBox_model_nn.isChecked() and n == 0:
+                    predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                        id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
+                    ).first().prediction), 175, 3)
+                    line_nn = [(layer[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer))]
+                    curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
+                    radarogramma.addItem(curve_nn)
+                    globals()[f'curve_fake_{n}_nn'] = curve_nn
         else:
             prof_signal = json.loads(curr_prof.signal)
 
@@ -743,27 +768,7 @@ def draw_relief():
             max_sig = len(relief_signal)
             relief_signal = [interpolate_list(i, 512) for i in relief_signal]
             draw_image(relief_signal)
-        # if ui.checkBox_vel.isChecked():
-        #     depth = [i * 100 / 40 for i in json.loads(prof.depth_relief)]
-        #     print(depth)
-        #     # l_max = 0
-        #     # for rs in relief_signal:
-        #     #     l_max = len(rs) if len(rs) > l_max else l_max
-        #
-        #     coeff = 512 / (512 + np.max(depth))
-        #     bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
-        #     for n, b in enumerate(bindings):
-        #         l = json.loads(b.layer.layer_line)
-        #         p = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
-        #         v = [(p[i]*100)/(l[i]*8) for i in range(len(l))]
-        #         print('v', v)
-        #         layer = [p[i] * 100 / 8*v[i] for i in range(len(p))]
-        #         print(layer)
-        #         line = [int(x + y) * coeff for x, y in zip(layer, depth)]
-        #         x1 = list(range(len(line)))
-        #         curve = pg.PlotCurveItem(x=x1, y=line, pen=pg.mkPen(width=2))
-        #         radarogramma.addItem(curve)
-        #         globals()[f'curve_fake_{n}'] = curve
+
     else:
         if ui.checkBox_vel.isChecked():
             deep_signal = calc_deep_predict_current_profile()
