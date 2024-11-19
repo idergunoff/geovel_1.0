@@ -174,8 +174,8 @@ def is_invalid(value, threshold=1.7e38):
 def draw_image(radar):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
-    if ui.checkBox_seismic.isChecked():
-        if ui.checkBox_relief.isChecked():
+    if ui.comboBox_color.currentText() == 'seismic':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
                 '#FFFFFF',  # Белый,
                 '#0000FF',  # Синий,
@@ -188,8 +188,8 @@ def draw_image(radar):
                 '#000000', # Черный
                 '#FF0000'  # Ярко-красный
             ]
-    else:
-        if ui.checkBox_relief.isChecked():
+    elif ui.comboBox_color.currentText() == 'RGBB':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
                 '#FFFFFF',
                 '#FFFFFF',
@@ -220,6 +220,34 @@ def draw_image(radar):
                 "#FF00FF",  # Фуксия
                 "#A52A2A"  # Коричневый
             ]
+    elif ui.comboBox_color.currentText() == 'white - black':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():colors = [
+            '#FFFFFF',  # Белый,
+            '#000000',  # Черный
+            '#808080',  # Серый
+            '#FFFFFF',  # Белый,
+        ]
+        else:
+            colors = [
+                '#000000',  # Черный
+                '#FFFFFF',  # Белый,
+            ]
+
+
+    elif ui.comboBox_color.currentText() == 'black - white':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
+            colors = [
+                '#000000',  # Черный
+                '#000000',  # Черный
+                '#808080',  # Серый
+                '#FFFFFF',  # Белый,
+            ]
+        else:
+            colors = [
+                '#000000',  # Черный
+                '#FFFFFF',  # Белый,
+            ]
+
 
 
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
@@ -246,8 +274,8 @@ def draw_image(radar):
 def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
-    if ui.checkBox_seismic.isChecked():
-        if ui.checkBox_relief.isChecked():
+    if ui.comboBox_color.currentText() == 'seismic':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
                 '#FFFFFF',  # Белый,
                 '#0000FF',  # Синий,
@@ -257,11 +285,11 @@ def draw_image_deep_prof(radar, scale):
         else:
             colors = [
                 '#0000FF',  # Синий,
-                '#000000',  # Черный
+                '#000000', # Черный
                 '#FF0000'  # Ярко-красный
             ]
-    else:
-        if ui.checkBox_relief.isChecked():
+    elif ui.comboBox_color.currentText() == 'RGBB':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
                 '#FFFFFF',
                 '#FFFFFF',
@@ -292,6 +320,34 @@ def draw_image_deep_prof(radar, scale):
                 "#FF00FF",  # Фуксия
                 "#A52A2A"  # Коричневый
             ]
+    elif ui.comboBox_color.currentText() == 'white - black':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():colors = [
+                '#FFFFFF',  # Белый,
+                '#FFFFFF',  # Белый,
+                '#808080',  # Серый
+                '#000000'  # Черный
+            ]
+        else:
+            colors = [
+                '#FFFFFF',  # Белый,
+                '#000000',  # Черный
+            ]
+
+    elif ui.comboBox_color.currentText() == 'black - white':
+        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
+            colors = [
+                '#000000',  # Черный
+                '#000000',  # Черный
+                '#808080',  # Серый
+                '#FFFFFF',  # Белый,
+            ]
+        else:
+            colors = [
+                '#000000',  # Черный
+                '#FFFFFF',  # Белый,
+            ]
+
+
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)

@@ -2492,7 +2492,12 @@ def calc_profile_model_regmod():
         model = session.query(TrainedModelReg).filter_by(
         id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
-        working_sample = working_data[list_param_num].values.tolist()
+        try:
+            working_sample = working_data[list_param_num].values.tolist()
+        except KeyError:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Для расчёта выбранной модели не хватает параметров',
+                                 QMessageBox.Ok)
+            return
 
         with open(model.path_model, 'rb') as f:
             reg_model = pickle.load(f)
