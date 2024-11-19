@@ -2741,3 +2741,27 @@ def remove_model_prediction():
     session.commit()
     update_list_model_prediction()
 
+
+def get_system_font(size):
+    # Список возможных путей к шрифтам
+    font_paths = [
+        # Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        # Windows
+        "C:\\Windows\\Fonts\\arial.ttf",
+        # MacOS
+        "/Library/Fonts/Arial.ttf",
+        # Локальный файл проекта
+        os.path.join(os.path.dirname(__file__), "DejaVuSans.ttf")
+    ]
+
+    for path in font_paths:
+        try:
+            if os.path.exists(path):
+                return ImageFont.truetype(path, size)
+        except Exception:
+            continue
+
+    print("Warning: Using default font")
+    return ImageFont.load_default()

@@ -116,12 +116,15 @@ def process_images(images, graphs):
         combined_images.append(combined_image)
     return combined_images
 
-def set_marks_scale(image, width, width_2, length):
+def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=None):
     draw = ImageDraw.Draw(image)
 
     for i in range(length):
-        font = ImageFont.truetype("arial.ttf", 11)
-        font_graph = ImageFont.truetype("arial.ttf", 10)
+        # font = ImageFont.truetype("arial.ttf", 11)
+        # font_graph = ImageFont.truetype("arial.ttf", 10)
+        font = get_system_font(13)
+        font_graph = get_system_font(12)
+
         text = f'{i+1}000'
         text_bbox = draw.textbbox((0, 0), text, font=font)  # Вычисляем размеры текста
         text_width = text_bbox[2] - text_bbox[0]
@@ -129,9 +132,9 @@ def set_marks_scale(image, width, width_2, length):
             text_x = width - text_width // 2
         else:
             text_x = (width + width_2 * i) - text_width // 2
-        draw.text((text_x, 575), text, fill="white", font=font)
+        draw.text((text_x, bottom_break + 2), text, fill="grey", font=font)
         if ui.checkBox_save_graph.isChecked():
-            draw.text((text_x, 724), text, fill="white", font=font_graph)
+            draw.text((text_x, bottom_comb + 2), text, fill="grey", font=font_graph)
 
     return image
 
@@ -162,6 +165,13 @@ def save_image():
         images = [Image.open(path) for path in list_paths]
         graphs = [Image.open(path) for path in list_graphs]
 
+        color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
+        color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
+
+        bottom_break = images[0].height - 1
+        while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
+            bottom_break -= 1
+
         cropped_images = []
         for img in images:
             width, height = img.size
@@ -170,8 +180,6 @@ def save_image():
 
         images = cropped_images
 
-        color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
-        color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
         color_break, color_break_0, count_color = 0, 0, 0
         while images[0].getpixel((color_break, 200)) == color or count_color < 5:
             if images[0].getpixel((color_break, 200)) != color:
@@ -216,7 +224,14 @@ def save_image():
                 back_break = x
                 combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
                 break
-        final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width, len(combined_images))
+
+        bottom_comb = combined_image.height - 1
+        color_pix = combined_image.getpixel((combined_image.width - 5, bottom_comb))
+        while combined_image.getpixel((combined_image.width - 5, bottom_comb)) == color_pix:
+            bottom_comb -= 1
+        print(bottom_comb)
+        final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
+                                      len(combined_images), bottom_break, bottom_comb)
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
             return
@@ -248,9 +263,13 @@ def save_image():
 
         images = cropped_images
 
-
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
+
+        bottom_break = images[0].height - 1
+        while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
+            bottom_break -= 1
+
         color_break, color_break_0, count_color = 0, 0, 0
         while images[0].getpixel((color_break, 200)) == color or count_color < 5:
             if images[0].getpixel((color_break, 200)) != color:
@@ -285,7 +304,7 @@ def save_image():
                 break
 
         final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
-                                      len(images))
+                                      len(images), bottom_break)
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
             return
