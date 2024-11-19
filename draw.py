@@ -116,6 +116,25 @@ def process_images(images, graphs):
         combined_images.append(combined_image)
     return combined_images
 
+def set_marks_scale(image, width, width_2, length):
+    draw = ImageDraw.Draw(image)
+
+    for i in range(length):
+        font = ImageFont.truetype("arial.ttf", 11)
+        font_graph = ImageFont.truetype("arial.ttf", 10)
+        text = f'{i+1}000'
+        text_bbox = draw.textbbox((0, 0), text, font=font)  # Вычисляем размеры текста
+        text_width = text_bbox[2] - text_bbox[0]
+        if i == 0:
+            text_x = width - text_width // 2
+        else:
+            text_x = (width + width_2 * i) - text_width // 2
+        draw.text((text_x, 575), text, fill="white", font=font)
+        if ui.checkBox_save_graph.isChecked():
+            draw.text((text_x, 724), text, fill="white", font=font_graph)
+
+    return image
+
 
 def save_image():
     exporter = ImageExporter(radarogramma)
@@ -142,6 +161,14 @@ def save_image():
 
         images = [Image.open(path) for path in list_paths]
         graphs = [Image.open(path) for path in list_graphs]
+
+        cropped_images = []
+        for img in images:
+            width, height = img.size
+            cropped_img = img.crop((0, 0, width, height - 10))
+            cropped_images.append(cropped_img)
+
+        images = cropped_images
 
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
@@ -189,13 +216,13 @@ def save_image():
                 back_break = x
                 combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
                 break
-
+        final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width, len(combined_images))
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
             save_path += '.png'
-        combined_image.save(save_path)
+        final_image.save(save_path)
 
         for file in list_paths:
             os.remove(file)
@@ -213,6 +240,14 @@ def save_image():
             list_paths.append(f'{i}_part.png')
 
         images = [Image.open(path) for path in list_paths]
+        cropped_images = []
+        for img in images:
+            width, height = img.size
+            cropped_img = img.crop((0, 0, width, height - 10))
+            cropped_images.append(cropped_img)
+
+        images = cropped_images
+
 
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
@@ -249,12 +284,14 @@ def save_image():
                 combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
                 break
 
+        final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
+                                      len(images))
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
             save_path += '.png'
-        combined_image.save(save_path)
+        final_image.save(save_path)
         for file in list_paths:
             os.remove(file)
 
