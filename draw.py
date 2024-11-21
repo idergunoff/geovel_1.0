@@ -1,6 +1,7 @@
 import json
 from fileinput import filename
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from sympy.physics.units import velocity
 
@@ -955,6 +956,25 @@ def draw_profile_model_prediction():
 def draw_velocity_model_color():
     if ui.checkBox_velmod.isChecked():
         if ui.checkBox_vel.isChecked():
+
+            fig, axs = plt.subplots(15, 1, layout='constrained', figsize=(2, 6))
+
+            def hatches_plot(ax, color, num):
+                # Добавляем квадрат с нужным цветом
+                ax.add_patch(Rectangle((1, 0), 2, 2, color=color))  # Квадрат начинается с x=1
+                # Подпись с небольшим отступом слева
+                ax.text(0.8, 1, f"{num + 1}", size=12, ha="right", va="center")
+                # Настройка осей
+                ax.set_xlim(0, 3)  # Настройка видимой области
+                ax.set_ylim(0, 2)
+                ax.axis('off')
+            # Используем enumerate для получения индекса
+            for num, (ax, color) in enumerate(zip(axs.flat, rainbow_colors15)):
+                hatches_plot(ax, color, num)
+
+            fig.subplots_adjust(hspace=0.05)
+            plt.show()
+
             draw_relief()
             list_vel = calc_list_velocity()
 
@@ -1008,7 +1028,7 @@ def draw_velocity_model_color():
                         list_up = [i / (l_max / 512) for i in
                                  savgol_line(json.loads(bindings[index - 1].prediction.prediction), 175)]
 
-                list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in
+                list_color = [rainbow_colors15[int(i)] if int(i) < len(rainbow_colors15) else rainbow_colors15[-1] for i in
                               list_vel[index]]
                 previous_element = None
                 list_dupl = []

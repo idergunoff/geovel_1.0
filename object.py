@@ -141,6 +141,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.patches import Rectangle
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from python_speech_features import mfcc
