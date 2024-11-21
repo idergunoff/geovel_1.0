@@ -109,6 +109,7 @@ ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
 ui.pushButton_wavelet_filter.clicked.connect(calc_wavelet_filter)
 ui.pushButton_calc_all_param.clicked.connect(calc_all_params)
+ui.toolButton_recalc_relief.clicked.connect(recalc_relief)
 
 ui.pushButton_reset.clicked.connect(reset_spinbox_fft)
 # ui.pushButton_maxmin.clicked.connect(draw_max_min)

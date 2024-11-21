@@ -174,12 +174,13 @@ def is_invalid(value, threshold=1.7e38):
 def draw_image(radar):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
+    color_bg = '#FFFFFF' if ui.checkBox_black_white.isChecked() else '#000000'
     if ui.comboBox_color.currentText() == 'seismic':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#FFFFFF',  # Белый,
+                color_bg,
                 '#0000FF',  # Синий,
-                '#000000',  # Черный
+                color_bg,  # Черный
                 '#FF0000'  # Ярко-красный
             ]
         else:
@@ -191,11 +192,11 @@ def draw_image(radar):
     elif ui.comboBox_color.currentText() == 'RGBB':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',  # Белый,
+                color_bg,
+                color_bg,
+                color_bg,
+                color_bg,
+                color_bg,  # Белый,
                 "#FF0000",  # Ярко-красный
                 "#FF8C00",  # Темно-оранжевый
                 "#FFD700",  # Золотой
@@ -220,24 +221,11 @@ def draw_image(radar):
                 "#FF00FF",  # Фуксия
                 "#A52A2A"  # Коричневый
             ]
-    elif ui.comboBox_color.currentText() == 'white - black':
-        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():colors = [
-            '#FFFFFF',  # Белый,
-            '#000000',  # Черный
-            '#808080',  # Серый
-            '#FFFFFF',  # Белый,
-        ]
-        else:
-            colors = [
-                '#000000',  # Черный
-                '#FFFFFF',  # Белый,
-            ]
-
 
     elif ui.comboBox_color.currentText() == 'black - white':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#000000',  # Черный
+                color_bg,  # Черный
                 '#000000',  # Черный
                 '#808080',  # Серый
                 '#FFFFFF',  # Белый,
@@ -274,12 +262,13 @@ def draw_image(radar):
 def draw_image_deep_prof(radar, scale):
     hist.setImageItem(img)
     hist.setLevels(np.array(radar).min(), np.array(radar).max())
+    color_bg = '#FFFFFF' if ui.checkBox_black_white.isChecked() else '#000000'
     if ui.comboBox_color.currentText() == 'seismic':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#FFFFFF',  # Белый,
+                color_bg,
                 '#0000FF',  # Синий,
-                '#000000',  # Черный
+                color_bg,  # Черный
                 '#FF0000'  # Ярко-красный
             ]
         else:
@@ -291,11 +280,11 @@ def draw_image_deep_prof(radar, scale):
     elif ui.comboBox_color.currentText() == 'RGBB':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',
-                '#FFFFFF',  # Белый,
+                color_bg,
+                color_bg,
+                color_bg,
+                color_bg,
+                color_bg,  # Белый,
                 "#FF0000",  # Ярко-красный
                 "#FF8C00",  # Темно-оранжевый
                 "#FFD700",  # Золотой
@@ -319,24 +308,12 @@ def draw_image_deep_prof(radar, scale):
                 "#8B008B",  # Темно-фиолетовый
                 "#FF00FF",  # Фуксия
                 "#A52A2A"  # Коричневый
-            ]
-    elif ui.comboBox_color.currentText() == 'white - black':
-        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():colors = [
-                '#FFFFFF',  # Белый,
-                '#FFFFFF',  # Белый,
-                '#808080',  # Серый
-                '#000000'  # Черный
-            ]
-        else:
-            colors = [
-                '#FFFFFF',  # Белый,
-                '#000000',  # Черный
             ]
 
     elif ui.comboBox_color.currentText() == 'black - white':
         if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
             colors = [
-                '#000000',  # Черный
+                color_bg,  # Черный
                 '#000000',  # Черный
                 '#808080',  # Серый
                 '#FFFFFF',  # Белый,
@@ -1234,6 +1211,10 @@ def calc_relief_profile(profile: Profile) -> None:
         ui.progressBar.setValue(i)
         i_r = idw_interpolation(tree_grid, list_x[i], list_y[i], grid_val)
         list_abs_relief.append(round(i_r, 2))
+    try:
+        list_abs_relief = savgol_filter(list_abs_relief, 71, 3).tolist()
+    except ValueError:
+        pass
 
     list_depth_relief = [max(list_abs_relief) - i for i in list_abs_relief]
     profile.abs_relief = json.dumps(list_abs_relief)
@@ -1241,6 +1222,11 @@ def calc_relief_profile(profile: Profile) -> None:
     session.commit()
     set_info('Рельеф для профиля сохранён в БД', 'green')
 
+
+def recalc_relief():
+    session.query(Profile).filter_by(id=get_profile_id()).update({'abs_relief': None, 'depth_relief': None})
+    session.commit()
+    calc_relief_profile(session.query(Profile).filter_by(id=get_profile_id()).first())
 
 
 def check_grid_relief():
@@ -2765,3 +2751,8 @@ def get_system_font(size):
 
     print("Warning: Using default font")
     return ImageFont.load_default()
+
+
+def savgol_line(obj, window_len):
+    wl = window_len if window_len < len(obj) else len(obj) if len(obj) % 2 == 1 else len(obj) - 1
+    return savgol_filter(obj, wl, 3)

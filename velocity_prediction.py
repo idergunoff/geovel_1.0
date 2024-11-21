@@ -45,7 +45,8 @@ def calc_deep_predict_current_profile():
     for i in session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all():
 
         list_layer_line.append(json.loads(i.layer.layer_line))
-        list_predict.append(savgol_filter(json.loads(i.prediction.prediction), 175, 3))
+
+        list_predict.append(savgol_line(json.loads(i.prediction.prediction), 175))
 
     if not check_intersection(list_layer_line):
         set_info('Слои не должны пересекаться', 'red')
@@ -121,12 +122,12 @@ def calc_list_velocity():
     for b in range(len(bindings)):
         if len(list_vel) == 0:
             l = json.loads(bindings[b].layer.layer_line)
-            p = savgol_filter(json.loads(bindings[b].prediction.prediction), 175, 3)
+            p = savgol_line(json.loads(bindings[b].prediction.prediction), 175)
             list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
         else:
             l = [a - b for a, b in zip(json.loads(bindings[b].layer.layer_line), json.loads(bindings[b - 1].layer.layer_line))]
             p = [a - b for a, b in zip(savgol_filter(json.loads(bindings[b].prediction.prediction), 175, 3),
-                 savgol_filter(json.loads(bindings[b - 1].prediction.prediction), 175, 3))]
+                 savgol_line(json.loads(bindings[b - 1].prediction.prediction), 175))]
             list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
 
     return list_vel

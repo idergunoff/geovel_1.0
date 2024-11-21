@@ -25,8 +25,13 @@ def draw_radarogram():
     remove_fill_form()
     remove_poly_item()
     remove_curve_fake()
+
     # ui.info.clear()
     ui.checkBox_relief.setChecked(False)
+    ui.checkBox_vel.setChecked(False)
+    ui.checkBox_velmod.setChecked(False)
+    ui.checkBox_model_nn.setChecked(False)
+    ui.listWidget_model_nn.clear()
     clear_current_velocity_model()
     clear_current_profile()
     prof = session.query(Profile).filter(Profile.id == get_profile_id()).first()
@@ -181,8 +186,9 @@ def save_image():
         images = cropped_images
 
         color_break, color_break_0, count_color = 0, 0, 0
-        while images[0].getpixel((color_break, 200)) == color or count_color < 5:
-            if images[0].getpixel((color_break, 200)) != color:
+        color = images[0].getpixel((color_break, 450))
+        while images[0].getpixel((color_break, 450)) == color or count_color < 15:
+            if images[0].getpixel((color_break, 450)) != color:
                 count_color += 1
                 if count_color == 1:
                     color_break_0 = color_break
@@ -279,8 +285,9 @@ def save_image():
             bottom_break -= 1
 
         color_break, color_break_0, count_color = 0, 0, 0
-        while images[0].getpixel((color_break, 200)) == color or count_color < 5:
-            if images[0].getpixel((color_break, 200)) != color:
+        color = images[0].getpixel((color_break, 450))
+        while images[0].getpixel((color_break, 450)) == color or count_color < 15:
+            if images[0].getpixel((color_break, 450)) != color:
                 count_color += 1
                 if count_color == 1:
                     color_break_0 = color_break
@@ -721,6 +728,8 @@ def draw_relief():
     if 'text_item' in globals():
         radarogramma.removeItem(globals()['text_item'])
 
+    filter_nn = ui.spinBox_filter_model_nn.value() if ui.spinBox_filter_model_nn.value() % 2 == 1 else ui.spinBox_filter_model_nn.value() + 1
+
     if ui.checkBox_relief.isChecked():
         if ui.checkBox_minmax.isChecked():
             curr_prof = session.query(CurrentProfileMinMax).first()
@@ -731,6 +740,11 @@ def draw_relief():
 
         prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
         if ui.checkBox_vel.isChecked():
+            if session.query(BindingLayerPrediction).join(ProfileModelPrediction).filter(
+                ProfileModelPrediction.profile_id == prof.id).count() == 0:
+                ui.checkBox_vel.setChecked(False)
+                set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
+                return
             velocity_signal = calc_deep_predict_current_profile()
             depth_relief = json.loads(prof.depth_relief)
             relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in range(len(depth_relief))]
@@ -744,7 +758,7 @@ def draw_relief():
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(
                 Layers.profile_id == get_profile_id()).all()
             for n, b in enumerate(bindings):
-                layer = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
+                layer = savgol_line(json.loads(b.prediction.prediction), 175)
                 line = [(layer[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer))]
                 x = list(range(len(line)))
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
@@ -752,9 +766,9 @@ def draw_relief():
                 globals()[f'curve_fake_{n}'] = curve
 
                 if ui.checkBox_model_nn.isChecked() and n == 0:
-                    predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                    predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
                         id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                    ).first().prediction), 175, 3)
+                    ).first().prediction), filter_nn)
                     line_nn = [(layer[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer))]
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
@@ -773,6 +787,11 @@ def draw_relief():
 
     else:
         if ui.checkBox_vel.isChecked():
+            if session.query(BindingLayerPrediction).join(ProfileModelPrediction).filter(
+                    ProfileModelPrediction.profile_id == get_profile_id()).count() == 0:
+                ui.checkBox_vel.setChecked(False)
+                set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
+                return
             deep_signal = calc_deep_predict_current_profile()
             l_max = 0
             try:
@@ -786,7 +805,7 @@ def draw_relief():
 
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
             for n, b in enumerate(bindings):
-                predict_layer = savgol_filter(json.loads(b.prediction.prediction), 175, 3)
+                predict_layer = savgol_line(json.loads(b.prediction.prediction), 175)
                 line = [i / (l_max/512) for i in predict_layer]
                 x = list(range(len(line)))
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
@@ -794,9 +813,9 @@ def draw_relief():
                 globals()[f'curve_fake_{n}'] = curve
 
                 if ui.checkBox_model_nn.isChecked() and n == 0:
-                    predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                    predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
                         id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                    ).first().prediction), 175, 3)
+                    ).first().prediction), filter_nn)
                     line_nn = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
@@ -841,6 +860,8 @@ def draw_profile_model_prediction():
     except AttributeError:
         return
 
+    filter_nn = ui.spinBox_filter_model_nn.value() if ui.spinBox_filter_model_nn.value() % 2 == 1 else ui.spinBox_filter_model_nn.value() + 1
+
     if ui.checkBox_vel.isChecked() and model.type_model == 'cls' and not ui.checkBox_velmod.isChecked():
         if ui.checkBox_relief.isChecked():
             curr_prof = session.query(CurrentProfile).first()
@@ -860,15 +881,15 @@ def draw_profile_model_prediction():
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(
                 Layers.profile_id == get_profile_id()).all()
 
-            layer_up = savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)
+            layer_up = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
             list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
-            layer_down = savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)
+            layer_down = savgol_line(json.loads(bindings[1].prediction.prediction), 175)
             list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
 
             if ui.checkBox_model_nn.isChecked():
-                predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                ).first().prediction), 175, 3)
+                ).first().prediction), filter_nn)
                 list_down = [(layer_up[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer_up))]
         else:
             deep_signal = calc_deep_predict_current_profile()
@@ -882,14 +903,14 @@ def draw_profile_model_prediction():
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(
                 Layers.profile_id == get_profile_id()).all()
 
-            list_up = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)]
-            list_down = [i / (l_max / 512) for i in savgol_filter(json.loads(bindings[1].prediction.prediction), 175, 3)]
+            list_up = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[0].prediction.prediction), 175)]
+            list_down = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[1].prediction.prediction), 175)]
 
             if ui.checkBox_model_nn.isChecked():
-                predict = savgol_filter(json.loads(session.query(ProfileModelPrediction).filter_by(
+                predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                ).first().prediction), 175, 3)
-                predict_layer = savgol_filter(json.loads(bindings[0].prediction.prediction), 175, 3)
+                ).first().prediction), filter_nn)
+                predict_layer = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
                 list_down = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
 
         previous_element = None
@@ -921,7 +942,7 @@ def draw_profile_model_prediction():
     curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
     # m для отображения графика данных
     # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
-    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+    curve_filter = pg.PlotCurveItem(x=number, y=savgol_line(graph, 31), pen=pg.mkPen(color='red', width=2.4))
     ui.graph.addItem(curve)  # добавляем график данных на график
     ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
@@ -965,27 +986,27 @@ def draw_velocity_model_color():
             for index, b in enumerate(bindings):
                 if ui.checkBox_relief.isChecked():
                     if index == 0:
-                        layer_down = savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)
+                        layer_down = savgol_line(json.loads(bindings[index].prediction.prediction), 175)
                         list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
 
                         layer_up = [0 for _ in range(len(list_down))]
                         list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
 
                     else:
-                        layer_down = savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)
+                        layer_down = savgol_line(json.loads(bindings[index].prediction.prediction), 175)
                         list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
 
-                        layer_up = savgol_filter(json.loads(bindings[index - 1].prediction.prediction), 175, 3)
+                        layer_up = savgol_line(json.loads(bindings[index - 1].prediction.prediction), 175)
                         list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
 
                 else:
                     list_down = [i / (l_max / 512) for i in
-                                 savgol_filter(json.loads(bindings[index].prediction.prediction), 175, 3)]
+                                 savgol_line(json.loads(bindings[index].prediction.prediction), 175)]
                     if index == 0:
                         list_up = [0 for _ in range(len(list_down))]
                     else:
                         list_up = [i / (l_max / 512) for i in
-                                 savgol_filter(json.loads(bindings[index - 1].prediction.prediction), 175, 3)]
+                                 savgol_line(json.loads(bindings[index - 1].prediction.prediction), 175)]
 
                 list_color = [rainbow_colors[int(i)] if int(i) < len(rainbow_colors) else rainbow_colors[-1] for i in
                               list_vel[index]]

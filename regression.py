@@ -2653,7 +2653,7 @@ def calc_object_model_regmod():
                 try:
                     y_pred = reg_model.predict(working_sample_profile)
                 except ValueError:
-                    working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
+                    working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample_profile]
                     data = imputer.fit_transform(working_sample)
                     y_pred = reg_model.predict(data)
 
