@@ -47,10 +47,10 @@ def mouse_moved_to_signal(evt):
     if radarogramma.sceneBoundingRect().contains(pos):
         mousePoint = vb.mapSceneToView(pos)
         # Создание бесконечных линий
-        hor_line_sig = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
-        hor_line_rad = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
-        vert_line_rad = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
-        vert_line_graph = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='w', width=0.5, dash=[4, 7]))
+        hor_line_sig = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='grey', width=0.5, dash=[4, 7]))
+        hor_line_rad = pg.InfiniteLine(pos=mousePoint.y(), angle=0, pen=pg.mkPen(color='grey', width=0.5, dash=[4, 7]))
+        vert_line_rad = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='grey', width=0.5, dash=[4, 7]))
+        vert_line_graph = pg.InfiniteLine(pos=mousePoint.x(), angle=90, pen=pg.mkPen(color='grey', width=0.5, dash=[4, 7]))
 
         # Добавление линий на соответствующие графики
         ui.signal.addItem(hor_line_sig)
@@ -491,6 +491,7 @@ ui.comboBox_profile.activated.connect(update_list_model_prediction)
 ui.pushButton_model_pred_rmv.clicked.connect(remove_model_prediction)
 ui.listWidget_model_pred.currentItemChanged.connect(draw_profile_model_prediction)
 ui.listWidget_model_pred.activated.connect(draw_profile_model_prediction)
+ui.listWidget_model_pred.clicked.connect(draw_profile_model_prediction)
 ui.pushButton_add_predict_mlp.clicked.connect(add_predict_mlp)
 ui.pushButton_add_predict_reg.clicked.connect(add_predict_reg)
 ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)

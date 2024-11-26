@@ -916,7 +916,11 @@ def draw_profile_model_prediction():
 
         previous_element = None
         list_dupl = []
-        for index, pred in enumerate(graph):
+        if ui.checkBox_filter_cls.isChecked():
+            graph_cls = savgol_line(graph, 31)
+        else:
+            graph_cls = graph
+        for index, pred in enumerate(graph_cls):
             color = get_color_rainbow(pred)
             if color == previous_element:
                 list_dupl.append(index)
