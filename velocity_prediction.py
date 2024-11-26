@@ -126,7 +126,7 @@ def calc_list_velocity():
             list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
         else:
             l = [a - b for a, b in zip(json.loads(bindings[b].layer.layer_line), json.loads(bindings[b - 1].layer.layer_line))]
-            p = [a - b for a, b in zip(savgol_filter(json.loads(bindings[b].prediction.prediction), 175, 3),
+            p = [a - b for a, b in zip(savgol_line(json.loads(bindings[b].prediction.prediction), 175),
                  savgol_line(json.loads(bindings[b - 1].prediction.prediction), 175))]
             list_vel.append([(p[i] * 100) / (l[i] * 8) for i in range(len(l))])
 

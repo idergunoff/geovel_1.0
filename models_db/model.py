@@ -95,6 +95,17 @@ class ProfileModelPrediction(Base):
 
     profile = relationship('Profile', back_populates='predictions')
     binding_layer_predictions = relationship('BindingLayerPrediction', back_populates='prediction')
+    correct = relationship('PredictionCorrect', back_populates='prediction')
+
+
+class PredictionCorrect(Base):
+    __tablename__ = 'prediction_correct'
+
+    id = Column(Integer, primary_key=True)
+    prediction_id = Column(Integer, ForeignKey('profile_model_prediction.id'))
+    correct = Column(Text)
+
+    prediction = relationship('ProfileModelPrediction', back_populates='correct')
 
 
 class BindingLayerPrediction(Base):

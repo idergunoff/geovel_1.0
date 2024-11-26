@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1804,7 +1804,21 @@
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0">
+                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0,0,0">
+                  <item row="0" column="2">
+                   <widget class="QCheckBox" name="checkBox_filter_cls">
+                    <property name="text">
+                     <string>filter cls</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QCheckBox" name="checkBox_use_land">
+                    <property name="text">
+                     <string>land</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_36">
                     <property name="font">
@@ -1822,9 +1836,9 @@
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QCheckBox" name="checkBox_use_land">
+                   <widget class="QCheckBox" name="checkBox_corr_pred">
                     <property name="text">
-                     <string>land</string>
+                     <string>correct</string>
                     </property>
                    </widget>
                   </item>
