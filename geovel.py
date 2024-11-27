@@ -496,6 +496,8 @@ ui.pushButton_add_predict_mlp.clicked.connect(add_predict_mlp)
 ui.pushButton_add_predict_reg.clicked.connect(add_predict_reg)
 ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
 ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
+ui.pushButton_correct_predict.clicked.connect(correct_profile_model_predict)
+ui.checkBox_corr_pred.clicked.connect(draw_profile_model_prediction)
 
 ########## Velocity Prediction ############
 ui.pushButton_add_bind_vel_pred.clicked.connect(add_bind_vel_prediction)

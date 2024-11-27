@@ -45,6 +45,7 @@ from qt.random_param import *
 from qt.random_search_reg import *
 from qt.feature_selection import *
 from qt.parameter_dependence import *
+from qt.corrected_model_pred import *
 
 import numpy as np
 import pyqtgraph as pg

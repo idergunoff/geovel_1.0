@@ -114,13 +114,17 @@ def process_images(images, graphs):
     for i in range(len(images)):
         img1 = images[i]
         img2 = graphs[i]
+        inx = 1 if len(images) > 1 else 0
+
         img2_cropped = crop_from_right(img2)
-        aspect_ratio = crop_from_right(graphs[1]).height / crop_from_right(graphs[1]).width
-        new_height = int(aspect_ratio * images[1].width)
+        aspect_ratio = crop_from_right(graphs[inx]).height / crop_from_right(graphs[inx]).width
+        new_height = int(aspect_ratio * images[inx].width)
         img2_resized = resize_image(img2_cropped, img1.width, new_height)
         combined_image = concatenate_images_vertically(img1, img2_resized)
+
         combined_images.append(combined_image)
     return combined_images
+
 
 def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=None):
     draw = ImageDraw.Draw(image)
@@ -150,6 +154,8 @@ def save_image():
     exporter.parameters()['height'] = 610
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
+
+    crop_index = ui.spinBox_save_img.value()
 
     if ui.checkBox_save_graph.isChecked():
         graph_exporter = ImageExporter(ui.graph.scene())
@@ -187,16 +193,20 @@ def save_image():
         images = cropped_images
 
         color_break, color_break_0, count_color = 0, 0, 0
-        color = images[0].getpixel((color_break, 450))
-        while images[0].getpixel((color_break, 450)) == color or count_color < 15:
-            if images[0].getpixel((color_break, 450)) != color:
-                count_color += 1
-                if count_color == 1:
-                    color_break_0 = color_break
-            else:
-                count_color = 0
-            color_break += 1
-        color_break = color_break_0
+        try:
+            color = images[0].getpixel((color_break, crop_index))
+            while images[0].getpixel((color_break, crop_index)) == color or count_color < 15:
+                if images[0].getpixel((color_break, crop_index)) != color:
+                    count_color += 1
+                    if count_color == 1:
+                        color_break_0 = color_break
+                else:
+                    count_color = 0
+                color_break += 1
+            color_break = color_break_0
+        except Exception as e:
+            set_info(f'Некорректные данные: {e}', 'red')
+            return
 
         graph_break = 0
         while graphs[0].getpixel((graph_break, 2)) == color:
@@ -225,9 +235,9 @@ def save_image():
 
         back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
-        color_pix = combined_image.getpixel((comb_width - 2, 450))
+        color_pix = combined_image.getpixel((comb_width - 2, crop_index))
         for x in range(comb_width - 2, -1, -1):
-            if combined_image.getpixel((x, 450)) != color_pix:
+            if combined_image.getpixel((x, crop_index)) != color_pix:
                 if count_pix == 5:
                     back_break = back_break_0
                     combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
@@ -239,13 +249,22 @@ def save_image():
             else:
                 count_pix = 0
 
+        if len(images) == 1:
+            final_image = combined_image
+        else:
+            try:
+                bottom_comb = combined_image.height - 1
+                color_pix = combined_image.getpixel((combined_image.width - 5, bottom_comb))
+                while combined_image.getpixel((combined_image.width - 5, bottom_comb)) == color_pix:
+                    bottom_comb -= 1
+            except IndexError:
+                bottom_comb = combined_image.height - 1
+                color_pix = combined_image.getpixel((combined_image.width - 50, bottom_comb))
+                while combined_image.getpixel((combined_image.width - 50, bottom_comb)) == color_pix:
+                    bottom_comb -= 1
 
-        bottom_comb = combined_image.height - 1
-        color_pix = combined_image.getpixel((combined_image.width - 5, bottom_comb))
-        while combined_image.getpixel((combined_image.width - 5, bottom_comb)) == color_pix:
-            bottom_comb -= 1
-        print(bottom_comb)
-        final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
+            print(bottom_comb)
+            final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
                                       len(combined_images), bottom_break, bottom_comb)
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
@@ -286,9 +305,9 @@ def save_image():
             bottom_break -= 1
 
         color_break, color_break_0, count_color = 0, 0, 0
-        color = images[0].getpixel((color_break, 450))
-        while images[0].getpixel((color_break, 450)) == color or count_color < 15:
-            if images[0].getpixel((color_break, 450)) != color:
+        color = images[0].getpixel((color_break, crop_index))
+        while images[0].getpixel((color_break, crop_index)) == color or count_color < 15:
+            if images[0].getpixel((color_break, crop_index)) != color:
                 count_color += 1
                 if count_color == 1:
                     color_break_0 = color_break
@@ -313,9 +332,9 @@ def save_image():
 
         back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
-        color_pix = combined_image.getpixel((comb_width - 2, 450))
+        color_pix = combined_image.getpixel((comb_width - 2, crop_index))
         for x in range(comb_width - 2, -1, -1):
-            if combined_image.getpixel((x, 450)) != color_pix:
+            if combined_image.getpixel((x, crop_index)) != color_pix:
                 if count_pix == 5:
                     back_break = back_break_0
                     combined_image = combined_image.crop((0, 0, back_break + 23, comb_height))
@@ -327,7 +346,10 @@ def save_image():
             else:
                 count_pix = 0
 
-        final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
+        if len(images) == 1:
+            final_image = combined_image
+        else:
+            final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
                                       len(images), bottom_break)
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
@@ -640,7 +662,11 @@ def build_table_profile_model_predict():
             return
         x_pulc = json.loads(prof.x_pulc)
         y_pulc = json.loads(prof.y_pulc)
-        value = json.loads(pred.prediction)
+
+        if ui.checkBox_corr_pred.isChecked() and pred.corrected:
+            value = json.loads(pred.corrected[0].correct)
+        else:
+            value = json.loads(pred.prediction)
         pd_dict = {'x_pulc': x_pulc, 'y_pulc': y_pulc, 'prediction': value}
         if ui.checkBox_use_land.isChecked():
             land = json.loads(prof.formations[0].land)
@@ -759,7 +785,10 @@ def draw_relief():
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(
                 Layers.profile_id == get_profile_id()).all()
             for n, b in enumerate(bindings):
-                layer = savgol_line(json.loads(b.prediction.prediction), 175)
+                if ui.checkBox_corr_pred.isChecked() and b.prediction.corrected:
+                    layer = savgol_line(json.loads(b.prediction.corrected[0].correct), 175)
+                else:
+                    layer = savgol_line(json.loads(b.prediction.prediction), 175)
                 line = [(layer[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer))]
                 x = list(range(len(line)))
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
@@ -767,9 +796,13 @@ def draw_relief():
                 globals()[f'curve_fake_{n}'] = curve
 
                 if ui.checkBox_model_nn.isChecked() and n == 0:
-                    predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
-                        id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                    ).first().prediction), filter_nn)
+                    predict = session.query(ProfileModelPrediction).filter_by(
+                    id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
+                    ).first()
+                    if ui.checkBox_corr_pred.isChecked() and predict.corrected:
+                        predict = savgol_line(json.loads(predict.corrected[0].correct), filter_nn)
+                    else:
+                        predict = savgol_line(json.loads(predict.prediction), filter_nn)
                     line_nn = [(layer[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer))]
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
@@ -806,7 +839,10 @@ def draw_relief():
 
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
             for n, b in enumerate(bindings):
-                predict_layer = savgol_line(json.loads(b.prediction.prediction), 175)
+                if ui.checkBox_corr_pred.isChecked() and b.prediction.corrected:
+                    predict_layer = savgol_line(json.loads(b.prediction.corrected[0].correct), 175)
+                else:
+                    predict_layer = savgol_line(json.loads(b.prediction.prediction), 175)
                 line = [i / (l_max/512) for i in predict_layer]
                 x = list(range(len(line)))
                 curve = pg.PlotCurveItem(x=x, y=line, pen=pg.mkPen(width=2))
@@ -814,9 +850,14 @@ def draw_relief():
                 globals()[f'curve_fake_{n}'] = curve
 
                 if ui.checkBox_model_nn.isChecked() and n == 0:
-                    predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
+                    predict = session.query(ProfileModelPrediction).filter_by(
                         id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                    ).first().prediction), filter_nn)
+                    ).first()
+                    if ui.checkBox_corr_pred.isChecked() and predict.corrected:
+                        predict = savgol_line(json.loads(predict.corrected[0].correct), filter_nn)
+                    else:
+                        predict = savgol_line(json.loads(predict.prediction), filter_nn)
+
                     line_nn = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
@@ -861,6 +902,9 @@ def draw_profile_model_prediction():
     except AttributeError:
         return
 
+    if ui.checkBox_corr_pred.isChecked() and model.corrected:
+        graph = json.loads(model.corrected[0].correct)
+
     filter_nn = ui.spinBox_filter_model_nn.value() if ui.spinBox_filter_model_nn.value() % 2 == 1 else ui.spinBox_filter_model_nn.value() + 1
 
     if ui.checkBox_vel.isChecked() and model.type_model == 'cls' and not ui.checkBox_velmod.isChecked():
@@ -888,9 +932,13 @@ def draw_profile_model_prediction():
             list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
 
             if ui.checkBox_model_nn.isChecked():
-                predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
+                predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                ).first().prediction), filter_nn)
+                ).first()
+                if ui.checkBox_corr_pred.isChecked() and predict.corrected:
+                    predict = savgol_line(json.loads(predict.corrected[0].correct), filter_nn)
+                else:
+                    predict = savgol_line(json.loads(predict.prediction), filter_nn)
                 list_down = [(layer_up[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer_up))]
         else:
             deep_signal = calc_deep_predict_current_profile()
@@ -908,9 +956,14 @@ def draw_profile_model_prediction():
             list_down = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[1].prediction.prediction), 175)]
 
             if ui.checkBox_model_nn.isChecked():
-                predict = savgol_line(json.loads(session.query(ProfileModelPrediction).filter_by(
+                predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
-                ).first().prediction), filter_nn)
+                ).first()
+                if ui.checkBox_corr_pred.isChecked() and predict.corrected:
+                    predict = savgol_line(json.loads(predict.corrected[0].correct), filter_nn)
+                else:
+                    predict = savgol_line(json.loads(predict.prediction), filter_nn)
+
                 predict_layer = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
                 list_down = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
 

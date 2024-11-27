@@ -1,4 +1,7 @@
 import json
+import random
+
+from torch.cuda import graph
 
 from func import *
 from velocity_model import check_intersection
@@ -149,3 +152,76 @@ def update_list_model_nn():
     ui.listWidget_model_nn.setCurrentRow(0)
 
 
+def correct_profile_model_predict():
+    global l_int_up, l_int_down
+    CorrModelPred = QtWidgets.QDialog()
+    ui_cmp = Ui_FormCorrectedModel()
+    ui_cmp.setupUi(CorrModelPred)
+    CorrModelPred.show()
+    CorrModelPred.setAttribute(Qt.WA_DeleteOnClose)
+
+    pred = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+
+    list_pred = json.loads(pred.prediction)
+
+    if pred.corrected:
+        if ui.checkBox_corr_pred.isChecked():
+            list_pred = json.loads(pred.corrected[0].correct)
+        else:
+            session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': pred.prediction})
+    else:
+        session.add(PredictionCorrect(prediction_id=pred.id, correct=pred.prediction))
+    session.commit()
+
+    if pred.type_model == 'reg':
+        ui_cmp.doubleSpinBox_pred_min.setMaximum(max(list_pred) * 3)
+        ui_cmp.doubleSpinBox_pred_max.setMaximum(max(list_pred) * 3)
+
+    ui_cmp.spinBox_int_max.setMaximum(len(list_pred) - 1)
+    ui_cmp.spinBox_int_min.setMaximum(len(list_pred) - 1)
+    ui_cmp.spinBox_int_min.setValue(0)
+    ui_cmp.spinBox_int_max.setValue(40)
+
+    line_up = ui_cmp.spinBox_int_min.value()
+    line_down = ui_cmp.spinBox_int_max.value()
+    l_int_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
+    l_int_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=4, dash=[8, 2]))
+    ui.graph.addItem(l_int_up)
+    ui.graph.addItem(l_int_down)
+
+    def draw_int_line():
+        global l_int_up, l_int_down
+        ui.graph.removeItem(l_int_up)
+        ui.graph.removeItem(l_int_down)
+        line_up = ui_cmp.spinBox_int_min.value()
+        line_down = ui_cmp.spinBox_int_max.value()
+        l_int_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
+        l_int_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=4, dash=[8, 2]))
+        ui.graph.addItem(l_int_up)
+        ui.graph.addItem(l_int_down)
+
+        ui_cmp.spinBox_int_min.setMaximum(ui_cmp.spinBox_int_max.value() - 1)
+        ui_cmp.spinBox_int_max.setMinimum(ui_cmp.spinBox_int_min.value() + 1)
+
+        ui_cmp.doubleSpinBox_pred_min.setValue(min(list_pred[ui_cmp.spinBox_int_min.value():ui_cmp.spinBox_int_max.value()]))
+        ui_cmp.doubleSpinBox_pred_max.setValue(max(list_pred[ui_cmp.spinBox_int_min.value():ui_cmp.spinBox_int_max.value()]))
+
+    draw_int_line()
+
+
+
+    def correct_predict():
+        for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
+            list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+
+        session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': json.dumps(list_pred)})
+        session.commit()
+
+        CorrModelPred.close()
+
+    ui_cmp.buttonBox.accepted.connect(correct_predict)
+    ui_cmp.buttonBox.rejected.connect(CorrModelPred.close)
+    ui_cmp.spinBox_int_max.valueChanged.connect(draw_int_line)
+    ui_cmp.spinBox_int_min.valueChanged.connect(draw_int_line)
+
+    CorrModelPred.exec_()
