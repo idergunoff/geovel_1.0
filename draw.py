@@ -88,6 +88,7 @@ def crop_from_right(image):
     width, height = image.size
     color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
 
+    # Обрезаем по границе, где меняется цвет пикселя
     for x in range(width - 1, -1, -1):
         if image.getpixel((x, 5)) != color:
             back_break = x
@@ -109,60 +110,100 @@ def concatenate_images_vertically(image1, image2):
     return new_image
 
 def process_images(images, graphs):
-    """Изменить размеры изображений в graphs и объединить каждую пару с изображениями из images."""
+    """
+        Изменить размеры изображений в graphs и объединить каждую пару с изображениями из images.
+        images - список с основными изображениями
+        graphs - список с нижними графиками
+    """
     combined_images = []
     for i in range(len(images)):
-        img1 = images[i]
-        img2 = graphs[i]
+        img = images[i]
+        graph = graphs[i]
         inx = 1 if len(images) > 1 else 0
 
-        img2_cropped = crop_from_right(img2)
+        # Обрезаем изображение графика справа, чтобы избиваиься от свободного пространства
+        graph_cropped = crop_from_right(graph)
+
+        # Вычисление новой высоты для изменения размера изображения графика
+        # Необходимо для того, чтобы длина верхней и нижней картинки были одинаковые
         aspect_ratio = crop_from_right(graphs[inx]).height / crop_from_right(graphs[inx]).width
         new_height = int(aspect_ratio * images[inx].width)
-        img2_resized = resize_image(img2_cropped, img1.width, new_height)
-        combined_image = concatenate_images_vertically(img1, img2_resized)
+        graph_resized = resize_image(graph_cropped, img.width, new_height)
+        # Склейка изображение вертикально
+        combined_image = concatenate_images_vertically(img, graph_resized)
 
         combined_images.append(combined_image)
     return combined_images
 
 
 def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=None):
+    """
+        Установка недостающих меток на график.
+        Аргументы: само изображение, ширина первой части изображения, ширина второй части,
+        количество частей изображения, индексы по высоте изображения для проставления меток.
+        Внимание! Передается итоговое уже склеенное изображение, количество частей изображения
+        необходимо для итерации в цикле, где расчитывается расстояние между метками по ширине частей
+    """
+    # Создание объекта ImageDraw, который необходим для рисования на изображении
     draw = ImageDraw.Draw(image)
 
     for i in range(length):
-        # font = ImageFont.truetype("arial.ttf", 11)
-        # font_graph = ImageFont.truetype("arial.ttf", 10)
+        # Выбор системного шрифта для основного изображения и графика
         font = get_system_font(13)
         font_graph = get_system_font(12)
 
         text = f'{i+1}000'
-        text_bbox = draw.textbbox((0, 0), text, font=font)  # Вычисляем размеры текста
+        # Вычисляем размеры текста
+        text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
+        # Вычисляем координату по X для проставления метки, в зависимости от того,
+        # на какой части изображения мы находимся (первой или последующих)
         if i == 0:
             text_x = width - text_width // 2
         else:
             text_x = (width + width_2 * i) - text_width // 2
+
+        # Отрисовка меток на графике
+        # bottom_break это высота, на которой будет располагаться метка на основном изображении
+        # bottom_comb это высота, на которой будет располагаться метка на графике
         draw.text((text_x, bottom_break + 2), text, fill="grey", font=font)
         if ui.checkBox_save_graph.isChecked():
             draw.text((text_x, bottom_comb + 2), text, fill="grey", font=font_graph)
-
+    # Возвращается итоговое изображение с метками, готовое к сохранению
     return image
 
 
 def save_image():
+    """
+        Сохранение изображения при нажатии кнопки pushButton_save_img.
+        Логика: при сохранении изображения сохраняется только часть, которая отображается на экране
+        (в режиме scale). Поэтому необходимо сдвигать изображение по длине профиля вручную и
+        сохранять части изображаения по отдельности, а потом склеивать их в одно общее изображение.
+        То же самое происходит с графиком в нижнем окне.
+        При выборе сохранения изображения с графиком, сначала соответственно склеиваются верхняя и нижняя картинки,
+        после чего скомбинированные изображения склеиваются последовательно друг с другом в итоговое изображение.
+    """
+
+    # Создаем объект экспортера PyQtGraph для основного изображения и настраиваем фиксированный размер изображения
     exporter = ImageExporter(radarogramma)
     exporter.parameters()['height'] = 610
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
 
+    # Спинбокс для выбора высоты изображения, которая нужна для обрезки изображения (в пикселях)
     crop_index = ui.spinBox_save_img.value()
 
+    # Сохранение изображения с графиком
     if ui.checkBox_save_graph.isChecked():
+        # Создаем объект экспортера для графика
         graph_exporter = ImageExporter(ui.graph.scene())
         graph_exporter.parameters()['width'] = 868
 
         list_paths = []
         list_graphs = []
+        # N - количество частей изображения
+        # В цикле сдвигаем шкалу для смены части изображения, затем
+        # сохраняем части основных изображений и графиков в соответствующие списки
         N = (count_measure + 399) // 400
         for i in range(N):
             n = i * 400
@@ -174,24 +215,25 @@ def save_image():
             list_paths.append(f'{i}_part.png')
             list_graphs.append(f'{i}_graph.png')
 
+        # Открываем изображения с помощью библиотеки PIL для дальнейшей работы
         images = [Image.open(path) for path in list_paths]
         graphs = [Image.open(path) for path in list_graphs]
 
+        # Выбираем основной цвет фона black/white
+        # Нужно для определения границ изображения для обрезки
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
 
-        bottom_break = images[0].height - 1
-        while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
-            bottom_break -= 1
-
+        # Обрезаем изображение снизу, чтобы убрать подписи ("Профиль, м")
         cropped_images = []
         for img in images:
             width, height = img.size
             cropped_img = img.crop((0, 0, width, height - 10))
             cropped_images.append(cropped_img)
-
         images = cropped_images
 
+        # Ищем границу смены цвета, чтобы определить индекс для обрезки изображения слева
+        # Нужно для того, чтобы убрать шкалу слева на всех изображениях кроме первого
         color_break, color_break_0, count_color = 0, 0, 0
         try:
             color = images[0].getpixel((color_break, crop_index))
@@ -208,10 +250,14 @@ def save_image():
             set_info(f'Некорректные данные: {e}', 'red')
             return
 
+        # Ищем границу смены цвета, чтобы определить индекс для обрезки изображения слева
+        # Нужно для того, чтобы убрать шкалу графика слева на всех изображениях после первого
+        # Для графика
         graph_break = 0
         while graphs[0].getpixel((graph_break, 2)) == color:
             graph_break += 1
 
+        # Обрезаем изображения слева по индексу, найденому ранее (color_break, graph_break)
         for i in range(len(images)):
             width, height = images[i].size
             left = color_break + 1 if i != 0 else 0
@@ -222,17 +268,22 @@ def save_image():
             left = graph_break + 1 if i != 0 else 0
             graphs[i] = graphs[i].crop((left, 0, width, height))
 
+        # Объединяем изображения
         combined_images = process_images(images, graphs)
 
+        # Находим суммарные для всех изображений длину и ширину и создаем объект Image
         total_width = sum(img.width for img in combined_images)
         max_height = max(img.height for img in combined_images)
         combined_image = Image.new('RGB', (total_width, max_height), color_short)
 
+        # Склеиваем изображения из combined_images последовательно в большую итоговую картинку
         x_offset = 0
         for img in combined_images:
             combined_image.paste(img, (x_offset, 0))
             x_offset += img.width
 
+        # Отрезка итогового изображения справа, чтобы убрать лишнее пустое пространство после графика
+        # (back_break + 23) нужен для того, чтобы был небольшой отступ и изображение обрезалось не вплотную
         back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
         color_pix = combined_image.getpixel((comb_width - 2, crop_index))
@@ -249,9 +300,15 @@ def save_image():
             else:
                 count_pix = 0
 
+        # Функция set_marks_scale нужна для того, чтобы проставить недостающие метки на шкалах
+        # Если избражение состоит только из одной части, то это не нужно
         if len(images) == 1:
             final_image = combined_image
         else:
+            bottom_break = images[0].height - 1
+            while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
+                bottom_break -= 1
+
             try:
                 bottom_comb = combined_image.height - 1
                 color_pix = combined_image.getpixel((combined_image.width - 5, bottom_comb))
@@ -263,9 +320,12 @@ def save_image():
                 while combined_image.getpixel((combined_image.width - 50, bottom_comb)) == color_pix:
                     bottom_comb -= 1
 
-            print(bottom_comb)
+            # Функция для проставления недостающих меток.
+            # Передаются: само изображение, ширина первой части изображения, ширина второй части,
+            # количество частей изображения, индексы по высоте изображения для проставления меток.
             final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
                                       len(combined_images), bottom_break, bottom_comb)
+
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
         if save_path == '':
             return
@@ -273,12 +333,16 @@ def save_image():
             save_path += '.png'
         final_image.save(save_path)
 
+        # Удаляем сохраненные части изображений, потому что больше они нам не нужны
         for file in list_paths:
             os.remove(file)
         for file in list_graphs:
             os.remove(file)
 
+    # Сохраняем изображение без графика
     else:
+        # N - количество частей изображения
+        # В цикле сохраняем основные изображения в список list_paths
         list_paths = []
         N = (count_measure + 399) // 400
         for i in range(N):
@@ -287,23 +351,24 @@ def save_image():
             radarogramma.setXRange(n, m, padding=0)
             exporter.export(f'{i}_part.png')
             list_paths.append(f'{i}_part.png')
-
+        # Открываем изображения с помощью библиотеки PIL для дальнейшей работы
         images = [Image.open(path) for path in list_paths]
+
+        # Обрезаем изображение снизу, чтобы убрать подписи ("Профиль, м")
         cropped_images = []
         for img in images:
             width, height = img.size
             cropped_img = img.crop((0, 0, width, height - 10))
             cropped_images.append(cropped_img)
-
         images = cropped_images
 
+        # Выбираем основной цвет фона black/white
+        # Нужно для определения границ изображения для обрезки
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
 
-        bottom_break = images[0].height - 1
-        while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
-            bottom_break -= 1
-
+        # Ищем границу смены цвета, чтобы определить индекс для обрезки изображения слева
+        # Нужно для того, чтобы убрать шкалу слева на всех изображениях кроме первого
         color_break, color_break_0, count_color = 0, 0, 0
         color = images[0].getpixel((color_break, crop_index))
         while images[0].getpixel((color_break, crop_index)) == color or count_color < 15:
@@ -316,20 +381,25 @@ def save_image():
             color_break += 1
         color_break = color_break_0
 
+        # Обрезаем изображения слева по индексу, найденому ранее (color_break)
         for i in range(len(images)):
             width, height = images[i].size
             left = color_break + 1 if i != 0 else 0
             images[i] = images[i].crop((left, 0, width, height))
 
+        # Находим суммарные для всех изображений длину и ширину и создаем объект Image
         total_width = sum(img.width for img in images)
         max_height = max(img.height for img in images)
         combined_image = Image.new('RGB', (total_width, max_height), color_short)
 
+        # Склеиваем изображения из images последовательно в большую итоговую картинку
         x_offset = 0
         for img in images:
             combined_image.paste(img, (x_offset, 0))
             x_offset += img.width
 
+        # Отрезка итогового изображения справа, чтобы убрать лишнее пустое пространство после графика
+        # (back_break + 23) нужен для того, чтобы был небольшой отступ и изображение обрезалось не вплотную
         back_break, back_break_0, count_pix = 0, 0, 0
         comb_width, comb_height = combined_image.size
         color_pix = combined_image.getpixel((comb_width - 2, crop_index))
@@ -346,9 +416,18 @@ def save_image():
             else:
                 count_pix = 0
 
+        # Функция set_marks_scale нужна для того, чтобы проставить недостающие метки на шкалах
+        # Если избражение состоит только из одной части, то это не нужно
         if len(images) == 1:
             final_image = combined_image
         else:
+            bottom_break = images[0].height - 1
+            while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
+                bottom_break -= 1
+
+            # Функция для проставления недостающих меток.
+            # Передаются: само изображение, ширина первой части изображения, ширина второй части,
+            # количество частей изображения, индексы по высоте изображения для проставления меток.
             final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
                                       len(images), bottom_break)
         save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
@@ -357,6 +436,8 @@ def save_image():
         if not save_path.endswith('.png'):
             save_path += '.png'
         final_image.save(save_path)
+
+        # Удаляем сохраненные части изображений, потому что больше они нам не нужны
         for file in list_paths:
             os.remove(file)
 
