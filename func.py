@@ -126,10 +126,12 @@ def get_object_id():
         pass
 
 
+# Функция получения id выбранного исследования
 def get_research_id():
     return int(ui.comboBox_research.currentText().split(' id')[-1])
 
 
+# Функция получения имени выбранного исследования
 def get_research_name():
     return ui.comboBox_research.currentText().split(' id')[0]
 
@@ -142,6 +144,7 @@ def get_object_name():
 # Функция получения имени выбранного объекта мониторинга
 def get_obj_monitor_name():
     return ui.comboBox_object_monitor.currentText()
+
 
 # Функция получения имени выбранного анализа
 def get_analysis_name():
@@ -166,6 +169,8 @@ def query_to_list(query):
     """ результаты запроса в список """
     return sum(list(map(list, query)), [])
 
+
+# функция проверяет, является ли переданное значение недопустимым по определённым критериям
 def is_invalid(value, threshold=1.7e38):
     return math.isnan(value) or math.isinf(value) or value > threshold
 
@@ -237,7 +242,6 @@ def draw_image(radar):
             ]
 
 
-
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
@@ -247,6 +251,7 @@ def draw_image(radar):
     radarogramma.getAxis('bottom').setScale(2.5)
 
     radarogramma.getAxis('left').setLabel('Время, нсек')
+    # отображение радораграммы с рельефом, вычисление коэффициента для натсройки шкалы по глубине профиля
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:

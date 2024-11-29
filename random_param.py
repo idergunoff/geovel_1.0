@@ -853,6 +853,10 @@ def push_random_param():
         return data_train, new_list_param
 
     def test_classif_estimator(estimators, data_val, list_param, labels, filename):
+        """
+
+        """
+
         list_estimator_roc = []
         list_estimator_percent = []
         list_estimator_recall, list_estimator_precision = [], []
@@ -1048,6 +1052,17 @@ def push_random_param():
 
 
     def start_random_param():
+        """
+            Запуск подбора параметров.
+            Собирается талица из рандомного набора параметров, выбранных из отмеченных в окне.
+            Собирается пайплан для указанной модели, после чего она проходит кросс-валидацию.
+            С выхода получаем 5 разных обученных моделей.
+            Все модлели передаются в test_classif_estimator для оценки, на выходе получаем списки
+            roc_auc_score, percent, precision, recall, f1 по результатам 5 моделей.
+            Все логи и результаты записываются в файл .txt, который в дальнейшем обрабатывается
+            для отображения результатов в программе "random_param_view".
+        """
+
         start_time = datetime.datetime.now()
         filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                   filter="TXT (*.txt)")

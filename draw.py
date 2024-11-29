@@ -446,85 +446,11 @@ def save_image():
         for file in list_paths:
             os.remove(file)
 
-    # img.save('radarogramma.png')
-    #
-    # # Открываем изображение
-    # result_image = Image.open("radarogramma.png")
-    #
-    # # Получаем размеры изображения
-    # width, height = result_image.size
-    #
-    # # Задаем отступы для увеличения изображения
-    # lp = 50
-    # bp = 25
-    #
-    # # Создаем новое изображение с учетом отступов
-    # new_width = width + lp
-    # new_height = height + bp
-    # new_image = Image.new("RGB", (new_width, new_height), "black")
-    #
-    # # Вставляем текущее изображение с учетом отступов
-    # new_image.paste(result_image, (lp, 0))
-    #
-    # # Создаем объект для рисования на новом изображении
-    # draw = ImageDraw.Draw(new_image)
-    # # Создаем объект для рисования
-    # # draw = ImageDraw.Draw(result_image)
-    #
-    # font = ImageFont.load_default()
-    #
-    # # Рисуем ось x (горизонтальную линию внизу)
-    # draw.line([(0 + lp, height - 1), (width + lp, height - 1)], fill="white", width=1)
-    #
-    # # Рисуем ось y (вертикальную линию слева)
-    # draw.line([(0 + lp, 0), (0 + lp, height)], fill="white", width=1)
-    #
-    # # Добавляем деления и подписи на оси X
-    # for x in range(0, width, 40):
-    #     draw.line([(x + lp, height - 5), (x + lp, height + 5)], fill="white", width=1)
-    #     tick_label = f"{int(x * 2.5)}"
-    #     draw.text((x + lp - 10, height + 10), tick_label, fill="white", font=font)
-    #
-    # # Добавляем деления и подписи на оси Y
-    # for y in range(0, height, 64):
-    #     draw.line([(-5 + lp, y), (5 + lp, y)], fill="white", width=2)
-    #     tick_label = f"{y * 8}"
-    #     draw.text((-30 + lp, y + 5), tick_label, fill="white", font=font)
-    #
-    # # Добавляем тонкую светлую сетку грида
-    # dash_length = 5
-    # for x in range(0, width, 40):
-    #     for y in range(0, height, dash_length * 2):
-    #         draw.point((x + lp, y), fill=(200, 200, 200))
-    #
-    # for y in range(0, height, 64):
-    #     for x in range(0, width, dash_length * 2):
-    #         draw.point((x + lp, y), fill=(200, 200, 200))
-    #
-    # # Подписываем оси
-    # draw.text((width + lp - 20, height - 20), "X", fill="white", font=font)
-    # draw.text((10 + lp, 10), "Y", fill="white", font=font)
-    #
-    # # Сохраняем результат
-    # try:
-    #     file_name = f"{get_profile_name()}.png"
-    #     fn = QFileDialog.getSaveFileName(
-    #         caption=f'Сохранить файл "{get_profile_name()}"',
-    #         directory=file_name,
-    #         filter="Изображения (*.png)")
-    #     print(fn)
-    #     new_image.save(fn[0])
-    #     set_info(f'Сохранено в файл: {fn[0]}', 'green')
-    # except ValueError:
-    #     pass
-    #
-    # # Удаляем файл
-    # del_img = 'radarogramma.png'
-    # if os.path.exists(del_img):
-    #     os.remove(del_img)
 
 
 def show_grid():
+    """ Отображение грида """
+
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
     else:
@@ -854,7 +780,7 @@ def draw_relief():
         prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
         if ui.checkBox_vel.isChecked():
             if session.query(BindingLayerPrediction).join(ProfileModelPrediction).filter(
-                ProfileModelPrediction.profile_id == prof.id).count() == 0:
+                    ProfileModelPrediction.profile_id == prof.id).count() == 0:
                 ui.checkBox_vel.setChecked(False)
                 set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
                 return
