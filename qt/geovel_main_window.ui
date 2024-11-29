@@ -1164,8 +1164,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>58</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1214,7 +1214,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="1">
+                <item row="0" column="2">
                  <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0">
                   <item row="0" column="1" colspan="2">
                    <widget class="QLabel" name="label_15">
@@ -1257,6 +1257,18 @@
                    </widget>
                   </item>
                  </layout>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QCheckBox" name="checkBox_prof_intersect">
+                  <property name="font">
+                   <font>
+                    <pointsize>10</pointsize>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>prof-prof</string>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
@@ -5885,7 +5897,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

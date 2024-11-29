@@ -1892,33 +1892,34 @@ def calc_distance(x1, y1, x2, y2):
     """ Функция для вычисления расстояния между двумя точками """
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
-
-def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
-    """ Функция для поиска точек пересечения и выбора ближайшей """
-    intersection_points = []
-
-    # Перебираем все пары соседних точек в профилях
-    for i in range(len(list_x1) - 1):
-        for j in range(len(list_x2) - 1):
-            x1, y1 = list_x1[i], list_y1[i]
-            x2, y2 = list_x1[i + 1], list_y1[i + 1]
-            x3, y3 = list_x2[j], list_y2[j]
-            x4, y4 = list_x2[j + 1], list_y2[j + 1]
-
-            # Вычисляем знаменатель для проверки пересечения отрезков
-            den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-
-            # Если отрезки пересекаются, вычисляем координаты точки пересечения
-            if den != 0:
-                ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den
-                ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den
-
-                # Проверяем, что точка пересечения находится на отрезках
-                if 0 <= ua <= 1 and 0 <= ub <= 1:
-                    intersect_x = x1 + ua * (x2 - x1)
-                    intersect_y = y1 + ua * (y2 - y1)
-                    intersection_points.append((intersect_x, intersect_y, i, j))
-    return intersection_points
+#
+# def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
+#     """ Функция для поиска точек пересечения и выбора ближайшей """
+#     intersection_points = []
+#
+#     # Перебираем все пары соседних точек в профилях
+#     for i in range(len(list_x1) - 1):
+#         for j in range(len(list_x2) - 1):
+#             x1, y1 = list_x1[i], list_y1[i]
+#             x2, y2 = list_x1[i + 1], list_y1[i + 1]
+#             x3, y3 = list_x2[j], list_y2[j]
+#             x4, y4 = list_x2[j + 1], list_y2[j + 1]
+#
+#             # Вычисляем знаменатель для проверки пересечения отрезков
+#             den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+#
+#             # Если отрезки пересекаются, вычисляем координаты точки пересечения
+#             if den != 0:
+#                 ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den
+#                 ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den
+#
+#                 # Проверяем, что точка пересечения находится на отрезках
+#                 if 0 <= ua <= 1 and 0 <= ub <= 1:
+#                     intersect_x = x1 + ua * (x2 - x1)
+#                     intersect_y = y1 + ua * (y2 - y1)
+#                     intersection_points.append((intersect_x, intersect_y, i, j))
+#
+#     return intersection_points
 
     # # Если нет точек пересечения, возвращаем пустой список
     # if not intersection_points:
@@ -1927,6 +1928,49 @@ def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
     # # Находим ближайшую точку пересечения к началу координат
     # closest_point = min(intersection_points, key=lambda p: calc_distance(0, 0, p[0], p[1]))
     # return closest_point[2], closest_point[3]
+
+
+def find_intersection_points(list_x1, list_y1, list_x2, list_y2):
+    """ Функция для поиска точек пересечения с улучшенной производительностью """
+    intersection_points = []
+
+    # Предварительная обработка: кэширование длин списков
+    len_x1 = len(list_x1)
+    len_x2 = len(list_x2)
+
+    # Оптимизация 1: Кэширование координат для уменьшения обращений к спискам
+    for i in range(len_x1 - 1):
+        x1, y1 = list_x1[i], list_y1[i]
+        x2, y2 = list_x1[i + 1], list_y1[i + 1]
+
+        for j in range(len_x2 - 1):
+            x3, y3 = list_x2[j], list_y2[j]
+            x4, y4 = list_x2[j + 1], list_y2[j + 1]
+
+            # Оптимизация 2: Быстрая проверка ограничивающих прямоугольников
+            if (max(x1, x2) < min(x3, x4) or
+                    max(x3, x4) < min(x1, x2) or
+                    max(y1, y2) < min(y3, y4) or
+                    max(y3, y4) < min(y1, y2)):
+                continue
+
+            # Оптимизация 3: Использование детерминанта для проверки пересечения
+            den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+
+            # Проверка вырождения и пересечения
+            if den == 0:
+                continue
+
+            ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den
+            ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den
+
+            # Проверка нахождения точки на отрезках с допуском дляFloat
+            if 0 <= ua <= 1 and 0 <= ub <= 1:
+                intersect_x = x1 + ua * (x2 - x1)
+                intersect_y = y1 + ua * (y2 - y1)
+                intersection_points.append((intersect_x, intersect_y, i, j))
+
+    return intersection_points
 
 
 def get_attributes():

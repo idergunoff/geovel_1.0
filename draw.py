@@ -3,6 +3,7 @@ from fileinput import filename
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from networkx.algorithms.operators.binary import intersection
 from sympy.physics.units import velocity
 
 from func import *
@@ -32,6 +33,7 @@ def draw_radarogram():
     ui.checkBox_vel.setChecked(False)
     ui.checkBox_velmod.setChecked(False)
     ui.checkBox_model_nn.setChecked(False)
+    ui.checkBox_prof_intersect.setChecked(False)
     ui.listWidget_model_nn.clear()
     clear_current_velocity_model()
     clear_current_profile()
@@ -96,9 +98,11 @@ def crop_from_right(image):
             break
     return combined_image
 
+
 def resize_image(image, width, new_height):
     """Изменить размер изображения до заданной ширины, сохраняя пропорции."""
     return image.resize((width, new_height), Image.Resampling.LANCZOS)
+
 
 def concatenate_images_vertically(image1, image2):
     """Объединить два изображения по вертикали."""
@@ -108,6 +112,7 @@ def concatenate_images_vertically(image1, image2):
     new_image.paste(image1, (0, 0))
     new_image.paste(image2, (0, image1.height))
     return new_image
+
 
 def process_images(images, graphs):
     """
@@ -1191,3 +1196,39 @@ def draw_velocity_model_color():
             remove_fill_form()
     else:
         remove_fill_form()
+
+
+def draw_profile_intersection():
+    '''
+    Вынести пересечения с другими профилями на радарамограмму
+    '''
+    for key, value in globals().items():
+        if key.startswith('profile_intersection_'):
+            radarogramma.removeItem(globals()[key])
+
+    if not ui.checkBox_prof_intersect.isChecked():
+        return
+
+    x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
+    y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+
+
+    for p in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
+        if p.id == get_profile_id():
+            continue
+
+        x_prof_p = json.loads(p.x_pulc)
+        y_prof_p = json.loads(p.y_pulc)
+
+        intersection = find_intersection_points(x_prof, y_prof, x_prof_p, y_prof_p)
+        if len(intersection) > 0:
+
+            curve = pg.PlotCurveItem(x=[intersection[0][2], intersection[0][2]], y=[0, 512], pen=pg.mkPen(color='#c0bfbc', width=2))
+            radarogramma.addItem(curve)
+            globals()[f'profile_intersection_{p.id}'] = curve
+
+
+            text_item = pg.TextItem(text=p.title, color='#c0bfbc')
+            text_item.setPos(intersection[0][2], -15)
+            radarogramma.addItem(text_item)
+            globals()[f'profile_intersection_text_{p.id}'] = text_item
