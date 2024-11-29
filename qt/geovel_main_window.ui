@@ -1819,18 +1819,25 @@
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0,0,0">
+                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0,0,0,0">
                   <item row="0" column="2">
-                   <widget class="QCheckBox" name="checkBox_filter_cls">
+                   <widget class="QCheckBox" name="checkBox_corr_pred">
                     <property name="text">
-                     <string>filter cls</string>
+                     <string>correct</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QCheckBox" name="checkBox_use_land">
+                    <property name="text">
+                     <string>land</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="3">
-                   <widget class="QCheckBox" name="checkBox_use_land">
+                   <widget class="QCheckBox" name="checkBox_filter_cls">
                     <property name="text">
-                     <string>land</string>
+                     <string>filter cls</string>
                     </property>
                    </widget>
                   </item>
@@ -1851,9 +1858,15 @@
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QCheckBox" name="checkBox_corr_pred">
+                   <widget class="QToolButton" name="toolButton_check_uf">
+                    <property name="toolTip">
+                     <string>check uf</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(5, 244, 215);</string>
+                    </property>
                     <property name="text">
-                     <string>correct</string>
+                     <string>?</string>
                     </property>
                    </widget>
                   </item>
@@ -1921,6 +1934,9 @@
               </item>
               <item row="8" column="0">
                <layout class="QGridLayout" name="gridLayout_104">
+                <item row="1" column="0">
+                 <widget class="QListWidget" name="listWidget_model_nn"/>
+                </item>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_90" columnstretch="0,0,1">
                   <item row="0" column="0">
@@ -1962,8 +1978,59 @@
                   </item>
                  </layout>
                 </item>
-                <item row="1" column="0">
-                 <widget class="QListWidget" name="listWidget_model_nn"/>
+                <item row="1" column="1">
+                 <widget class="QListWidget" name="listWidget_ix_prod"/>
+                </item>
+                <item row="0" column="1">
+                 <layout class="QGridLayout" name="gridLayout_161">
+                  <item row="0" column="2">
+                   <widget class="QToolButton" name="toolButton_ix_prod_draw">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>draw</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QToolButton" name="toolButton_ix_prod_excel">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(153, 193, 241);</string>
+                    </property>
+                    <property name="text">
+                     <string>excel</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QToolButton" name="toolButton_ix_prod_add">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(170, 255, 127);</string>
+                    </property>
+                    <property name="text">
+                     <string>+</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QToolButton" name="toolButton_ix_prod_rmv">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 153, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QCheckBox" name="checkBox_ix_prod_norm">
+                    <property name="text">
+                     <string>norm</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </item>
@@ -5897,7 +5964,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

@@ -22,6 +22,7 @@ from lineup_train_models import *
 from nn_torch_classifier import *
 from nn_torch_regression import *
 from feature_selection import *
+from index_productivity import *
 
 MainWindow.show()
 
@@ -306,6 +307,7 @@ ui.comboBox_profile.currentTextChanged.connect(update_list_velocity_model)
 ui.comboBox_profile.activated.connect(calc_add_features_profile)
 ui.comboBox_profile.activated.connect(calc_profile_features)
 ui.comboBox_profile.currentTextChanged.connect(update_list_bind_vel_prediction)
+ui.comboBox_profile.currentTextChanged.connect(index_prod_list_update)
 
 ui.comboBox_plast.activated.connect(update_param_combobox)
 ui.comboBox_plast.activated.connect(draw_formation)
@@ -499,6 +501,12 @@ ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
 ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
 ui.pushButton_correct_predict.clicked.connect(correct_profile_model_predict)
 ui.checkBox_corr_pred.clicked.connect(draw_profile_model_prediction)
+ui.toolButton_check_uf.clicked.connect(check_uf)
+
+ui.toolButton_ix_prod_add.clicked.connect(index_prod_add)
+ui.toolButton_ix_prod_rmv.clicked.connect(index_prod_remove)
+ui.toolButton_ix_prod_draw.clicked.connect(index_prod_draw)
+ui.toolButton_ix_prod_excel.clicked.connect(index_prod_save)
 
 ########## Velocity Prediction ############
 ui.pushButton_add_bind_vel_pred.clicked.connect(add_bind_vel_prediction)
@@ -546,6 +554,7 @@ update_list_binding()
 update_list_velocity_model()
 update_list_model_prediction()
 update_list_bind_vel_prediction()
+index_prod_list_update()
 
 time2 = datetime.datetime.now() - time
 print(time2)

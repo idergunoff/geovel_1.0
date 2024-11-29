@@ -38,6 +38,7 @@ class Research(Base):
 
     object = relationship('GeoradarObject', back_populates='researches')
     profiles = relationship('Profile', back_populates='research')
+    index_productivity = relationship('IndexProductivity', back_populates='research')
 
 
 class Profile(Base):
@@ -96,6 +97,7 @@ class ProfileModelPrediction(Base):
     profile = relationship('Profile', back_populates='predictions')
     binding_layer_predictions = relationship('BindingLayerPrediction', back_populates='prediction')
     corrected = relationship('PredictionCorrect', back_populates='prediction')
+    index_productivity = relationship('IndexProductivity', back_populates='prediction')
 
 
 class PredictionCorrect(Base):
@@ -106,6 +108,17 @@ class PredictionCorrect(Base):
     correct = Column(Text)
 
     prediction = relationship('ProfileModelPrediction', back_populates='corrected')
+
+
+class IndexProductivity(Base):
+    __tablename__ = 'index_productivity'
+
+    id = Column(Integer, primary_key=True)
+    research_id = Column(Integer, ForeignKey('research.id'))
+    prediction_id = Column(Integer, ForeignKey('profile_model_prediction.id'))
+
+    research = relationship('Research', back_populates='index_productivity')
+    prediction = relationship('ProfileModelPrediction', back_populates='index_productivity')
 
 
 class BindingLayerPrediction(Base):

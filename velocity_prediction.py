@@ -225,3 +225,25 @@ def correct_profile_model_predict():
     ui_cmp.spinBox_int_min.valueChanged.connect(draw_int_line)
 
     CorrModelPred.exec_()
+
+
+def check_uf():
+    predict = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+    list_predict_uf = json.loads(predict.prediction)
+
+    formation = session.query(Formation).filter_by(profile_id=get_profile_id()).first()
+    list_land = json.loads(formation.land)
+    list_top = json.loads(formation.top)
+
+    graph = [list_predict_uf[i] - (list_land[i] - list_top[i]) for i in range(len(list_predict_uf))]
+
+    number = list(range(1, len(graph) + 1))
+    ui.graph.clear()
+    cc = (120, 120, 120, 255)
+    curve = pg.PlotCurveItem(x=number, y=graph, pen=cc)  # создаем объект класса PlotCurveIte
+    curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
+    ui.graph.addItem(curve)  # добавляем график данных на график
+    ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+    ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
+    ui.graph.getAxis('bottom').setScale(2.5)
+    ui.graph.getAxis('bottom').setLabel('Профиль, м')
