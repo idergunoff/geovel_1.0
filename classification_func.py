@@ -11,6 +11,8 @@ from random_param import push_random_param
 from feature_selection import *
 
 
+
+""" Класс модели PyTorch"""
 class Model(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
         super(Model, self).__init__()
@@ -123,6 +125,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             ui_cls.checkBox_smote.setChecked(False)
 
     def build_torch_model(training_sample_train):
+        """ Сборка модели PyTorch"""
+
         output_dim = 1
 
         epochs = ui_cls.spinBox_epochs_torch.value()
@@ -501,12 +505,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
     def draw_yellow_brick():
-        # if ui_cls.checkBox_cvw.isChecked():
-        #     training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(data_train,
-        #         list_marker, mark, list_param, random_seed=ui.spinBox_seed.value(), test_size=0.2)
-        # else:
-        #     training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-        #         training_sample, markup, test_size=0.20, random_state=ui.spinBox_seed.value(), stratify=markup)
+        """ Отрисовка графиков YellowBrick (не используем) """
 
         training_sample = np.array(data_train[list_param].values.tolist())
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
@@ -521,8 +520,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
-
-        start_time = datetime.datetime.now()
 
         list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
         data_train_by_well = data_train.copy()
@@ -589,14 +586,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             axes_cvw[cvw_row, cvw_col].set_title('ROC-кривая')
             axes_cvw[cvw_row, cvw_col].legend(loc="lower right")
 
-        train_time = datetime.datetime.now() - start_time
-
         axes_cvw[1, 2].bar(range(5), list_accuracy)
 
         fig_cvw.tight_layout()
         fig_cvw.show()
 
     def set_marks():
+        """ Установка маркеров для модели PyTorch """
+
         list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
         labels = {}
         labels[list_cat[0]] = 0
@@ -637,7 +634,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         pipe.fit(training_sample_train, markup_train)
 
-        # Оценка точности на всей обучающей выборке
+        # Получение метрик качества модели
         test_accuracy = pipe.score(training_sample_test, markup_test)
         if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
             train_accuracy = pipe.score(training_sample, np.array([labels[i] for i in markup], dtype=np.float32))
@@ -656,8 +653,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         precision = precision_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
         recall = recall_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
         f1 = f1_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
-
-        print('precision ', precision, 'recall ', recall, 'f1 ', f1, 'roc_auc ', roc_auc)
 
         text_model += f'test_precision: {round(precision, 4)},\ntest_recall: {round(recall, 4)},' \
                       f'\ntest_f1: {round(f1, 4)},\nroc_auc: {round(roc_auc, 4)},\nвремя обучения: {train_time}'
@@ -682,6 +677,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             data_tsne = pd.DataFrame(train_tsne)
             data_tsne[mark] = preds_train
 
+        # Кросс-валидация
         if ui_cls.checkBox_cross_val.isChecked():
             kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
 
@@ -697,6 +693,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             else:
                 scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
 
+        # Оценка важности параметров для моделей, которые поддерживают .feature_importances_
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or \
                 model_name == 'ABC' or model_name == 'LGBM':
             if not ui_cls.checkBox_baggig.isChecked():
@@ -711,33 +708,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                                 imp_name_params.append(list_param[n])
                                 imp_params.append(i)
 
-        # def model_predict_proba(X):
-        #     return pipe['model'].predict_proba(X)
-        #
-        # print(training_sample_test.shape)
-        # print(type(training_sample_test))
-        # print('DATA ', training_sample_test[:100, :10])
-        # list_names = data_train.iloc[:, 2:].columns
-        # print('LIST_NAMES ', list_names)
-        # explainer = shap.KernelExplainer(model_predict_proba, training_sample_train[:100])
-        # shap_values = explainer(training_sample_test[:30])
-        # print('shap values ', shap_values)
-        # print('shap values shape ', shap_values.shape)
-        # print(f"SHAP values shape for class 0: {shap_values[0].shape}")
-        # print(f"SHAP values shape for class 1: {shap_values[0, 0].shape}")
-        # print(f"SHAP values shape for class 2: {shap_values[0][0].shape}")
-        # shap.plots.bar(shap_values[:, :, 0])
-        # shap.summary_plot(shap_values, training_sample_test[:30], plot_type="bar", feature_names=list_names)
-        # shap.summary_plot(shap_values, training_sample_test[:30], feature_names=list_names)
-
-
-
-        # shap.plots.heatmap(shap_values[0])
-        #
-        # shap.plots.beeswarm(shap_values[0, 0], training_sample_test[:10])
-        # shap.plots.waterfall(shap_values[0][0], max_display=20)
-
-
+        # Построение графиков по результатам предсказаний модели
         (fig_train, axes) = plt.subplots(nrows=1, ncols=3)
         fig_train.set_size_inches(25, 10)
         if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
@@ -796,6 +767,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         fig_train.tight_layout()
         fig_train.show()
 
+
+        # Сохранение таблицы с расчетами модели
         if ui_cls.checkBox_save_table.isChecked():
             preds_train = pipe.predict(training_sample)
             probability = pipe.predict_proba(training_sample)
@@ -816,6 +789,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         if not ui_cls.checkBox_save_model.isChecked():
             return
+        # Сохранение моделей
         if type_case == 'georadar':
             save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save)
         if type_case == 'geochem':
@@ -1133,7 +1107,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
 def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param):
-    print(list_param)
+    """ Сохранение моделей в TrainedModelClass """
+
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Сохранение модели',
@@ -1164,6 +1139,8 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
         pass
 
 def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train):
+    """ Сохранение моделей в GeochemTrainedModel """
+
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Сохранение модели',

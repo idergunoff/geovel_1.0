@@ -346,6 +346,8 @@ def add_profile_mlp():
 
 
 def update_well_markup_mlp():
+    """ Обновить список маркированных скважин """
+
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
         return
@@ -379,6 +381,8 @@ def update_well_markup_mlp():
 
 
 def remove_well_markup_mlp():
+    """ Удалить маркированную скважину """
+
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     if not markup:
         return
@@ -400,17 +404,15 @@ def remove_well_markup_mlp():
         pass
 
 
-
-
-
 def choose_marker_mlp():
-    # Функция выбора маркера MLP
-    # Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
-    # пользовательского интерфейса
+    """ Функция выбора маркера MLP
+        Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
+        пользовательского интерфейса """
 
     # Получение информации о маркере из БД по его ID
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
     # Если ID маркера не найден в БД, то функция завершается
+
     if not markup:
         return
 
@@ -441,6 +443,8 @@ def choose_marker_mlp():
 
 
 def split_well_train_test_mlp():
+    """ Размеление AnalysisMLP на train и test выборки методами clusters/greedy """
+
     markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
     list_markers = [mrk.id for mrk in session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).all()]
     list_mkp_id = [mkp.id for mkp in markups if not mkp.type_markup]
@@ -542,6 +546,8 @@ def split_well_train_test_mlp():
 
 
 def add_param_signal_mlp():
+    """ Добавление одного параметра Signal """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_signal_mlp.currentText()
@@ -557,6 +563,8 @@ def add_param_signal_mlp():
 
 
 def add_all_param_signal_mlp():
+    """ Добавление всех параметров Signal """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
@@ -573,6 +581,8 @@ def add_all_param_signal_mlp():
 
 
 def add_param_crl_mlp():
+    """ Добавление одного параметра CRL """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     if session.query(ParameterMLP).filter_by(
@@ -588,6 +598,8 @@ def add_param_crl_mlp():
 
 
 def add_param_crl_nf_mlp():
+    """ Добавление всех параметров CRL """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     if session.query(ParameterMLP).filter_by(
@@ -603,6 +615,8 @@ def add_param_crl_nf_mlp():
 
 
 def add_param_geovel_mlp():
+    """ Добавление основных атрибутов сигнала """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_mlp.currentText()
@@ -622,7 +636,32 @@ def add_param_geovel_mlp():
         set_info(f'Параметр {param} уже добавлен', 'red')
 
 
+def add_all_param_geovel_mlp():
+    """ Добавление всех атрибутов сигнала """
+
+    new_list_param = ['X', 'Y'] + list_param_geovel + list_all_additional_features
+    for param in list_param_geovel:
+        for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
+            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
+                if param in new_list_param:
+                    set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
+                    new_list_param.remove(param)
+    for param in new_list_param:
+        if session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).filter(
+                ParameterMLP.parameter == param).count() > 0:
+            set_info(f'Параметр {param} уже добавлен', 'red')
+            continue
+        add_param_mlp(param)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata()
+    update_list_param_mlp_no_update()
+
+
+
 def add_param_list_mlp():
+    """ Копирование параметров из строки ввода lineEdit_string """
+
     analysis_id = get_MLP_id()
     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
     session.query(AnalysisMLP).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
@@ -693,27 +732,9 @@ def add_param_list_mlp():
     update_line_edit_exception_mlp()
 
 
-def add_all_param_geovel_mlp():
-    new_list_param = ['X', 'Y'] + list_param_geovel + list_all_additional_features
-    for param in list_param_geovel:
-        for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
-            if not session.query(literal_column(f'Formation.{param}')).filter(Formation.id == m.formation_id).first()[0]:
-                if param in new_list_param:
-                    set_info(f'Параметр {param} отсутствует для профиля {m.profile.title}', 'red')
-                    new_list_param.remove(param)
-    for param in new_list_param:
-        if session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).filter(
-                ParameterMLP.parameter == param).count() > 0:
-            set_info(f'Параметр {param} уже добавлен', 'red')
-            continue
-        add_param_mlp(param)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
-    set_color_button_updata()
-    update_list_param_mlp_no_update()
-
-
 def add_param_profile_mlp():
+    """ Добавление одного параметра PROF """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_prof_ftr_mlp.currentText()
@@ -729,6 +750,8 @@ def add_param_profile_mlp():
 
 
 def add_all_param_profile_mlp():
+    """ Добавление всех параметров PROF """
+
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     for param in list_all_additional_features:
@@ -744,6 +767,8 @@ def add_all_param_profile_mlp():
 
 
 def add_param_distr_mlp():
+    """ Добавление одного параметра distr """
+
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith(f'distr_{ui.comboBox_atrib_distr_mlp.currentText()}'):
             session.query(ParameterMLP).filter_by(id=param.id).update({
@@ -763,7 +788,30 @@ def add_param_distr_mlp():
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
 
+def add_all_param_distr_mlp():
+    """ Добавление всех параметров distr """
+
+    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'distr_SigCRL',
+                  'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt', 'sep_SigCRL']
+    count = ui.spinBox_count_distr_mlp.value()
+    for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
+        if param.parameter.startswith('distr') or param.parameter.startswith('sep'):
+            session.query(ParameterMLP).filter_by(id=param.id).delete()
+            session.commit()
+    for distr_param in list_distr:
+        new_param = f'{distr_param}_{count}'
+        new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
+        session.add(new_param_mlp)
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    set_color_button_updata()
+    update_list_param_mlp_no_update()
+    set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
+
+
 def add_param_sep_mlp():
+    """ Добавление одного параметра sep """
+
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith(f'sep_{ui.comboBox_atrib_distr_mlp.currentText()}'):
             session.query(ParameterMLP).filter_by(id=param.id).update({
@@ -783,25 +831,10 @@ def add_param_sep_mlp():
              f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
 
 
-def add_all_param_distr_mlp():
-    list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'distr_SigCRL', 'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt', 'sep_SigCRL']
-    count = ui.spinBox_count_distr_mlp.value()
-    for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
-        if param.parameter.startswith('distr') or param.parameter.startswith('sep'):
-            session.query(ParameterMLP).filter_by(id=param.id).delete()
-            session.commit()
-    for distr_param in list_distr:
-        new_param = f'{distr_param}_{count}'
-        new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
-        session.add(new_param_mlp)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
-    set_color_button_updata()
-    update_list_param_mlp_no_update()
-    set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
-
 
 def add_param_mfcc_mlp():
+    """ Добавление одного параметра mfcc """
+
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
         if param.parameter.startswith(f'mfcc_{ui.comboBox_atrib_mfcc_mlp.currentText()}'):
             session.query(ParameterMLP).filter_by(id=param.id).update({
@@ -822,6 +855,8 @@ def add_param_mfcc_mlp():
 
 
 def add_all_param_mfcc_mlp():
+    """ Добавление всех параметров mfcc """
+
     list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt', 'mfcc_SigCRL']
     count = ui.spinBox_count_mfcc_mlp.value()
     for param in session.query(ParameterMLP).filter(ParameterMLP.analysis_id == get_MLP_id()).all():
@@ -840,6 +875,8 @@ def add_all_param_mfcc_mlp():
 
 
 def add_predict_mlp():
+    """ Добавление параметра predict, который является предсказанием обученной модели """
+
     try:
         predict = session.query(ProfileModelPrediction).filter_by(
             id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
@@ -862,6 +899,8 @@ def add_predict_mlp():
 
 
 def remove_param_geovel_mlp():
+    """ Удаление одного основного атрибута  """
+
     param = ui.listWidget_param_mlp.currentItem().text().split(' ')[0]
     if param:
         if (param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc') or
@@ -881,6 +920,8 @@ def remove_param_geovel_mlp():
 
 
 def remove_all_param_geovel_mlp():
+    """ Удаление всех атрибутов """
+
     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -929,6 +970,11 @@ def update_list_well_markup_mlp():
 
 
 def update_list_param_mlp_no_update():
+    """
+        Обновление списка параметров после добавления новых.
+        НЕ пересобирает таблицу
+    """
+
     data = session.query(AnalysisMLP.up_data).filter_by(id=get_MLP_id()).first()
     if data[0]:
         return
@@ -943,6 +989,11 @@ def update_list_param_mlp_no_update():
 
 
 def update_list_param_mlp(db=False):
+    """
+        Обновление списка параметров после добавления новых.
+        Пересобирает таблицу
+    """
+
     start_time = datetime.datetime.now()
     data_train, list_param = build_table_train(db, 'mlp')
     list_marker = get_list_marker_mlp('georadar')
@@ -977,6 +1028,8 @@ def update_list_param_mlp(db=False):
 
 
 def update_line_edit_exception_mlp():
+    """ Обновление строки для Exception параметров """
+
     ui.lineEdit_signal_except.clear()
     ui.lineEdit_crl_except.clear()
     except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
@@ -986,6 +1039,8 @@ def update_line_edit_exception_mlp():
 
 
 def set_color_button_updata():
+    """ Установка цвета кнопки "UP DATA" """
+
     mlp = session.query(AnalysisMLP).filter(AnalysisMLP.id == get_MLP_id()).first()
     btn_color = 'background-color: rgb(191, 255, 191);' if mlp.up_data else 'background-color: rgb(255, 185, 185);'
     ui.pushButton_updata_mlp.setStyleSheet(btn_color)
@@ -1148,6 +1203,8 @@ def calc_class_profile():
 
 
 def draw_result_mlp(working_data, curr_form, color_marker):
+    """ Отрисовка результата модели MLP """
+
     colors = {}
     for m in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all():
         colors[m.title] = m.color
@@ -1156,6 +1213,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     list_up = json.loads(curr_form.layer_up.layer_line)  # Получение списка с верхними границами формации
     list_down = json.loads(curr_form.layer_down.layer_line)  # Получение списка со снижными границами формации
 
+    # С учетом рельефа
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:
@@ -1168,9 +1226,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     previous_element = None
     list_dupl = []
 
-
     if color_marker:
-
         for index, current_element in enumerate(working_data['mark']):
             if current_element == previous_element:
                 list_dupl.append(index)
@@ -1186,8 +1242,6 @@ def draw_result_mlp(working_data, curr_form, color_marker):
             y_up = [list_up[i] for i in list_dupl]
             y_down = [list_down[i] for i in list_dupl]
             draw_fill_result(list_dupl, y_up, y_down, colors[previous_element])
-
-
     else:
         for index, probability in enumerate(working_data[col]):
             color = get_color_rainbow(probability)
@@ -1231,7 +1285,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
 
 
 def get_color_rainbow(probability):
-
+    """ Возвращает цвет в зависимости от значения предсказания модели """
     rainbow_colors =[
         "#0000FF",  # Синий
         "#0066FF",  # Голубой
@@ -1248,7 +1302,6 @@ def get_color_rainbow(probability):
         return rainbow_colors[int(probability * 10)]
     except (IndexError, ValueError):
         return '#FF0000'
-
 
 
 def calc_object_class():
@@ -1463,6 +1516,8 @@ def calc_object_class():
 
 
 def calc_corr_mlp():
+    """ Расчет корреяции между признаками """
+
     if not session.query(AnalysisMLP).filter(AnalysisMLP.id == get_MLP_id()).first().up_data:
         update_list_param_mlp()
     data_train, list_param = build_table_train(True, 'mlp')
@@ -1493,6 +1548,8 @@ def calc_corr_mlp():
 
 
 def anova_mlp():
+    """ Отрисовка графиков ANOVA """
+
     Anova = QtWidgets.QDialog()
     ui_anova = Ui_Anova()
     ui_anova.setupUi(Anova)
@@ -1537,6 +1594,8 @@ def anova_mlp():
 
 
 def clear_fake_mlp():
+    """ Очистка выбросов """
+
     session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).update({'list_fake': None},
                                                                                   synchronize_session='fetch')
     session.commit()
@@ -1592,6 +1651,8 @@ def clear_fake_mlp():
 
 
 def get_model_param_list():
+    """ Вывод параметров модели в отдельное окно и сравнение с параметрами другой модели """
+
     try:
         model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
     except AttributeError:
@@ -1853,6 +1914,8 @@ def rename_model_class():
 
 
 def list_param_to_lineEdit():
+    """ Вывод списка параметров в строку lineEdit_string"""
+
     model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
         Qt.UserRole)).first()
 
@@ -1883,6 +1946,8 @@ def list_param_to_lineEdit():
 
 
 def get_feature_importance_cls():
+    """ Вывод важности признаков в терминал (!)"""
+
     model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(
         Qt.UserRole)).first()
 
@@ -1908,6 +1973,8 @@ def get_feature_importance_cls():
 
 
 def markup_to_excel_mlp():
+    """ Сохранение анализа в Excel """
+
     list_col = ['маркер', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
                                       'альтитуда', 'удаленность', 'X', 'Y']
     analisis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()

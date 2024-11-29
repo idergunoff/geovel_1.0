@@ -14,8 +14,7 @@ from random_param_reg import push_random_param_reg
 from feature_selection import *
 
 
-
-
+""" Структура модели PyTorch """
 class RegressionModel(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
         super(RegressionModel, self).__init__()
@@ -195,8 +194,6 @@ def add_all_well_markup_reg():
     update_list_well_markup_reg()
 
 
-
-
 def update_list_well_markup_reg():
     """Обновить список обучающих скважин"""
     ui.listWidget_well_regmod.clear()
@@ -233,6 +230,8 @@ def update_list_well_markup_reg():
 
 
 def remove_well_markup_reg():
+    """ Удалить скважину """
+
     markup = session.query(MarkupReg).filter(MarkupReg.id == get_markup_regmod_id()).first()
     if not markup:
         return
@@ -256,9 +255,11 @@ def remove_well_markup_reg():
 
 
 def choose_markup_regmod():
-    # Функция выбора маркера регрессионной модели
-    # Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
-    # пользовательского интерфейса
+    """
+        Функция выбора маркера регрессионной модели
+        Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
+        пользовательского интерфейса
+    """
 
     # Получение информации о маркере из БД по его ID
     markup = session.query(MarkupReg).filter(MarkupReg.id == get_markup_regmod_id()).first()
@@ -291,6 +292,8 @@ def choose_markup_regmod():
 
 
 def update_all_well_markup_reg():
+    """ Обновляет количество измерений для всех скважин """
+
     for mrp in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
         if mrp.type_markup == 'intersection':
             return
@@ -311,8 +314,9 @@ def update_all_well_markup_reg():
     update_list_well_markup_reg()
 
 
-
 def update_well_markup_reg():
+    """ Обновить измерения для скважины объекта """
+
     markup = session.query(MarkupReg).filter(MarkupReg.id == get_markup_regmod_id()).first()
     if not markup:
         return
@@ -340,6 +344,8 @@ def update_well_markup_reg():
 
 
 def split_well_train_test():
+    """ Разделение выборки на train и test методами clusters/greedy"""
+
     markups = session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()).all()
     list_mkp_id = [mkp.id for mkp in markups]
     list_data = [[mkp.well.x_coord, mkp.well.y_coord, mkp.target_value] for mkp in markups]
@@ -430,10 +436,8 @@ def split_well_train_test():
         set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
 
 
-
-
-
 def add_param_signal_reg():
+    """ Добавление одного параметра Signal """
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_signal_reg.currentText()
@@ -450,6 +454,8 @@ def add_param_signal_reg():
 
 
 def add_param_crl_reg():
+    """ Добавление одного параметра CRL """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     if session.query(ParameterReg).filter_by(
@@ -466,6 +472,8 @@ def add_param_crl_reg():
 
 
 def add_param_crl_nf_reg():
+    """ Добавление параметра CRL NF """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     if session.query(ParameterReg).filter_by(
@@ -482,6 +490,8 @@ def add_param_crl_nf_reg():
 
 
 def add_all_param_signal_reg():
+    """ Добавление всех параметров Signal """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
@@ -499,6 +509,8 @@ def add_all_param_signal_reg():
 
 
 def add_param_geovel_reg():
+    """ Добавление основных атрибутов """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_geovel_param_reg.currentText()
@@ -520,6 +532,8 @@ def add_param_geovel_reg():
 
 
 def add_all_param_geovel_reg():
+    """ Добавление всех основных атрибутов """
+
     new_list_param = ['X', 'Y'] +list_param_geovel + list_all_additional_features
     for param in list_param_geovel:
         for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
@@ -541,6 +555,8 @@ def add_all_param_geovel_reg():
 
 
 def add_param_profile_reg():
+    """ Добавление параметров PROF """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     param = ui.comboBox_prof_ftr_reg.currentText()
@@ -556,6 +572,8 @@ def add_param_profile_reg():
 
 
 def add_all_param_profile_reg():
+    """ Добавление всех параметров PROF """
+
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
     for param in list_all_additional_features:
@@ -571,6 +589,8 @@ def add_all_param_profile_reg():
 
 
 def add_param_distr_reg():
+    """ Добавление параметров distr """
+
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
         if param.parameter.startswith(f'distr_{ui.comboBox_atrib_distr_reg.currentText()}'):
             session.query(ParameterReg).filter_by(id=param.id).update({
@@ -591,6 +611,8 @@ def add_param_distr_reg():
 
 
 def add_param_sep_reg():
+    """ Добавление параметров SEP """
+
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
         if param.parameter.startswith(f'sep_{ui.comboBox_atrib_distr_reg.currentText()}'):
             session.query(ParameterReg).filter_by(id=param.id).update({
@@ -612,6 +634,8 @@ def add_param_sep_reg():
 
 
 def add_all_param_distr_reg():
+    """ Добавление всех параметров distr """
+
     list_distr = ['distr_Abase', 'distr_diff', 'distr_At', 'distr_Vt', 'distr_Pht', 'distr_Wt', 'distr_SigCRL',
                   'sep_Abase', 'sep_diff', 'sep_At', 'sep_Vt', 'sep_Pht', 'sep_Wt', 'sep_SigCRL']
     count = ui.spinBox_count_distr_reg.value()
@@ -632,6 +656,8 @@ def add_all_param_distr_reg():
 
 
 def add_param_mfcc_reg():
+    """ Добавление параметров mfcc """
+
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
         if param.parameter.startswith(f'mfcc_{ui.comboBox_atrib_mfcc_reg.currentText()}'):
             session.query(ParameterReg).filter_by(id=param.id).update({
@@ -653,6 +679,8 @@ def add_param_mfcc_reg():
 
 
 def add_all_param_mfcc_reg():
+    """ Добавление всех параметров mfcc """
+
     list_mfcc = ['mfcc_Abase', 'mfcc_diff', 'mfcc_At', 'mfcc_Vt', 'mfcc_Pht', 'mfcc_Wt', 'mfcc_SigCRL']
     count = ui.spinBox_count_mfcc_reg.value()
     for param in session.query(ParameterReg).filter(ParameterReg.analysis_id == get_regmod_id()).all():
@@ -672,6 +700,8 @@ def add_all_param_mfcc_reg():
 
 
 def add_predict_reg():
+    """ Добавление параметра с предсказанями обученной модели"""
+
     try:
         predict = session.query(ProfileModelPrediction).filter_by(
             id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
@@ -695,6 +725,8 @@ def add_predict_reg():
 
 
 def remove_param_geovel_reg():
+    """ Удаление одного параметра """
+
     try:
         param = ui.listWidget_param_reg.currentItem().text().split(' ')[0]
     except AttributeError:
@@ -718,6 +750,8 @@ def remove_param_geovel_reg():
 
 
 def remove_all_param_geovel_reg():
+    """ Удаление всех параметров """
+
     session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
@@ -726,6 +760,8 @@ def remove_all_param_geovel_reg():
 
 
 def update_list_param_reg_no_update():
+    """ Обновление списка параметров БЕЗ сбора таблицы """
+
     data = session.query(AnalysisReg.up_data).filter_by(id=get_regmod_id()).first()
     if data[0]:
         return
@@ -739,6 +775,8 @@ def update_list_param_reg_no_update():
 
 
 def update_list_param_regmod(db=False):
+    """ Обновление списка параметров со сбором таблицы """
+
     data_train, list_param = build_table_train(db, 'regmod')
     ui.listWidget_param_reg.clear()
     list_param_reg = data_train.columns.tolist()[2:]
@@ -751,6 +789,8 @@ def update_list_param_regmod(db=False):
 
 
 def update_line_edit_exception_reg():
+    """ Обновление строки исключений Exception для параметров """
+
     ui.lineEdit_signal_except_reg.clear()
     ui.lineEdit_crl_except_reg.clear()
     except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
@@ -760,12 +800,16 @@ def update_line_edit_exception_reg():
 
 
 def set_color_button_updata_regmod():
+    """ Изменение цвета кнопки UP DATA"""
+
     reg = session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first()
     btn_color = 'background-color: rgb(191, 255, 191);' if reg.up_data else 'background-color: rgb(255, 185, 185);'
     ui.pushButton_updata_regmod.setStyleSheet(btn_color)
 
 
 def add_param_list_reg():
+    """ Получить параметры из строки """
+
     analysis_id = get_regmod_id()
     session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
     session.query(AnalysisReg).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
@@ -834,13 +878,13 @@ def add_param_list_reg():
     update_line_edit_exception_reg()
     update_list_param_reg_no_update()
 
-
-def str_to_interval(string):
-    if string == '':
-        return ''
-    parts = string.split("-")
-    result = [float(part.replace(",", ".")) for part in parts]
-    return result
+#
+# def str_to_interval(string):
+#     if string == '':
+#         return ''
+#     parts = string.split("-")
+#     result = [float(part.replace(",", ".")) for part in parts]
+#     return result
 
 def train_regression_model():
     """ Расчет регрессионной модели """
@@ -888,6 +932,8 @@ def train_regression_model():
 
 
     def build_torch_model(training_sample_train):
+        """ Сбор модели PyTorch """
+
         output_dim = 1
 
         epochs = ui_r.spinBox_epochs_torch.value()
@@ -1222,6 +1268,8 @@ def train_regression_model():
         return model_class, text_model, model_name
 
     def add_model_reg_to_lineup():
+        """ Добавить модель в LineUp """
+
         scaler = StandardScaler()
 
         pipe_steps = []
@@ -1511,6 +1559,8 @@ def train_regression_model():
 
 
         def search_param():
+            """ Подбор оптимальных параметров с помощью Optuna """
+
             global data
             filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                       filter="Excel Files (*.xlsx)")
@@ -2476,6 +2526,8 @@ def remove_trained_model_regmod():
 
 
 def calc_profile_model_regmod():
+    """ Расчет профиля обученной моделью """
+
     try:
         working_data, curr_form = build_table_test('regmod')
     except TypeError:
@@ -2546,6 +2598,8 @@ def calc_profile_model_regmod():
 
 
 def calc_object_model_regmod():
+    """ Расчет объекта обученной моделью """
+
     global flag_break
     working_data_result = pd.DataFrame()
     list_formation = []
@@ -2759,6 +2813,8 @@ def copy_regmod():
 
 
 def calc_corr_regmod():
+    """ Расчет корреляции """
+
     if not session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).first().up_data:
         update_list_param_regmod()
     data_train, list_param = build_table_train(True, 'regmod')
@@ -2789,6 +2845,8 @@ def calc_corr_regmod():
 
 
 def anova_regmod():
+    """ Отображение ANOVA """
+
     Anova = QtWidgets.QDialog()
     ui_anova = Ui_Anova()
     ui_anova.setupUi(Anova)
@@ -2835,6 +2893,8 @@ def anova_regmod():
 
 
 def clear_fake_reg():
+    """ Удаление выбросов """
+
     session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).update({'list_fake': None},
                                                                                   synchronize_session='fetch')
     session.commit()
@@ -2846,6 +2906,8 @@ def clear_fake_reg():
 
 
 def get_model_param_list_reg():
+    """ Функция для вывода параметров модели и сравнения с параметрами других моделей """
+
     try:
         model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
     except AttributeError:
@@ -3037,6 +3099,7 @@ def import_model_reg():
 
 
 def export_well_markup_reg():
+    """ Сохранение тренировочных точек """
 
     dir = QFileDialog.getExistingDirectory()
     if not dir:
@@ -3151,6 +3214,8 @@ def add_crl_except_reg():
 
 
 def list_param_reg_to_lineEdit():
+    """ Выгрузка параметров в строку """
+
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
         Qt.UserRole)).first()
 
@@ -3181,6 +3246,8 @@ def list_param_reg_to_lineEdit():
 
 
 def get_feature_importance_reg():
+    """ Вывод наиболее значимых параметров для моделей, поддерживающих feature_importances """
+
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(
         Qt.UserRole)).first()
 
@@ -3208,6 +3275,8 @@ def get_feature_importance_reg():
 
 
 def markup_to_excel_reg():
+    """ Сохранение результатов анализа в файл Excel """
+
     list_col = ['целевое значение', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
                 'альтитуда', 'удаленность', 'X', 'Y']
     analisis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
