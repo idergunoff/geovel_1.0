@@ -800,6 +800,14 @@ def tsne_geochem():
         update_listwidget_geochem_point()
 
 
+    def check_param_all():
+        all_check(ui_tsne.listWidget_check_param, ui_tsne.checkBox_param_all)
+
+
+    def check_point_all():
+        all_check(ui_tsne.listWidget_check_point, ui_tsne.checkBox_point_all)
+
+
 
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_tsne)
     ui_tsne.listWidget_point.currentItemChanged.connect(draw_graph_anova)
@@ -810,6 +818,8 @@ def tsne_geochem():
     # ui_tsne.listWidget_point.clicked.connect(set_list_point)
     ui_tsne.checkBox_name_point.stateChanged.connect(draw_graph_tsne)
     ui_tsne.checkBox_name_point.stateChanged.connect(draw_graph_anova)
+    ui_tsne.checkBox_param_all.stateChanged.connect(check_param_all)
+    ui_tsne.checkBox_point_all.stateChanged.connect(check_point_all)
     ui_tsne.listWidget_param.currentItemChanged.connect(draw_graph_anova)
     ui_tsne.radioButton_boxen.clicked.connect(draw_graph_anova)
     ui_tsne.radioButton_strip.clicked.connect(draw_graph_anova)
@@ -1189,8 +1199,11 @@ def draw_point_graph():
     #         continue
     #     pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
-    def calc_mean_well(well_name: str, list_param: list):
-        data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
+    def calc_mean_well(well_name: str, list_param: list, list_point: list):
+        if ui_pg.checkBox_only_check.isChecked():
+            data_mean = data_plot.loc[(data_plot['well'] == well_name) & (data_plot['point'].isin(list_point))][list_param]
+        else:
+            data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
         list_result = []
         for param in list_param:
             if ui_pg.radioButton_mean.isChecked():
@@ -1230,18 +1243,20 @@ def draw_point_graph():
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
         list_well_graph = get_list_check_checkbox(ui_pg.listWidget_well_graph)
 
-        for p in list_point:
-            if ui_pg.checkBox_marker.isChecked():
-                plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
-            else:
-                plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p)
+        if not ui_pg.checkBox_only_mean.isChecked():
+            for p in list_point:
+                if ui_pg.checkBox_marker.isChecked():
+                    plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
+                else:
+                    plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p)
+
         num_param = range(len(list_param))
 
         for wg in list_well_graph:
             if ui_pg.checkBox_marker.isChecked():
-                plt.plot(calc_mean_well(wg, list_param), label=f'mean_{wg}', marker='o', linestyle='--', linewidth=3)
+                plt.plot(calc_mean_well(wg, list_param, list_point), label=f'mean_{wg}', marker='o', linestyle='--', linewidth=3)
             else:
-                plt.plot(calc_mean_well(wg, list_param), label=f'mean_{wg}', linestyle='--', linewidth=3)
+                plt.plot(calc_mean_well(wg, list_param, list_point), label=f'mean_{wg}', linestyle='--', linewidth=3)
 
         if ui_pg.checkBox_conf_int.isChecked():
             for wg in list_well_graph:
@@ -1311,14 +1326,6 @@ def draw_point_graph():
         draw_graph()
         set_list_point()
 
-    def all_check(widget, check):
-        check = True if check.isChecked() else False
-        for i in range(widget.count()):
-            item = widget.item(i)
-            if isinstance(item, QListWidgetItem):
-                checkbox = widget.itemWidget(item)
-                if isinstance(checkbox, QCheckBox):
-                    checkbox.setChecked(check)
 
     set_list_point()
     draw_graph()
@@ -1331,10 +1338,19 @@ def draw_point_graph():
     ui_pg.radioButton_mean.clicked.connect(draw_graph)
     ui_pg.radioButton_median.clicked.connect(draw_graph)
     ui_pg.checkBox_conf_int.clicked.connect(draw_graph)
+    ui_pg.checkBox_only_mean.clicked.connect(draw_graph)
+    ui_pg.checkBox_only_check.clicked.connect(draw_graph)
     PointGraph.exec_()
 
 
-
+def all_check(widget, check):
+    check = True if check.isChecked() else False
+    for i in range(widget.count()):
+        item = widget.item(i)
+        if isinstance(item, QListWidgetItem):
+            checkbox = widget.itemWidget(item)
+            if isinstance(checkbox, QCheckBox):
+                checkbox.setChecked(check)
 
 # def find_optimal_params_add_one_at_a_time(data, well1, well2, initial_params):
 #     current_params = [initial_params[0], initial_params[1]]

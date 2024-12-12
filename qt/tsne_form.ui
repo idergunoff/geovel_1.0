@@ -108,18 +108,29 @@
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_8">
-        <item row="0" column="0">
-         <widget class="QPushButton" name="pushButton_to_maket">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(172, 244, 166);</string>
-          </property>
-          <property name="text">
-           <string>TO MAKET</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="0">
          <widget class="QListWidget" name="listWidget_check_param"/>
+        </item>
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_10" columnstretch="0,1">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_param_all">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_to_maket">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(172, 244, 166);</string>
+            </property>
+            <property name="text">
+             <string>TO MAKET</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
@@ -180,7 +191,17 @@
         </item>
         <item row="1" column="0">
          <layout class="QGridLayout" name="gridLayout_9">
-          <item row="0" column="0">
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButton_point_to_field">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(172, 244, 166);</string>
+            </property>
+            <property name="text">
+             <string>TO FIELD</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_point_to_fake">
             <property name="styleSheet">
              <string notr="true">background-color: rgb(172, 244, 166);</string>
@@ -190,13 +211,10 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_point_to_field">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(172, 244, 166);</string>
-            </property>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_point_all">
             <property name="text">
-             <string>TO FIELD</string>
+             <string/>
             </property>
            </widget>
           </item>

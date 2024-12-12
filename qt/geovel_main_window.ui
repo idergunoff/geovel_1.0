@@ -241,7 +241,7 @@
                  </layout>
                 </item>
                 <item row="4" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,9,0,1,1">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,0,0,9,0,1,1">
                   <item>
                    <widget class="QLabel" name="label_6">
                     <property name="text">
@@ -251,6 +251,13 @@
                   </item>
                   <item>
                    <widget class="QComboBox" name="comboBox_plast"/>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_param_count">
+                    <property name="text">
+                     <string>n</string>
+                    </property>
+                   </widget>
                   </item>
                   <item>
                    <widget class="QComboBox" name="comboBox_param_plast">
@@ -1164,8 +1171,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5964,7 +5971,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

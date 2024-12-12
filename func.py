@@ -630,6 +630,7 @@ def update_param_combobox():
     index = ui.comboBox_param_plast.findText(current_text)  # находим индекс сохраненного текста в комбобоксе
     if index != -1:  # если сохраненный текст есть в комбобоксе, то выбираем его
         ui.comboBox_param_plast.setCurrentIndex(index)
+    ui.label_param_count.setText(str(ui.comboBox_param_plast.count()))
     draw_param()  # отрисовываем параметр
     update_layers()  # обновляем список слоев в соответствии с выбранным параметром
 

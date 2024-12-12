@@ -110,6 +110,13 @@
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="2" column="0">
+          <widget class="QCheckBox" name="checkBox_only_check">
+           <property name="text">
+            <string>only check</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
           <spacer name="verticalSpacer_4">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -121,6 +128,16 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item row="1" column="0">
+          <widget class="QRadioButton" name="radioButton_median">
+           <property name="text">
+            <string>median</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">buttonGroup</string>
+           </attribute>
+          </widget>
          </item>
          <item row="0" column="0">
           <widget class="QRadioButton" name="radioButton_mean">
@@ -135,14 +152,11 @@
            </attribute>
           </widget>
          </item>
-         <item row="1" column="0">
-          <widget class="QRadioButton" name="radioButton_median">
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="checkBox_only_mean">
            <property name="text">
-            <string>median</string>
+            <string>only mean</string>
            </property>
-           <attribute name="buttonGroup">
-            <string notr="true">buttonGroup</string>
-           </attribute>
           </widget>
          </item>
         </layout>
