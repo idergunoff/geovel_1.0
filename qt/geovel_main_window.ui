@@ -1171,8 +1171,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>98</width>
-                       <height>38</height>
+                       <width>372</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3618,6 +3618,16 @@ Therm</string>
                      <widget class="QRadioButton" name="radioButton_greedy_mlp">
                       <property name="text">
                        <string>greedy</string>
+                      </property>
+                      <attribute name="buttonGroup">
+                       <string notr="true">buttonGroup_2</string>
+                      </attribute>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QRadioButton" name="radioButton_object_mlp">
+                      <property name="text">
+                       <string>object</string>
                       </property>
                       <attribute name="buttonGroup">
                        <string notr="true">buttonGroup_2</string>
