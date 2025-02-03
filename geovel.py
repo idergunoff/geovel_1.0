@@ -23,6 +23,7 @@ from nn_torch_classifier import *
 from nn_torch_regression import *
 from feature_selection import *
 from index_productivity import *
+from pareto import *
 
 MainWindow.show()
 
@@ -228,6 +229,7 @@ ui.listWidget_trained_model_class.customContextMenuRequested.connect(rename_mode
 ui.toolButton_list_param_to_line.clicked.connect(list_param_to_lineEdit)
 ui.toolButton_feature_importance.clicked.connect(get_feature_importance_cls)
 ui.toolButton_excel_markup_mlp.clicked.connect(markup_to_excel_mlp)
+ui.pushButton_pareto.clicked.connect(pareto_start)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)

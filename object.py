@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplicatio
 from PyQt5.QtGui import QBrush, QColor, QCursor
 from pyqtgraph.Qt import QtWidgets
 
+from platypus import Problem, Real, Binary, NSGAII, GDE3, RandomGenerator, SBX, PM, GAOperator, ProcessPoolEvaluator, GeneticAlgorithm
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *
@@ -45,6 +46,7 @@ from qt.random_param import *
 from qt.random_search_reg import *
 from qt.feature_selection import *
 from qt.parameter_dependence import *
+from qt.pareto_form import *
 from qt.corrected_model_pred import *
 
 import numpy as np

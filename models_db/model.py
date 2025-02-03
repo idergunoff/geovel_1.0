@@ -872,6 +872,7 @@ class AnalysisMLP(Base):
     markups = relationship('MarkupMLP', back_populates='analysis')
     trained_models = relationship('TrainedModelClass', back_populates='analysis')
     exceptions = relationship('ExceptionMLP', back_populates='analysis')
+    pareto_analysis = relationship('ParetoAnalysis', back_populates='analysis_mlp')
 
 
 
@@ -1446,6 +1447,32 @@ class GeochemTrainedModel(Base):
     comment = Column(Text)
 
     maket = relationship('GeochemMaket', back_populates='g_trained_models')
+
+
+######### PARETO #########
+
+class ParetoAnalysis(Base):
+    __tablename__ = 'pareto_analysis'
+
+    id = Column(Integer, primary_key=True)
+    analysis_mlp_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    n_iter = Column(Integer)
+    problem_type = Column(String) # 'MINIMIZE' or 'MAXIMIZE' or 'NO'
+    start_params = Column(Text)
+
+    analysis_mlp = relationship("AnalysisMLP", back_populates="pareto_analysis")
+    pareto_results = relationship("ParetoResult", back_populates="pareto_analysis")
+
+
+class ParetoResult(Base):
+    __tablename__ = 'pareto_result'
+
+    id = Column(Integer, primary_key=True)
+    pareto_analysis_id = Column(Integer, ForeignKey('pareto_analysis.id'))
+    pareto_data = Column(Text)
+    distance = Column(Float)
+
+    pareto_analysis = relationship("ParetoAnalysis", back_populates="pareto_results")
 
 
 

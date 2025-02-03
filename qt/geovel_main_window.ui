@@ -1171,8 +1171,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>372</width>
-                       <height>170</height>
+                       <width>58</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3649,6 +3649,16 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
+                  <item row="2" column="2">
+                   <widget class="QPushButton" name="pushButton_pareto">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>PARETO</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                 <item row="1" column="0">
@@ -3658,15 +3668,13 @@ Therm</string>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_95">
-                    <item row="0" column="0">
-                     <widget class="QLabel" name="label_count_markup_mlp">
-                      <property name="font">
-                       <font>
-                        <pointsize>9</pointsize>
-                       </font>
+                    <item row="0" column="4">
+                     <widget class="QPushButton" name="pushButton_clear_fake">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
                       <property name="text">
-                       <string>count markup mlp</string>
+                       <string>clear fake</string>
                       </property>
                      </widget>
                     </item>
@@ -3683,17 +3691,19 @@ Therm</string>
                       </property>
                      </spacer>
                     </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_clear_fake">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_count_markup_mlp">
+                      <property name="font">
+                       <font>
+                        <pointsize>9</pointsize>
+                       </font>
                       </property>
                       <property name="text">
-                       <string>clear fake</string>
+                       <string>count markup mlp</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QPushButton" name="pushButton_edit_marker_mlp">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 255, 191);</string>
@@ -3831,13 +3841,25 @@ Therm</string>
                 </item>
                 <item row="2" column="0">
                  <layout class="QGridLayout" name="gridLayout_89">
-                  <item row="1" column="5">
-                   <widget class="QPushButton" name="pushButton_corr_mlp">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_count_param_mlp">
+                    <property name="font">
+                     <font>
+                      <pointsize>9</pointsize>
+                     </font>
                     </property>
                     <property name="text">
-                     <string>CORR</string>
+                     <string>count param mlp</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QCheckBox" name="checkBox_kf">
+                    <property name="toolTip">
+                     <string>расчет критерия Фишира</string>
+                    </property>
+                    <property name="text">
+                     <string/>
                     </property>
                    </widget>
                   </item>
@@ -3851,18 +3873,6 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="label_count_param_mlp">
-                    <property name="font">
-                     <font>
-                      <pointsize>9</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>count param mlp</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="3">
                    <widget class="QPushButton" name="pushButton_anova_mlp">
                     <property name="styleSheet">
@@ -3873,13 +3883,13 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="1">
-                   <widget class="QCheckBox" name="checkBox_kf">
-                    <property name="toolTip">
-                     <string>расчет критерия Фишира</string>
+                  <item row="1" column="5">
+                   <widget class="QPushButton" name="pushButton_corr_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
                     </property>
                     <property name="text">
-                     <string/>
+                     <string>CORR</string>
                     </property>
                    </widget>
                   </item>
@@ -5981,7 +5991,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

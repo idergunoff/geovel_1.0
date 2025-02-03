@@ -464,6 +464,16 @@ def get_profile_coords(profile_id):
     return np.array([[x_prof[0], y_prof[0]], [x_prof[-1], y_prof[-1]]])
 
 
+@lru_cache(maxsize=None)
+def get_profile_by_id(profile_id):
+    return session.query(Profile).filter(Profile.id == profile_id).first()
+
+
+@lru_cache(maxsize=None)
+def get_well_by_id(well_id):
+    return session.query(Well).filter(Well.id == well_id).first()
+
+
 def check_profile_grid_by_start_stop(p_id, g_id, min_dist=100):
     grid_data = get_grid_data(g_id)
     profile_coords = get_profile_coords(p_id)
@@ -2806,3 +2816,14 @@ def get_system_font(size):
 def savgol_line(obj, window_len):
     wl = window_len if window_len < len(obj) else len(obj) if len(obj) % 2 == 1 else len(obj) - 1
     return savgol_filter(obj, wl, 3)
+
+
+
+def all_check(widget, check):
+    check = True if check.isChecked() else False
+    for i in range(widget.count()):
+        item = widget.item(i)
+        if isinstance(item, QListWidgetItem):
+            checkbox = widget.itemWidget(item)
+            if isinstance(checkbox, QCheckBox):
+                checkbox.setChecked(check)
