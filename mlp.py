@@ -403,11 +403,7 @@ def remove_well_markup_mlp():
     elif result == QtWidgets.QMessageBox.No:
         pass
 
-
-def choose_marker_mlp():
-    """ Функция выбора маркера MLP
-        Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
-        пользовательского интерфейса """
+def show_well_markup_mlp():
 
     # Получение информации о маркере из БД по его ID
     markup = session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).first()
@@ -415,6 +411,14 @@ def choose_marker_mlp():
 
     if not markup:
         return
+
+    choose_markup_mlp(markup)
+
+
+def choose_markup_mlp(markup):
+    """ Функция выбора маркера MLP
+        Выбирает маркер, на основе сохраненных данных из базы данных, и затем обновляет все соответствующие виджеты
+        пользовательского интерфейса """
 
     # Установка соответствующих значений виджетов пользовательского интерфейса
     ui.comboBox_object.setCurrentText(f'{markup.profile.research.object.title} id{markup.profile.research.object_id}')
@@ -1610,6 +1614,22 @@ def clear_fake_mlp():
     session.commit()
     build_table_train(False, 'mlp')
     update_list_well_markup_mlp()
+
+
+def remove_fake_current_markup():
+    """ Очистка выбросов выбранной скважины """
+
+    session.query(MarkupMLP).filter(MarkupMLP.id == get_markup_mlp_id()).update({'list_fake': None},
+                                                                                  synchronize_session='fetch')
+    session.commit()
+    markup = session.query(MarkupMLP).filter_by(id=get_markup_mlp_id()).first()
+    set_info(f'Выбросы для скважины "{ui.listWidget_well_mlp.currentItem().text()}" очищены.', 'green')
+    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    session.commit()
+    update_list_well_markup_mlp()
+    set_color_button_updata()
+    update_list_param_mlp_no_update()
+    choose_markup_mlp(markup)
 
 
 # def test():

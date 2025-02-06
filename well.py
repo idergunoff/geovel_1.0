@@ -13,7 +13,7 @@ def add_well():
     ui_w = Ui_add_well()
     ui_w.setupUi(Add_Well)
     Add_Well.show()
-    Add_Well.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    Add_Well.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     ui_w.lineEdit_well_alt.setText('0')
     ui_w.toolButton_del.hide()
@@ -187,29 +187,29 @@ def add_wells():
                     except ValueError:
                         continue
             else:
-                n_new += 1
-                new_well = Well(
-                    name=str(pd_wells[name_cell][i]),
-                    x_coord=float(process_string(pd_wells[x_cell][i])),
-                    y_coord=float(process_string(pd_wells[y_cell][i])),
-                    alt=round(float(process_string(pd_wells[alt_cell][i])), 2)
-                )
-                session.add(new_well)
-                session.commit()
-                for lr in list_layers:
-                    try:
-                        if pd_wells[lr][i] != empty_value:
-                            if ui_wl.checkBox_deep.isChecked():
-                                depth = round(float(process_string(pd_wells[lr][i])), 2)
-                            else:
-                                depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
-                            session.add(Boundary(
-                                well_id=new_well.id,
-                                depth=depth,
-                                title=str(lr)
-                            ))
-                    except ValueError:
-                        continue
+                try:
+                    n_new += 1
+                    new_well = Well(
+                        name=str(pd_wells[name_cell][i]),
+                        x_coord=float(process_string(pd_wells[x_cell][i])),
+                        y_coord=float(process_string(pd_wells[y_cell][i])),
+                        alt=round(float(process_string(pd_wells[alt_cell][i])), 2)
+                    )
+                    session.add(new_well)
+                    session.commit()
+                    for lr in list_layers:
+                            if pd_wells[lr][i] != empty_value:
+                                if ui_wl.checkBox_deep.isChecked():
+                                    depth = round(float(process_string(pd_wells[lr][i])), 2)
+                                else:
+                                    depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
+                                session.add(Boundary(
+                                    well_id=new_well.id,
+                                    depth=depth,
+                                    title=str(lr)
+                                ))
+                except ValueError:
+                    continue
                 for opt in list_opt:
                     try:
                         if pd_wells[opt][i] != empty_value:
