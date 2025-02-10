@@ -225,7 +225,7 @@ def pareto_start():
             distance = np.linalg.norm(centroid_0 - centroid_1)
             count = np.sum(selected_features)
 
-            print(distance, count)
+            print(distance, count, ui_prt.progressBar_1.value())
 
             if ui_prt.radioButton_pareto_no.isChecked():
                 return [distance]
@@ -311,7 +311,6 @@ def pareto_start():
 
 
             for solution in solutions:
-                print(solution["features"], solution["distance"])
                 new_pareto_result = ParetoResult(
                     pareto_analysis_id = new_pareto.id,
                     pareto_data = json.dumps(list(solution["features"])),
@@ -408,8 +407,6 @@ def pareto_start():
         # Обновление канвы
         canvas_best_param.draw()
 
-        print(dict_params)
-
 
     def calc_correlation():
         pareto_analysis = session.query(ParetoAnalysis).filter_by(
@@ -426,7 +423,6 @@ def pareto_start():
 
         corr_data = pd.DataFrame.from_dict(dict_params, orient='index')
         corr_data = corr_data.transpose()
-        print(corr_data)
         corr_result = corr_data.corr()
 
         dict_corr = {}

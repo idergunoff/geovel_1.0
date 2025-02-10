@@ -11,12 +11,15 @@ def update_list_bind_vel_prediction():
     bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
     ui.listWidget_bind_vel.clear()
     for i in bindings:
-        if i.prediction.type_model == 'cls':
-            model = session.query(TrainedModelClass).filter_by(id=i.prediction.model_id).first()
-        else:
-            model = session.query(TrainedModelReg).filter_by(id=i.prediction.model_id).first()
-        item = f'{i.layer.layer_title}_{i.prediction.type_model}-{model.title}_id{i.id}'
-        ui.listWidget_bind_vel.addItem(item)
+        try:
+            if i.prediction.type_model == 'cls':
+                model = session.query(TrainedModelClass).filter_by(id=i.prediction.model_id).first()
+            else:
+                model = session.query(TrainedModelReg).filter_by(id=i.prediction.model_id).first()
+            item = f'{i.layer.layer_title}_{i.prediction.type_model}-{model.title}_id{i.id}'
+            ui.listWidget_bind_vel.addItem(item)
+        except AttributeError:
+            pass
 
 
 def add_bind_vel_prediction():
