@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>PARETO</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_3" rowstretch="3,1">
+  <layout class="QGridLayout" name="gridLayout_3" rowstretch="3,1,0">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,1">
      <item row="0" column="0">
@@ -56,9 +56,23 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0,1,1,1,0,0">
+     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1,1,0,1,0,0">
       <item>
-       <widget class="QListWidget" name="listWidget_pareto_analysis"/>
+       <layout class="QGridLayout" name="gridLayout_14">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="pushButton_rm_pareto">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(252, 171, 171);</string>
+          </property>
+          <property name="text">
+           <string>REMOVE</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QListWidget" name="listWidget_pareto_analysis"/>
+        </item>
+       </layout>
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_12">
@@ -97,7 +111,17 @@
          <widget class="QListWidget" name="listWidget_check_param"/>
         </item>
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_10" columnstretch="0,1">
+         <layout class="QGridLayout" name="gridLayout_10" columnstretch="0,1,0">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_save_mask">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(172, 244, 166);</string>
+            </property>
+            <property name="text">
+             <string>SAVE MASK</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_param_all">
             <property name="text">
@@ -105,107 +129,53 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_to_maket">
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButton_export_mask">
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(172, 244, 166);</string>
+             <string notr="true">background-color: rgb(153, 193, 241);</string>
             </property>
             <property name="text">
-             <string>TO MAKET</string>
+             <string>EXPORT MASK</string>
             </property>
            </widget>
           </item>
          </layout>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QListWidget" name="listWidget_point"/>
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_7">
-          <item row="0" column="3">
-           <widget class="QToolButton" name="toolButton_lof_all">
-            <property name="toolTip">
-             <string>выбрвать все образцы</string>
-            </property>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_import_mask">
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(249, 240, 107);</string>
+             <string notr="true">background-color: rgb(220, 138, 221);</string>
             </property>
             <property name="text">
-             <string>#</string>
+             <string>IMPORT MASK</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QSpinBox" name="spinBox_lof">
-            <property name="minimum">
-             <number>2</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_lof">
+           <widget class="QPushButton" name="pushButton_rm_mask">
             <property name="styleSheet">
-             <string notr="true">background-color: rgb(170, 63, 251);</string>
+             <string notr="true">background-color: rgb(253, 181, 181);</string>
             </property>
             <property name="text">
-             <string>LOF</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QToolButton" name="toolButton_lof_clean">
-            <property name="toolTip">
-             <string>отключить выбросы</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(252, 171, 171);</string>
-            </property>
-            <property name="text">
-             <string>-</string>
+             <string>REMOVE MASK</string>
             </property>
            </widget>
           </item>
          </layout>
-        </item>
-        <item row="2" column="0">
-         <widget class="QListWidget" name="listWidget_check_point"/>
         </item>
         <item row="1" column="0">
-         <layout class="QGridLayout" name="gridLayout_9">
-          <item row="0" column="2">
-           <widget class="QPushButton" name="pushButton_point_to_field">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(172, 244, 166);</string>
-            </property>
-            <property name="text">
-             <string>TO FIELD</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_point_to_fake">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(172, 244, 166);</string>
-            </property>
-            <property name="text">
-             <string>TO MAKET</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_point_all">
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QListWidget" name="listWidget_saved_mask"/>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listWidget_point"/>
       </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,7">

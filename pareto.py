@@ -39,11 +39,22 @@ def pareto_start():
         list_col = data_plot.columns.tolist()
         data_plot = pd.DataFrame(imputer.fit_transform(data_plot), columns=list_col)
 
-    pareto_analysis = session.query(ParetoAnalysis).filter(ParetoAnalysis.analysis_mlp_id == get_MLP_id()).all()
 
-    for i in pareto_analysis:
-        ui_prt.listWidget_pareto_analysis.addItem(f'{len(json.loads(i.start_params))}_niter{i.n_iter}_{i.problem_type}_id{i.id}')
+    def update_list_pareto():
+        ui_prt.listWidget_pareto_analysis.clear()
+        pareto_analysis = session.query(ParetoAnalysis).filter(ParetoAnalysis.analysis_mlp_id == get_MLP_id()).all()
+
+        for i in pareto_analysis:
+            ui_prt.listWidget_pareto_analysis.addItem(f'{len(json.loads(i.start_params))}_niter{i.n_iter}_{i.problem_type}_id{i.id}')
     # ui_prt.listWidget_pareto_analysis.setCurrentRow(0)
+
+    def update_list_saved_mask():
+        ui_prt.listWidget_saved_mask.clear()
+        for i in session.query(ParameterMask).all():
+            item = QListWidgetItem(f'{i.count_param} id{i.id}')
+            item.setToolTip(i.mask_info)
+            ui_prt.listWidget_saved_mask.addItem(item)
+
 
     for i_param in list_param:
         check_box_widget = QCheckBox(i_param)
@@ -319,10 +330,16 @@ def pareto_start():
                 session.add(new_pareto_result)
             session.commit()
 
+            update_list_pareto()
+
 
     def set_list_pareto_analysis():
+        id_pareto = ui_prt.listWidget_pareto_analysis.currentItem().text().split('_id')[-1]
+        if not id_pareto:
+            QMessageBox.critical(MainWindow, 'Парето-фронт', 'Не выбран анализ')
+            return
         pareto_analysis = session.query(ParetoAnalysis).filter_by(
-            id=ui_prt.listWidget_pareto_analysis.currentItem().text().split('_id')[-1]
+            id=id_pareto
         ).first()
         solutions = session.query(ParetoResult).filter_by(
             pareto_analysis_id=pareto_analysis.id
@@ -429,9 +446,6 @@ def pareto_start():
         for i in corr_result.columns:
             dict_corr[i] = np.sum(corr_result[i])
 
-
-
-
         clear_layout(ui_prt.verticalLayout_anova)
         figure_correlation = plt.figure()
         canvas_correlation = FigureCanvas(figure_correlation)
@@ -455,18 +469,115 @@ def pareto_start():
     def set_list_check_param():
         all_check(ui_prt.listWidget_check_param, ui_prt.checkBox_param_all)
 
+    def remove_pareto_analysis():
+        id_pareto = ui_prt.listWidget_pareto_analysis.currentItem().text().split('_id')[-1]
+        if not id_pareto:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите анализ')
+            return
+        if session.query(ParameterMask).filter_by(pareto_analysis_id=id_pareto).count() > 0:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Невозможно удалить этот анализ так как по нему есть сохраненные маски параметров')
+            return
+        result = QMessageBox.question(
+            MainWindow, "Удаление анализа",
+            "Вы действительно хотите удалить анализ?",
+            QMessageBox.Yes | QMessageBox.No
+        )
 
+        if result == QMessageBox.No:
+            return
+        else:
+
+            pareto_analysis = session.query(ParetoAnalysis).filter_by(
+                id=id_pareto
+            ).first()
+            for i in session.query(ParetoResult).filter_by(pareto_analysis_id=pareto_analysis.id).all():
+                session.delete(i)
+            session.delete(pareto_analysis)
+            session.commit()
+            update_list_pareto()
+
+
+    def save_mask():
+        info = (f'cls analysis: {ui.comboBox_mlp_analysis.currentText().split(" id")[0]}\n'
+                f'pareto analysis: {ui_prt.listWidget_pareto_analysis.currentItem().text().split("_id")[0]}')
+        list_checked_param = get_list_check_checkbox(ui_prt.listWidget_check_param)
+        print(list_checked_param)
+        new_mask = ParameterMask(
+            count_param = len(list_checked_param),
+            mask = json.dumps(list_checked_param),
+            mask_info = info
+        )
+        session.add(new_mask)
+        session.commit()
+        QMessageBox.information(MainWindow, 'Info', 'Маска сохранена')
+        update_list_saved_mask()
+
+
+    def remove_mask():
+        id_mask = ui_prt.listWidget_saved_mask.currentItem().text().split(' id')[-1]
+        if not id_mask:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите маску')
+            return
+        result = QMessageBox.question(
+            MainWindow, "Удаление маски",
+            "Вы действительно хотите удалить маску?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if result == QMessageBox.No:
+            return
+        else:
+            session.query(ParameterMask).filter_by(id=id_mask).delete()
+            session.commit()
+            update_list_saved_mask()
+
+
+    def export_mask():
+        mask_to_export = session.query(ParameterMask).filter_by(id=ui_prt.listWidget_saved_mask.currentItem().text().split(' id')[-1]).first()
+
+        file_name = QFileDialog.getSaveFileName(caption='Export mask', filter="*.pkl")[0]
+        if not file_name:
+            return
+        with open(file_name, 'wb') as f:
+            pickle.dump(mask_to_export, f)
+        QMessageBox.information(MainWindow, 'Info', 'Маска экспортирована')
+
+
+    def import_mask():
+        file_name = QFileDialog.getOpenFileName(caption='Import mask', filter="*.pkl")[0]
+        if not file_name:
+            return
+        with open(file_name, 'rb') as f:
+            mask = pickle.load(f)
+
+        import_mask = ParameterMask(
+            count_param = mask.count_param,
+            mask = mask.mask,
+            mask_info = mask.mask_info
+        )
+        session.add(import_mask)
+        session.commit()
+        QMessageBox.information(MainWindow, 'Info', 'Маска импортирована')
+        update_list_saved_mask()
 
     ui_prt.pushButton_apply.clicked.connect(draw_graph_tsne)
     ui_prt.pushButton_pareto.clicked.connect(calc_pareto)
-    ui_prt.listWidget_pareto_analysis.currentItemChanged.connect(set_list_pareto_analysis)
-    ui_prt.listWidget_population.currentItemChanged.connect(set_list_pareto_result)
+    ui_prt.listWidget_pareto_analysis.clicked.connect(set_list_pareto_analysis)
+    ui_prt.listWidget_population.clicked.connect(set_list_pareto_result)
     ui_prt.checkBox_param_all.clicked.connect(set_list_check_param)
     ui_prt.pushButton_best_params.clicked.connect(best_params)
     ui_prt.pushButton_correlation.clicked.connect(calc_correlation)
+    ui_prt.pushButton_rm_pareto.clicked.connect(remove_pareto_analysis)
+    ui_prt.pushButton_save_mask.clicked.connect(save_mask)
+    ui_prt.pushButton_rm_mask.clicked.connect(remove_mask)
+    ui_prt.pushButton_export_mask.clicked.connect(export_mask)
+    ui_prt.pushButton_import_mask.clicked.connect(import_mask)
 
 
+
+    update_list_pareto()
     set_list_point()
+    update_list_saved_mask()
 
     Pareto.exec_()
 

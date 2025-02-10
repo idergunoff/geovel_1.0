@@ -1475,5 +1475,11 @@ class ParetoResult(Base):
     pareto_analysis = relationship("ParetoAnalysis", back_populates="pareto_results")
 
 
+class ParameterMask(Base):
+    __tablename__ = 'parameter_mask'
 
+    id = Column(Integer, primary_key=True)
+    count_param = Column(Integer)
+    mask = Column(Text)
+    mask_info = Column(Text)
 
