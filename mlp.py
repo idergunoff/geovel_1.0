@@ -1381,6 +1381,10 @@ def calc_object_class():
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
+        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
@@ -1439,6 +1443,11 @@ def calc_object_class():
         if 'TORCH' in model.title:
             list_cat = [labels_dict[i] for i in list_cat]
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()
         except KeyError:

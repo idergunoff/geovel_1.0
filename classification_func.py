@@ -93,6 +93,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
         set_info(f'Заполнены пропуски в {count_nan} образцах в параметрах {", ".join(list_nan_param)}', 'red')
+
     training_sample = np.array(data_train[list_param].values.tolist())
     markup = np.array(sum(data_train[[mark]].values.tolist(), []))
     list_marker = get_list_marker_mlp(type_case)
@@ -102,7 +103,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.setupUi(Classifier)
     Classifier.show()
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-
     max_pca = min(len(list_param), len(data_train.index))
     max_pca -= int(round(max_pca/5, 0))
     ui_cls.spinBox_pca.setMaximum(max_pca)
@@ -116,6 +116,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     ui_cls.label.setText(text_label)
 
+    def get_list_param_by_mask(mask_id):
+        return json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask)
+
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
             ui_cls.checkBox_adasyn.setChecked(False)
@@ -123,6 +126,16 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     def push_checkbutton_adasyn():
         if ui_cls.checkBox_smote.isChecked():
             ui_cls.checkBox_smote.setChecked(False)
+
+
+
+    def update_list_saved_mask():
+        ui_cls.listWidget_mask_param.clear()
+        for i in session.query(ParameterMask).all():
+            item = QListWidgetItem(f'{i.count_param} id{i.id}')
+            item.setToolTip(i.mask_info)
+            ui_cls.listWidget_mask_param.addItem(item)
+
 
     def build_torch_model(training_sample_train):
         """ Сборка модели PyTorch"""
@@ -484,6 +497,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
 
+        ### todo if parameter mask
+
         new_lineup = LineupTrain(
             type_ml = 'cls',
             analysis_id = get_MLP_id(),
@@ -520,6 +535,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
+        if ui_cls.checkBox_mask_param.isChecked():
+            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
+            training_sample = np.array(data_train[list_param].values.tolist())
 
         list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
         data_train_by_well = data_train.copy()
@@ -611,6 +629,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         start_time = datetime.datetime.now()
         labels = set_marks()
         labels_dict = {value: key for key, value in labels.items()}
+
+        if ui_cls.checkBox_mask_param.isChecked():
+            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
+            training_sample = np.array(data_train[list_param].values.tolist())
 
         # Разделение данных на обучающую и тестовую выборки
         if ui_cls.checkBox_cvw.isChecked():
@@ -791,7 +813,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             return
         # Сохранение моделей
         if type_case == 'georadar':
-            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save)
+            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save, ui_cls)
         if type_case == 'geochem':
             save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save, data_train)
 
@@ -1091,6 +1113,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     def class_exit():
         Classifier.close()
 
+
+    update_list_saved_mask()
+
     ui_cls.pushButton_random_search.clicked.connect(class_exit)
     ui_cls.pushButton_random_search.clicked.connect(push_random_search)
     ui_cls.pushButton_random_param.clicked.connect(class_exit)
@@ -1106,7 +1131,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     Classifier.exec_()
 
 
-def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param):
+def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param, ui_cls):
     """ Сохранение моделей в TrainedModelClass """
 
     result = QtWidgets.QMessageBox.question(
@@ -1134,6 +1159,15 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
         )
         session.add(new_trained_model)
         session.commit()
+        if ui_cls.checkBox_mask_param.isChecked():
+            mask_id = int(ui_cls.listWidget_mask_param.currentItem().text().split(' id')[-1])
+            new_trained_model_mask = TrainedModelClassMask(
+                model_id = new_trained_model.id,
+                mask_id = mask_id
+            )
+            session.add(new_trained_model_mask)
+            session.commit()
+
         update_list_trained_models_class()
     else:
         pass

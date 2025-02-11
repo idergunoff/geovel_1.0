@@ -942,6 +942,20 @@ class TrainedModelClass(Base):
     comment = Column(Text)
 
     analysis = relationship('AnalysisMLP', back_populates='trained_models')
+    model_mask = relationship('TrainedModelClassMask', back_populates='model')
+
+
+class TrainedModelClassMask(Base):
+    __tablename__ = 'trained_model_class_mask'
+
+    id = Column(Integer, primary_key=True)
+    model_id = Column(Integer, ForeignKey('trained_model_class.id'))
+    mask_id = Column(Integer, ForeignKey('parameter_mask.id'))
+
+    model = relationship('TrainedModelClass', back_populates='model_mask')
+    mask = relationship('ParameterMask', back_populates='model_mask')
+
+
 
 #####################################################
 ################## Regression #######################
@@ -1482,4 +1496,7 @@ class ParameterMask(Base):
     count_param = Column(Integer)
     mask = Column(Text)
     mask_info = Column(Text)
+
+    model_mask = relationship("TrainedModelClassMask", back_populates="mask")
+
 

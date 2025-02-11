@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1029</width>
-    <height>616</height>
+    <width>1266</width>
+    <height>768</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,240 +18,6 @@
     <layout class="QGridLayout" name="gridLayout_54">
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout_53">
-       <item row="0" column="0">
-        <layout class="QGridLayout" name="gridLayout_27">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="groupBox">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>Multi-layer Perceptron Classifier</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_22">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_19">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_mlp">
-                <property name="toolTip">
-                 <string>Multi-layer Perceptron classifier</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(252, 226, 251);</string>
-                </property>
-                <property name="text">
-                 <string>MLPC</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_36">
-                <property name="text">
-                 <string>hidden layer</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="label_38">
-                <property name="text">
-                 <string>activat</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QLabel" name="label_42">
-                <property name="text">
-                 <string>solver</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="4">
-               <widget class="QLabel" name="label_43">
-                <property name="text">
-                 <string>alpha</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="5">
-               <widget class="QLabel" name="label_46">
-                <property name="text">
-                 <string>lr</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="6">
-               <widget class="QLabel" name="label_44">
-                <property name="text">
-                 <string>valid %</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_e_stop_mlp">
-                <property name="text">
-                 <string>e-stop</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="lineEdit_layer_mlp">
-                <property name="text">
-                 <string>500</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QComboBox" name="comboBox_activation_mlp">
-                <item>
-                 <property name="text">
-                  <string>relu</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>logistic</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>tanh</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>identity</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QComboBox" name="comboBox_solvar_mlp">
-                <property name="currentText">
-                 <string>lbfgs</string>
-                </property>
-                <property name="currentIndex">
-                 <number>1</number>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>adam</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>lbfgs</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>sgd</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="1" column="4">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
-                <property name="decimals">
-                 <number>4</number>
-                </property>
-                <property name="maximum">
-                 <double>100.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.000100000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="5">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp">
-                <property name="decimals">
-                 <number>4</number>
-                </property>
-                <property name="maximum">
-                 <double>100.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.000100000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="6">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
-                <property name="decimals">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.200000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_4">
-           <property name="styleSheet">
-            <string notr="true"/>
-           </property>
-           <property name="title">
-            <string>DecisionTree</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_20">
-            <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_7">
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="radioButton_dtc">
-                <property name="toolTip">
-                 <string>Decision Tree classifier</string>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(202, 251, 201);</string>
-                </property>
-                <property name="text">
-                 <string>DTC</string>
-                </property>
-                <attribute name="buttonGroup">
-                 <string notr="true">buttonGroup</string>
-                </attribute>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_splitter_rnd">
-                <property name="toolTip">
-                 <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
-                </property>
-                <property name="text">
-                 <string>rnd</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
        <item row="1" column="0">
         <layout class="QGridLayout" name="gridLayout_50" columnstretch="1,1">
          <item row="0" column="0">
@@ -1287,7 +1053,51 @@
         </layout>
        </item>
        <item row="2" column="0">
-        <layout class="QGridLayout" name="gridLayout_41" columnstretch="3,2">
+        <layout class="QGridLayout" name="gridLayout_41" columnstretch="3,2,2">
+         <item row="0" column="1">
+          <widget class="QGroupBox" name="groupBox_17">
+           <property name="title">
+            <string>PreProcess</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_36">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_30">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="checkBox_stdscaler">
+                <property name="text">
+                 <string>StandardScaler</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="checkBox_robscaler">
+                <property name="text">
+                 <string>RobustScaler</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QCheckBox" name="checkBox_mnmxscaler">
+                <property name="text">
+                 <string>MinMaxScaler</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QCheckBox" name="checkBox_mxabsscaler">
+                <property name="text">
+                 <string>MaxAbsScaler</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
          <item row="0" column="0">
           <widget class="QGroupBox" name="groupBox_3">
            <property name="styleSheet">
@@ -1419,42 +1229,246 @@
            </layout>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QGroupBox" name="groupBox_17">
-           <property name="title">
-            <string>PreProcess</string>
+         <item row="0" column="2">
+          <layout class="QGridLayout" name="gridLayout_60">
+           <item row="0" column="0">
+            <widget class="QCheckBox" name="checkBox_mask_param">
+             <property name="text">
+              <string>mask parameters</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QListWidget" name="listWidget_mask_param"/>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_27">
+         <item row="0" column="0">
+          <widget class="QGroupBox" name="groupBox">
+           <property name="styleSheet">
+            <string notr="true"/>
            </property>
-           <layout class="QGridLayout" name="gridLayout_36">
+           <property name="title">
+            <string>Multi-layer Perceptron Classifier</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_22">
             <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_30">
+             <layout class="QGridLayout" name="gridLayout_19">
               <item row="0" column="0">
-               <widget class="QCheckBox" name="checkBox_stdscaler">
+               <widget class="QRadioButton" name="radioButton_mlp">
+                <property name="toolTip">
+                 <string>Multi-layer Perceptron classifier</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(252, 226, 251);</string>
+                </property>
                 <property name="text">
-                 <string>StandardScaler</string>
+                 <string>MLPC</string>
+                </property>
+                <attribute name="buttonGroup">
+                 <string notr="true">buttonGroup</string>
+                </attribute>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_36">
+                <property name="text">
+                 <string>hidden layer</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_38">
+                <property name="text">
+                 <string>activat</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLabel" name="label_42">
+                <property name="text">
+                 <string>solver</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="4">
+               <widget class="QLabel" name="label_43">
+                <property name="text">
+                 <string>alpha</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="5">
+               <widget class="QLabel" name="label_46">
+                <property name="text">
+                 <string>lr</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="6">
+               <widget class="QLabel" name="label_44">
+                <property name="text">
+                 <string>valid %</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="checkBox_e_stop_mlp">
+                <property name="text">
+                 <string>e-stop</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="lineEdit_layer_mlp">
+                <property name="text">
+                 <string>500</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QComboBox" name="comboBox_activation_mlp">
+                <item>
+                 <property name="text">
+                  <string>relu</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>logistic</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>tanh</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>identity</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QComboBox" name="comboBox_solvar_mlp">
+                <property name="currentText">
+                 <string>lbfgs</string>
+                </property>
+                <property name="currentIndex">
+                 <number>1</number>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>adam</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>lbfgs</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>sgd</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="4">
+               <widget class="QDoubleSpinBox" name="doubleSpinBox_alpha_mlp">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000100000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="5">
+               <widget class="QDoubleSpinBox" name="doubleSpinBox_lr_mlp">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000100000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="6">
+               <widget class="QDoubleSpinBox" name="doubleSpinBox_valid_mlp">
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.200000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QGroupBox" name="groupBox_4">
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="title">
+            <string>DecisionTree</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_20">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="0" column="0">
+               <widget class="QRadioButton" name="radioButton_dtc">
+                <property name="toolTip">
+                 <string>Decision Tree classifier</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(202, 251, 201);</string>
+                </property>
+                <property name="text">
+                 <string>DTC</string>
+                </property>
+                <attribute name="buttonGroup">
+                 <string notr="true">buttonGroup</string>
+                </attribute>
+               </widget>
+              </item>
               <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_robscaler">
-                <property name="text">
-                 <string>RobustScaler</string>
+               <widget class="QCheckBox" name="checkBox_splitter_rnd">
+                <property name="toolTip">
+                 <string>Стратегия, используемая для выбора разделения в узлах. Возможные значения - &quot;best&quot; (выбирается лучшее разделение) или &quot;random&quot; (выбирается случайное разделение)</string>
                 </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QCheckBox" name="checkBox_mnmxscaler">
                 <property name="text">
-                 <string>MinMaxScaler</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QCheckBox" name="checkBox_mxabsscaler">
-                <property name="text">
-                 <string>MaxAbsScaler</string>
+                 <string>rnd</string>
                 </property>
                </widget>
               </item>
@@ -1975,7 +1989,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_stack_vote"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>
