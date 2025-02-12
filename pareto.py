@@ -343,7 +343,7 @@ def pareto_start():
         ).first()
         solutions = session.query(ParetoResult).filter_by(
             pareto_analysis_id=pareto_analysis.id
-        ).all()
+        ).order_by(desc(ParetoResult.distance)).all()
 
         ui_prt.listWidget_population.clear()
         list_distance, list_count = [], []
