@@ -1148,6 +1148,11 @@ def calc_class_profile():
             list_cat = list(class_model.classes_)
             print('sklearn list_cat ', list_cat)
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
         try:
             working_sample = working_data_class[list_param_num].values.tolist()
         except KeyError:
