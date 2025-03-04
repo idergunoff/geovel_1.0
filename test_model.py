@@ -676,7 +676,7 @@ def regression_test():
                     print(f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
                           f"Тестирование модели {model.title}:"
                           f'Точность: {round(accuracy, 5)} \nMean Squared Error: {round(mse, 5)}\n\n', file=f)
-            index = 0
+            index, sum_mistake = 0, 0
             while index + 1 < len(working_data):
                 comp, total = 0, 0
                 diff_list, list_y = [], []
@@ -721,6 +721,8 @@ def regression_test():
                               f' predict {mean_pred} | target {round(working_data.loc[index, "target_value"], 2)} '
                               f'| погрешность: {mistake}\n', file=f)
                 index += 1
+                sum_mistake += mistake
+            ui_tr.textEdit_test_result.insertPlainText(f'\nСуммарная ошибка: {sum_mistake}, средняя ошибка: {round(sum_mistake/index, 2)}\n\n')
 
             data_graph = pd.DataFrame({
                 'y_test': working_data['target_value'].values.tolist(),

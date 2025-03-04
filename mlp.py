@@ -135,6 +135,7 @@ def copy_mlp_to_regmod():
     update_list_reg()
     set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
+
 def remove_mlp():
     """Удалить анализ MLP"""
     mlp_title = get_mlp_title()

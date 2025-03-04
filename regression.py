@@ -366,6 +366,12 @@ def split_well_train_test():
 
             test_ids.extend([list_mkp_id[i] for i in test_cluster_indices])
             train_ids.extend([list_mkp_id[i] for i in train_cluster_indices])
+    elif ui.radioButton_object.isChecked():
+
+        obj_id = get_object_id()
+        train_ids = [mkp.id for mkp in markups if mkp.profile.research.object_id != obj_id]
+        test_ids = [mkp.id for mkp in markups if mkp.profile.research.object_id == obj_id]
+
 
     else:
         def min_distance_to_selected(point, selected_points):
