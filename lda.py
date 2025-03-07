@@ -475,7 +475,10 @@ def remove_all_param_geovel_lda():
 
 
 def update_list_param_lda(db=False):
-    data_train, list_param = build_table_train(db)
+    try:
+        data_train, list_param = build_table_train(db)
+    except TypeError:
+        return
     list_marker = get_list_marker()
     ui.listWidget_param_lda.clear()
     list_param_lda = data_train.columns.tolist()[2:]

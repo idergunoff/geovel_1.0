@@ -769,8 +769,11 @@ def update_list_param_reg_no_update():
     """ Обновление списка параметров БЕЗ сбора таблицы """
 
     data = session.query(AnalysisReg.up_data).filter_by(id=get_regmod_id()).first()
-    if data[0]:
-        return
+    try:
+        if data[0]:
+            return
+    except TypeError:
+        return 
     list_param_reg = session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).all()
     list_param_reg.sort(key=lambda x: x.parameter)
     ui.listWidget_param_reg.clear()
@@ -783,7 +786,10 @@ def update_list_param_reg_no_update():
 def update_list_param_regmod(db=False):
     """ Обновление списка параметров со сбором таблицы """
 
-    data_train, list_param = build_table_train(db, 'regmod')
+    try:
+        data_train, list_param = build_table_train(db, 'regmod')
+    except TypeError:
+        return
     ui.listWidget_param_reg.clear()
     list_param_reg = data_train.columns.tolist()[2:]
     for param in list_param_reg:

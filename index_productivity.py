@@ -22,16 +22,19 @@ def index_prod_remove():
 
 def index_prod_list_update():
     ui.listWidget_ix_prod.clear()
-    for i in session.query(IndexProductivity).filter_by(research_id=get_research_id()).all():
-        try:
-            if i.prediction.type_model == 'cls':
-                model = session.query(TrainedModelClass).filter_by(id=i.prediction.model_id).first()
-            else:
-                model = session.query(TrainedModelReg).filter_by(id=i.prediction.model_id).first()
-            item = f'{i.prediction.type_model}-{model.title}_id{i.id}'
-            ui.listWidget_ix_prod.addItem(item)
-        except AttributeError:
-            continue
+    try:
+        for i in session.query(IndexProductivity).filter_by(research_id=get_research_id()).all():
+            try:
+                if i.prediction.type_model == 'cls':
+                    model = session.query(TrainedModelClass).filter_by(id=i.prediction.model_id).first()
+                else:
+                    model = session.query(TrainedModelReg).filter_by(id=i.prediction.model_id).first()
+                item = f'{i.prediction.type_model}-{model.title}_id{i.id}'
+                ui.listWidget_ix_prod.addItem(item)
+            except AttributeError:
+                continue
+    except ValueError:
+        return
 
 
 def index_prod_draw():

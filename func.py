@@ -510,7 +510,10 @@ def update_profile_combobox():
 
     # Очистка выпадающего списка
     ui.comboBox_profile.clear()
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    try:
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    except ValueError:
+        return
 
     # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
     for i in profiles:
@@ -1262,7 +1265,10 @@ def check_grid_relief():
 
 
 def check_coordinates_research():
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    try:
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    except ValueError:
+        return
     if len(profiles) == 0:
         ui.label_4.setStyleSheet('background: #F7B9B9')
         return
@@ -2018,9 +2024,12 @@ def get_attributes():
 def calc_object_measures():
     """ Расчет количества измерений на объекте """
     count_measure = 0
-    for i in session.query(Profile).filter_by(research_id=get_research_id()).all():
-        count_measure += len(json.loads(i.signal))
-    return count_measure
+    try:
+        for i in session.query(Profile).filter_by(research_id=get_research_id()).all():
+            count_measure += len(json.loads(i.signal))
+        return count_measure
+    except ValueError:
+        return 0
 
 
 def calc_fft_attributes(signal):

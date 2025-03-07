@@ -987,7 +987,10 @@ def update_list_param_mlp_no_update():
     """
 
     data = session.query(AnalysisMLP.up_data).filter_by(id=get_MLP_id()).first()
-    if data[0]:
+    try:
+        if data[0]:
+            return
+    except TypeError:
         return
     print('update_list_param_mlp_no_update')
     list_param_mlp = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
@@ -1006,7 +1009,10 @@ def update_list_param_mlp(db=False):
     """
 
     start_time = datetime.datetime.now()
-    data_train, list_param = build_table_train(db, 'mlp')
+    try:
+        data_train, list_param = build_table_train(db, 'mlp')
+    except TypeError:
+        return
     list_marker = get_list_marker_mlp('georadar')
     ui.listWidget_param_mlp.clear()
     list_param_mlp = data_train.columns.tolist()[2:]

@@ -17,23 +17,26 @@ def update_list_h_well():
     start_time = datetime.datetime.now()
     """Обновить список горизонтальных скважин"""
     ui.listWidget_h_well.clear()
-    for h_well in session.query(GeoradarObject).filter_by(id=get_obj_monitor_id()).first().h_wells:
-        count_therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).count()
-        item_text = f'{h_well.title}\t+{count_therm} термограмм' if count_therm > 0 else h_well.title
-        item = QListWidgetItem(item_text)
-        if count_therm > 0:
-            therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).first()
-            incl = False
-            for i in json.loads(therm.therm_data):
-                if len(i) > 2:
-                    item.setBackground(QBrush(QColor('#ADFCDF')))
-                    incl = True
-                    break
-            if not incl:
-                item.setBackground(QBrush(QColor('#FBD59E')))
-        item.setData(Qt.UserRole, h_well.id)
-        ui.listWidget_h_well.addItem(item)
-    ui.listWidget_h_well.sortItems()
+    try:
+        for h_well in session.query(GeoradarObject).filter_by(id=get_obj_monitor_id()).first().h_wells:
+            count_therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).count()
+            item_text = f'{h_well.title}\t+{count_therm} термограмм' if count_therm > 0 else h_well.title
+            item = QListWidgetItem(item_text)
+            if count_therm > 0:
+                therm = session.query(Thermogram).filter_by(h_well_id=h_well.id).first()
+                incl = False
+                for i in json.loads(therm.therm_data):
+                    if len(i) > 2:
+                        item.setBackground(QBrush(QColor('#ADFCDF')))
+                        incl = True
+                        break
+                if not incl:
+                    item.setBackground(QBrush(QColor('#FBD59E')))
+            item.setData(Qt.UserRole, h_well.id)
+            ui.listWidget_h_well.addItem(item)
+        ui.listWidget_h_well.sortItems()
+    except TypeError:
+        return
 
 
 def update_list_param_h_well():
