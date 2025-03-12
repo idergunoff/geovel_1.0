@@ -609,6 +609,7 @@ def save_signal():
 
 
 def remove_object():
+    """ Удаление объекта (исследования) """
     if session.query(Profile).filter(Profile.id == get_profile_id()).count() == 0:
         title_object = ui.comboBox_object.currentText().split(' id')[0]
         title_research = ui.comboBox_research.currentText().split(' id')[0]

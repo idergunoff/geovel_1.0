@@ -16,6 +16,7 @@ from velocity_prediction import calc_deep_predict_current_profile, calc_list_vel
 
 def draw_radarogram():
     global l_up, l_down
+    # Удаление предыдущих элементов с графика
     if 'curve_up' in globals():
         radarogramma.removeItem(globals()['curve_up'])
     if 'curve_down' in globals():
@@ -24,10 +25,13 @@ def draw_radarogram():
         radarogramma.removeItem(globals()['text_item'])
     if 'poly_item' in globals():
         radarogramma.removeItem(globals()['poly_item'])
+
+    # Очистка формы и удаление лишних элементов
     remove_fill_form()
     remove_poly_item()
     remove_curve_fake()
 
+    # Сброс флажков и очистка списков
     # ui.info.clear()
     ui.checkBox_relief.setChecked(False)
     ui.checkBox_vel.setChecked(False)
@@ -37,9 +41,13 @@ def draw_radarogram():
     ui.listWidget_model_nn.clear()
     clear_current_velocity_model()
     clear_current_profile()
+
+    # Загрузка данных профиля
     prof = session.query(Profile).filter(Profile.id == get_profile_id()).first()
     rad = json.loads(prof.signal)
     ui.progressBar.setMaximum(len(rad))
+
+    # Вычисление атрибутов и отрисовка изображения
     radar = calc_atrib(rad, ui.comboBox_atrib.currentText())
     clear_current_profile()
     new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
@@ -49,16 +57,22 @@ def draw_radarogram():
     ui.checkBox_minmax.setCheckState(0)
     draw_image(radar)
 
+    # Расчет рельефа профиля
     calc_relief_profile(prof)
 
+    # Установка информации о текущем профиле
     set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')
     updatePlot()
+
+    # Добавление линий на график
     line_up = ui.spinBox_rad_up.value()
     line_down = ui.spinBox_rad_down.value()
     l_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred',width=1, dash=[8, 2]))
     l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
     radarogramma.addItem(l_up)
     radarogramma.addItem(l_down)
+
+    # Обновление слоев и комбобокса
     update_layers()
     draw_layers()
     update_formation_combobox()
@@ -568,10 +582,12 @@ def draw_formation():
     #     layer_down = [x / 8 for x in t_bot]
     #     title_text = 'KROT'
     else:
+        # Загрузка данных о слоях
         formation = session.query(Formation).filter(Formation.id == get_formation_id()).first()
         layer_up = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.up).first()[0])
         layer_down = json.loads(session.query(Layers.layer_line).filter(Layers.id == formation.down).first()[0])
         title_text = formation.title
+    # Отрисовка слоев
     x = list(range(len(layer_up)))
     vel_mod = session.query(CurrentVelocityModel).first()
     if vel_mod:
