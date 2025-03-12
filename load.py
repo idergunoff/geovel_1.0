@@ -7,7 +7,7 @@ from qt.add_obj_dialog import *
 
 
 def add_object():
-    """Добавить ноывый объект в БД"""
+    """Добавить новый объект в БД"""
     Add_Object = QtWidgets.QDialog()
     ui_ob = Ui_add_obj()
     ui_ob.setupUi(Add_Object)
@@ -607,3 +607,33 @@ def save_signal():
     fn = QFileDialog.getSaveFileName(caption="Сохранить сигнал", filter="TXT (*.txt)")
     pd_radar.to_csv(fn[0], sep=';')
 
+
+def remove_object():
+    if session.query(Profile).filter(Profile.id == get_profile_id()).count() == 0:
+        title_object = ui.comboBox_object.currentText().split(' id')[0]
+        title_research = ui.comboBox_research.currentText().split(' id')[0]
+        if session.query(Research).filter(Research.object_id == get_object_id()).count() > 1:
+            result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove research',
+                                                      f'Вы уверены, что хотите удалить исследование /{title_research}/ объекта "{title_object}"?',
+                                                      QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if result == QtWidgets.QMessageBox.Yes:
+                session.query(Research).filter(Research.id == get_research_id()).delete()
+                session.commit()
+                set_info(f'Исследование /{title_research}/ объекта "{title_object} удалено', 'green')
+                update_research_combobox()
+            else:
+                pass
+        else:
+            result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove object',
+                                                    f'Вы уверены, что хотите удалить объект "{title_object}"?',
+                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if result == QtWidgets.QMessageBox.Yes:
+                session.query(Research).filter(Research.id == get_research_id()).delete()
+                session.query(GeoradarObject).filter(GeoradarObject.id == get_object_id()).delete()
+                session.commit()
+                set_info(f'Объект "{title_object}" удалён', 'green')
+                update_object()
+            else:
+                pass
+    else:
+        set_info('НЕВОЗМОЖНО УДАЛИТЬ ОБЪЕКТ ПРИ НАЛИЧИИ ПРОФИЛЯ', 'red')

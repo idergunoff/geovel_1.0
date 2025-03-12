@@ -290,6 +290,7 @@ ui.listWidget_trained_model_reg.itemDoubleClicked.connect(rename_model_reg)
 ui.toolButton_list_param_to_line_reg.clicked.connect(list_param_reg_to_lineEdit)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
+ui.toolButton_del_obj.clicked.connect(remove_object)
 ui.toolButton_load_prof.clicked.connect(load_profile)
 ui.toolButton_del_prof.clicked.connect(delete_profile)
 ui.toolButton_load_plast.clicked.connect(load_param)
