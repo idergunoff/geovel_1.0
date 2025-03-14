@@ -45,7 +45,7 @@ def add_model_ai():
     session.add(new_model)
     session.commit()
     update_combobox_model_ai()
-    set_info(f'Модель {new_model.title} добавлена', 'green')
+    set_info(f'Модель "{new_model.title}" добавлена', 'green')
 
 
 def remove_model_ai():
@@ -54,7 +54,7 @@ def remove_model_ai():
     result = QtWidgets.QMessageBox.question(
         MainWindow,
         'Удаление модели',
-        f'Вы уверены, что хотите удалить модель {model_title} со всеми пластами?',
+        f'Вы уверены, что хотите удалить модель "{model_title}" со всеми пластами?',
         QtWidgets.QMessageBox.Yes,
         QtWidgets.QMessageBox.No)
     if result == QtWidgets.QMessageBox.Yes:
@@ -345,15 +345,6 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
 
     ui_r.spinBox_pca.setMaximum(len(input_data[0]))
     ui_r.spinBox_pca.setValue(len(input_data[0]) // 2)
-
-    def push_checkbutton_extra():
-        if ui_r.checkBox_rfr_ada.isChecked():
-            ui_r.checkBox_rfr_ada.setChecked(False)
-
-    def push_checkbutton_ada():
-        if ui_r.checkBox_rfr_extra.isChecked():
-            ui_r.checkBox_rfr_extra.setChecked(False)
-
 
     def choice_model_regressor(model):
         """ Выбор модели регрессии """
