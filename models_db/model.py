@@ -782,14 +782,17 @@ class WellOptionally(Base):
 
     well = relationship("Well", back_populates="well_optionally")
 
+
 class WellLog(Base):
     __tablename__ = 'well_log'
 
     id = Column(Integer, primary_key=True)
     well_id = Column(Integer, ForeignKey('well.id'))
     curve_name = Column(String)
-    depth_data = Column(Text)
     curve_data = Column(Text)
+    begin = Column(Float)
+    end = Column(Float)
+    description = Column(Text)
 
     well = relationship("Well", back_populates="well_logs")
 
