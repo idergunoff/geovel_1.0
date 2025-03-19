@@ -567,7 +567,6 @@ def remove_well():
         set_info('Пересечение удалено', 'green')
     else:
         session.query(Boundary).filter_by(well_id=w_id).delete()
-        session.query(MarkupLDA).filter_by(well_id=w_id).delete()
         session.query(MarkupMLP).filter_by(well_id=w_id).delete()
         session.query(Well).filter_by(id=w_id).delete()
         set_info('Скважина удалена', 'green')

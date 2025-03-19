@@ -67,7 +67,6 @@ class Profile(Base):
     velocity_formations = relationship('VelocityFormation', back_populates='profile')
     velocity_models = relationship('VelocityModel', back_populates='profile')
     deep_profiles = relationship('DeepProfile', back_populates='profile')
-    markups_lda = relationship('MarkupLDA', back_populates='profile')
     markups_mlp = relationship('MarkupMLP', back_populates='profile')
     markups_reg = relationship('MarkupReg', back_populates='profile')
     intersections = relationship('Intersection', back_populates='profile')
@@ -405,7 +404,6 @@ class Formation(Base):
     profile = relationship('Profile', back_populates='formations')
     layer_up = relationship('Layers', back_populates='formation_up', foreign_keys=[up])
     layer_down = relationship('Layers', back_populates='formation_down', foreign_keys=[down])
-    markups_lda = relationship('MarkupLDA', back_populates='formation')
     markups_mlp = relationship('MarkupMLP', back_populates='formation')
     markups_reg = relationship('MarkupReg', back_populates='formation')
     model = relationship('FormationAI', back_populates='formation')
@@ -755,7 +753,6 @@ class Well(Base):
     boundaries = relationship("Boundary", back_populates="well")
     well_optionally = relationship("WellOptionally", back_populates="well")
     well_logs = relationship("WellLog", back_populates="well")
-    markups_lda = relationship("MarkupLDA", back_populates="well")
     markups_mlp = relationship('MarkupMLP', back_populates='well')
     markups_reg = relationship('MarkupReg', back_populates='well')
 
@@ -795,66 +792,6 @@ class WellLog(Base):
     description = Column(Text)
 
     well = relationship("Well", back_populates="well_logs")
-
-
-#####################################################
-######################  LDA  ########################
-#####################################################
-
-
-class AnalysisLDA(Base):
-    __tablename__ = 'analysis_lda'
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String)
-    data = Column(Text)
-    up_data = Column(Boolean, default=False)
-
-    parameters = relationship('ParameterLDA', back_populates='analysis')
-    markers = relationship('MarkerLDA', back_populates='analysis')
-    markups = relationship('MarkupLDA', back_populates='analysis')
-
-
-class ParameterLDA(Base):
-    __tablename__ = 'parameter_lda'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
-    parameter = Column(String)
-
-    analysis = relationship('AnalysisLDA', back_populates='parameters')
-
-
-class MarkerLDA(Base):
-    __tablename__ = 'marker_lda'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
-    title = Column(String)
-    color = Column(String)
-
-    analysis = relationship('AnalysisLDA', back_populates='markers')
-    markups = relationship('MarkupLDA', back_populates='marker')
-
-
-class MarkupLDA(Base):
-    __tablename__ = 'markup_lda'
-
-    id = Column(Integer, primary_key=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_lda.id'))
-    well_id = Column(Integer, ForeignKey('well.id'))    # возможно не нужно
-    profile_id = Column(Integer, ForeignKey('profile.id'))
-    formation_id = Column(Integer, ForeignKey('formation.id'))
-    marker_id = Column(Integer, ForeignKey('marker_lda.id'))
-    list_measure = Column(Text)
-    list_fake = Column(Text)
-    type_markup = Column(String)
-
-    analysis = relationship('AnalysisLDA', back_populates='markups')
-    well = relationship("Well", back_populates="markups_lda")
-    profile = relationship("Profile", back_populates="markups_lda")
-    formation = relationship("Formation", back_populates="markups_lda")
-    marker = relationship("MarkerLDA", back_populates="markups")
 
 
 #####################################################

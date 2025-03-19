@@ -62,15 +62,15 @@ def load_profile():
         new_profile = Profile(research_id=get_research_id(), title=file_name.split('/')[-1].split('.')[0], signal=json.dumps(signal))
         session.add(new_profile)
         session.commit()
-        set_info(f'Профиль загружен ({get_object_name()})', 'green')
+        set_info(f'Профиль загружен ("{get_object_name()}")', 'green')
     except KeyError:
-        set_info('Не правильный формат файла', 'red')
+        set_info('Неправильный формат файла', 'red')
         return
     update_profile_combobox()
 
 
 def load_param():
-    """ загрузка файла интервала """
+    """ Загрузка файла интервала """
     try:
         file_name = QFileDialog.getOpenFileName(caption='Выберите файл интервала', filter='*.txt')[0]
         set_info(file_name, 'blue')
@@ -94,7 +94,7 @@ def load_param():
                        'x_pulc': json.dumps(x_pulc_l), 'y_pulc': json.dumps(y_pulc_l)}
         session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
         session.commit()
-        set_info(f'Загружены координаты ({get_object_name()}, {get_profile_name()})', 'green')
+        set_info(f'Загружены координаты ("{get_object_name()}", "{get_profile_name()}")', 'green')
         check_coordinates_profile()
         check_coordinates_research()
         layer_top = list(map(lambda x: int(x / 40), pd_int['T01'].values.tolist()))
@@ -116,7 +116,7 @@ def load_param():
             session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_bottom').update(
                 {'layer_line': json.dumps(layer_bottom)}, synchronize_session="fetch")
         session.commit()
-        set_info(f'Загружены слои из программы KROT ({get_object_name()}, {get_profile_name()})', 'green')
+        set_info(f'Загружены слои из программы KROT ("{get_object_name()}", ""{get_profile_name()}")', 'green')
         update_layers()
 
         ui.progressBar.setMaximum(len(layer_top))
@@ -513,17 +513,16 @@ def load_param():
 
 def delete_profile():
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
-    result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove profile',
+    result = QtWidgets.QMessageBox.question(MainWindow, 'Remove profile',
                 f'Вы уверены, что хотите удалить профиль "{title_prof}" вместе со слоями, пластами и обучающими скважинами?',
                                             QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
     if result == QtWidgets.QMessageBox.Yes:
-        session.query(MarkupLDA).filter(MarkupLDA.profile_id == get_profile_id()).delete()
         session.query(Formation).filter(Formation.profile_id == get_profile_id()).delete()
         session.query(Layers).filter(Layers.profile_id == get_profile_id()).delete()
         session.query(Profile).filter(Profile.id == get_profile_id()).delete()
         session.commit()
         # vacuum()
-        set_info(f'Профиль {title_prof} удалён', 'green')
+        set_info(f'Профиль "{title_prof}" удалён', 'green')
         update_profile_combobox()
     else:
         pass
@@ -532,7 +531,7 @@ def delete_profile():
 def load_uf_grid():
     try:
         file_name = QFileDialog.getOpenFileName(
-            caption=f'Выберите grid-файл структурной карты по кровле продуктивного пласта по объекту {get_object_name()}',
+            caption=f'Выберите grid-файл структурной карты по кровле продуктивного пласта по объекту "{get_object_name()}"',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
@@ -556,7 +555,7 @@ def load_uf_grid():
 def load_m_grid():
     try:
         file_name = QFileDialog.getOpenFileName(
-            caption=f'Выберите grid-файл карты мощности продуктивного пласта по объекту {get_object_name()}',
+            caption=f'Выберите grid-файл карты мощности продуктивного пласта по объекту "{get_object_name()}"',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
@@ -580,7 +579,7 @@ def load_m_grid():
 def load_r_grid():
     try:
         file_name = QFileDialog.getOpenFileName(
-            caption=f'Выберите grid-файл карты рельефа по объекту {get_object_name()}',
+            caption=f'Выберите grid-файл карты рельефа по объекту "{get_object_name()}"',
             filter='*.dat')[0]
         set_info(file_name, 'blue')
         fn = file_name.split('/')[-1].split('.')[0]
@@ -614,18 +613,18 @@ def remove_object():
         title_object = ui.comboBox_object.currentText().split(' id')[0]
         title_research = ui.comboBox_research.currentText().split(' id')[0]
         if session.query(Research).filter(Research.object_id == get_object_id()).count() > 1:
-            result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove research',
+            result = QtWidgets.QMessageBox.question(MainWindow, 'Remove research',
                                                       f'Вы уверены, что хотите удалить исследование /{title_research}/ объекта "{title_object}"?',
                                                       QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if result == QtWidgets.QMessageBox.Yes:
                 session.query(Research).filter(Research.id == get_research_id()).delete()
                 session.commit()
-                set_info(f'Исследование /{title_research}/ объекта "{title_object} удалено', 'green')
+                set_info(f'Исследование /{title_research}/ объекта "{title_object}" удалено', 'green')
                 update_research_combobox()
             else:
                 pass
         else:
-            result = QtWidgets.QMessageBox.question(ui.listWidget_well_lda, 'Remove object',
+            result = QtWidgets.QMessageBox.question(MainWindow, 'Remove object',
                                                     f'Вы уверены, что хотите удалить объект "{title_object}"?',
                                                     QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if result == QtWidgets.QMessageBox.Yes:
@@ -637,4 +636,4 @@ def remove_object():
             else:
                 pass
     else:
-        set_info('НЕВОЗМОЖНО УДАЛИТЬ ОБЪЕКТ ПРИ НАЛИЧИИ ПРОФИЛЯ', 'red')
+        set_info('Невозможно удалить объект при наличии профиля', 'red')

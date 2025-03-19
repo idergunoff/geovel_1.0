@@ -7,7 +7,6 @@ from layer import *
 from calc_additional_features import *
 from calc_profile_features import *
 from well import *
-from lda import *
 from mlp import *
 from monitoring import *
 from krige import *
@@ -144,44 +143,12 @@ ui.pushButton_slide.clicked.connect(slide_average)
 radarogramma.sigRangeChanged.connect(on_range_changed)
 ui.checkBox_black_white.clicked.connect(change_background)
 
-
-
-#   lda
-ui.pushButton_add_lda.clicked.connect(add_lda)
-ui.pushButton_rem_lda.clicked.connect(remove_lda)
-ui.pushButton_copy_lda.clicked.connect(copy_lda)
-ui.pushButton_copy_lda_to_mlp.clicked.connect(copy_lda_to_mlp)
-ui.pushButton_add_mark_lda.clicked.connect(add_marker_lda)
-ui.pushButton_rem_mark_lda.clicked.connect(remove_marker_lda)
-ui.pushButton_add_well_lda.clicked.connect(add_well_markup_lda)
-ui.pushButton_add_geovel_lda.clicked.connect(add_param_geovel_lda)
-ui.pushButton_add_all_geovel_lda.clicked.connect(add_all_param_geovel_lda)
-ui.pushButton_add_distr_lda.clicked.connect(add_param_distr_lda)
-ui.pushButton_add_sep_lda.clicked.connect(add_param_sep_lda)
-ui.pushButton_add_all_distr.clicked.connect(add_all_param_distr_lda)
-ui.pushButton_update_well_lda.clicked.connect(update_well_markup_lda)
-ui.pushButton_rem_well_lda.clicked.connect(remove_well_markup_lda)
-ui.pushButton_rem_param_lda.clicked.connect(remove_param_geovel_lda)
-ui.pushButton_clear_params_lda.clicked.connect(remove_all_param_geovel_lda)
-ui.pushButton_draw_lda.clicked.connect(draw_LDA)
-ui.pushButton_verify_lda.clicked.connect(calc_verify_lda)
-ui.pushButton_reset_verify_lda.clicked.connect(reset_verify_lda)
-ui.pushButton_calc_lda.clicked.connect(calc_LDA)
-ui.pushButton_calc_obj_lda.clicked.connect(calc_obj_lda)
-ui.pushButton_add_mfcc.clicked.connect(add_param_mfcc_lda)
-ui.pushButton_add_all_mfcc.clicked.connect(add_all_param_mfcc_lda)
-ui.pushButton_corr_lda.clicked.connect(calc_corr_lda)
-ui.pushButton_updata_lda.clicked.connect(update_list_param_lda)
-ui.pushButton_anova_lda.clicked.connect(anova_lda)
-ui.listWidget_well_lda.currentItemChanged.connect(choose_marker_lda)
-ui.comboBox_lda_analysis.activated.connect(update_list_marker_lda_db)
 ui.pushButton_test.clicked.connect(draw_max_min)
 
 #   mlp
 ui.pushButton_add_mlp.clicked.connect(add_mlp)
 ui.pushButton_rem_mlp.clicked.connect(remove_mlp)
 ui.pushButton_copy_mlp.clicked.connect(copy_mlp)
-ui.pushButton_copy_to_lda.clicked.connect(copy_mlp_to_lda)
 ui.pushButton_copy_regmod.clicked.connect(copy_mlp_to_regmod)
 ui.pushButton_add_mark_mlp.clicked.connect(add_marker_mlp)
 ui.pushButton_rem_mark_mlp.clicked.connect(remove_marker_mlp)
@@ -241,7 +208,6 @@ ui.pushButton_torch.clicked.connect(torch_regressor_train)
 ui.pushButton_add_regmod.clicked.connect(add_regression_model)
 ui.pushButton_rem_regmod.clicked.connect(remove_reg)
 ui.pushButton_copy_reg.clicked.connect(copy_regmod)
-# ui.pushButton_copy_to_lda.clicked.connect(copy_reg_to_lda)
 ui.pushButton_add_signal_reg.clicked.connect(add_param_signal_reg)
 ui.pushButton_add_all_signal_reg.clicked.connect(add_all_param_signal_reg)
 ui.pushButton_add_crl_reg.clicked.connect(add_param_crl_reg)
@@ -533,10 +499,8 @@ clear_window_profile()
 update_list_well()
 set_info('Старт...', 'green')
 set_random_color(ui.pushButton_color)
-update_list_lda(True)
 update_list_mlp(True)
 update_list_reg()
-set_param_lda_to_combobox()
 set_param_mlp_to_combobox()
 set_param_regmod_to_combobox()
 set_param_expl_to_combobox()

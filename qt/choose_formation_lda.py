@@ -13,12 +13,12 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_FormationLDA(object):
     def setupUi(self, FormationLDA):
-        FormationLDA.setObjectName("FormationLDA")
+        FormationLDA.setObjectName("Formation")
         FormationLDA.resize(300, 300)
         self.gridLayout = QtWidgets.QGridLayout(FormationLDA)
         self.gridLayout.setObjectName("gridLayout")
         self.listWidget_form_lda = QtWidgets.QListWidget(FormationLDA)
-        self.listWidget_form_lda.setObjectName("listWidget_form_lda")
+        self.listWidget_form_lda.setObjectName("listWidget_form")
         self.gridLayout.addWidget(self.listWidget_form_lda, 0, 0, 1, 2)
         self.checkBox_to_all = QtWidgets.QCheckBox(FormationLDA)
         self.checkBox_to_all.setObjectName("checkBox_to_all")
@@ -34,9 +34,9 @@ class Ui_FormationLDA(object):
 
     def retranslateUi(self, FormationLDA):
         _translate = QtCore.QCoreApplication.translate
-        FormationLDA.setWindowTitle(_translate("FormationLDA", "Formation LDA"))
-        self.checkBox_to_all.setText(_translate("FormationLDA", "to all"))
-        self.pushButton_ok_form_lda.setText(_translate("FormationLDA", "ОК"))
+        FormationLDA.setWindowTitle(_translate("Formation", "Formation"))
+        self.checkBox_to_all.setText(_translate("Formation", "to all"))
+        self.pushButton_ok_form_lda.setText(_translate("Formation", "ОК"))
 
 
 if __name__ == "__main__":

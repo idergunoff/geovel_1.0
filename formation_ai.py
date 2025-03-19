@@ -807,7 +807,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         result = QtWidgets.QMessageBox.question(
             MainWindow,
             'Сохранение модели',
-            f'Сохранить модель {model_name}?',
+            f'Сохранить модель "{model_name}"?',
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
@@ -1111,4 +1111,4 @@ def import_model_formation_ai():
         pass
 
     update_list_trained_models()
-    set_info(f'Модель добавлена {model_name}', 'blue')
+    set_info(f'Модель "{model_name}" добавлена', 'blue')

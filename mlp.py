@@ -53,38 +53,6 @@ def copy_mlp():
     set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
 
 
-def copy_mlp_to_lda():
-    """Скопировать анализ MLP в LDA"""
-    from lda import update_list_lda
-
-    if ui.lineEdit_string.text() == '':
-        set_info('Введите название для копии анализа', 'red')
-        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите название для копии анализа в поле в верхней части главного окна')
-        return
-    old_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
-    new_lda = AnalysisLDA(title=ui.lineEdit_string.text())
-    session.add(new_lda)
-    session.commit()
-    for old_marker in old_mlp.markers:
-        new_marker = MarkerLDA(analysis_id=new_lda.id, title=old_marker.title, color=old_marker.color)
-        session.add(new_marker)
-        for old_markup in session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id(), marker_id=old_marker.id):
-            new_markup = MarkupLDA(
-                analysis_id=new_lda.id,
-                well_id=old_markup.well_id,
-                profile_id=old_markup.profile_id,
-                formation_id=old_markup.formation_id,
-                marker_id=new_marker.id,
-                list_measure=old_markup.list_measure,
-                type_markup=old_markup.type_markup
-            )
-            session.add(new_markup)
-    session.commit()
-    build_table_train_no_db('lda', new_lda.id, [])
-    update_list_lda()
-    set_info(f'Скопирован анализ MLP - "{old_mlp.title}"', 'green')
-
-
 def copy_mlp_to_regmod():
     """Скопировать анализ MLP в регрессионную модель"""
     if ui.lineEdit_string.text() == '':

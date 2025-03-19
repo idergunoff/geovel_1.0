@@ -1524,12 +1524,8 @@ def draw_boundary(bound_id, index):
 
 
 #################################################################
-###################### LDA MLP KNN GPC ##########################
+###################### MLP KNN GPC ##########################
 #################################################################
-
-
-def get_LDA_id():
-    return ui.comboBox_lda_analysis.currentText().split(' id')[-1]
 
 
 def get_MLP_id():
@@ -1540,10 +1536,6 @@ def get_regmod_id():
     return ui.comboBox_regmod.currentText().split(' id')[-1]
 
 
-def get_lda_title():
-    return ui.comboBox_lda_analysis.currentText().split(' id')[0]
-
-
 def get_mlp_title():
     return ui.comboBox_mlp_analysis.currentText().split(' id')[0]
 
@@ -1552,16 +1544,8 @@ def get_regmod_title():
     return ui.comboBox_regmod.currentText().split(' id')[0]
 
 
-def get_marker_id():
-    return ui.comboBox_mark_lda.currentText().split(' id')[-1]
-
-
 def get_marker_mlp_id():
     return ui.comboBox_mark_mlp.currentText().split(' id')[-1]
-
-
-def get_marker_title():
-    return ui.comboBox_mark_lda.currentText().split(' id')[0]
 
 
 def get_marker_mlp_title():
@@ -1570,10 +1554,6 @@ def get_marker_mlp_title():
 def get_expl_model_title():
     if ui.listWidget_trained_model_expl.currentItem():
         return ui.listWidget_trained_model_expl.currentItem().text()
-
-def get_markup_id():
-    if ui.listWidget_well_lda.currentItem():
-        return ui.listWidget_well_lda.currentItem().text().split(' id')[-1]
 
 
 def get_markup_mlp_id():
@@ -1584,11 +1564,6 @@ def get_markup_mlp_id():
 def get_markup_regmod_id():
     if ui.listWidget_well_regmod.currentItem():
         return ui.listWidget_well_regmod.currentItem().text().split(' id')[-1]
-
-
-def set_param_lda_to_combobox():
-    for param in list_param_geovel:
-        ui.comboBox_geovel_param_lda.addItem(param)
 
 
 def set_param_mlp_to_combobox():
@@ -1617,18 +1592,6 @@ def set_param_expl_to_combobox():
         new_list_param_geovel.remove(i)
     for param in new_list_param_geovel:
         ui.comboBox_geovel_param_expl.addItem(param)
-
-
-def add_param_lda(param):
-    if param.startswith('distr') or param.startswith('sep'):
-        atr, count = ui.comboBox_atrib_distr_lda.currentText(), ui.spinBox_count_distr_lda.value()
-        param = f'{param}_{atr}_{count}'
-    elif param.startswith('mfcc'):
-        atr, count = ui.comboBox_atrib_mfcc_lda.currentText(), ui.spinBox_count_mfcc.value()
-        param = f'{param}_{atr}_{count}'
-    new_param_lda = ParameterLDA(analysis_id=get_LDA_id(), parameter=param)
-    session.add(new_param_lda)
-    session.commit()
 
 
 def add_param_mlp(param):
@@ -1815,10 +1778,6 @@ def get_list_param_numerical_for_train(list_param):
             new_list_param.append(param)
     return new_list_param
 
-def get_list_marker():
-    markers = session.query(MarkerLDA).filter_by(analysis_id=get_LDA_id()).all()
-    return [m.title for m in markers]
-
 
 def get_list_marker_mlp(type_case):
     if type_case == 'georadar':
@@ -1827,12 +1786,6 @@ def get_list_marker_mlp(type_case):
     if type_case == 'geochem':
         markers = session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()
         return [m.title for m in markers]
-
-
-def get_list_param_lda():
-    parameters = session.query(ParameterLDA).filter_by(analysis_id=get_LDA_id()).all()
-    return [p.parameter for p in parameters]
-
 
 def get_list_param_mlp():
     parameters = session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).all()
@@ -1915,9 +1868,7 @@ def check_list_lengths(list_of_lists):
 def string_to_unique_number(strings, type_analysis):
     unique_strings = {}  # Словарь для хранения уникальных строк и их численного представления
     result = []  # Список для хранения результата
-    if type_analysis == 'lda':
-        markers = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
-    elif type_analysis == 'mlp':
+    if type_analysis == 'mlp':
         markers = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
     elif type_analysis == 'geochem':
         markers = session.query(GeochemCategory).filter(GeochemCategory.maket_id == get_maket_id()).all()

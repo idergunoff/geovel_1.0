@@ -160,13 +160,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
         legend = ''
         levels_count = 10
         color_map = ui_dm.comboBox_cmap.currentText()
-        if param == 'lda':
-            markers_lda = session.query(MarkerLDA).filter(MarkerLDA.analysis_id == get_LDA_id()).all()
-            colors_lda = [marker.color for marker in markers_lda]
-            color_map = ListedColormap(colors_lda)
-            legend = '\n'.join([f'{n+1}-{m.title}' for n, m in enumerate(markers_lda)])
-            levels_count = len(markers_lda) - 1
-        elif param.startswith('Classifier'):
+        if param.startswith('Classifier'):
             markers_mlp = session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()
             colors_mlp = [marker.color for marker in markers_mlp]
             color_map = ListedColormap(colors_mlp)

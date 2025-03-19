@@ -13,11 +13,7 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
 
 def build_table_train(db=False, analisis='lda'):
     # Получение списка параметров
-    if analisis == 'lda':
-        list_param = get_list_param_lda()
-        analisis_id = get_LDA_id()
-        analis = session.query(AnalysisLDA).filter_by(id=get_LDA_id()).first()
-    elif analisis == 'mlp':
+    if analisis == 'mlp':
         list_param = get_list_param_mlp()
         analisis_id = get_MLP_id()
         analis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
@@ -27,9 +23,7 @@ def build_table_train(db=False, analisis='lda'):
         analis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
     # Если в базе есть сохранённая обучающая выборка, забираем ее оттуда
     if db or analis.up_data:
-        if analisis == 'lda':
-            data = session.query(AnalysisLDA.data).filter_by(id=get_LDA_id()).first()
-        elif analisis == 'mlp':
+        if analisis == 'mlp':
             data = session.query(AnalysisMLP.data).filter_by(id=get_MLP_id()).first()
         elif analisis == 'regmod':
             data = session.query(AnalysisReg.data).filter_by(id=get_regmod_id()).first()
@@ -51,9 +45,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
     except_param = False
     # Получаем размеченные участки
-    if analisis == 'lda':
-        markups = session.query(MarkupLDA).filter_by(analysis_id=analisis_id).all()
-    elif analisis == 'mlp':
+    if analisis == 'mlp':
         markups = session.query(MarkupMLP).filter_by(analysis_id=analisis_id).all()
         except_param = session.query(ExceptionMLP).filter_by(analysis_id=analisis_id).first()
     elif analisis == 'regmod':
@@ -283,9 +275,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
 
         ui.progressBar.setValue(nm + 1)
     data_train_to_db = json.dumps(data_train.to_dict())
-    if analisis == 'lda':
-        session.query(AnalysisLDA).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
-    elif analisis == 'mlp':
+    if analisis == 'mlp':
         session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
     elif analisis == 'regmod':
         session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
@@ -293,11 +283,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     return data_train, list_param
 
 
-def build_table_test(analisis='lda', model=False, curr_form=False):
+def build_table_test(analisis='mlp', model=False, curr_form=False):
     list_except_signal, list_except_crl = [], []
-    if analisis == 'lda':
-        list_param, analisis_title = get_list_param_lda(), ui.comboBox_lda_analysis.currentText()
-    elif analisis == 'mlp':
+    if analisis == 'mlp':
         if not model:
             model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
         list_param, analisis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
@@ -528,49 +516,6 @@ def set_marks():
         for index, i in enumerate(list_cat[2:]):
             labels[i] = index
     return labels
-
-
-def get_working_data_lda():
-    data_train, list_param = build_table_train(True)
-    list_param_lda = data_train.columns.tolist()[2:]
-    training_sample = data_train[list_param_lda].values.tolist()
-    markup = sum(data_train[['mark']].values.tolist(), [])
-    clf = LinearDiscriminantAnalysis()
-    try:
-        trans_coef = clf.fit(training_sample, markup).transform(training_sample)
-    except ValueError:
-        set_info(f'Ошибка в расчетах LDA! Возможно значения одного из параметров отсутствуют в интервале обучающей '
-                 f'выборки.', 'red')
-        return
-    data_trans_coef = pd.DataFrame(trans_coef)
-    data_trans_coef['mark'] = data_train['mark'].values.tolist()
-    data_trans_coef['shape'] = ['train']*len(data_trans_coef)
-    list_cat = list(clf.classes_)
-    working_data, curr_form = build_table_test()
-    profile_title = session.query(Profile.title).filter_by(id=working_data['prof_index'][0].split('_')[0]).first()[0][0]
-    set_info(f'Процесс расчёта LDA. {ui.comboBox_lda_analysis.currentText()} по профилю {profile_title}', 'blue')
-    try:
-        new_trans_coef = clf.transform(working_data.iloc[:, 3:])
-        new_mark = clf.predict(working_data.iloc[:, 3:])
-        probability = clf.predict_proba(working_data.iloc[:, 3:])
-    except ValueError:
-        data = imputer.fit_transform(working_data.iloc[:, 3:])
-        new_trans_coef = clf.transform(data)
-        new_mark = clf.predict(data)
-        probability = clf.predict_proba(data)
-        for i in working_data.index:
-            p_nan = [working_data.columns[ic + 3] for ic, v in enumerate(working_data.iloc[i, 3:].tolist()) if
-                     np.isnan(v)]
-            if len(p_nan) > 0:
-                set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
-                         f' этого измерения может быть не корректен', 'red')
-    working_data = pd.concat([working_data, pd.DataFrame(probability, columns=list_cat)], axis=1)
-    working_data['mark'] = new_mark
-    test_data_trans_coef = pd.DataFrame(new_trans_coef)
-    test_data_trans_coef['mark'] = new_mark
-    test_data_trans_coef['shape'] = ['test'] * len(new_trans_coef)
-    data_trans_coef = pd.concat([data_trans_coef, test_data_trans_coef], ignore_index=True)
-    return working_data, data_trans_coef, curr_form
 
 
 def calc_profile_model_predict(param, formation):
