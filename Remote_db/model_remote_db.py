@@ -5,7 +5,7 @@ from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, 
                         Date, Text, text, literal_column, or_, func, Index, desc)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
-DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz1.j56960636.m29on.vps.myjino.ru:49359/geovel_remote'
+DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz2.j56960636.0n03n.vps.myjino.ru:49221/geovel_remote'
 
 engine_remote = create_engine(f'postgresql+psycopg2://{DATABASE_NAME}', echo=False)
 Session = sessionmaker(bind=engine_remote)
@@ -22,8 +22,6 @@ class GeoradarObject(Base):
     title = Column(String)
 
     researches = relationship('Research', back_populates='object')
-
-
 
 
 class Research(Base):
