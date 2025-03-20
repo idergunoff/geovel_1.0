@@ -1,0 +1,60 @@
+import datetime
+import json
+
+from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
+                        Date, Text, text, literal_column, or_, func, Index, desc)
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+
+DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz1.j56960636.m29on.vps.myjino.ru:49359/geovel_remote'
+
+engine_remote = create_engine(f'postgresql+psycopg2://{DATABASE_NAME}', echo=False)
+Session = sessionmaker(bind=engine_remote)
+
+session_remote = Session()
+
+Base = declarative_base()
+
+
+class GeoradarObject(Base):
+    __tablename__ = 'georadar_object'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    researches = relationship('Research', back_populates='object')
+
+
+
+
+class Research(Base):
+    __tablename__ = 'research'
+
+    id = Column(Integer, primary_key=True)
+    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    date_research = Column(Date)
+
+    object = relationship('GeoradarObject', back_populates='researches')
+    profiles = relationship('Profile', back_populates='research')
+
+
+
+class Profile(Base):
+    __tablename__ = 'profile'
+
+    id = Column(Integer, primary_key=True)
+    research_id = Column(Integer, ForeignKey('research.id'))
+    title = Column(String)
+
+    signal = Column(Text)
+
+    x_wgs = Column(Text)
+    y_wgs = Column(Text)
+    x_pulc = Column(Text)
+    y_pulc = Column(Text)
+    abs_relief = Column(Text)
+    depth_relief = Column(Text)
+
+    research = relationship('Research', back_populates='profiles')
+
+
+Base.metadata.create_all(engine_remote)
