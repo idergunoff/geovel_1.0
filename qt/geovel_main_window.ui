@@ -1171,8 +1171,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>354</width>
-                       <height>171</height>
+                       <width>98</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5290,6 +5290,19 @@ Therm</string>
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_rem_db">
+            <property name="toolTip">
+             <string>Удаленная база данных</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 170, 255);</string>
+            </property>
+            <property name="text">
+             <string>RemoteDB</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>

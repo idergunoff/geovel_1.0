@@ -23,6 +23,7 @@ from nn_torch_regression import *
 from feature_selection import *
 from index_productivity import *
 from pareto import *
+from test_remote_db import *
 
 MainWindow.show()
 
@@ -94,6 +95,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
 img.scene().sigMouseClicked.connect(mouseClicked)
 img.scene().sigMouseMoved.connect(mouseLine)
 
+ui.pushButton_rem_db.clicked.connect(open_rem_db_window)
 ui.pushButton_save_signal.clicked.connect(save_signal)
 ui.pushButton_draw_rad.clicked.connect(draw_radarogram)
 ui.pushButton_draw_cur.clicked.connect(draw_current_radarogram)
@@ -523,6 +525,13 @@ update_list_velocity_model()
 update_list_model_prediction()
 update_list_bind_vel_prediction()
 index_prod_list_update()
+
+# ########## Remote DB ############
+# update_object_rem_combobox()
+# update_research_rem_combobox()
+# update_profile_rem_combobox()
+
+
 
 time2 = datetime.datetime.now() - time
 print(time2)
