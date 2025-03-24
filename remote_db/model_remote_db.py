@@ -1,16 +1,29 @@
 import datetime
 import json
+from contextlib import contextmanager
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
-                        Date, Text, text, literal_column, or_, func, Index, desc)
+                        Date, Text, text, literal_column, or_, func, Index, desc, MetaData, Table)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz2.j56960636.0n03n.vps.myjino.ru:49221/geovel_remote'
 
 engine_remote = create_engine(f'postgresql+psycopg2://{DATABASE_NAME}', echo=False)
-Session = sessionmaker(bind=engine_remote)
+Session_remote = sessionmaker(bind=engine_remote)
 
-session_remote = Session()
+
+@contextmanager
+def get_session():
+    session_remote = Session_remote()
+    try:
+        yield session_remote
+        session_remote.commit()
+    except Exception:
+        session_remote.rollback()
+        raise
+    finally:
+        session_remote.close()
+
 
 Base = declarative_base()
 
@@ -44,6 +57,7 @@ class Profile(Base):
     title = Column(String)
 
     signal = Column(Text)
+    signal_hash = Column(String)
 
     x_wgs = Column(Text)
     y_wgs = Column(Text)

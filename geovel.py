@@ -23,7 +23,7 @@ from nn_torch_regression import *
 from feature_selection import *
 from index_productivity import *
 from pareto import *
-from test_remote_db import *
+from remote_db_win import *
 
 MainWindow.show()
 
@@ -525,11 +525,6 @@ update_list_velocity_model()
 update_list_model_prediction()
 update_list_bind_vel_prediction()
 index_prod_list_update()
-
-# ########## Remote DB ############
-# update_object_rem_combobox()
-# update_research_rem_combobox()
-# update_profile_rem_combobox()
 
 
 
