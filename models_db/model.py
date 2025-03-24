@@ -789,6 +789,7 @@ class WellLog(Base):
     curve_data = Column(Text)
     begin = Column(Float)
     end = Column(Float)
+    step = Column(Float)
     description = Column(Text)
 
     well = relationship("Well", back_populates="well_logs")
