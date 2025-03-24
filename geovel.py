@@ -24,6 +24,7 @@ from feature_selection import *
 from index_productivity import *
 from pareto import *
 from remote_db_win import *
+from well_log import *
 
 MainWindow.show()
 
@@ -369,6 +370,13 @@ roi.sigRegionChanged.connect(updatePlot)
 ui.pushButton_find_oil.clicked.connect(filter19)
 ui.pushButton_secret_filter.clicked.connect(secret_filter)
 ui.listWidget_formation_ai.currentItemChanged.connect(choose_formation_ai)
+
+
+#################################################################
+######################### WELL LOG ##############################
+#################################################################
+
+ui.pushButton_well_log.clicked.connect(show_well_log)
 
 #################################################################
 ###################### Exploration ##############################

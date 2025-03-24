@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\qt\geovel_main_window.ui'
+# Form implementation generated from reading ui file 'qt/geovel_main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -585,7 +585,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 98, 38))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 452, 170))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_18.setObjectName("gridLayout_18")
@@ -668,7 +668,11 @@ class Ui_MainWindow(object):
         self.pushButton_add_data_well = QtWidgets.QPushButton(self.tab_4)
         self.pushButton_add_data_well.setStyleSheet("background-color: rgb(202, 251, 171);")
         self.pushButton_add_data_well.setObjectName("pushButton_add_data_well")
-        self.gridLayout_12.addWidget(self.pushButton_add_data_well, 0, 1, 1, 1)
+        self.gridLayout_12.addWidget(self.pushButton_add_data_well, 0, 2, 1, 1)
+        self.pushButton_well_log = QtWidgets.QPushButton(self.tab_4)
+        self.pushButton_well_log.setStyleSheet("background-color: rgb(252, 204, 165);")
+        self.pushButton_well_log.setObjectName("pushButton_well_log")
+        self.gridLayout_12.addWidget(self.pushButton_well_log, 0, 1, 1, 1)
         self.gridLayout_148.addLayout(self.gridLayout_12, 2, 2, 1, 1)
         self.listWidget_well = QtWidgets.QListWidget(self.tab_4)
         self.listWidget_well.setObjectName("listWidget_well")
@@ -2618,7 +2622,7 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addLayout(self.gridLayout_3, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1600, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1600, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -2721,6 +2725,7 @@ class Ui_MainWindow(object):
         self.pushButton_rem_well.setText(_translate("MainWindow", "remove well"))
         self.label_12.setText(_translate("MainWindow", "Data of Well:"))
         self.pushButton_add_data_well.setText(_translate("MainWindow", "add data well"))
+        self.pushButton_well_log.setText(_translate("MainWindow", "LOG"))
         self.label_13.setText(_translate("MainWindow", "Boundaries:"))
         self.label_16.setText(_translate("MainWindow", "Vmin"))
         self.label_17.setText(_translate("MainWindow", "Vср"))
