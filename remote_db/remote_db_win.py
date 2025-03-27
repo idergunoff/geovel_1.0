@@ -237,9 +237,9 @@ def open_rem_db_window():
                         remote_profile = remote_session.query(ProfileRDB).filter_by(
                             research_id=remote_research.id,
                             signal_hash=local_profile.signal_hash
-                        ).first()
+                        ).count()
 
-                        if not remote_profile:
+                        if remote_profile == 0:
                             # Добавляем отсутствующий профиль
                             new_profile = ProfileRDB(
                                 research_id=remote_research.id,
