@@ -137,8 +137,12 @@ def open_rem_db_window():
                     # Получаем все профили для текущего исследования из удалённой базы
                     remote_profiles = remote_session.query(ProfileRDB).filter_by(research_id=remote_research.id).all()
 
-                    for remote_profile in remote_profiles:
+
+                    ui.progressBar.setMaximum(len(remote_profiles))
+
+                    for n, remote_profile in enumerate(remote_profiles):
                         # Проверяем существование профиля в локальной базе по signal_hash
+                        ui.progressBar.setValue(n)
                         local_profile = session.query(Profile).filter_by(
                             research_id=local_research.id,
                             signal_hash=remote_profile.signal_hash
@@ -223,8 +227,11 @@ def open_rem_db_window():
                     # Получаем все профили для текущего исследования из локальной базы
                     local_profiles = session.query(Profile).filter_by(research_id=local_research.id).all()
 
-                    for local_profile in local_profiles:
+                    ui.progressBar.setMaximum(len(local_profiles))
+
+                    for n, local_profile in enumerate(local_profiles):
                         # Проверяем существование профиля в удаленной базе по signal_hash
+                        ui.progressBar.setValue(n)
                         remote_profile = remote_session.query(ProfileRDB).filter_by(
                             research_id=remote_research.id,
                             signal_hash=local_profile.signal_hash
