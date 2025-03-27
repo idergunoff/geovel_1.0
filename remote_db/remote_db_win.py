@@ -43,13 +43,15 @@ def open_rem_db_window():
         ui_rdb.comboBox_profile_rem.clear()
         with get_session() as session_r:
             try:
-                profiles_rem = session_r.query(ProfileRDB).filter(ProfileRDB.research_id == get_research_rem_id()).all()
+                profiles_rem = session_r.query(ProfileRDB.id, ProfileRDB.title).filter(
+                    ProfileRDB.research_id == get_research_rem_id()
+                ).order_by(ProfileRDB.id).all()
             except ValueError:
                 return
             # Запрос на получение всех профилей, относящихся к исследованию, и их добавление в выпадающий список
             for i in profiles_rem:
-                count_measure = len(json.loads(i.signal))
-                ui_rdb.comboBox_profile_rem.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
+                # count_measure = len(json.loads(i.signal))
+                ui_rdb.comboBox_profile_rem.addItem(f'{i[1]} id{i[0]}')
 
 
     def update_research_rem_combobox():
@@ -137,12 +139,11 @@ def open_rem_db_window():
                     # Получаем все профили для текущего исследования из удалённой базы
                     remote_profiles = remote_session.query(ProfileRDB).filter_by(research_id=remote_research.id).all()
 
-
                     ui.progressBar.setMaximum(len(remote_profiles))
 
                     for n, remote_profile in enumerate(remote_profiles):
                         # Проверяем существование профиля в локальной базе по signal_hash
-                        ui.progressBar.setValue(n)
+                        ui.progressBar.setValue(n+1)
                         local_profile = session.query(Profile).filter_by(
                             research_id=local_research.id,
                             signal_hash=remote_profile.signal_hash
@@ -163,11 +164,12 @@ def open_rem_db_window():
                                 depth_relief=remote_profile.depth_relief
                             )
                             session.add(new_profile)
-                            session.commit()
                             set_info(f'Профиль "{remote_profile.title}" загружен с удаленной БД', 'green')
 
                         else:
                             set_info(f'Профиль "{remote_profile.title}" есть в локальной БД', 'red')
+
+                    session.commit()
 
         update_object()
 
@@ -231,7 +233,7 @@ def open_rem_db_window():
 
                     for n, local_profile in enumerate(local_profiles):
                         # Проверяем существование профиля в удаленной базе по signal_hash
-                        ui.progressBar.setValue(n)
+                        ui.progressBar.setValue(n+1)
                         remote_profile = remote_session.query(ProfileRDB).filter_by(
                             research_id=remote_research.id,
                             signal_hash=local_profile.signal_hash
@@ -252,11 +254,12 @@ def open_rem_db_window():
                                 depth_relief=local_profile.depth_relief
                             )
                             remote_session.add(new_profile)
-                            remote_session.commit()
                             set_info(f'Профиль "{local_profile.title}" выгружен на удаленную БД', 'green')
 
                         else:
                             set_info(f'Профиль "{local_profile.title}" есть в удаленной БД', 'red')
+
+                    remote_session.commit()
 
         update_object_rem_combobox()
 
