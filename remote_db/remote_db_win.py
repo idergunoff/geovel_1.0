@@ -28,15 +28,6 @@ def open_rem_db_window():
         except ValueError:
             pass
 
-
-    def get_profile_rem_id():
-        """ Получение id выбранного профиля """
-        try:
-            return int(ui_rdb.comboBox_profile_rem.currentText().split(' id')[-1])
-        except ValueError:
-            pass
-
-
     def update_profile_rem_combobox():
         """ Обновление списка профилей в выпадающем списке """
         # Очистка выпадающего списка
@@ -61,6 +52,17 @@ def open_rem_db_window():
             for i in session_r.query(ResearchRDB).filter(ResearchRDB.object_id == get_object_rem_id()).order_by(
                     ResearchRDB.date_research).all():
                 ui_rdb.comboBox_research_rem.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
+
+            # Отдельно находим последнее добавленное исследование (по ID или дате создания)
+            last_added = session_r.query(ResearchRDB).order_by(ResearchRDB.id.desc()).first()
+
+            # Если такое исследование есть - выбираем его в комбобоксе
+            if last_added:
+                last_item_text = f'{last_added.date_research.strftime("%m.%Y")} id{last_added.id}'
+                index = ui_rdb.comboBox_research_rem.findText(last_item_text)
+                if index >= 0:
+                    ui_rdb.comboBox_research_rem.setCurrentIndex(index)
+
         update_profile_rem_combobox()
 
     def update_object_rem_combobox():
@@ -76,8 +78,19 @@ def open_rem_db_window():
                 # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
                 ui_rdb.comboBox_object_rem.addItem(f'{i.title} id{i.id}')
 
+            # Отдельно находим последний добавленный объект (по ID или дате создания)
+            last_added = session_r.query(GeoradarObjectRDB).order_by(GeoradarObjectRDB.id.desc()).first()
+
+            # Если такой объект есть - выбираем его в комбобоксе
+            if last_added:
+                last_item_text = f'{last_added.title} id{last_added.id}'
+                index = ui_rdb.comboBox_object_rem.findText(last_item_text)
+                if index >= 0:
+                    ui_rdb.comboBox_object_rem.setCurrentIndex(index)
+
         # Обновление выпадающих списков исследований
         update_research_rem_combobox()
+
 
     update_object_rem_combobox()
     # При изменении объекта -> обновить исследования
@@ -172,8 +185,7 @@ def open_rem_db_window():
                     session.commit()
 
         update_object()
-        set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'green')
-
+        set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
 
     def unload_object_rem():
@@ -264,32 +276,49 @@ def open_rem_db_window():
                     remote_session.commit()
 
         update_object_rem_combobox()
-        set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'green')
-
+        set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
     def delete_object_rem():
         title_object = ui_rdb.comboBox_object_rem.currentText().split(' id')[0]
-        result = QtWidgets.QMessageBox.question(RemoteDB, 'Delete object in RemoteDB',
-                                                f'Вы уверены, что хотите удалить объект "{title_object}" со всеми '
-                                                f'исследованиями и профилями?',
-                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        object_id = get_object_rem_id()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete object in RemoteDB',
+            f'Вы уверены, что хотите удалить объект "{title_object}" со всеми исследованиями и профилями?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
         if result == QtWidgets.QMessageBox.Yes:
             with get_session() as remote_session:
-                if remote_session.query(ProfileRDB.id).filter(ProfileRDB.id == get_profile_rem_id()).count() > 0:
-                    remote_session.query(ProfileRDB).filter(ProfileRDB.research_id == get_research_rem_id()).delete()
-                    remote_session.query(ResearchRDB).filter(ResearchRDB.object_id == get_object_rem_id()).delete()
-                    remote_session.query(GeoradarObjectRDB).filter(GeoradarObjectRDB.id == get_object_rem_id()).delete()
-                elif remote_session.query(ResearchRDB).filter(ResearchRDB.id == get_research_rem_id()).count() > 0:
-                    remote_session.query(ResearchRDB).filter(ResearchRDB.object_id == get_object_rem_id()).delete()
-                    remote_session.query(GeoradarObjectRDB).filter(GeoradarObjectRDB.id == get_object_rem_id()).delete()
-                else:
-                    remote_session.query(GeoradarObjectRDB).filter(GeoradarObjectRDB.id == get_object_rem_id()).delete()
-                remote_session.commit()
+                try:
+                    # Удаляем все профили, связанные с объектом
+                    remote_session.query(ProfileRDB) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
 
-            set_info(f'Объект "{title_object}" и все его исследования и профили удалены в удаленной БД', 'green')
-            update_object_rem_combobox()
-        else:
-            pass
+                    # Удаляем все исследования объекта
+                    remote_session.query(ResearchRDB) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем сам объект
+                    remote_session.query(GeoradarObjectRDB) \
+                        .filter(GeoradarObjectRDB.id == object_id) \
+                        .delete()
+
+                    remote_session.commit()
+                    set_info(f'Объект "{title_object}" и все его исследования и профили удалены в удаленной БД',
+                             'green')
+                    update_object_rem_combobox()
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
+
+
 
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)

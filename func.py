@@ -557,6 +557,16 @@ def update_object():
         # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
         ui.comboBox_object.addItem(f'{i.title} id{i.id}')
 
+    # Отдельно находим последний добавленный объект (по ID или дате создания)
+    last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
+
+    # Если такой объект есть - выбираем его в комбобоксе
+    if last_added:
+        last_item_text = f'{last_added.title} id{last_added.id}'
+        index = ui.comboBox_object.findText(last_item_text)
+        if index >= 0:
+            ui.comboBox_object.setCurrentIndex(index)
+
     # Обновление выпадающего списка профилей
     update_research_combobox()
     check_coordinates_research()
@@ -564,11 +574,21 @@ def update_object():
     update_train_combobox()
 
 
-
 def update_research_combobox():
     ui.comboBox_research.clear()
     for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
         ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
+
+    # Отдельно находим последнее добавленное исследование (по ID или дате создания)
+    last_added = session.query(Research).order_by(Research.id.desc()).first()
+
+    # Если такое исследование есть - выбираем его в комбобоксе
+    if last_added:
+        last_item_text = f'{last_added.date_research.strftime("%m.%Y")} id{last_added.id}'
+        index = ui.comboBox_research.findText(last_item_text)
+        if index >= 0:
+            ui.comboBox_research.setCurrentIndex(index)
+
     update_profile_combobox()
     check_coordinates_profile()
     check_coordinates_research()
