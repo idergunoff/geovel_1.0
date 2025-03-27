@@ -3,7 +3,7 @@ import json
 from contextlib import contextmanager
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
-                        Date, Text, text, literal_column, or_, func, Index, desc, MetaData, Table)
+                        Date, Text, text, literal_column, or_, func, Index, desc)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz2.j56960636.0n03n.vps.myjino.ru:49221/geovel_remote'
@@ -28,32 +28,32 @@ def get_session():
 Base = declarative_base()
 
 
-class GeoradarObject(Base):
-    __tablename__ = 'georadar_object'
+class GeoradarObjectRDB(Base):
+    __tablename__ = 'georadar_object_rdb'
 
     id = Column(Integer, primary_key=True)
     title = Column(String)
 
-    researches = relationship('Research', back_populates='object')
+    researches = relationship('ResearchRDB', back_populates='object')
 
 
-class Research(Base):
-    __tablename__ = 'research'
+class ResearchRDB(Base):
+    __tablename__ = 'research_rdb'
 
     id = Column(Integer, primary_key=True)
-    object_id = Column(Integer, ForeignKey('georadar_object.id'))
+    object_id = Column(Integer, ForeignKey('georadar_object_rdb.id'))
     date_research = Column(Date)
 
-    object = relationship('GeoradarObject', back_populates='researches')
-    profiles = relationship('Profile', back_populates='research')
+    object = relationship('GeoradarObjectRDB', back_populates='researches')
+    profiles = relationship('ProfileRDB', back_populates='research')
 
 
 
-class Profile(Base):
-    __tablename__ = 'profile'
+class ProfileRDB(Base):
+    __tablename__ = 'profile_rdb'
 
     id = Column(Integer, primary_key=True)
-    research_id = Column(Integer, ForeignKey('research.id'))
+    research_id = Column(Integer, ForeignKey('research_rdb.id'))
     title = Column(String)
 
     signal = Column(Text)
@@ -66,7 +66,7 @@ class Profile(Base):
     abs_relief = Column(Text)
     depth_relief = Column(Text)
 
-    research = relationship('Research', back_populates='profiles')
+    research = relationship('ResearchRDB', back_populates='profiles')
 
 
 Base.metadata.create_all(engine_remote)

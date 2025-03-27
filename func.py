@@ -1,6 +1,5 @@
 # from torch.cuda import graph
 import os.path
-
 import numpy as np
 from object import *
 
@@ -557,6 +556,7 @@ def update_object():
     for i in session.query(GeoradarObject).order_by(GeoradarObject.title).all():
         # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
         ui.comboBox_object.addItem(f'{i.title} id{i.id}')
+
     # Обновление выпадающего списка профилей
     update_research_combobox()
     check_coordinates_research()

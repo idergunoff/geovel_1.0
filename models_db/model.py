@@ -49,6 +49,7 @@ class Profile(Base):
     title = Column(String)
 
     signal = Column(Text)
+    signal_hash = Column(String)
 
     x_wgs = Column(Text)
     y_wgs = Column(Text)

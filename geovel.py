@@ -23,7 +23,7 @@ from nn_torch_regression import *
 from feature_selection import *
 from index_productivity import *
 from pareto import *
-from remote_db_win import *
+from remote_db.remote_db_win import *
 from well_log import *
 
 MainWindow.show()
