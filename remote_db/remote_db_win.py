@@ -172,6 +172,8 @@ def open_rem_db_window():
                     session.commit()
 
         update_object()
+        set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'green')
+
 
 
     def unload_object_rem():
@@ -262,6 +264,7 @@ def open_rem_db_window():
                     remote_session.commit()
 
         update_object_rem_combobox()
+        set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'green')
 
 
     def delete_object_rem():
