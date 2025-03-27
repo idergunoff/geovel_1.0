@@ -299,18 +299,22 @@ def open_rem_db_window():
 
     def update_signal_hashes(session):
         """ Обновление хэш-сумм в таблице Profile """
-        profiles = session.query(Profile).all()
-        for profile in profiles:
-            if profile.signal and not profile.signal_hash:
-                profile.signal_hash = calculate_hash(profile.signal)
+        profiles = session.query(Profile.id, Profile.signal_hash).all()
+        for p in profiles:
+            if not p[1]:
+                profile = session.query(Profile).filter_by(id=p[0]).first()
+                if profile.signal:
+                    profile.signal_hash = calculate_hash(profile.signal)
         session.commit()
 
     def update_signal_hashes_rdb(session):
         """ Обновление хэш-сумм в таблице ProfileRDB """
-        profiles = session.query(ProfileRDB).all()
-        for profile in profiles:
-            if profile.signal and not profile.signal_hash:
-                profile.signal_hash = calculate_hash(profile.signal)
+        profiles = session.query(ProfileRDB.id, ProfileRDB.signal_hash).all()
+        for p in profiles:
+            if not p[1]:
+                profile = session.query(ProfileRDB).filter_by(id=p[0]).first()
+                if profile.signal:
+                    profile.signal_hash = calculate_hash(profile.signal)
         session.commit()
 
 
