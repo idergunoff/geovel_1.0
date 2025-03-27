@@ -49,6 +49,7 @@ from qt.parameter_dependence import *
 from qt.pareto_form import *
 from qt.corrected_model_pred import *
 from qt.rem_db_window import *
+from qt.form_well_log import *
 
 import numpy as np
 import pyqtgraph as pg
