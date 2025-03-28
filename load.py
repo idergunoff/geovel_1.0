@@ -31,7 +31,7 @@ def add_object():
             new_research = Research(object_id=obj_id, date_research=date_research)
             session.add(new_research)
             session.commit()
-            update_object()
+            update_object(new_obj=True)
             Add_Object.close()
             set_info(f'Добавлено исследование /{date_research.strftime("%m.%Y")}/ для объекта "{name_object}".', 'green')
 

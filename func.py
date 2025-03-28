@@ -548,7 +548,7 @@ def update_profile_combobox():
     check_grid_relief()
 
 
-def update_object():
+def update_object(new_obj=False):
     """ Функция для обновления списка объектов в выпадающем списке """
     # Очистка выпадающего списка объектов
     ui.comboBox_object.clear()
@@ -556,16 +556,16 @@ def update_object():
     for i in session.query(GeoradarObject).order_by(GeoradarObject.title).all():
         # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
         ui.comboBox_object.addItem(f'{i.title} id{i.id}')
+    if new_obj:
+        # Отдельно находим последний добавленный объект (по ID или дате создания)
+        last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
 
-    # Отдельно находим последний добавленный объект (по ID или дате создания)
-    last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
-
-    # Если такой объект есть - выбираем его в комбобоксе
-    if last_added:
-        last_item_text = f'{last_added.title} id{last_added.id}'
-        index = ui.comboBox_object.findText(last_item_text)
-        if index >= 0:
-            ui.comboBox_object.setCurrentIndex(index)
+        # Если такой объект есть - выбираем его в комбобоксе
+        if last_added:
+            last_item_text = f'{last_added.title} id{last_added.id}'
+            index = ui.comboBox_object.findText(last_item_text)
+            if index >= 0:
+                ui.comboBox_object.setCurrentIndex(index)
 
     # Обновление выпадающего списка профилей
     update_research_combobox()

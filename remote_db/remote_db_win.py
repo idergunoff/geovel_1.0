@@ -65,7 +65,7 @@ def open_rem_db_window():
 
         update_profile_rem_combobox()
 
-    def update_object_rem_combobox():
+    def update_object_rem_combobox(from_local=False):
         """ Обновление списка объектов в выпадающем списке """
 
         # Очистка выпадающего списка объектов
@@ -77,16 +77,16 @@ def open_rem_db_window():
 
                 # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
                 ui_rdb.comboBox_object_rem.addItem(f'{i.title} id{i.id}')
+            if from_local:
+                # Отдельно находим последний добавленный объект (по ID или дате создания)
+                last_added = session_r.query(GeoradarObjectRDB).order_by(GeoradarObjectRDB.id.desc()).first()
 
-            # Отдельно находим последний добавленный объект (по ID или дате создания)
-            last_added = session_r.query(GeoradarObjectRDB).order_by(GeoradarObjectRDB.id.desc()).first()
-
-            # Если такой объект есть - выбираем его в комбобоксе
-            if last_added:
-                last_item_text = f'{last_added.title} id{last_added.id}'
-                index = ui_rdb.comboBox_object_rem.findText(last_item_text)
-                if index >= 0:
-                    ui_rdb.comboBox_object_rem.setCurrentIndex(index)
+                # Если такой объект есть - выбираем его в комбобоксе
+                if last_added:
+                    last_item_text = f'{last_added.title} id{last_added.id}'
+                    index = ui_rdb.comboBox_object_rem.findText(last_item_text)
+                    if index >= 0:
+                        ui_rdb.comboBox_object_rem.setCurrentIndex(index)
 
         # Обновление выпадающих списков исследований
         update_research_rem_combobox()
@@ -184,7 +184,7 @@ def open_rem_db_window():
 
                     session.commit()
 
-        update_object()
+        update_object(new_obj=True)
         set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
 
@@ -275,7 +275,7 @@ def open_rem_db_window():
 
                     remote_session.commit()
 
-        update_object_rem_combobox()
+        update_object_rem_combobox(from_local=True)
         set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
     def delete_object_rem():
