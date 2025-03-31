@@ -159,7 +159,7 @@ def open_rem_db_window():
                         ui.progressBar.setValue(n+1)
                         local_profile = session.query(Profile).filter_by(
                             research_id=local_research.id,
-                            signal_hash=remote_profile.signal_hash
+                            signal_hash_md5=remote_profile.signal_hash_md5
                         ).first()
 
                         if not local_profile:
@@ -168,7 +168,7 @@ def open_rem_db_window():
                                 research_id=local_research.id,
                                 title=remote_profile.title,
                                 signal=remote_profile.signal,
-                                signal_hash=remote_profile.signal_hash,
+                                signal_hash_md5=remote_profile.signal_hash_md5,
                                 x_wgs=remote_profile.x_wgs,
                                 y_wgs=remote_profile.y_wgs,
                                 x_pulc=remote_profile.x_pulc,
@@ -250,7 +250,7 @@ def open_rem_db_window():
                         ui.progressBar.setValue(n+1)
                         remote_profile = remote_session.query(ProfileRDB).filter_by(
                             research_id=remote_research.id,
-                            signal_hash=local_profile.signal_hash
+                            signal_hash_md5=local_profile.signal_hash_md5
                         ).count()
 
                         if remote_profile == 0:
@@ -259,7 +259,7 @@ def open_rem_db_window():
                                 research_id=remote_research.id,
                                 title=local_profile.title,
                                 signal=local_profile.signal,
-                                signal_hash=local_profile.signal_hash,
+                                signal_hash_md5=local_profile.signal_hash_md5,
                                 x_wgs=local_profile.x_wgs,
                                 y_wgs=local_profile.y_wgs,
                                 x_pulc=local_profile.x_pulc,
@@ -327,26 +327,26 @@ def open_rem_db_window():
 
     # Функция вычисления хэш-суммы
     def calculate_hash(value):
-        return hashlib.sha256(str(value).encode()).hexdigest()
+        return hashlib.md5(str(value).encode()).hexdigest()
 
     def update_signal_hashes(session):
         """ Обновление хэш-сумм в таблице Profile """
-        profiles = session.query(Profile.id, Profile.signal_hash).all()
+        profiles = session.query(Profile.id, Profile.signal_hash_md5).all()
         for p in profiles:
             if not p[1]:
                 profile = session.query(Profile).filter_by(id=p[0]).first()
                 if profile.signal:
-                    profile.signal_hash = calculate_hash(profile.signal)
+                    profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
     def update_signal_hashes_rdb(session):
         """ Обновление хэш-сумм в таблице ProfileRDB """
-        profiles = session.query(ProfileRDB.id, ProfileRDB.signal_hash).all()
+        profiles = session.query(ProfileRDB.id, ProfileRDB.signal_hash_md5).all()
         for p in profiles:
             if not p[1]:
                 profile = session.query(ProfileRDB).filter_by(id=p[0]).first()
                 if profile.signal:
-                    profile.signal_hash = calculate_hash(profile.signal)
+                    profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
 
