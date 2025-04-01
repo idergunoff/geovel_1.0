@@ -5,6 +5,7 @@ from func import *
 import hashlib
 
 def open_rem_db_window():
+    BaseRDB.metadata.create_all(engine_remote)
     """ Открытие окна для работы с удаленной БД """
     RemoteDB = QtWidgets.QDialog()
     ui_rdb = Ui_rem_db()

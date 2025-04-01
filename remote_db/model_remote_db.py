@@ -25,10 +25,10 @@ def get_session():
         session_remote.close()
 
 
-Base = declarative_base()
+BaseRDB = declarative_base()
 
 
-class GeoradarObjectRDB(Base):
+class GeoradarObjectRDB(BaseRDB):
     __tablename__ = 'georadar_object_rdb'
 
     id = Column(Integer, primary_key=True)
@@ -37,7 +37,7 @@ class GeoradarObjectRDB(Base):
     researches = relationship('ResearchRDB', back_populates='object')
 
 
-class ResearchRDB(Base):
+class ResearchRDB(BaseRDB):
     __tablename__ = 'research_rdb'
 
     id = Column(Integer, primary_key=True)
@@ -49,7 +49,7 @@ class ResearchRDB(Base):
 
 
 
-class ProfileRDB(Base):
+class ProfileRDB(BaseRDB):
     __tablename__ = 'profile_rdb'
 
     id = Column(Integer, primary_key=True)
@@ -69,4 +69,3 @@ class ProfileRDB(Base):
     research = relationship('ResearchRDB', back_populates='profiles')
 
 
-Base.metadata.create_all(engine_remote)
