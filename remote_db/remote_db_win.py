@@ -1,3 +1,5 @@
+import psycopg2
+
 from remote_db.model_remote_db import *
 from models_db.model import *
 from qt.rem_db_window import *
@@ -5,7 +7,11 @@ from func import *
 import hashlib
 
 def open_rem_db_window():
-    BaseRDB.metadata.create_all(engine_remote)
+    try:
+        BaseRDB.metadata.create_all(engine_remote)
+    except psycopg2.OperationalError:
+        set_info(f'Нет подключения к сети', 'red')
+        return
     """ Открытие окна для работы с удаленной БД """
     RemoteDB = QtWidgets.QDialog()
     ui_rdb = Ui_rem_db()
