@@ -2,7 +2,7 @@ import datetime
 import json
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
-                        Date, Text, text, literal_column, or_, func, Index, desc)
+                        Date, Text, text, literal_column, or_, func, Index, desc, select, update, bindparam, literal)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_db.sqlite'
@@ -750,6 +750,7 @@ class Well(Base):
     x_coord = Column(Float)
     y_coord = Column(Float)
     alt = Column(Float)
+    well_hash = Column(String)
 
     boundaries = relationship("Boundary", back_populates="well")
     well_optionally = relationship("WellOptionally", back_populates="well")

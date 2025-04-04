@@ -3,7 +3,7 @@ import json
 from contextlib import contextmanager
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
-                        Date, Text, text, literal_column, or_, func, Index, desc)
+                        Date, Text, text, literal_column, or_, func, Index, desc, select, update, bindparam, literal)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz2.j56960636.0n03n.vps.myjino.ru:49221/geovel_remote'
@@ -69,3 +69,12 @@ class ProfileRDB(BaseRDB):
     research = relationship('ResearchRDB', back_populates='profiles')
 
 
+class WellRDB(BaseRDB):
+    __tablename__ = 'well_rdb'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    alt = Column(Float)
+    well_hash = Column(String)

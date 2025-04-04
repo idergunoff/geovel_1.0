@@ -5,11 +5,13 @@ from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 import hashlib
+import logging
+from remote_db.sync_wells import *
 
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
-    except psycopg2.OperationalError:
+    except:
         set_info(f'Нет подключения к сети', 'red')
         return
     """ Открытие окна для работы с удаленной БД """
@@ -19,6 +21,8 @@ def open_rem_db_window():
     RemoteDB.show()
 
     RemoteDB.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+    calc_count_wells(ui_rdb)
 
     def get_object_rem_id():
         """ Получение id выбранного объекта """
@@ -326,7 +330,7 @@ def open_rem_db_window():
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
 
-
+    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
@@ -355,6 +359,8 @@ def open_rem_db_window():
                 if profile.signal:
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
+
+
 
 
     RemoteDB.exec_()
