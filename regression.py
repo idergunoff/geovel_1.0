@@ -2520,6 +2520,7 @@ def update_list_trained_models_regmod():
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, model.id)
         item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+                        f'ID {model.id}\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '
                         f'{len(get_list_param_numerical(json.loads(model.list_params), model))}')

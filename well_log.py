@@ -37,7 +37,11 @@ def show_well_log():
             ui_wl.widget_graph_well_log.clear()
             Y = json.loads(well_log.curve_data)
             X = np.arange(well_log.begin - well_log.step, well_log.end, well_log.step)
-            curve = pg.PlotCurveItem(Y, X)
+            try:
+                curve = pg.PlotCurveItem(Y, X)
+            except:
+                X = np.arange(well_log.begin, well_log.begin + len(Y)*well_log.step, well_log.step)
+                curve = pg.PlotCurveItem(Y, X)
             ui_wl.widget_graph_well_log.showGrid(x=True, y=True)
             ui_wl.widget_graph_well_log.invertY(True)
 
@@ -74,9 +78,14 @@ def show_well_log():
         for curve in list_curves:
             if curve in ['DEPT', 'DEPH', 'MD', 'DEPTH']:
                 continue
-            description = (f'Скв.: {las.well["WELL"].value}\n'
-                           f'Площ.:' f'{las.well["AREA"].value}\n'
-                           f'Дата: {las.well["DATE"].value}')
+            try:
+                description = (f'Скв.: {las.well["WELL"].value}\n'
+                               f'Площ.:' f'{las.well["AREA"].value}\n'
+                               f'Дата: {las.well["DATE"].value}')
+            except KeyError:
+                description = (f'Скв.: {las.well["WELL"].value}\n'
+                               f'Площ.:' f'{las.well["FLD"].value}\n'
+                               f'Дата: {las.well["DATE"].value}')
             new_well_log = WellLog(
                 well_id=get_well_id(),
                 curve_name=curve,

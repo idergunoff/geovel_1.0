@@ -474,9 +474,9 @@ def pareto_start():
         if not id_pareto:
             QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите анализ')
             return
-        if session.query(ParameterMask).filter_by(pareto_analysis_id=id_pareto).count() > 0:
-            QMessageBox.critical(MainWindow, 'Ошибка', 'Невозможно удалить этот анализ так как по нему есть сохраненные маски параметров')
-            return
+        # if session.query(ParameterMask).filter_by(pareto_analysis_id=id_pareto).count() > 0:
+        #     QMessageBox.critical(MainWindow, 'Ошибка', 'Невозможно удалить этот анализ так как по нему есть сохраненные маски параметров')
+        #     return
         result = QMessageBox.question(
             MainWindow, "Удаление анализа",
             "Вы действительно хотите удалить анализ?",
