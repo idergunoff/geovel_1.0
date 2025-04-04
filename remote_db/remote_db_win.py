@@ -9,7 +9,7 @@ import hashlib
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
-    except psycopg2.OperationalError:
+    except:
         set_info(f'Нет подключения к сети', 'red')
         return
     """ Открытие окна для работы с удаленной БД """
