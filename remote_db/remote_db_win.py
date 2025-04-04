@@ -22,7 +22,11 @@ def open_rem_db_window():
 
     RemoteDB.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-    calc_count_wells(ui_rdb)
+    def calc_count_wells():
+        with get_session() as remote_session:
+            count_wells = remote_session.query(WellRDB).count()
+        ui_rdb.label_wells_count.setText(f'Кол-во скважин: {count_wells}')
+
 
     def get_object_rem_id():
         """ Получение id выбранного объекта """
@@ -330,15 +334,10 @@ def open_rem_db_window():
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
 
-    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
-    ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
-    ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
-    ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
-
-
     # Функция вычисления хэш-суммы
     def calculate_hash(value):
         return hashlib.md5(str(value).encode()).hexdigest()
+
 
     def update_signal_hashes(session):
         """ Обновление хэш-сумм в таблице Profile """
@@ -350,6 +349,7 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
+
     def update_signal_hashes_rdb(session):
         """ Обновление хэш-сумм в таблице ProfileRDB """
         profiles = session.query(ProfileRDB.id, ProfileRDB.signal_hash_md5).all()
@@ -360,7 +360,12 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
+    ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
+    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
+    ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
+    ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
+    ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
 
-
+    calc_count_wells()
 
     RemoteDB.exec_()

@@ -4,11 +4,6 @@ from qt.rem_db_window import *
 from func import *
 import hashlib
 
-def calc_count_wells(ui):
-    with get_session() as remote_session:
-        count_wells = remote_session.query(WellRDB).count()
-    ui.label_wells_count.setText(f'Кол-во скважин: {count_wells}')
-
 def sync_direction(source_session, target_session, source_model, target_model, batch_size):
     """
     Универсальная функция для синхронизации данных между двумя базами данных.
@@ -69,16 +64,14 @@ def create_sync_func():
             set_info('Начало синхронизации...', 'blue')
 
             # Синхронизация изменённых скважин (удаленная -> локальная)
-            updated_count_local = sync_direction(
-                remote_session, session, WellRDB, Well, batch_size
-            )
-            set_info(f'Обновлено {updated_count_local} скважин в локальной БД', 'green')
+            set_info(f'Обновление скважин в локальной БД...', 'blue')
+            sync_direction(remote_session, session, WellRDB, Well, batch_size)
+            set_info(f'Обновление скважин в локальной БД завершено', 'blue')
 
             # Синхронизация изменённых скважин (локальная -> удаленная)
-            updated_count_remote = sync_direction(
-                session, remote_session, Well, WellRDB, batch_size
-            )
-            set_info(f'Обновлено {updated_count_remote} скважин в удаленной БД', 'green')
+            set_info(f'Обновление скважин в удаленной БД...', 'blue')
+            sync_direction(session, remote_session, Well, WellRDB, batch_size)
+            set_info(f'Обновление скважин в удаленной БД завершено', 'blue')
 
             set_info('Синхронизация завершена', 'blue')
 
