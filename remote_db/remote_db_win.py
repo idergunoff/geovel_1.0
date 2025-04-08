@@ -7,6 +7,7 @@ from func import *
 import hashlib
 import logging
 from remote_db.sync_wells import *
+from remote_db.sync_well_relations import *
 
 def open_rem_db_window():
     try:
@@ -360,11 +361,14 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
-    ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
-    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
+    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
+    ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
+    ui_rdb.pushButton_load_well_rel.clicked.connect(load_well_relations)
+    ui_rdb.pushButton_unload_well_rel.clicked.connect(unload_well_relations)
+
 
     calc_count_wells()
 

@@ -78,3 +78,41 @@ class WellRDB(BaseRDB):
     y_coord = Column(Float)
     alt = Column(Float)
     well_hash = Column(String)
+
+    boundaries = relationship("BoundaryRDB", back_populates="well")
+    well_optionally = relationship("WellOptionallyRDB", back_populates="well")
+    well_logs = relationship("WellLogRDB", back_populates="well")
+
+class BoundaryRDB(BaseRDB):
+    __tablename__ = 'boundary_rdb'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well_rdb.id'))
+    depth = Column(Float)
+    title = Column(String)
+
+    well = relationship("WellRDB", back_populates="boundaries")
+
+class WellOptionallyRDB(BaseRDB):
+    __tablename__ = 'well_optionally_rdb'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well_rdb.id'))
+    option = Column(String)
+    value = Column(String)
+
+    well = relationship("WellRDB", back_populates="well_optionally")
+
+class WellLogRDB(BaseRDB):
+    __tablename__ = 'well_log_rdb'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well_rdb.id'))
+    curve_name = Column(String)
+    curve_data = Column(Text)
+    begin = Column(Float)
+    end = Column(Float)
+    step = Column(Float)
+    description = Column(Text)
+
+    well = relationship("WellRDB", back_populates="well_logs")

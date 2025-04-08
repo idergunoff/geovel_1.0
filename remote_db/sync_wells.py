@@ -13,7 +13,8 @@ def sync_direction(source_session, target_session, source_model, target_model, b
     :param target_model: Модель таблицы целевой базы данных.
     :param batch_size: Размер пакета для обработки данных.
     """
-    ui.progressBar.setMaximum(int(source_session.query(source_model).count()/batch_size))
+    total_wells = source_session.query(source_model).count()
+    ui.progressBar.setMaximum(int(total_wells/batch_size))
     n = 0
     offset = 0
 
@@ -48,7 +49,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
             target_session.commit()
 
         offset += batch_size
-        set_info(f'Обновлено {offset} скважин', 'green')
+        set_info(f'Обновлено {min(offset, total_wells)} скважин', 'green')
 
         n += 1
 
@@ -63,12 +64,12 @@ def create_sync_func():
 
             set_info('Начало синхронизации...', 'blue')
 
-            # Синхронизация изменённых скважин (удаленная -> локальная)
+            # Синхронизация скважин (удаленная -> локальная)
             set_info(f'Обновление скважин в локальной БД...', 'blue')
             sync_direction(remote_session, session, WellRDB, Well, batch_size)
             set_info(f'Обновление скважин в локальной БД завершено', 'blue')
 
-            # Синхронизация изменённых скважин (локальная -> удаленная)
+            # Синхронизация скважин (локальная -> удаленная)
             set_info(f'Обновление скважин в удаленной БД...', 'blue')
             sync_direction(session, remote_session, Well, WellRDB, batch_size)
             set_info(f'Обновление скважин в удаленной БД завершено', 'blue')
