@@ -12,9 +12,9 @@ from remote_db.sync_well_relations import *
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
-    except:
-        set_info(f'Нет подключения к сети', 'red')
-        return
+    except Exception as e:
+        set_info(f'{str(e)}', 'red')
+
     """ Открытие окна для работы с удаленной БД """
     RemoteDB = QtWidgets.QDialog()
     ui_rdb = Ui_rem_db()
