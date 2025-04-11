@@ -14,7 +14,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
     :param batch_size: Размер пакета для обработки данных.
     """
     total_wells = source_session.query(source_model).count()
-    ui.progressBar.setMaximum(int(total_wells/batch_size))
+    ui.progressBar.setMaximum((total_wells + batch_size - 1) // batch_size)
     n = 0
     offset = 0
 

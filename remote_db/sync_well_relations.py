@@ -73,7 +73,12 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                         if b.depth not in existing_boundaries
                     ]
                     if new_boundaries:
+                        new_b_count = len(new_boundaries)
                         target_session.bulk_insert_mappings(target_bound_model, new_boundaries)
+                        set_info(
+                            f'Добавлено {new_b_count} границ для скважины {target_well.name}',
+                            'blue'
+                        )
 
                 # Синхронизация опций
                 if hasattr(source_well, 'well_optionally') and source_well.well_optionally:
@@ -84,7 +89,9 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                         if o.option not in existing_options
                     ]
                     if new_options:
+                        new_o_count = len(new_options)
                         target_session.bulk_insert_mappings(target_opt_model, new_options)
+                        set_info(f'Добавлено {new_o_count} опций для скважины {target_well.name}', 'blue')
 
                 # Синхронизация каротажа
                 if hasattr(source_well, 'well_logs') and source_well.well_logs:
@@ -102,7 +109,9 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                         if l.curve_name not in existing_logs
                     ]
                     if new_logs:
+                        new_l_count = len(new_logs)
                         target_session.bulk_insert_mappings(target_log_model, new_logs)
+                        set_info(f'Добавлено {new_l_count} каротажей для скважины {target_well.name}', 'blue')
 
             target_session.commit()
 
