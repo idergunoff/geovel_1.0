@@ -104,7 +104,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     Classifier.show()
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     max_pca = min(len(list_param), len(data_train.index))
-    max_pca -= int(round(max_pca/5, 0))
+    # max_pca -= int(round(max_pca/5, 0))
     ui_cls.spinBox_pca.setMaximum(max_pca)
     ui_cls.spinBox_pca.setValue(max_pca // 2)
     if len (list_param) > len(data_train.index):
@@ -540,6 +540,113 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         visualizer = DiscriminationThreshold(pipe)
         visualizer.fit(training_sample, markup)
         visualizer.show()
+
+
+    def calc_cov():
+        """ Кросс-объектная валидация """
+
+        def get_obj_title(prof_well_index):
+            prof_id = prof_well_index.split('_')[0]
+            obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
+            return obj.title
+
+        data_train_cov = data_train.copy()
+        data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+
+        training_sample = np.array(data_train_cov[list_param].values.tolist())
+        markup = np.array(sum(data_train[[mark]].values.tolist(), []))
+        groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
+
+        (markup_train, model_class, model_name, pipe,
+         text_model, training_sample_train) = build_pipeline(markup, training_sample)
+
+        # logo = LeaveOneGroupOut()
+
+        # Передаём groups и logo как cv
+        # scores = cross_val_score(pipe, training_sample, markup, cv=logo, groups=groups)
+
+        scores = []
+        group_order = []
+        group_sizes = []
+        class_ratios = []
+        all_list = []
+
+        ui.progressBar.setMaximum(len(set(list(groups))))
+        n_progress = 1
+        for train_idx, test_idx in LeaveOneGroupOut().split(training_sample, markup, groups):
+            ui.progressBar.setValue(n_progress)
+            start_time = datetime.datetime.now()
+
+            if ui_cls.checkBox_cov_percent.isChecked():
+                if len(test_idx) / len(markup) < ui_cls.spinBox_cov_percent.value() / 100:
+                    n_progress += 1
+                    continue
+
+            pipe.fit(training_sample[train_idx], markup[train_idx])
+            score = pipe.score(training_sample[test_idx], markup[test_idx])
+            # scores.append(score)
+
+            test_group = np.unique(groups[test_idx])[0]
+            # group_order.append(test_group)
+
+            group_size = int(len(test_idx)/30) if len(test_idx)%30 == 0 else int(len(test_idx)/30) + 1
+            # group_sizes.append(group_size)
+
+            # Подсчёт классов
+            classes = list(set(list(markup)))
+            y_test = markup[test_idx]
+            counter = Counter(y_test)
+            count_0 = counter.get(classes[0], 0)
+            count_1 = counter.get(classes[1], 0)
+            total = count_0 + count_1
+
+            if total == 0:
+                ratio_str = "0.00/0.00"
+            else:
+                perc_0 = count_0 / total
+                perc_1 = count_1 / total
+                ratio_str = f"{perc_0:.2f}/{perc_1:.2f}"
+
+            all_list.append([score, test_group, group_size, ratio_str])
+
+            # class_ratios.append(ratio_str)
+            finish_time = datetime.datetime.now()
+            inter_time = finish_time - start_time
+            set_info(f'Качество "{test_group}": {score}. Время выполнения: {inter_time}, осталось: {(len(set(list(groups))) - n_progress) * inter_time}', 'blue')
+            n_progress += 1
+
+
+        # Сортируем по group_sizes
+
+        all_list = sorted(all_list, key=lambda x: x[2], reverse=True)
+        for i in all_list:
+            scores.append(i[0])
+            group_order.append(i[1])
+            group_sizes.append(i[2])
+            class_ratios.append(i[3])
+
+        # Собираем подписи
+        labels = [f"{g}\n(n={s})\n{r}" for g, s, r in zip(group_order, group_sizes, class_ratios)]
+
+        # Рисуем график
+        plt.figure(figsize=(15, 12))
+        bars = plt.bar(range(len(scores)), scores, color='skyblue', edgecolor='black')
+
+        # Подписываем столбики снизу
+        plt.xticks(ticks=range(len(scores)), labels=labels, rotation=90, fontsize=12)
+
+        # Значения сверху столбиков
+        for i, bar in enumerate(bars):
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f'{yval:.2f}', ha='center', va='bottom')
+
+        plt.title(f'{model_name}\nMean: {np.mean(scores):.2f} Std: {np.std(scores):.2f}')
+        plt.ylabel('Score')
+        plt.ylim(0, 1.05)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.show()
+
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
@@ -1138,6 +1245,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_cvw.clicked.connect(calc_model_class_by_cvw)
     ui_cls.pushButton_yellow_brick.clicked.connect(draw_yellow_brick)
     ui_cls.pushButton_feature_selection.clicked.connect(call_feature_selection)
+    ui_cls.pushButton_cov.clicked.connect(calc_cov)
     Classifier.exec_()
 
 
