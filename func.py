@@ -2442,7 +2442,10 @@ def check_and_create_folders():
     root_directory = os.getcwd()  # Получаем текущую рабочую директорию
 
     p_sep = os.path.sep
-    required_folders = [f'models{p_sep}classifier', f'models{p_sep}regression', f'models{p_sep}reg_form', f'models{p_sep}g_classifier', 'lineup_pictures']
+    required_folders = [f'models{p_sep}classifier', f'models{p_sep}regression', f'models{p_sep}reg_form',
+                        f'models{p_sep}g_classifier', 'lineup_pictures', f'data_tables{p_sep}cls',
+                        f'data_tables{p_sep}reg']
+
 
     for folder in required_folders:
         folder_path = os.path.join(root_directory, folder)

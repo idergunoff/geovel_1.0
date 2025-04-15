@@ -29,7 +29,11 @@ def build_table_train(db=False, analisis='lda'):
             data = session.query(AnalysisReg.data).filter_by(id=get_regmod_id()).first()
 
         if data[0]:
-            data_train = pd.DataFrame(json.loads(data[0]))
+            try:
+                data_train = pd.read_parquet(data[0])
+            except OSError:
+                data_train = pd.DataFrame(json.loads(data[0]))
+
             return data_train, list_param
 
     data_train, _ = build_table_train_no_db(analisis, analisis_id, list_param)
@@ -274,11 +278,24 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
 
         ui.progressBar.setValue(nm + 1)
-    data_train_to_db = json.dumps(data_train.to_dict())
+    # data_train_to_db = json.dumps(data_train.to_dict())
+    p_sep = os.path.sep
     if analisis == 'mlp':
-        session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
+        analysis_mlp = session.query(AnalysisMLP).filter_by(id=analisis_id).first()
+        name = f'{analysis_mlp.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        filepath = f'data_tables{p_sep}cls{p_sep}{name}.parquet'
+
+        data_train.to_parquet(filepath)
+
+        session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': str(filepath), 'up_data': True}, synchronize_session='fetch')
     elif analisis == 'regmod':
-        session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': data_train_to_db, 'up_data': True}, synchronize_session='fetch')
+        analysis_reg = session.query(AnalysisReg).filter_by(id=analisis_id).first()
+        name = f'{analysis_reg.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        filepath = f'data_tables{p_sep}reg{p_sep}{name}.parquet'
+
+        data_train.to_parquet(filepath)
+
+        session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': str(filepath), 'up_data': True}, synchronize_session='fetch')
     session.commit()
     return data_train, list_param
 

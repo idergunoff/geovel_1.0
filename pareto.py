@@ -486,7 +486,6 @@ def pareto_start():
         if result == QMessageBox.No:
             return
         else:
-
             pareto_analysis = session.query(ParetoAnalysis).filter_by(
                 id=id_pareto
             ).first()

@@ -1,3 +1,4 @@
+
 import pandas as pd
 from PyQt5.QtWidgets import QDialog
 
@@ -527,8 +528,9 @@ def split_well_train_test_mlp():
 def add_param_signal_mlp():
     """ Добавление одного параметра Signal """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     param = ui.comboBox_signal_mlp.currentText()
     if session.query(ParameterMLP).filter_by(
             analysis_id=get_MLP_id(),
@@ -543,9 +545,9 @@ def add_param_signal_mlp():
 
 def add_all_param_signal_mlp():
     """ Добавление всех параметров Signal """
-
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
     for param in list_param_signal:
         if session.query(ParameterMLP).filter_by(
@@ -562,8 +564,9 @@ def add_all_param_signal_mlp():
 def add_param_crl_mlp():
     """ Добавление одного параметра CRL """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     if session.query(ParameterMLP).filter_by(
             analysis_id=get_MLP_id(),
             parameter='CRL'
@@ -579,8 +582,9 @@ def add_param_crl_mlp():
 def add_param_crl_nf_mlp():
     """ Добавление всех параметров CRL """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     if session.query(ParameterMLP).filter_by(
             analysis_id=get_MLP_id(),
             parameter='CRL_NF'
@@ -596,8 +600,9 @@ def add_param_crl_nf_mlp():
 def add_param_geovel_mlp():
     """ Добавление основных атрибутов сигнала """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     param = ui.comboBox_geovel_param_mlp.currentText()
     if not param in list_all_additional_features + ['X', 'Y']:
         for m in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():
@@ -631,8 +636,9 @@ def add_all_param_geovel_mlp():
             set_info(f'Параметр {param} уже добавлен', 'red')
             continue
         add_param_mlp(param)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
 
@@ -643,8 +649,9 @@ def add_param_list_mlp():
 
     analysis_id = get_MLP_id()
     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
-    session.query(AnalysisMLP).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     check_except = False
     for i in ui.lineEdit_string.text().split('//'):
         param = i.split('_')
@@ -714,8 +721,9 @@ def add_param_list_mlp():
 def add_param_profile_mlp():
     """ Добавление одного параметра PROF """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     param = ui.comboBox_prof_ftr_mlp.currentText()
     if session.query(ParameterMLP).filter_by(
             analysis_id=get_MLP_id(),
@@ -731,8 +739,9 @@ def add_param_profile_mlp():
 def add_all_param_profile_mlp():
     """ Добавление всех параметров PROF """
 
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     for param in list_all_additional_features:
         if param in ['fractal_dim', 'hht_marg_spec_min']:
             continue
@@ -759,8 +768,9 @@ def add_param_distr_mlp():
                      f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
             return
     add_param_mlp('distr')
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_mlp.value()} интервалов распределения по '
@@ -781,8 +791,9 @@ def add_all_param_distr_mlp():
         new_param = f'{distr_param}_{count}'
         new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
         session.add(new_param_mlp)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
     set_info(f'Добавлены все параметры распределения по {count} интервалам', 'green')
@@ -802,8 +813,9 @@ def add_param_sep_mlp():
                      f'{ui.comboBox_atrib_distr_mlp.currentText()}', 'green')
             return
     add_param_mlp('sep')
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены средние значения разделения на {ui.spinBox_count_distr_mlp.value()} интервалов по '
@@ -825,8 +837,9 @@ def add_param_mfcc_mlp():
                      f'{ui.comboBox_atrib_mfcc_mlp.currentText()}', 'green')
             return
     add_param_mlp('mfcc')
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
     set_info(f'В параметры добавлены {ui.spinBox_count_mfcc_mlp.value()} кепстральных коэффициентов '
@@ -846,8 +859,9 @@ def add_all_param_mfcc_mlp():
         new_param = f'{mfcc_param}_{count}'
         new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=new_param)
         session.add(new_param_mlp)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     update_list_param_mlp_no_update()
     set_info(f'Добавлены коэффициенты mfcc по всем параметрам по {count} интервалам', 'green')
@@ -870,8 +884,9 @@ def add_predict_mlp():
     else:
         new_param_mlp = ParameterMLP(analysis_id=get_MLP_id(), parameter=param)
         session.add(new_param_mlp)
-        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-        session.commit()
+        set_updata_false()
+        # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+        # session.commit()
         update_list_param_mlp_no_update()
         set_color_button_updata()
         set_info(f'Добавлен параметр {param}', 'green')
@@ -892,8 +907,9 @@ def remove_param_geovel_mlp():
             session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param ).delete()
         session.commit()
         ui.listWidget_param_mlp.takeItem(ui.listWidget_param_mlp.currentRow())
-        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-        session.commit()
+        set_updata_false()
+        # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+        # session.commit()
         set_color_button_updata()
         update_list_param_mlp_no_update()
 
@@ -902,8 +918,9 @@ def remove_all_param_geovel_mlp():
     """ Удаление всех атрибутов """
 
     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id()).delete()
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     update_list_param_mlp()
     update_list_param_mlp_no_update()
 
@@ -1021,6 +1038,18 @@ def update_line_edit_exception_mlp():
     if except_mlp:
         ui.lineEdit_signal_except.setText(except_mlp.except_signal)
         ui.lineEdit_crl_except.setText(except_mlp.except_crl)
+
+
+def set_updata_false():
+    analysis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    try:
+        filepath = Path(analysis.data)
+        if filepath.exists():
+            filepath.unlink()
+    except OSError:
+        pass
+    analysis.up_data = False
+    session.commit()
 
 
 def set_color_button_updata():
@@ -1599,8 +1628,9 @@ def clear_fake_mlp():
                                                                                   synchronize_session='fetch')
     session.commit()
     set_info(f'Выбросы для анализа "{ui.comboBox_mlp_analysis.currentText()}" очищены.', 'green')
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     build_table_train(False, 'mlp')
     update_list_well_markup_mlp()
 
@@ -1613,8 +1643,9 @@ def remove_fake_current_markup():
     session.commit()
     markup = session.query(MarkupMLP).filter_by(id=get_markup_mlp_id()).first()
     set_info(f'Выбросы для скважины "{ui.listWidget_well_mlp.currentItem().text()}" очищены.', 'green')
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     update_list_well_markup_mlp()
     set_color_button_updata()
     update_list_param_mlp_no_update()
@@ -1877,8 +1908,9 @@ def add_signal_except_mlp():
             except_signal=except_line
         )
         session.add(new_except)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     set_info('Исключения добавлены', 'green')
 
@@ -1899,8 +1931,9 @@ def add_crl_except_mlp():
             except_crl=except_line
         )
         session.add(new_except)
-    session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false()
+    # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'up_data': False}, synchronize_session='fetch')
+    # session.commit()
     set_color_button_updata()
     set_info('Исключения добавлены', 'green')
 
