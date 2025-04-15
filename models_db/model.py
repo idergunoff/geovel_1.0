@@ -306,6 +306,8 @@ class Formation(Base):
     title = Column(String)
     up = Column(Integer, ForeignKey('layers.id'))
     down = Column(Integer, ForeignKey('layers.id'))
+    up_hash = Column(String)
+    down_hash = Column(String)
 
     T_top = Column(Text)
     T_bottom = Column(Text)

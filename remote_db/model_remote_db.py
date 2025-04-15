@@ -67,6 +67,7 @@ class ProfileRDB(BaseRDB):
     depth_relief = Column(Text)
 
     research = relationship('ResearchRDB', back_populates='profiles')
+    formations = relationship('FormationRDB', back_populates='profile')
 
 
 class WellRDB(BaseRDB):
@@ -116,3 +117,16 @@ class WellLogRDB(BaseRDB):
     description = Column(Text)
 
     well = relationship("WellRDB", back_populates="well_logs")
+
+class FormationRDB(BaseRDB):
+    __tablename__ = 'formation_rdb'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile_rdb.id'))
+    title = Column(String)
+    up = Column(Text)
+    down = Column(Text)
+    up_hash = Column(String)
+    down_hash = Column(String)
+
+    profile = relationship('ProfileRDB', back_populates='formations')

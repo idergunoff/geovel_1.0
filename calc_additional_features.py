@@ -15,7 +15,18 @@ def calc_all_params():
             calc_hht_features(f.id)
             calc_grid_features(f.id)
 
-
+def calc_all_params_by_f_id(f_id):
+    calc_wavelet_features(f_id)
+    calc_fractal_features(f_id)
+    calc_entropy_features(f_id)
+    calc_nonlinear_features(f_id)
+    calc_morphology_features(f_id)
+    calc_frequency_features(f_id)
+    calc_envelope_feature(f_id)
+    calc_autocorr_feature(f_id)
+    calc_emd_feature(f_id)
+    calc_hht_features(f_id)
+    calc_grid_features(f_id)
 
 def calc_add_features_profile():
     if not ui.checkBox_calc_all_features.isChecked():

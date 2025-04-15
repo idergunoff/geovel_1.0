@@ -1,13 +1,15 @@
 import psycopg2
-
+from PyQt5 import QtWidgets, QtCore
 from remote_db.model_remote_db import *
 from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 import hashlib
 import logging
-from remote_db.sync_wells import *
-from remote_db.sync_well_relations import *
+from remote_db.sync_wells import create_sync_func
+from remote_db.sync_well_relations import load_well_relations, unload_well_relations
+from remote_db.sync_formations import load_formations, unload_formations
+from remote_db.sync_objects import sync_objects_direction
 
 def open_rem_db_window():
     try:
@@ -21,7 +23,7 @@ def open_rem_db_window():
     ui_rdb.setupUi(RemoteDB)
     RemoteDB.show()
 
-    RemoteDB.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    RemoteDB.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_count_wells():
         with get_session() as remote_session:
@@ -301,7 +303,7 @@ def open_rem_db_window():
         result = QtWidgets.QMessageBox.question(
             RemoteDB,
             'Delete object in RemoteDB',
-            f'Вы уверены, что хотите удалить объект "{title_object}" со всеми исследованиями и профилями?',
+            f'Вы уверены, что хотите удалить объект "{title_object}" со всеми исследованиями, профилями и пластами?',
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No
         )
@@ -309,6 +311,13 @@ def open_rem_db_window():
         if result == QtWidgets.QMessageBox.Yes:
             with get_session() as remote_session:
                 try:
+                    # Удаляем все пласты, связанные с объектом
+                    remote_session.query(FormationRDB) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
                     # Удаляем все профили, связанные с объектом
                     remote_session.query(ProfileRDB) \
                         .filter(ProfileRDB.research_id == ResearchRDB.id) \
@@ -326,13 +335,50 @@ def open_rem_db_window():
                         .delete()
 
                     remote_session.commit()
-                    set_info(f'Объект "{title_object}" и все его исследования и профили удалены в удаленной БД',
+                    set_info(f'Объект "{title_object}" и все его исследования, профили и пласты удалены в удаленной БД',
                              'green')
                     update_object_rem_combobox()
 
                 except Exception as e:
                     remote_session.rollback()
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
+
+    def sync_all_objects():
+        """Синхронизация всех объектов с исследованиями и профилями"""
+        try:
+            with get_session() as remote_session:
+
+                update_signal_hashes(session)  # Обновляем хэши для локальной таблицы
+                update_signal_hashes_rdb(remote_session)  # Обновляем хэши для удалённой таблицы
+
+                set_info('Начало синхронизации...', 'blue')
+
+                # Синхронизация объектов (удаленная -> локальная)
+                set_info(f'Обновление объектов в локальной БД...', 'blue')
+                sync_objects_direction(remote_session, session, GeoradarObjectRDB, ResearchRDB, ProfileRDB, GeoradarObject,
+                               Research, Profile)
+                update_object()
+                set_info(f'Обновление объектов в локальной БД завершено', 'blue')
+
+                # Синхронизация объектов (локальная -> удаленная)
+                set_info(f'Обновление объектов в удаленной БД...', 'blue')
+                sync_objects_direction(session, remote_session, GeoradarObject, Research, Profile, GeoradarObjectRDB,
+                                       ResearchRDB, ProfileRDB)
+                update_object_rem_combobox()
+                set_info(f'Обновление объектов в удаленной БД завершено', 'blue')
+
+                set_info('Синхронизация завершена', 'blue')
+
+
+        except Exception as e:
+            # Откат изменений в случае ошибки
+            session.rollback()
+            set_info(f'Синхронизация прервалась: {str(e)}', 'red')
+            raise  # Проброс исключения для дальнейшей обработки
+        finally:
+            session.close()
+
+
 
 
     # Функция вычисления хэш-суммы
@@ -364,10 +410,13 @@ def open_rem_db_window():
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
+    ui_rdb.pushButton_sync_objects.clicked.connect(sync_all_objects)
     ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
     ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
     ui_rdb.pushButton_load_well_rel.clicked.connect(load_well_relations)
     ui_rdb.pushButton_unload_well_rel.clicked.connect(unload_well_relations)
+    ui_rdb.pushButton_load_formations.clicked.connect(load_formations)
+    ui_rdb.pushButton_unload_formations.clicked.connect(unload_formations)
 
 
     calc_count_wells()
