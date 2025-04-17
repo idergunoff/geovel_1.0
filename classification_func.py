@@ -934,6 +934,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if type_case == 'geochem':
             save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save, data_train)
 
+
     def build_pipeline(markup_train, training_sample_train):
         pipe_steps = []
         text_scaler = ''
@@ -1227,6 +1228,185 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         feature_selection_calc(data_train[list_param], data_train['mark'], mode='classif')
 
 
+    def genetic_algorithm():
+
+        time_start = datetime.datetime.now()
+
+        def get_obj_title(prof_well_index):
+            prof_id = prof_well_index.split('_')[0]
+            obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
+            return obj.title
+
+        def save_population(alg, fname):
+            data = dict(
+                X=[s.variables[:] for s in alg.population],
+                F=[s.objectives[:] for s in alg.population],
+                nfe=alg.nfe,
+                rng=random.getstate(),
+                ngen=alg.nfe // alg.population_size
+            )
+            with open(fname, "wb") as f:
+                pickle.dump(data, f)
+
+
+        def load_checkpoint(problem, fname):
+            with open(fname, "rb") as f:
+                data = pickle.load(f)
+
+            pop = []
+            for x, fobj in zip(data["X"], data["F"]):
+                s = Solution(problem)
+                s.variables[:] = x
+                s.objectives[:] = fobj
+                s.evaluated = True
+                pop.append(s)
+                print(x)
+                print(fobj)
+
+            n_features = problem.nvars
+            crossover = HUX()
+            mutation = BitFlip(probability=1 / n_features)
+            variator = CompoundOperator(crossover, mutation)
+            alg = NSGAII(problem,
+                         generator=InjectedPopulation(pop),
+                         variator=variator,
+                         population_size=len(pop))
+
+            alg.nfe = data["nfe"]
+            random.setstate(data["rng"])
+
+            alg.initialize()
+
+            return alg, data["ngen"]
+
+
+        data_train_cov = data_train.copy()
+        data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+
+        # training_sample = np.array(data_train_cov[list_param].values.tolist())
+        # markup = np.array(sum(data_train[[mark]].values.tolist(), []))
+        # groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
+
+        training_sample = data_train_cov[list_param]
+        markup = data_train_cov[[mark]]
+        groups = data_train_cov[['obj_title']]
+
+        markup_subset = np.array(sum(markup.values.tolist(), []))
+        groups_subset = np.array(sum(groups.values.tolist(), []))
+
+        # Определение задачи
+        n_features = training_sample.shape[1]
+
+        problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+
+        # Важно: создаем отдельный объект Binary для каждой переменной
+        for i in range(n_features):
+            problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+        problem.directions[0] = Problem.MAXIMIZE  # Максимизация расстояния
+        problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+
+        p_sep = os.path.sep
+        # Целевая функция остается без изменений
+        def objectives(features):
+
+            selected_features = np.array(features, dtype=int)
+            if np.sum(selected_features) == 0:
+                return [0, n_features]
+
+            # Выбор активных признаков
+            training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
+
+            markup_subset = np.array(sum(markup.values.tolist(), []))
+            groups_subset = np.array(sum(groups.values.tolist(), []))
+
+            scores = []
+
+            (markup_train, model_class, model_name, pipe,
+             text_model, training_sample_train) = build_pipeline(markup, training_sample)
+
+            ui.progressBar.setMaximum(len(set(list(groups_subset))))
+            n_progress = 1
+
+            for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
+                ui.progressBar.setValue(n_progress)
+                start_time = datetime.datetime.now()
+
+                if ui_cls.checkBox_cov_percent.isChecked():
+                    if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
+                        n_progress += 1
+                        continue
+
+                pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
+                score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
+                scores.append(score)
+
+
+            count = np.sum(selected_features)
+            print(np.mean(scores), count)
+            return [np.mean(scores), count]
+
+        problem.function = objectives
+
+        # --- Параметры сохранения и выполнения ---
+        population_size = 5  # Размер популяции (укажите ваш)
+        total_generations = 10  # Общее количество поколений для выполнения
+        save_interval = 1  # Сохранять каждые N поколений
+        checkpoint_file = f'genetic{p_sep}cls{p_sep}nsgaii_checkpoint.pkl'  # Файл для сохранения состояния
+        # --- Конец параметров ---
+
+        # --- Логика загрузки или инициализации ---
+        start_gen = 0
+        if os.path.exists(checkpoint_file):
+            try:
+                print(f"Загрузка состояния из файла: {checkpoint_file}")
+
+                algorithm, start_gen = load_checkpoint(problem, checkpoint_file)
+
+                print(f"Возобновление с поколения {start_gen + 1}")
+            except Exception as e:
+                print(f"Ошибка при загрузке файла {checkpoint_file}: {e}")
+                print("Начинаем новый запуск.")
+                algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+        else:
+            print("Файл состояния не найден. Начинаем новый запуск.")
+            algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+
+        # --- Основной цикл выполнения с сохранением ---
+        print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
+        for gen in range(start_gen, total_generations + start_gen):
+            print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
+            algorithm.step()  # Выполняем одно поколение
+
+            # Проверяем, нужно ли сохраняться
+            if (gen + 1) % save_interval == 0:
+                print(f"Сохранение состояния в {checkpoint_file} после поколения {gen + 1}...")
+                try:
+                    # Очищаем ссылку на problem перед сохранением, если он сложный или несериализуемый
+                    # temp_problem = algorithm.problem
+                    # algorithm.problem = None # Опционально, если problem плохо сериализуется
+                    save_population(algorithm, checkpoint_file)
+                    # algorithm.problem = temp_problem # Возвращаем обратно, если очищали
+                    print("Состояние успешно сохранено.")
+                except Exception as e:
+                    print(f"Ошибка при сохранении состояния: {e}")
+                    # algorithm.problem = temp_problem # Убедитесь, что problem восстановлен даже при ошибке
+
+        print("Оптимизация завершена.")
+        # --- Конец основного цикла ---
+
+        # Получение результатов после завершения цикла
+        results = algorithm.result
+        # Дальнейшая обработка результатов...
+        for solution in results:
+           print(solution.objectives)
+           print(solution.variables)
+        # Запускаем оптимизацию
+
+
+
     def class_exit():
         Classifier.close()
 
@@ -1246,6 +1426,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_yellow_brick.clicked.connect(draw_yellow_brick)
     ui_cls.pushButton_feature_selection.clicked.connect(call_feature_selection)
     ui_cls.pushButton_cov.clicked.connect(calc_cov)
+    ui_cls.pushButton_gen.clicked.connect(genetic_algorithm)
     Classifier.exec_()
 
 
@@ -1341,9 +1522,6 @@ def get_text_train_param_geochem(list_param):
     text = '\nПараметры модели:\n'
     text += ", ".join(list_param)
     return text
-
-
-
 
 
 

@@ -510,19 +510,6 @@
          </item>
          <item row="1" column="0" colspan="4">
           <layout class="QGridLayout" name="gridLayout_10">
-           <item row="0" column="2">
-            <widget class="QPushButton" name="pushButton_random_search">
-             <property name="toolTip">
-              <string>Подбор гиперпараметров</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(220, 138, 221);</string>
-             </property>
-             <property name="text">
-              <string>RndSrcCV</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="QPushButton" name="pushButton_calc">
              <property name="minimumSize">
@@ -542,6 +529,19 @@
              </property>
             </widget>
            </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="pushButton_random_search">
+             <property name="toolTip">
+              <string>Подбор гиперпараметров</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(220, 138, 221);</string>
+             </property>
+             <property name="text">
+              <string>RndSrcCV</string>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="3">
             <widget class="QPushButton" name="pushButton_random_param">
              <property name="styleSheet">
@@ -549,6 +549,16 @@
              </property>
              <property name="text">
               <string>RndPrm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="QPushButton" name="pushButton_gen">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(209, 182, 249);</string>
+             </property>
+             <property name="text">
+              <string>Genetic</string>
              </property>
             </widget>
            </item>
@@ -2037,7 +2047,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_stack_vote"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_stack_vote"/>
  </buttongroups>
 </ui>

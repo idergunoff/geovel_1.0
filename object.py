@@ -18,7 +18,8 @@ from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplicatio
 from PyQt5.QtGui import QBrush, QColor, QCursor
 from pyqtgraph.Qt import QtWidgets
 
-from platypus import Problem, Real, Binary, NSGAII, GDE3, RandomGenerator, SBX, PM, GAOperator, ProcessPoolEvaluator, GeneticAlgorithm
+from platypus import (Problem, Real, Binary, NSGAII, GDE3, RandomGenerator, SBX, PM, GAOperator, ProcessPoolEvaluator,
+                      GeneticAlgorithm, InjectedPopulation, Solution, HUX, BitFlip, CompoundOperator)
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *

@@ -2444,7 +2444,7 @@ def check_and_create_folders():
     p_sep = os.path.sep
     required_folders = [f'models{p_sep}classifier', f'models{p_sep}regression', f'models{p_sep}reg_form',
                         f'models{p_sep}g_classifier', 'lineup_pictures', f'data_tables{p_sep}cls',
-                        f'data_tables{p_sep}reg']
+                        f'data_tables{p_sep}reg', f'genetic{p_sep}cls', f'genetic{p_sep}reg']
 
 
     for folder in required_folders:
