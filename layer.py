@@ -1,4 +1,5 @@
 import numpy as np
+from calc_additional_features import calc_all_params_by_f_id
 
 from func import *
 from qt.add_layer_dialog import *
@@ -171,7 +172,7 @@ def add_formation():
             session.add(new_formation)
             session.commit()
 
-            add_param_in_new_formation(new_formation.id)
+            add_param_in_new_formation(new_formation.id, new_formation.profile_id)
 
             Add_Form.close()
 
@@ -183,20 +184,39 @@ def add_formation():
     Add_Form.exec_()
 
 
-def add_param_in_new_formation(new_formation_id):
+def add_param_in_new_formation(new_formation_id, new_formation_profile_id):
+
     formation = session.query(Formation).filter(Formation.id == new_formation_id).first()
+    if not formation:
+        set_info(f"Ошибка: Пласт с id={new_formation_id} не найден!", "red")
+        return
+
+    if not formation.layer_up or not formation.layer_down:
+        set_info("Ошибка: Не заданы границы пласта (layer_up/layer_down)!", "red")
+        return
     layer_0, layer_1 = formation.layer_up.layer_line, formation.layer_down.layer_line
-    signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
+
+    signals = json.loads(session.query(Profile.signal).filter(Profile.id == new_formation_profile_id).first()[0])
+    if not signals or not signals[0]:
+        set_info("Ошибка: Сигнал профиля не найден или пуст", "red")
+        return
+
     layer_up, layer_down = json.loads(layer_0), json.loads(layer_1)
     CRL_signal = calc_CRL_filter(signals)
-    if len(signals) != len(layer_up) != len(layer_down):
-        set_info(
-            'ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в радарпограмме и в границах кровли/подошвы',
-            'red')
+
+    if len(signals) != len(layer_up) or len(signals) != len(layer_down):
+        error_msg = (
+            f"Ошибка: Несовпадение количества измерений: в радарограмме ({len(signals)}), "
+            f"в границе кровли ({len(layer_up)}), в границе подошвы ({len(layer_down)})"
+        )
+        set_info(error_msg, "red")
+        # set_info(
+        #     'ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в радарограмме и в границах кровли/подошвы',
+        #     'red')
     else:
         ui.progressBar.setMaximum(len(layer_up))
-        x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == get_profile_id()).first()[0])
-        y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == get_profile_id()).first()[0])
+        x_pulc = json.loads(session.query(Profile.x_pulc).filter(Profile.id == new_formation_profile_id).first()[0])
+        y_pulc = json.loads(session.query(Profile.y_pulc).filter(Profile.id == new_formation_profile_id).first()[0])
 
         grid_uf = check_profile_all_grid(formation.profile_id, 'uf', min_dist=ui.spinBox_calc_dist_grid.value())
         grid_m = check_profile_all_grid(formation.profile_id, 'm', min_dist=ui.spinBox_calc_dist_grid.value())
@@ -448,6 +468,9 @@ def add_param_in_new_formation(new_formation_id):
                 k_r_l.append(np.corrcoef(list_param_1, list_param_2)[0, 1])
             list_param_1 = list_param_2.copy()
             ui.progressBar.setValue(i + 1)
+            QApplication.processEvents()  # Принудительное обновление
+        ui.progressBar.setValue(len(layer_up))  # Гарантированное завершение
+
         k_r_l.append(k_r_l[-1])
         dict_signal = {'T_top': json.dumps(T_top_l),
                        'T_bottom': json.dumps(T_bottom_l),
@@ -536,6 +559,9 @@ def add_param_in_new_formation(new_formation_id):
         session.query(Formation).filter(Formation.id == new_formation_id).update(dict_signal,
                                                                                  synchronize_session="fetch")
         session.commit()
+
+    calc_all_params_by_f_id(new_formation_id)
+
     update_formation_combobox()
     set_info(f'Добавлен новый пласт - "{formation.title}" на профиле - "{get_profile_name()}".', 'green')
 

@@ -55,12 +55,12 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                 )
             }
 
-            for source_well in tqdm(source_wells):
+            for source_well in tqdm(source_wells, desc="Синхронизация данных скважин"):
                 target_well = target_wells_map.get(source_well.well_hash)
 
                 if not target_well:
                     create_sync_func()
-                    set_info(f'Произведена синхронизация скважин, надо заново выполнить синхронизацию данных '
+                    set_info(f'Произведена синхронизация скважин, заново запустите синхронизацию данных '
                              f'скважин!!!', 'red')
                     return
 
@@ -75,10 +75,10 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                     if new_boundaries:
                         new_b_count = len(new_boundaries)
                         target_session.bulk_insert_mappings(target_bound_model, new_boundaries)
-                        set_info(
-                            f'Добавлено {new_b_count} границ для скважины {target_well.name}',
-                            'blue'
-                        )
+
+                        added_word = "Добавлена" if new_b_count == 1 else "Добавлено"
+                        set_info(f'{added_word} {pluralize(new_b_count, ["граница", "границы", "границ"])} '
+                                 f'для скважины {target_well.name}', 'blue')
 
                 # Синхронизация опций
                 if hasattr(source_well, 'well_optionally') and source_well.well_optionally:
@@ -91,7 +91,10 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                     if new_options:
                         new_o_count = len(new_options)
                         target_session.bulk_insert_mappings(target_opt_model, new_options)
-                        set_info(f'Добавлено {new_o_count} опций для скважины {target_well.name}', 'blue')
+
+                        added_word = "Добавлена" if new_o_count == 1 else "Добавлено"
+                        set_info(f'{added_word} {pluralize(new_o_count, ["опция", "опции", "опций"])} '
+                                 f'для скважины {target_well.name}', 'blue')
 
                 # Синхронизация каротажа
                 if hasattr(source_well, 'well_logs') and source_well.well_logs:
@@ -111,7 +114,10 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                     if new_logs:
                         new_l_count = len(new_logs)
                         target_session.bulk_insert_mappings(target_log_model, new_logs)
-                        set_info(f'Добавлено {new_l_count} каротажей для скважины {target_well.name}', 'blue')
+
+                        added_word = "Добавлен" if new_l_count == 1 else "Добавлено"
+                        set_info(f'{added_word} {pluralize(new_l_count, ["каротаж", "каротажа", "каротажей"])} '
+                                 f'для скважины {target_well.name}', 'blue')
 
             target_session.commit()
 
@@ -135,6 +141,7 @@ def load_well_relations():
             # Синхронизация данных скважин (удаленная -> локальная)
             set_info(f'Обновление данных скважин в локальной БД...', 'blue')
             sync_well_relations(remote_session, session, WellRDB, Well, Boundary, WellOptionally, WellLog, batch_size)
+
             set_info(f'Обновление данных скважин в локальной БД завершено', 'blue')
 
     except Exception as e:

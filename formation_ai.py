@@ -1017,7 +1017,7 @@ def calc_model_profile():
     new_formation = Formation(title=model.title, profile_id=get_profile_id(), up=new_top.id, down=new_bottom.id)
     session.add(new_formation)
     session.commit()
-    add_param_in_new_formation(new_formation.id)
+    add_param_in_new_formation(new_formation.id, new_formation.profile_id)
     update_formation_combobox()
 
 

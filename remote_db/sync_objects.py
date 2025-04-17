@@ -60,7 +60,7 @@ def sync_objects_direction(source_session, target_session, source_obj_model, sou
                 added_researches_count += 1
                 target_research = new_research
 
-            # Получаем все профили для текущего исследования из исходной базы
+            # Получаем все id и signal_hash профилей для текущего исследования из исходной базы
             source_profiles = source_session.query(source_prof_model.id, source_prof_model.signal_hash_md5).filter_by(
                 research_id=source_research.id).all()
 
@@ -95,7 +95,8 @@ def sync_objects_direction(source_session, target_session, source_obj_model, sou
 
             target_session.commit()
 
-    set_info(f'Добавлено: {added_objects_count} объектов, '
-                        f'{added_researches_count} исследований, '
-                        f'{added_profiles_count} профилей', 'green')
+
+    set_info(f'Добавлено: {pluralize(added_objects_count, ["объект", "объекта", "объектов"])}, '
+             f'{pluralize(added_researches_count, ["исследование", "исследования", "исследований"])}, '
+             f'{pluralize(added_profiles_count, ["профиль", "профиля", "профилей"])}', 'green')
 

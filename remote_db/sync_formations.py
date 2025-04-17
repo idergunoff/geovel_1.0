@@ -3,7 +3,6 @@ from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 from layer import add_param_in_new_formation
-from calc_additional_features import calc_all_params_by_f_id
 import hashlib
 from sqlalchemy.orm import selectinload
 
@@ -47,13 +46,10 @@ def load_formations():
             for n, remote_formation in tqdm(enumerate(remote_formations), desc="Загрузка пластов"):
 
                 ui.progressBar.setValue(n + 1)
+                QApplication.processEvents()  # Принудительное обновление
 
                 profile = remote_session.query(ProfileRDB.signal_hash_md5).filter_by(
                     id=remote_formation.profile_id).first()
-
-                # if not profile:
-                #     set_info(f'Пропуск пласта {remote_formation.title}: нет профиля', 'yellow')
-                #     continue
 
                 # Ищем соответствующий профиль в локальной БД по хэшу
                 remote_profile_hash = profile[0]
@@ -102,15 +98,21 @@ def load_formations():
 
                 session.add(new_formation)
                 session.flush()
-                add_param_in_new_formation(new_formation.id)
-                calc_all_params_by_f_id(new_formation.id)
+                add_param_in_new_formation(new_formation.id, new_formation.profile_id)
+
+                ui.progressBar.setValue(len(remote_formations))  # Гарантированное завершение
                 added_formations_count += 1
 
             session.commit()
-            set_info(f'Загружено {added_formations_count} пластов', 'green')
-            set_info(f'В локальной БД добавлено {added_layers_count} новых слоев', 'green')
+            set_info(f'{pluralize(added_formations_count, ["пласт загружен", "пласта загружено", "пластов загружено"])} '
+                     f'с удаленной БД на локальную',
+                     'green')
+            set_info(f'{pluralize(added_layers_count, ["новый слой добавлен", "новых слоя добавлено", "новых слоев добавлено"])} '
+                     f'в локальную БД',
+                     'green')
             if skipped_profiles_count:
-                set_info(f'Пропущено {skipped_profiles_count} пластов из-за несоответствия профилей', 'yellow')
+                set_info(f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '
+                         f'из-за несоответствия профилей', 'yellow')
 
         except Exception as e:
             remote_session.rollback()
@@ -158,9 +160,6 @@ def unload_formations():
 
                 ui.progressBar.setValue(n + 1)
 
-                if not local_formation.profile:
-                    set_info(f'Пропуск пласта {local_formation.title}: нет профиля', 'yellow')
-                    continue
                 if not local_formation.layer_up or not local_formation.layer_down:
                     set_info(f'Пропуск пласта {local_formation.title}: нет слоёв up/down', 'yellow')
                     skipped_profiles_count += 1
@@ -180,12 +179,6 @@ def unload_formations():
                 if key in existing_remote_formations:
                     continue
 
-                # remote_formation = remote_session.query(FormationRDB).options(selectinload(
-                #     FormationRDB.profile)).filter_by(
-                #     up_hash=local_formation.up_hash, down_hash=local_formation.down_hash).first()
-
-                # if not remote_formation:
-
                 # Создаем новый пласт
                 new_formation = FormationRDB(
                     profile_id=remote_profile_id,
@@ -199,9 +192,13 @@ def unload_formations():
                 added_formations_count += 1
 
             remote_session.commit()
-            set_info(f'Выгружено {added_formations_count} пластов', 'green')
+            set_info(f'{pluralize(added_formations_count, ["пласт выгружен", "пласта выгружено", "пластов выгружено"])} '
+                     f'с локальной БД на удаленную',
+                     'green')
             if skipped_profiles_count:
-                set_info(f'Пропущено {skipped_profiles_count} пластов из-за несоответствия профилей', 'yellow')
+                set_info(
+                    f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '
+                    f'из-за несоответствия профилей', 'yellow')
 
         except Exception as e:
             remote_session.rollback()
@@ -243,7 +240,8 @@ def update_formation_hashes(session):
             updated_count += 1
 
     session.commit()
-    set_info(f'Обновлено хэшей для {updated_count} локальных пластов', 'blue')
+    set_info(f'{pluralize(updated_count, ["хэш обновлен", "хэша обновлено", "хэшей обновлено"])} в таблице Formation',
+             'blue')
 
 
 def update_formation_hashes_rdb(session):
@@ -272,4 +270,5 @@ def update_formation_hashes_rdb(session):
             updated_count += 1
 
     session.commit()
-    set_info(f'Обновлено хэшей для {updated_count} удаленных пластов', 'blue')
+    set_info(f'{pluralize(updated_count, ["хэш обновлен", "хэша обновлено", "хэшей обновлено"])} в таблице FormationRDB',
+             'blue')

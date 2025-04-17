@@ -512,18 +512,81 @@ def load_param():
 
 
 def delete_profile():
+    """Удаление профиля"""
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
-    result = QtWidgets.QMessageBox.question(MainWindow, 'Remove profile',
-                f'Вы уверены, что хотите удалить профиль "{title_prof}" вместе со слоями, пластами и обучающими скважинами?',
-                                            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+    profile_id = get_profile_id()
+
+    related_tables = []
+
+    # Проверяем каждую связанную таблицу
+    if session.query(Binding).filter(Binding.profile_id == profile_id).first():
+        related_tables.append("Binding")
+    if session.query(VelocityFormation).filter(VelocityFormation.profile_id == profile_id).first():
+        related_tables.append("VelocityFormation")
+    if session.query(VelocityModel).filter(VelocityModel.profile_id == profile_id).first():
+        related_tables.append("VelocityModel")
+    if session.query(DeepProfile).filter(DeepProfile.profile_id == profile_id).first():
+        related_tables.append("DeepProfile")
+    if session.query(MarkupMLP).filter(MarkupMLP.profile_id == profile_id).first():
+        related_tables.append("MarkupMLP")
+    if session.query(MarkupReg).filter(MarkupReg.profile_id == profile_id).first():
+        related_tables.append("MarkupReg")
+    if session.query(Intersection).filter(Intersection.profile_id == profile_id).first():
+        related_tables.append("Intersection")
+    if session.query(ProfileModelPrediction).filter(ProfileModelPrediction.profile_id == profile_id).first():
+        related_tables.append("ProfileModelPrediction")
+
+    if related_tables:
+
+        message = f'Профиль "{title_prof}" связан со следующими таблицами: Layers, Formation, '
+        message += ", ".join(related_tables)
+        message += '.\n\nВы уверены, что хотите удалить профиль вместе с параметрами и всеми связанными данными?'
+    else:
+        message = f'Вы уверены, что хотите удалить профиль "{title_prof}" вместе со слоями, пластами и параметрами?'
+
+    result = QtWidgets.QMessageBox.question(
+        MainWindow,
+        'Remove profile',
+        message,
+        QtWidgets.QMessageBox.Yes,
+        QtWidgets.QMessageBox.No
+    )
+
     if result == QtWidgets.QMessageBox.Yes:
-        session.query(Formation).filter(Formation.profile_id == get_profile_id()).delete()
-        session.query(Layers).filter(Layers.profile_id == get_profile_id()).delete()
-        session.query(Profile).filter(Profile.id == get_profile_id()).delete()
-        session.commit()
-        # vacuum()
-        set_info(f'Профиль "{title_prof}" удалён', 'green')
-        update_profile_combobox()
+        try:
+            # Удаляем данные из всех связанных таблиц
+            session.query(Layers).filter(Layers.profile_id == profile_id).delete()
+            session.query(Formation).filter(Formation.profile_id == profile_id).delete()
+            session.query(Binding).filter(Binding.profile_id == profile_id).delete()
+            session.query(VelocityFormation).filter(VelocityFormation.profile_id == profile_id).delete()
+            session.query(VelocityModel).filter(VelocityModel.profile_id == profile_id).delete()
+            session.query(DeepProfile).filter(DeepProfile.profile_id == profile_id).delete()
+            session.query(MarkupMLP).filter(MarkupMLP.profile_id == profile_id).delete()
+            session.query(MarkupReg).filter(MarkupReg.profile_id == profile_id).delete()
+            session.query(Intersection).filter(Intersection.profile_id == profile_id).delete()
+            session.query(ProfileModelPrediction).filter(ProfileModelPrediction.profile_id == profile_id).delete()
+
+            # Удаляем параметры
+            session.query(WaveletFeatureProfile).filter(WaveletFeatureProfile.profile_id == profile_id).delete()
+            session.query(FractalFeatureProfile).filter(FractalFeatureProfile.profile_id == profile_id).delete()
+            session.query(EntropyFeatureProfile).filter(EntropyFeatureProfile.profile_id == profile_id).delete()
+            session.query(NonlinearFeatureProfile).filter(NonlinearFeatureProfile.profile_id == profile_id).delete()
+            session.query(MorphologyFeatureProfile).filter(MorphologyFeatureProfile.profile_id == profile_id).delete()
+            session.query(FrequencyFeatureProfile).filter(FrequencyFeatureProfile.profile_id == profile_id).delete()
+            session.query(EnvelopeFeatureProfile).filter(EnvelopeFeatureProfile.profile_id == profile_id).delete()
+            session.query(AutocorrFeatureProfile).filter(AutocorrFeatureProfile.profile_id == profile_id).delete()
+            session.query(EMDFeatureProfile).filter(EMDFeatureProfile.profile_id == profile_id).delete()
+            session.query(HHTFeatureProfile).filter(HHTFeatureProfile.profile_id == profile_id).delete()
+
+            # Удаляем сам профиль
+            session.query(Profile).filter(Profile.id == profile_id).delete()
+            session.commit()
+
+            set_info(f'Профиль "{title_prof}" и все связанные данные удалены', 'green')
+            update_profile_combobox()
+        except Exception as e:
+            session.rollback()
+            set_info(f'Ошибка при удалении профиля: {str(e)}', 'red')
     else:
         pass
 
