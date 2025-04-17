@@ -49,7 +49,9 @@ def sync_direction(source_session, target_session, source_model, target_model, b
             target_session.commit()
 
         offset += batch_size
-        set_info(f'Обновлено {min(offset, total_wells)} скважин', 'green')
+        wells_count = min(offset, total_wells)
+        set_info(f'{pluralize(wells_count, ["скважина обновлена", "скважины обновлено", "скважин обновлено"])}',
+                 'green')
 
         n += 1
 
@@ -67,6 +69,7 @@ def create_sync_func():
             # Синхронизация скважин (удаленная -> локальная)
             set_info(f'Обновление скважин в локальной БД...', 'blue')
             sync_direction(remote_session, session, WellRDB, Well, batch_size)
+            update_list_well()
             set_info(f'Обновление скважин в локальной БД завершено', 'blue')
 
             # Синхронизация скважин (локальная -> удаленная)

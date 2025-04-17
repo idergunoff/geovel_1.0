@@ -2834,3 +2834,18 @@ def all_check(widget, check):
             checkbox = widget.itemWidget(item)
             if isinstance(checkbox, QCheckBox):
                 checkbox.setChecked(check)
+
+
+def pluralize(number, word_forms):
+    """
+    Функция для склонения слов в зависимости от числа
+    :param number: количество
+    :param word_forms: список форм слова (например, ['объект', 'объекта', 'объектов'])
+    :return: строка с числом и правильной формой слова
+    """
+    if number % 10 == 1 and number % 100 != 11:
+        return f"{number} {word_forms[0]}"
+    elif 2 <= number % 10 <= 4 and (number % 100 < 10 or number % 100 >= 20):
+        return f"{number} {word_forms[1]}"
+    else:
+        return f"{number} {word_forms[2]}"

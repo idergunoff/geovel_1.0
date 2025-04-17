@@ -129,7 +129,7 @@ def open_rem_db_window():
             remote_objects = remote_session.query(GeoradarObjectRDB).filter(GeoradarObjectRDB.id ==
                                                                             get_object_rem_id())
 
-            for remote_object in remote_objects:
+            for remote_object in tqdm(remote_objects, desc='Загрузка объектов'):
                 # Проверяем существование объекта в локальной базе
                 local_object = session.query(GeoradarObject).filter_by(title=remote_object.title).first()
 
@@ -139,6 +139,7 @@ def open_rem_db_window():
                     session.add(new_object)
                     session.commit()
                     local_object = new_object
+                    update_object(new_obj=True)
                     set_info(f'Объект "{remote_object.title}" загружен с удаленной БД', 'green')
                 else:
                     set_info(f'Объект "{remote_object.title}" есть в локальной БД', 'red')
@@ -146,7 +147,7 @@ def open_rem_db_window():
                 # Получаем все исследования для текущего объекта из удалённой базы
                 remote_researches = remote_session.query(ResearchRDB).filter_by(object_id=remote_object.id).all()
 
-                for remote_research in remote_researches:
+                for remote_research in tqdm(remote_researches, desc='Загрузка исследований'):
                     # Проверяем существование исследования в локальной базе
                     local_research = session.query(Research).filter_by(
                         object_id=local_object.id,
@@ -172,7 +173,7 @@ def open_rem_db_window():
 
                     ui.progressBar.setMaximum(len(remote_profiles))
 
-                    for n, remote_profile in enumerate(remote_profiles):
+                    for n, remote_profile in tqdm(enumerate(remote_profiles), desc='Загрузка профилей'):
                         # Проверяем существование профиля в локальной базе по signal_hash
                         ui.progressBar.setValue(n+1)
                         local_profile = session.query(Profile).filter_by(
@@ -202,7 +203,8 @@ def open_rem_db_window():
 
                     session.commit()
 
-        update_object(new_obj=True)
+        update_research_combobox()
+
         set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
 
@@ -218,7 +220,7 @@ def open_rem_db_window():
             # Получаем выбранный объект из локальной базы
             local_objects = session.query(GeoradarObject).filter(GeoradarObject.id == get_object_id())
 
-            for local_object in local_objects:
+            for local_object in tqdm(local_objects, desc='Выгрузка объектов'):
                 # Проверяем существование объекта в удаленной базе
                 remote_object = remote_session.query(GeoradarObjectRDB).filter_by(title=local_object.title).first()
 
@@ -228,6 +230,7 @@ def open_rem_db_window():
                     remote_session.add(new_object)
                     remote_session.commit()
                     remote_object = new_object
+                    update_object_rem_combobox(from_local=True)
                     set_info(f'Объект "{local_object.title}" выгружен на удаленную БД', 'green')
 
                 else:
@@ -236,7 +239,7 @@ def open_rem_db_window():
                 # Получаем все исследования для текущего объекта из локальной базы
                 local_researches = session.query(Research).filter_by(object_id=local_object.id).all()
 
-                for local_research in local_researches:
+                for local_research in tqdm(local_researches, desc='Выгрузка исследований'):
                     # Проверяем существование исследования в удаленной базе
                     remote_research = remote_session.query(ResearchRDB).filter_by(
                         object_id=remote_object.id,
@@ -263,7 +266,7 @@ def open_rem_db_window():
 
                     ui.progressBar.setMaximum(len(local_profiles))
 
-                    for n, local_profile in enumerate(local_profiles):
+                    for n, local_profile in tqdm(enumerate(local_profiles), desc='Выгрузка профилей'):
                         # Проверяем существование профиля в удаленной базе по signal_hash
                         ui.progressBar.setValue(n+1)
                         remote_profile = remote_session.query(ProfileRDB).filter_by(
@@ -293,7 +296,7 @@ def open_rem_db_window():
 
                     remote_session.commit()
 
-        update_object_rem_combobox(from_local=True)
+        update_research_combobox()
         set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
     def delete_object_rem():

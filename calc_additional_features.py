@@ -422,7 +422,8 @@ def calc_nonlinear_features(f_id):
     if session.query(NonlinearFeature).filter_by(formation_id=f_id).count() != 0:
         return
     formation = session.query(Formation).filter(Formation.id == f_id).first()
-    set_info(f'Расчет нелинейныхпараметров для профиля {formation.profile.title} и пласта {formation.title}. {formation.profile.research.object.title}', 'blue')
+    set_info(f'Расчет нелинейных параметров для профиля {formation.profile.title} и пласта {formation.title}.'
+             f' {formation.profile.research.object.title}', 'blue')
     signal = json.loads(session.query(Profile.signal).filter(Profile.id == formation.profile_id).first()[0])
     layer_up, layer_down = json.loads(formation.layer_up.layer_line), json.loads(formation.layer_down.layer_line)
     dict_nln_ftr_list = {f'{ent}_l': [] for ent in list_nonlinear_features}
