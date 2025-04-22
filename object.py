@@ -14,7 +14,7 @@ from models_db.model_profile_features import *
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
 from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog, QTableWidget, QTableWidgetItem
 from PyQt5.QtGui import QBrush, QColor, QCursor
 from pyqtgraph.Qt import QtWidgets
 

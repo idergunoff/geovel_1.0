@@ -1268,8 +1268,80 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
                 ui_ga.lcdNumber_generation.display(data["ngen"])
 
-                update_list_params()
+                # update_list_params()
                 draw_pareto_front(data)
+
+
+        def show_population():
+            # Очищаем существующий layout перед добавлением новой таблицы
+            while ui_ga.verticalLayout_table_pop.count():
+                item = ui_ga.verticalLayout_table_pop.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            ga = get_gen_an()
+            
+            if ga:
+                n_features = training_sample.shape[1]
+                list_p = json.loads(ga.list_params)
+
+                problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+
+                # создаем отдельный объект Binary для каждой переменной
+                for i in range(n_features):
+                    problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+                problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+
+                with open(ga.checkfile_path, "rb") as f:
+                    saved = pickle.load(f)
+
+                pop = []
+                for x, fobj in zip(saved["X"], saved["F"]):
+                    s = Solution(problem)
+                    flat_x = [bool(v[0]) if isinstance(v, (list, tuple)) else bool(v)
+                              for v in x]
+                    s.variables[:] = flat_x
+                    s.objectives[:] = fobj
+                    s.evaluated = True
+                    pop.append(s)
+
+                data_dict = {}
+                for sol in pop:
+                    acc = sol.objectives[0]
+                    n_feat = sum(sol.variables)
+                    col_name = f"{acc:.4f}-{n_feat}"
+
+                    # Добавляем каждое значение как список значений для каждого признака
+                    for i, val in enumerate(sol.variables):
+                        if i not in data_dict:
+                            data_dict[i] = {}
+                        data_dict[i][col_name] = val
+
+                df = pd.DataFrame.from_dict(data_dict, orient='index')
+                df.index = list_p
+
+                rows, cols = df.shape
+
+                table = QTableWidget(rows, cols)
+
+                table.setHorizontalHeaderLabels(df.columns.tolist())
+                table.setVerticalHeaderLabels(df.index.tolist())
+
+                # заполняем ячейки
+                for row in range(df.shape[0]):
+                    for col in range(df.shape[1]):
+                        val = df.iat[row, col]
+                        item = QTableWidgetItem()
+                        # можно не показывать текст, оставить пусто
+                        # item.setText("1" if val else "0")
+                        color = QColor('#ABF37F') if val else QColor('#FF8080')
+                        item.setBackground(color)
+                        table.setItem(row, col, item)
+
+                ui_ga.verticalLayout_table_pop.addWidget(table)
 
 
         def update_list_params():
@@ -1527,7 +1599,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 pickle.dump(data, f)
 
 
-        def load_checkpoint(problem, fname):
+        def load_checkpoint(problem, fname, is_master_node=False):
             with open(fname, "rb") as f:
                 data = pickle.load(f)
 
@@ -1551,7 +1623,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                          population_size=len(pop))
 
             alg.nfe = data["nfe"]
-            random.setstate(data["rng"])
+            if is_master_node:
+                random.setstate(data["rng"])  # воспроизводимость
+            else:
+                random.seed()  # новое зерно из /dev/urandom
 
             alg.initialize()
 
@@ -1697,8 +1772,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         ui_ga.pushButton_start_gen.clicked.connect(start_gen_algorithm)
         ui_ga.comboBox_gen_analysis.currentIndexChanged.connect(show_gen_an_info)
+        ui_ga.comboBox_gen_analysis.currentIndexChanged.connect(show_population)
         ui_ga.toolButton_remove_gen_an.clicked.connect(remove_gen_an)
-        ui_ga.listWidget_population.currentItemChanged.connect(update_list_features)
+        # ui_ga.listWidget_population.currentItemChanged.connect(update_list_features)
         ui_ga.pushButton_add_file.clicked.connect(add_file_gen_an)
 
 
