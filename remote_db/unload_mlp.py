@@ -27,7 +27,7 @@ def check_rdb_dependencies():
             remote_formations[f.up_hash] = f.id
             remote_formations[f.down_hash] = f.id
 
-        for local_analysis in local_analyzes:
+        for local_analysis in tqdm(local_analyzes, desc='Проверка зависимостей MLP'):
             local_markers = session.query(MarkerMLP).filter_by(analysis_id=local_analysis.id).all()
 
             for local_marker in local_markers:
@@ -45,9 +45,12 @@ def check_rdb_dependencies():
                     related_tables = []
 
                     # Проверяем скважину
-                    local_well_hash = local_markup.well.well_hash
-                    if local_well_hash not in remote_wells:
-                        related_tables.append('WellRDB')
+                    try:
+                        local_well_hash = local_markup.well.well_hash
+                        if local_well_hash not in remote_wells:
+                            related_tables.append('WellRDB')
+                    except AttributeError:
+                        pass
 
                     # Проверяем профиль
                     local_profile_hash = local_markup.profile.signal_hash_md5
@@ -157,7 +160,7 @@ def unload_mlp_func(Window):
                 for n, local_markup in tqdm(enumerate(local_markups), desc='Выгрузка обучающих скважин'):
                     ui.progressBar.setValue(n + 1)
 
-                    remote_well_id = remote_wells[local_markup.well.well_hash]
+                    remote_well_id = remote_wells[local_markup.well.well_hash] if not local_markup.well_id else None
                     remote_profile_id = remote_profiles[local_markup.profile.signal_hash_md5]
 
                     # Получаем ID пласта

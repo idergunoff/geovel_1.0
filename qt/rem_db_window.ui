@@ -14,8 +14,8 @@
    <string>RemoteDB</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="1">
-    <spacer name="verticalSpacer_2">
+   <item row="2" column="1">
+    <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
@@ -40,6 +40,19 @@
      </property>
     </spacer>
    </item>
+   <item row="0" column="1">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>34</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
    <item row="1" column="0">
     <spacer name="horizontalSpacer_2">
      <property name="orientation">
@@ -53,44 +66,32 @@
      </property>
     </spacer>
    </item>
-   <item row="2" column="1">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>34</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="1" column="1">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="7" column="5">
-      <widget class="QPushButton" name="pushButton_unload_well_rel">
-       <property name="toolTip">
-        <string>Выгрузить данные скважин с локальной БД на удаленную</string>
-       </property>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_5">
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 233, 196);</string>
+        <string notr="true">background-color: rgb(191, 255, 191);</string>
        </property>
        <property name="text">
-        <string>LOC -&gt; REM</string>
+        <string>Профиль:</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="4">
-      <widget class="QPushButton" name="pushButton_load_well_rel">
-       <property name="toolTip">
-        <string>Загрузить данные скважин с удаленной БД на локальную</string>
-       </property>
+     <item row="5" column="0" colspan="4">
+      <widget class="QLabel" name="label_2">
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(206, 222, 255);</string>
+        <string notr="true"/>
        </property>
        <property name="text">
-        <string>REM -&gt; LOC</string>
+        <string>Синхронизировать пласты:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2" colspan="2">
+      <widget class="QComboBox" name="comboBox_research_rem">
+       <property name="toolTip">
+        <string>Дата исследования</string>
        </property>
       </widget>
      </item>
@@ -107,16 +108,6 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="0" colspan="4">
-      <widget class="QLabel" name="label_2">
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
-       <property name="text">
-        <string>Синхронизировать пласты:</string>
-       </property>
-      </widget>
-     </item>
      <item row="6" column="4" colspan="2">
       <widget class="QPushButton" name="pushButton_sync_wells">
        <property name="toolTip">
@@ -130,10 +121,69 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(191, 255, 191);</string>
+       </property>
+       <property name="text">
+        <string>Объект:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="5">
+      <widget class="QPushButton" name="pushButton_unload_obj_rem">
+       <property name="toolTip">
+        <string>Выгрузить объект с локальной БД на удаленную</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 233, 196);</string>
+       </property>
+       <property name="text">
+        <string>LOC -&gt; REM</string>
+       </property>
+      </widget>
+     </item>
      <item row="5" column="5">
       <widget class="QPushButton" name="pushButton_unload_formations">
        <property name="toolTip">
         <string>Выгрузить пласты с локальной БД на удаленную</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 233, 196);</string>
+       </property>
+       <property name="text">
+        <string>LOC -&gt; REM</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 206, 228);</string>
+       </property>
+       <property name="text">
+        <string>Анализ MLP:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="5">
+      <widget class="QPushButton" name="pushButton_unload_mlp">
+       <property name="toolTip">
+        <string>Выгрузить анализ с локальной БД на удаленную</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 233, 196);</string>
+       </property>
+       <property name="text">
+        <string>LOC -&gt; REM</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="5">
+      <widget class="QPushButton" name="pushButton_unload_well_rel">
+       <property name="toolTip">
+        <string>Выгрузить данные скважин с локальной БД на удаленную</string>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(255, 233, 196);</string>
@@ -153,93 +203,10 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="5">
-      <widget class="QPushButton" name="pushButton_unload_obj_rem">
-       <property name="toolTip">
-        <string>Выгрузить объект с локальной БД на удаленную</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 233, 196);</string>
-       </property>
-       <property name="text">
-        <string>LOC -&gt; REM</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="comboBox_object_rem">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0" colspan="3">
-      <widget class="QLabel" name="label_wells_count">
-       <property name="text">
-        <string>Кол-во скважин: </string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2" colspan="2">
-      <widget class="QComboBox" name="comboBox_research_rem">
-       <property name="toolTip">
-        <string>Дата исследования</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="4">
-      <widget class="QPushButton" name="pushButton_load_obj_rem">
-       <property name="toolTip">
-        <string>Загрузить объект с удаленной БД на локальную</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(206, 222, 255);</string>
-       </property>
-       <property name="text">
-        <string>REM -&gt; LOC</string>
-       </property>
-      </widget>
-     </item>
      <item row="7" column="0" colspan="4">
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Синхронизировать данные скважин:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1" colspan="3">
-      <widget class="QComboBox" name="comboBox_profile_rem">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(191, 255, 191);</string>
-       </property>
-       <property name="text">
-        <string>Профиль:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(191, 255, 191);</string>
-       </property>
-       <property name="text">
-        <string>Объект:</string>
        </property>
       </widget>
      </item>
@@ -269,23 +236,33 @@
        </property>
       </widget>
      </item>
-     <item row="8" column="5">
-      <widget class="QPushButton" name="pushButton_unload_mlp">
+     <item row="1" column="1" colspan="3">
+      <widget class="QComboBox" name="comboBox_profile_rem">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="comboBox_object_rem">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="toolTip">
-        <string>Выгрузить данные с локальной БД на удаленную</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 233, 196);</string>
-       </property>
-       <property name="text">
-        <string>LOC -&gt; REM</string>
+        <string/>
        </property>
       </widget>
      </item>
      <item row="8" column="4">
       <widget class="QPushButton" name="pushButton_load_mlp">
        <property name="toolTip">
-        <string>Загрузить данные MLP с удаленной БД на локальную</string>
+        <string>Загрузить анализ MLP с удаленной БД на локальную</string>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(206, 222, 255);</string>
@@ -295,16 +272,52 @@
        </property>
       </widget>
      </item>
-     <item row="8" column="1" colspan="3">
-      <widget class="QComboBox" name="comboBox_mlp_rdb"/>
-     </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="label_3">
+     <item row="7" column="4">
+      <widget class="QPushButton" name="pushButton_load_well_rel">
+       <property name="toolTip">
+        <string>Загрузить данные скважин с удаленной БД на локальную</string>
+       </property>
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 206, 228);</string>
+        <string notr="true">background-color: rgb(206, 222, 255);</string>
        </property>
        <property name="text">
-        <string>Анализ MLP:</string>
+        <string>REM -&gt; LOC</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
+      <widget class="QPushButton" name="pushButton_load_obj_rem">
+       <property name="toolTip">
+        <string>Загрузить объект с удаленной БД на локальную</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(206, 222, 255);</string>
+       </property>
+       <property name="text">
+        <string>REM -&gt; LOC</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="3">
+      <widget class="QLabel" name="label_wells_count">
+       <property name="text">
+        <string>Кол-во скважин: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1" colspan="2">
+      <widget class="QComboBox" name="comboBox_mlp_rdb"/>
+     </item>
+     <item row="8" column="3">
+      <widget class="QPushButton" name="pushButton_delete_mlp_rdb">
+       <property name="toolTip">
+        <string>Удалить анализ MLP в удаленной БД</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(255, 181, 182);</string>
+       </property>
+       <property name="text">
+        <string>Delete MLP</string>
        </property>
       </widget>
      </item>

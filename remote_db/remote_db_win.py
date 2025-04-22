@@ -480,9 +480,12 @@ def open_rem_db_window():
                         related_tables = []
 
                         # Проверяем скважину
-                        remote_well_hash = remote_markup.well.well_hash
-                        if remote_well_hash not in local_wells:
-                            related_tables.append('Well')
+                        try:
+                            remote_well_hash = remote_markup.well.well_hash
+                            if remote_well_hash not in local_wells:
+                                related_tables.append('Well')
+                        except AttributeError:
+                            pass
 
                         # Проверяем профиль
                         remote_profile_hash = remote_markup.profile.signal_hash_md5
@@ -594,7 +597,8 @@ def open_rem_db_window():
                     for n, remote_markup in tqdm(enumerate(remote_markups), desc='Загрузка обучающих скважин'):
                         ui.progressBar.setValue(n+1)
 
-                        local_well_id = local_wells[remote_markup.well.well_hash]
+                        local_well_id = local_wells[remote_markup.well.well_hash] \
+                            if not remote_markup.well_id else None
                         local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
 
                         # Получаем ID пласта
@@ -633,6 +637,47 @@ def open_rem_db_window():
 
         set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
+
+    def delete_mlp_rdb():
+        title_analysis = ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[0]
+        analysis_id = get_MLP_rdb_id()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete MLP in RemoteDB',
+            f'Вы уверены, что хотите удалить анализ "{title_analysis}" со всеми маркерами и обучающими скважинами?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
+        if result == QtWidgets.QMessageBox.Yes:
+            with get_session() as remote_session:
+                try:
+                    # Удаляем все обучающие скважины, связанные с анализом
+                    remote_session.query(MarkupMLPRDB) \
+                        .filter(MarkupMLPRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все маркеры анализа
+                    remote_session.query(MarkerMLPRDB) \
+                        .filter(MarkerMLPRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем сам анализ
+                    remote_session.query(AnalysisMLPRDB) \
+                        .filter(AnalysisMLPRDB.id == analysis_id) \
+                        .delete()
+
+                    remote_session.commit()
+                    set_info(f'Анализ "{title_analysis}" и все его маркеры и обучающие скважины удалены в удаленной '
+                             f'БД', 'green')
+                    update_mlp_rdb_combobox()
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
+
+
     update_mlp_rdb_combobox()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
@@ -646,6 +691,7 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_formations.clicked.connect(unload_formations)
     ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
     ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
+    ui_rdb.pushButton_delete_mlp_rdb.clicked.connect(delete_mlp_rdb)
 
 
     calc_count_wells()
