@@ -61,12 +61,15 @@ def check_rdb_dependencies():
                         related_tables.append('FormationRDB')
 
                     if related_tables:
-                        error_msg = (
-                            f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
-                            f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                            f'Скважина: {local_markup.well.name}'
-                        )
-                        errors.append(error_msg)
+                        try:
+                            error_msg = (
+                                f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
+                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                                f'Скважина: {local_markup.well.name}'
+                            )
+                            errors.append(error_msg)
+                        except AttributeError:
+                            pass
 
     return errors
 

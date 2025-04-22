@@ -496,12 +496,15 @@ def open_rem_db_window():
                             related_tables.append('Formation')
 
                         if related_tables:
-                            error_msg = (
-                                f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
-                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                                f'Скважина: {remote_markup.well.name}'
-                            )
-                            errors.append(error_msg)
+                            try:
+                                error_msg = (
+                                    f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
+                                    f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                                    f'Скважина: {remote_markup.well.name}'
+                                )
+                                errors.append(error_msg)
+                            except AttributeError:
+                                pass
 
         return errors
 
