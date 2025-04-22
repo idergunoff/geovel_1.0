@@ -818,6 +818,7 @@ class AnalysisMLP(Base):
     trained_models = relationship('TrainedModelClass', back_populates='analysis')
     exceptions = relationship('ExceptionMLP', back_populates='analysis')
     pareto_analysis = relationship('ParetoAnalysis', back_populates='analysis_mlp')
+    genetic_algorithms = relationship('GeneticAlgorithmCLS', back_populates='analysis_mlp')
 
 
 
@@ -901,6 +902,19 @@ class TrainedModelClassMask(Base):
     mask = relationship('ParameterMask', back_populates='model_mask')
 
 
+class GeneticAlgorithmCLS(Base):
+    __tablename__ = 'genetic_algorithm_cls'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
+    title = Column(String)
+    pipeline = Column(Text)
+    checkfile_path = Column(String)
+    list_params = Column(Text)
+    population_size = Column(Integer)
+    comment = Column(Text)
+
+    analysis_mlp = relationship('AnalysisMLP', back_populates='genetic_algorithms')
 
 #####################################################
 ################## Regression #######################
