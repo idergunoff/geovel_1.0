@@ -160,7 +160,7 @@ def unload_mlp_func(Window):
                 for n, local_markup in tqdm(enumerate(local_markups), desc='Выгрузка обучающих скважин'):
                     ui.progressBar.setValue(n + 1)
 
-                    remote_well_id = remote_wells[local_markup.well.well_hash] if not local_markup.well_id else None
+                    remote_well_id = remote_wells[local_markup.well.well_hash] if local_markup.well_id != 0 else None
                     remote_profile_id = remote_profiles[local_markup.profile.signal_hash_md5]
 
                     # Получаем ID пласта

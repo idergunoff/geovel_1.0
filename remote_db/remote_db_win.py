@@ -467,11 +467,7 @@ def open_rem_db_window():
 
                 for remote_marker in remote_markers:
                     remote_markups = remote_session.query(MarkupMLPRDB) \
-                        .options(
-                        selectinload(MarkupMLPRDB.well),
-                        selectinload(MarkupMLPRDB.profile),
-                        selectinload(MarkupMLPRDB.formation)
-                    ).filter_by(
+                        .filter_by(
                         analysis_id=remote_analysis.id,
                         marker_id=remote_marker.id
                     ).all()
@@ -565,11 +561,7 @@ def open_rem_db_window():
                         set_info(f'Маркер "{remote_marker.title}" есть в локальной БД', 'blue')
 
                     remote_markups = remote_session.query(MarkupMLPRDB) \
-                        .options(
-                        selectinload(MarkupMLPRDB.well),
-                        selectinload(MarkupMLPRDB.profile),
-                        selectinload(MarkupMLPRDB.formation)
-                    ).filter_by(
+                        .filter_by(
                         analysis_id=remote_analysis.id,
                         marker_id=remote_marker.id
                     ).all()
@@ -598,7 +590,7 @@ def open_rem_db_window():
                         ui.progressBar.setValue(n+1)
 
                         local_well_id = local_wells[remote_markup.well.well_hash] \
-                            if not remote_markup.well_id else None
+                            if remote_markup.well_id != None else 0
                         local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
 
                         # Получаем ID пласта
