@@ -19,7 +19,9 @@ from PyQt5.QtGui import QBrush, QColor, QCursor
 from pyqtgraph.Qt import QtWidgets
 
 from platypus import (Problem, Real, Binary, NSGAII, GDE3, RandomGenerator, SBX, PM, GAOperator, ProcessPoolEvaluator,
-                      GeneticAlgorithm, InjectedPopulation, Solution, HUX, BitFlip, CompoundOperator)
+                      GeneticAlgorithm, InjectedPopulation, Solution, HUX, BitFlip, CompoundOperator, nondominated,
+                      crowding_distance, nondominated_sort)
+
 
 from qt.geovel_main_window import *
 from qt.classifier_form import *
@@ -52,6 +54,7 @@ from qt.pareto_form import *
 from qt.corrected_model_pred import *
 from qt.rem_db_window import *
 from qt.form_well_log import *
+from qt.gen_alg_form import *
 
 import numpy as np
 import pyqtgraph as pg

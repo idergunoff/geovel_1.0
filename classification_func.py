@@ -1,4 +1,6 @@
 import json
+import os.path
+
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
@@ -1230,12 +1232,288 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def genetic_algorithm():
 
-        time_start = datetime.datetime.now()
+        GenAlg = QtWidgets.QDialog()
+        ui_ga = Ui_GeneticForm()
+        ui_ga.setupUi(GenAlg)
+        GenAlg.show()
+        GenAlg.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+        m_width, m_height = get_width_height_monitor()
+        GenAlg.resize(m_width - 500, m_height - 400)
+
+
+        def get_gen_an():
+            return session.query(GeneticAlgorithmCLS).filter_by(id=ui_ga.comboBox_gen_analysis.currentText().split(' id')[-1]).first()
+
+
+        def update_combobox_gen_an():
+            ui_ga.comboBox_gen_analysis.clear()
+            gen_analysis = session.query(GeneticAlgorithmCLS).filter_by(analysis_id=get_MLP_id()).order_by(desc(GeneticAlgorithmCLS.id)).all()
+            for ga in gen_analysis:
+                ui_ga.comboBox_gen_analysis.addItem(f'{ga.title} id{ga.id}')
+
+
+        def update_list_population():
+            ui_ga.listWidget_population.clear()
+            ga = get_gen_an()
+            if ga:
+                try:
+                    with open(ga.checkfile_path, "rb") as f:
+                        data = pickle.load(f)
+                except FileNotFoundError:
+                    return
+
+                for x, fobj in zip(data["X"], data["F"]):
+                    ui_ga.listWidget_population.addItem(f'{fobj[0]} N{fobj[1]}')
+
+                ui_ga.lcdNumber_generation.display(data["ngen"])
+
+                update_list_params()
+                draw_pareto_front(data)
+
+
+        def update_list_params():
+            ui_ga.listWidget_features.clear()
+            ga = get_gen_an()
+            if ga:
+                list_p = json.loads(ga.list_params)
+                for i_param in tqdm(list_p):
+                    check_box_widget = QCheckBox(i_param)
+                    # check_box_widget.setChecked(True)
+                    list_item = QListWidgetItem()
+                    ui_ga.listWidget_features.addItem(list_item)
+                    ui_ga.listWidget_features.setItemWidget(list_item, check_box_widget)
+
+
+
+        def update_list_features():
+            ga = get_gen_an()
+            if ga:
+                with open(ga.checkfile_path, "rb") as f:
+                    data = pickle.load(f)
+
+                list_x = []
+                try:
+                    point = ui_ga.listWidget_population.currentItem().text().split(' N')
+                except AttributeError:
+                    return
+                for x, fobj in zip(data["X"], data["F"]):
+                    if str(fobj[0]) == point[0] and fobj[1] == int(point[1]):
+                        list_x = list(x)
+                        break
+
+                if list_x:
+                    for i in range(ui_ga.listWidget_features.count()):
+                        checkbox = ui_ga.listWidget_features.itemWidget(ui_ga.listWidget_features.item(i))
+                        checkbox.setChecked(list_x[i][0])
+
+
+        def show_gen_an_info():
+            ui_ga.textEdit_info.clear()
+            ga = get_gen_an()
+            if ga:
+                ui_ga.textEdit_info.append(ga.title)
+                ui_ga.textEdit_info.append(ga.pipeline)
+                ui_ga.textEdit_info.append(ga.comment)
+                ui_ga.spinBox_pop_size.setValue(ga.population_size)
+                # with open(ga.checkfile_path, "rb") as f:
+                #     data = pickle.load(f)
+                # ui_ga.lcdNumber_generation.display(data["ngen"])
+
+                update_list_population()
+
+
+
+        def draw_pareto_front(data):
+
+            clear_layout(ui_ga.verticalLayout_pareto)
+            figure_pareto = plt.figure()
+            canvas_pareto = FigureCanvas(figure_pareto)
+            mpl_toolbar = NavigationToolbar(canvas_pareto, GenAlg)
+            ui_ga.verticalLayout_pareto.addWidget(mpl_toolbar)
+            ui_ga.verticalLayout_pareto.addWidget(canvas_pareto)
+
+            # Создание осей внутри фигуры
+            ax = figure_pareto.add_subplot(111)
+
+            # Построение точек на графике
+            counts = [f[1] for f in data["F"]]
+            accuracy = [f[0] for f in data["F"]]
+
+            ax.scatter(counts, accuracy, alpha=0.5)
+            ax.set_xlabel("Количество признаков")
+            ax.set_ylabel("Точность модели")
+            ax.set_title("Парето-фронт")
+            ax.grid(True)
+
+            # Обновление канвы
+            canvas_pareto.draw()
+
+
+
+        def start_gen_algorithm():
+
+            data_train_cov = data_train.copy()
+            data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+
+            training_sample = data_train_cov[list_param]
+            markup = data_train_cov[[mark]]
+            groups = data_train_cov[['obj_title']]
+
+            (markup_train, model_class, model_name, pipe,
+             text_model, training_sample_train) = build_pipeline(markup, training_sample)
+
+            title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
+            ga = session.query(GeneticAlgorithmCLS).filter_by(
+                analysis_id=get_MLP_id(),
+                title=title,
+                pipeline=text_model,
+                list_params=json.dumps(list_param),
+                population_size=ui_ga.spinBox_pop_size.value()
+            ).first()
+            if not ga:
+                ga = new_gen_an(model_name, text_model, list_param)
+
+            # Определение задачи
+            n_features = training_sample.shape[1]
+
+            problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+
+            # создаем отдельный объект Binary для каждой переменной
+            for i in range(n_features):
+                problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+            problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+            problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+
+            # Целевая функция
+            def objectives(features):
+
+                selected_features = np.array(features, dtype=int)
+                if np.sum(selected_features) == 0:
+                    return [0, n_features]
+
+                # Выбор активных признаков
+                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
+
+                markup_subset = np.array(sum(markup.values.tolist(), []))
+                groups_subset = np.array(sum(groups.values.tolist(), []))
+
+                scores = []
+
+                (markup_train, model_class, model_name, pipe,
+                 text_model, training_sample_train) = build_pipeline(markup, training_sample)
+
+                ui.progressBar.setMaximum(len(set(list(groups_subset))))
+                n_progress = 1
+
+                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
+                    ui.progressBar.setValue(n_progress)
+                    start_time = datetime.datetime.now()
+
+                    if ui_cls.checkBox_cov_percent.isChecked():
+                        if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
+                            n_progress += 1
+                            continue
+
+                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
+                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
+                    scores.append(score)
+
+
+                count = np.sum(selected_features)
+                print(np.mean(scores), count)
+                ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
+                return [np.mean(scores), count]
+
+            problem.function = objectives
+
+            # --- Параметры сохранения и выполнения ---
+            population_size = ui_ga.spinBox_pop_size.value() # Размер популяции
+            total_generations = ui_ga.spinBox_n_gen.value()  # Общее количество поколений для выполнения
+            save_interval = ui_ga.spinBox_save_int.value()  # Сохранять каждые N поколений
+            checkpoint_file = ga.checkfile_path  # Файл для сохранения состояния
+
+            ui_ga.progressBar_pop.setMaximum(population_size)
+            ui_ga.progressBar_gen.setMaximum(total_generations)
+
+            # --- Логика загрузки или инициализации ---
+            start_gen = 0
+            if os.path.exists(checkpoint_file):
+                try:
+                    print(f"Загрузка состояния из файла: {checkpoint_file}")
+
+                    algorithm, start_gen = load_checkpoint(problem, checkpoint_file)
+                    print(f"Возобновление с поколения {start_gen + 1}")
+
+                except Exception as e:
+
+                    print(f"Ошибка при загрузке файла {checkpoint_file}: {e}")
+                    print("Начинаем новый запуск.")
+
+                    algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+            else:
+
+                print("Файл состояния не найден. Начинаем новый запуск.")
+                algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+            # --- Основной цикл выполнения с сохранением ---
+            print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
+
+            n_gen = 0
+            for gen in range(start_gen, total_generations + start_gen):
+                ui_ga.lcdNumber_generation.display(gen)
+                ui_ga.progressBar_pop.setValue(0)
+                print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
+                algorithm.step()  # Выполняем одно поколение
+
+                # Проверяем, нужно ли сохраняться
+                if (gen + 1) % save_interval == 0:
+                    print(f"Сохранение состояния в {checkpoint_file} после поколения {gen + 1}...")
+                    try:
+                        save_population(algorithm, checkpoint_file)
+                        print("Состояние успешно сохранено.")
+                    except Exception as e:
+                        print(f"Ошибка при сохранении состояния: {e}")
+
+                n_gen += 1
+                ui_ga.progressBar_gen.setValue(n_gen)
+
+            print("Оптимизация завершена.")
+
+            # Получение результатов после завершения цикла
+            results = algorithm.result
+            # Дальнейшая обработка результатов...
+            for solution in results:
+                print(solution.objectives)
+                print(solution.variables)
+
+            update_combobox_gen_an()
+
+
+        def new_gen_an(model_name, text_model, list_param):
+            title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
+            p_sep = os.path.sep
+            filepath = f'genetic{p_sep}cls{p_sep}{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}{title}.pkl'
+            new_gen = GeneticAlgorithmCLS(
+                analysis_id=get_MLP_id(),
+                title = title,
+                pipeline = text_model,
+                checkfile_path = filepath,
+                list_params = json.dumps(list_param),
+                population_size = ui_ga.spinBox_pop_size.value()
+            )
+            session.add(new_gen)
+            session.commit()
+            return new_gen
+
 
         def get_obj_title(prof_well_index):
             prof_id = prof_well_index.split('_')[0]
             obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
             return obj.title
+
 
         def save_population(alg, fname):
             data = dict(
@@ -1279,132 +1557,154 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
             return alg, data["ngen"]
 
-
-        data_train_cov = data_train.copy()
-        data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
-
-        # training_sample = np.array(data_train_cov[list_param].values.tolist())
-        # markup = np.array(sum(data_train[[mark]].values.tolist(), []))
-        # groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
-
-        training_sample = data_train_cov[list_param]
-        markup = data_train_cov[[mark]]
-        groups = data_train_cov[['obj_title']]
-
-        markup_subset = np.array(sum(markup.values.tolist(), []))
-        groups_subset = np.array(sum(groups.values.tolist(), []))
-
-        # Определение задачи
-        n_features = training_sample.shape[1]
-
-        problem = Problem(n_features, 2)  # n_features переменных, 2 цели
-
-        # Важно: создаем отдельный объект Binary для каждой переменной
-        for i in range(n_features):
-            problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
-
-        problem.directions[0] = Problem.MAXIMIZE  # Максимизация расстояния
-        problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
-
-        p_sep = os.path.sep
-        # Целевая функция остается без изменений
-        def objectives(features):
-
-            selected_features = np.array(features, dtype=int)
-            if np.sum(selected_features) == 0:
-                return [0, n_features]
-
-            # Выбор активных признаков
-            training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
-
-            markup_subset = np.array(sum(markup.values.tolist(), []))
-            groups_subset = np.array(sum(groups.values.tolist(), []))
-
-            scores = []
-
-            (markup_train, model_class, model_name, pipe,
-             text_model, training_sample_train) = build_pipeline(markup, training_sample)
-
-            ui.progressBar.setMaximum(len(set(list(groups_subset))))
-            n_progress = 1
-
-            for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
-                ui.progressBar.setValue(n_progress)
-                start_time = datetime.datetime.now()
-
-                if ui_cls.checkBox_cov_percent.isChecked():
-                    if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
-                        n_progress += 1
-                        continue
-
-                pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
-                score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
-                scores.append(score)
+        def remove_gen_an():
+            gen_an = get_gen_an()
+            if os.path.exists(gen_an.checkfile_path):
+                os.unlink(gen_an.checkfile_path)
+            session.delete(gen_an)
+            session.commit()
+            update_combobox_gen_an()
 
 
-            count = np.sum(selected_features)
-            print(np.mean(scores), count)
-            return [np.mean(scores), count]
+        def _read_pop(fname, problem):
+            with open(fname, "rb") as f:
+                d = pickle.load(f)
 
-        problem.function = objectives
-
-        # --- Параметры сохранения и выполнения ---
-        population_size = 5  # Размер популяции (укажите ваш)
-        total_generations = 10  # Общее количество поколений для выполнения
-        save_interval = 1  # Сохранять каждые N поколений
-        checkpoint_file = f'genetic{p_sep}cls{p_sep}nsgaii_checkpoint.pkl'  # Файл для сохранения состояния
-        # --- Конец параметров ---
-
-        # --- Логика загрузки или инициализации ---
-        start_gen = 0
-        if os.path.exists(checkpoint_file):
-            try:
-                print(f"Загрузка состояния из файла: {checkpoint_file}")
-
-                algorithm, start_gen = load_checkpoint(problem, checkpoint_file)
-
-                print(f"Возобновление с поколения {start_gen + 1}")
-            except Exception as e:
-                print(f"Ошибка при загрузке файла {checkpoint_file}: {e}")
-                print("Начинаем новый запуск.")
-                algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
-
-        else:
-            print("Файл состояния не найден. Начинаем новый запуск.")
-            algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+            pop = []
+            for x, fobj in zip(d["X"], d["F"]):
+                s = Solution(problem)
+                s.variables[:] = x
+                s.objectives[:] = fobj
+                s.evaluated = True
+                pop.append(s)
+            return pop, d["nfe"]
 
 
-        # --- Основной цикл выполнения с сохранением ---
-        print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
-        for gen in range(start_gen, total_generations + start_gen):
-            print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
-            algorithm.step()  # Выполняем одно поколение
+        def _write_pop(pop, nfe, fname):
+            data = dict(
+                X=[s.variables[:] for s in pop],
+                F=[s.objectives[:] for s in pop],
+                nfe=nfe,
+                rng=random.getstate(),  # актуальное состояние ГСЧ
+                ngen=nfe // len(pop) if len(pop) else 0
+            )
+            with open(fname, "wb") as f:
+                pickle.dump(data, f)
 
-            # Проверяем, нужно ли сохраняться
-            if (gen + 1) % save_interval == 0:
-                print(f"Сохранение состояния в {checkpoint_file} после поколения {gen + 1}...")
-                try:
-                    # Очищаем ссылку на problem перед сохранением, если он сложный или несериализуемый
-                    # temp_problem = algorithm.problem
-                    # algorithm.problem = None # Опционально, если problem плохо сериализуется
-                    save_population(algorithm, checkpoint_file)
-                    # algorithm.problem = temp_problem # Возвращаем обратно, если очищали
-                    print("Состояние успешно сохранено.")
-                except Exception as e:
-                    print(f"Ошибка при сохранении состояния: {e}")
-                    # algorithm.problem = temp_problem # Убедитесь, что problem восстановлен даже при ошибке
 
-        print("Оптимизация завершена.")
-        # --- Конец основного цикла ---
+        def select_best(population, k):
+            """Возвратить k решений по рангу+crowding (NSGA‑II style)."""
+            # Применяем nondominated_sort к популяции (функция модифицирует объекты)
+            nondominated_sort(population)
 
-        # Получение результатов после завершения цикла
-        results = algorithm.result
-        # Дальнейшая обработка результатов...
-        for solution in results:
-           print(solution.objectives)
-           print(solution.variables)
-        # Запускаем оптимизацию
+            # Группируем решения по рангам
+            ranks = {}
+            for solution in population:
+                if not hasattr(solution, 'rank'):
+                    print("Warning: solution does not have 'rank' attribute after nondominated_sort")
+                    continue
 
+                rank = solution.rank
+                if rank not in ranks:
+                    ranks[rank] = []
+                ranks[rank].append(solution)
+
+            # Теперь мы имеем словарь, где ключи - ранги, значения - списки решений
+            selected = []
+
+            # Обрабатываем ранги в порядке возрастания (сначала лучшие)
+            for rank in sorted(ranks.keys()):
+                front = ranks[rank]
+                crowding_distance(front)  # нужно для сортировки
+                front.sort(key=lambda s: -s.crowding_distance)
+
+                space_left = k - len(selected)
+                selected.extend(front[:space_left])  # добираем столько, сколько нужно
+                if len(selected) >= k:
+                    break  # набрали k, выходим
+
+            return selected
+
+
+        def merge_checkpoints_to_file(problem,
+                                      filenames: list[str],
+                                      out_fname: str,
+                                      target_size: int | None = None,
+                                      nfe_mode: str = "max"):
+            """Склеить pkl-файлы и записать новый.
+
+            Parameters
+            ----------
+            problem      : ваш объект Problem (нужен для Solution)
+            filenames    : список путей к pkl-файлам
+            out_fname    : куда сохранить объединённый файл
+            target_size  : None -> не ограничивать;
+                           k    -> оставить k лучших по crowding
+            nfe_mode     : 'max'  -> взять max(nfe)  из файлов;
+                           'sum'  -> сумму; любое др. -> 0
+            """
+            all_pop, nfe_list = [], []
+
+            for fn in filenames:
+                pop, nfe = _read_pop(fn, problem)
+                all_pop.extend(pop)
+                nfe_list.append(nfe)
+
+            if target_size:
+                front = select_best(all_pop, target_size)
+            else:
+                front = select_best(all_pop, len(all_pop))
+
+            # 3. выбираем счётчик nfe
+            if nfe_mode == "max":
+                new_nfe = max(nfe_list)
+            elif nfe_mode == "sum":
+                new_nfe = sum(nfe_list)
+            else:
+                new_nfe = 0
+
+            # 4. сохраняем
+
+            _write_pop(front, new_nfe, out_fname)
+            print(f"Записан объединённый чек‑пойнт «{out_fname}» "
+                  f"({len(front)} решений, nfe={new_nfe})")
+
+
+        def add_file_gen_an():
+            file_name_new = QFileDialog.getOpenFileName(filter='Pickle files (*.pkl)')[0]
+            if file_name_new:
+                gen_an = get_gen_an()
+                file_name = gen_an.checkfile_path
+
+                n_features = training_sample.shape[1]
+
+                problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+
+                # создаем отдельный объект Binary для каждой переменной
+                for i in range(n_features):
+                    problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+                problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+
+                merge_checkpoints_to_file(problem, [file_name, file_name_new], file_name,
+                                          target_size=ui_ga.spinBox_pop_size.value(), nfe_mode="max")
+
+                update_list_population()
+
+
+
+
+        ui_ga.pushButton_start_gen.clicked.connect(start_gen_algorithm)
+        ui_ga.comboBox_gen_analysis.currentIndexChanged.connect(show_gen_an_info)
+        ui_ga.toolButton_remove_gen_an.clicked.connect(remove_gen_an)
+        ui_ga.listWidget_population.currentItemChanged.connect(update_list_features)
+        ui_ga.pushButton_add_file.clicked.connect(add_file_gen_an)
+
+
+        update_combobox_gen_an()
+
+        GenAlg.exec_()
 
 
     def class_exit():
