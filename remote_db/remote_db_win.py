@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import OperationalError
 from PyQt5 import QtWidgets, QtCore
 from remote_db.model_remote_db import *
 from models_db.model import *
@@ -10,12 +11,15 @@ from remote_db.sync_wells import create_sync_func
 from remote_db.sync_well_relations import load_well_relations, unload_well_relations
 from remote_db.sync_formations import load_formations, unload_formations
 from remote_db.sync_objects import sync_objects_direction
+from remote_db.unload_mlp import unload_mlp_func
+from sqlalchemy.orm import selectinload
+from mlp import update_list_mlp
 
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
-    except Exception as e:
-        set_info(f'{str(e)}', 'red')
+    except OperationalError:
+        set_info(f'Ошибка подключения к удаленной БД', 'red')
 
     """ Открытие окна для работы с удаленной БД """
     RemoteDB = QtWidgets.QDialog()
@@ -129,6 +133,8 @@ def open_rem_db_window():
             remote_objects = remote_session.query(GeoradarObjectRDB).filter(GeoradarObjectRDB.id ==
                                                                             get_object_rem_id())
 
+            loaded_obj_count = 0
+
             for remote_object in tqdm(remote_objects, desc='Загрузка объектов'):
                 # Проверяем существование объекта в локальной базе
                 local_object = session.query(GeoradarObject).filter_by(title=remote_object.title).first()
@@ -139,8 +145,8 @@ def open_rem_db_window():
                     session.add(new_object)
                     session.commit()
                     local_object = new_object
-                    update_object(new_obj=True)
                     set_info(f'Объект "{remote_object.title}" загружен с удаленной БД', 'green')
+                    loaded_obj_count += 1
                 else:
                     set_info(f'Объект "{remote_object.title}" есть в локальной БД', 'red')
 
@@ -203,7 +209,10 @@ def open_rem_db_window():
 
                     session.commit()
 
-        update_research_combobox()
+        if loaded_obj_count == 1:
+            update_object(new_obj=True)
+        else:
+            update_object()
 
         set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
@@ -220,7 +229,9 @@ def open_rem_db_window():
             # Получаем выбранный объект из локальной базы
             local_objects = session.query(GeoradarObject).filter(GeoradarObject.id == get_object_id())
 
-            for local_object in tqdm(local_objects, desc='Выгрузка объектов'):
+            unloaded_obj_count = 0
+
+            for local_object in tqdm(local_objects, desc='Выгрузка объекта'):
                 # Проверяем существование объекта в удаленной базе
                 remote_object = remote_session.query(GeoradarObjectRDB).filter_by(title=local_object.title).first()
 
@@ -230,8 +241,8 @@ def open_rem_db_window():
                     remote_session.add(new_object)
                     remote_session.commit()
                     remote_object = new_object
-                    update_object_rem_combobox(from_local=True)
                     set_info(f'Объект "{local_object.title}" выгружен на удаленную БД', 'green')
+                    unloaded_obj_count += 1
 
                 else:
                     set_info(f'Объект "{local_object.title}" есть в удаленной БД', 'red')
@@ -296,7 +307,11 @@ def open_rem_db_window():
 
                     remote_session.commit()
 
-        update_research_combobox()
+        if unloaded_obj_count == 1:
+            update_object_rem_combobox(from_local=True)
+        else:
+            update_object_rem_combobox()
+
         set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
     def delete_object_rem():
@@ -382,8 +397,6 @@ def open_rem_db_window():
             session.close()
 
 
-
-
     # Функция вычисления хэш-суммы
     def calculate_hash(value):
         return hashlib.md5(str(value).encode()).hexdigest()
@@ -410,6 +423,217 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
+    def update_mlp_rdb_combobox():
+        """Обновить список анализов MLP"""
+        with get_session() as remote_session:
+            ui_rdb.comboBox_mlp_rdb.clear()
+            for i in remote_session.query(AnalysisMLPRDB.id, AnalysisMLPRDB.title).order_by(AnalysisMLPRDB.title).all():
+                ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title} id{i.id}')
+
+    def unload_mlp():
+        unload_mlp_func(RemoteDB)
+        update_mlp_rdb_combobox()
+
+    def get_MLP_rdb_id():
+        return ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[-1]
+
+    # Функция для проверки зависимостей MLP
+    def check_dependencies():
+        set_info('Проверка наличия всех связанных данных в локальной БД', 'blue')
+        errors = []
+        with get_session() as remote_session:
+            remote_analyzes = remote_session.query(AnalysisMLPRDB).filter(AnalysisMLPRDB.id == get_MLP_rdb_id())
+
+        # Предзагрузка данных из локальной БД для проверки
+            # Проверяем наличие всех связанных данных в локальной БД
+            local_wells = {
+                w.well_hash: w.id
+                for w in session.query(Well.well_hash, Well.id).all()
+            }
+
+            local_profiles = {
+                p.signal_hash_md5: p.id
+                for p in session.query(Profile.signal_hash_md5, Profile.id).all()
+            }
+
+            local_formations = {}
+            for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
+                local_formations[f.up_hash] = f.id
+                local_formations[f.down_hash] = f.id
+
+            for remote_analysis in tqdm(remote_analyzes, desc='Проверка зависимостей MLP'):
+
+                remote_markers = remote_session.query(MarkerMLPRDB).filter_by(analysis_id=remote_analysis.id).all()
+
+                for remote_marker in remote_markers:
+                    remote_markups = remote_session.query(MarkupMLPRDB) \
+                        .options(
+                        selectinload(MarkupMLPRDB.well),
+                        selectinload(MarkupMLPRDB.profile),
+                        selectinload(MarkupMLPRDB.formation)
+                    ).filter_by(
+                        analysis_id=remote_analysis.id,
+                        marker_id=remote_marker.id
+                    ).all()
+
+                    for remote_markup in remote_markups:
+                        related_tables = []
+
+                        # Проверяем скважину
+                        remote_well_hash = remote_markup.well.well_hash
+                        if remote_well_hash not in local_wells:
+                            related_tables.append('Well')
+
+                        # Проверяем профиль
+                        remote_profile_hash = remote_markup.profile.signal_hash_md5
+                        if remote_profile_hash not in local_profiles:
+                            related_tables.append('Profile')
+
+                        # Проверяем пласт
+                        remote_formation_up_hash = remote_markup.formation.up_hash
+                        remote_formation_down_hash = remote_markup.formation.down_hash
+                        if (remote_formation_up_hash not in local_formations and
+                                remote_formation_down_hash not in local_formations):
+                            related_tables.append('Formation')
+
+                        if related_tables:
+                            error_msg = (
+                                f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
+                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                                f'Скважина: {remote_markup.well.name}'
+                            )
+                            errors.append(error_msg)
+
+        return errors
+
+    def load_mlp():
+        """Загрузка таблиц AnalysisMLP, MarkerMLP, MarkupMLP с удаленной БД на локальную"""
+
+        set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+
+        # Сначала выполняем проверку
+        dependency_errors = check_dependencies()
+
+        if dependency_errors:
+            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+            set_info('Обнаружены проблемы с зависимостями', 'red')
+            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+            return
+        else:
+            set_info('Проблем с зависимостями нет', 'green')
+
+        # Если проверка пройдена, выполняем выгрузку
+        with get_session() as remote_session:
+            remote_analyzes = remote_session.query(AnalysisMLPRDB).filter(AnalysisMLPRDB.id == get_MLP_rdb_id())
+
+            for remote_analysis in tqdm(remote_analyzes, desc='Загрузка анализа'):
+
+                local_analysis = session.query(AnalysisMLP).filter_by(title=remote_analysis.title).first()
+
+                if not local_analysis:
+                    new_analysis = AnalysisMLP(title=remote_analysis.title)
+                    session.add(new_analysis)
+                    session.commit()
+                    local_analysis = new_analysis
+                    set_info(f'Анализ "{remote_analysis.title}" загружен с удаленной БД', 'green')
+                else:
+                    set_info(f'Анализ "{remote_analysis.title}" есть в локальной БД', 'blue')
+
+                remote_markers = remote_session.query(MarkerMLPRDB).filter_by(analysis_id=remote_analysis.id).all()
+
+                for remote_marker in tqdm(remote_markers, desc='Загрузка маркеров'):
+                    local_marker = session.query(MarkerMLP).filter_by(
+                        analysis_id=local_analysis.id,
+                        title=remote_marker.title
+                    ).first()
+
+                    if not local_marker:
+                        new_marker = MarkerMLP(
+                            analysis_id=local_analysis.id,
+                            title=remote_marker.title,
+                            color=remote_marker.color
+                        )
+                        session.add(new_marker)
+                        session.commit()
+                        local_marker = new_marker
+                        set_info(f'Маркер "{remote_marker.title}" загружен с удаленной БД', 'green')
+                    else:
+                        set_info(f'Маркер "{remote_marker.title}" есть в локальной БД', 'blue')
+
+                    remote_markups = remote_session.query(MarkupMLPRDB) \
+                        .options(
+                        selectinload(MarkupMLPRDB.well),
+                        selectinload(MarkupMLPRDB.profile),
+                        selectinload(MarkupMLPRDB.formation)
+                    ).filter_by(
+                        analysis_id=remote_analysis.id,
+                        marker_id=remote_marker.id
+                    ).all()
+
+                    # Повторно загружаем данные
+                    local_wells = {
+                        w.well_hash: w.id
+                        for w in session.query(Well.well_hash, Well.id).all()
+                    }
+
+                    local_profiles = {
+                        p.signal_hash_md5: p.id
+                        for p in session.query(Profile.signal_hash_md5, Profile.id).all()
+                    }
+
+                    local_formations = {}
+                    for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
+                        local_formations[f.up_hash] = f.id
+                        local_formations[f.down_hash] = f.id
+
+                    added_markups_count = 0
+
+                    ui.progressBar.setMaximum(len(remote_markups))
+
+                    for n, remote_markup in tqdm(enumerate(remote_markups), desc='Загрузка обучающих скважин'):
+                        ui.progressBar.setValue(n+1)
+
+                        local_well_id = local_wells[remote_markup.well.well_hash]
+                        local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
+
+                        # Получаем ID пласта
+                        local_formation_id = local_formations.get(remote_markup.formation.up_hash)
+                        if not local_formation_id:
+                            local_formation_id = local_formations.get(remote_markup.formation.down_hash)
+
+                        local_markup = session.query(MarkupMLP).filter_by(
+                            analysis_id=local_analysis.id,
+                            well_id=local_well_id,
+                            profile_id=local_profile_id,
+                            formation_id=local_formation_id,
+                            marker_id=local_marker.id
+                        ).first()
+
+                        if not local_markup:
+                            new_markup = MarkupMLP(
+                                analysis_id=local_analysis.id,
+                                well_id=local_well_id,
+                                profile_id=local_profile_id,
+                                formation_id=local_formation_id,
+                                marker_id=local_marker.id,
+                                list_measure=remote_markup.list_measure,
+                                type_markup=remote_markup.type_markup
+                            )
+                            session.add(new_markup)
+                            added_markups_count += 1
+
+                    session.commit()
+                    set_info(
+                        f'Загружено: '
+                        f'{pluralize(added_markups_count, ["обучающая скважина", "обучающие скважины", "обучающих скважин"])}',
+                        'green')
+
+        update_list_mlp()
+
+        set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
+
+    update_mlp_rdb_combobox()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
@@ -420,6 +644,8 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_well_rel.clicked.connect(unload_well_relations)
     ui_rdb.pushButton_load_formations.clicked.connect(load_formations)
     ui_rdb.pushButton_unload_formations.clicked.connect(unload_formations)
+    ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
+    ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
 
 
     calc_count_wells()

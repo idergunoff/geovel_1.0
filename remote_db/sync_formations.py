@@ -104,11 +104,10 @@ def load_formations():
                 added_formations_count += 1
 
             session.commit()
-            set_info(f'{pluralize(added_formations_count, ["пласт загружен", "пласта загружено", "пластов загружено"])} '
-                     f'с удаленной БД на локальную',
+            set_info(f'Загружено: {pluralize(added_formations_count, ["пласт", "пласта", "пластов"])}',
                      'green')
-            set_info(f'{pluralize(added_layers_count, ["новый слой добавлен", "новых слоя добавлено", "новых слоев добавлено"])} '
-                     f'в локальную БД',
+            set_info(f'В локальную БД добавлено:'
+                     f'{pluralize(added_layers_count, ["новый слой", "новых слоя", "новых слоев"])}',
                      'green')
             if skipped_profiles_count:
                 set_info(f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '
@@ -192,9 +191,7 @@ def unload_formations():
                 added_formations_count += 1
 
             remote_session.commit()
-            set_info(f'{pluralize(added_formations_count, ["пласт выгружен", "пласта выгружено", "пластов выгружено"])} '
-                     f'с локальной БД на удаленную',
-                     'green')
+            set_info(f'Выгружено: {pluralize(added_formations_count, ["пласт", "пласта", "пластов"])}', 'green')
             if skipped_profiles_count:
                 set_info(
                     f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '

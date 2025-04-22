@@ -50,7 +50,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
 
         offset += batch_size
         wells_count = min(offset, total_wells)
-        set_info(f'{pluralize(wells_count, ["скважина обновлена", "скважины обновлено", "скважин обновлено"])}',
+        set_info(f'Обновлено: {pluralize(wells_count, ["скважина", "скважины", "скважин"])}',
                  'green')
 
         n += 1

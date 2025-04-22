@@ -68,6 +68,7 @@ class ProfileRDB(BaseRDB):
 
     research = relationship('ResearchRDB', back_populates='profiles')
     formations = relationship('FormationRDB', back_populates='profile')
+    markups_mlp = relationship('MarkupMLPRDB', back_populates='profile')
 
 
 class WellRDB(BaseRDB):
@@ -83,6 +84,7 @@ class WellRDB(BaseRDB):
     boundaries = relationship("BoundaryRDB", back_populates="well")
     well_optionally = relationship("WellOptionallyRDB", back_populates="well")
     well_logs = relationship("WellLogRDB", back_populates="well")
+    markups_mlp = relationship('MarkupMLPRDB', back_populates='well')
 
 class BoundaryRDB(BaseRDB):
     __tablename__ = 'boundary_rdb'
@@ -130,3 +132,50 @@ class FormationRDB(BaseRDB):
     down_hash = Column(String)
 
     profile = relationship('ProfileRDB', back_populates='formations')
+    markups_mlp = relationship('MarkupMLPRDB', back_populates='formation')
+
+
+#####################################################
+######################  MLP  ########################
+#####################################################
+
+class AnalysisMLPRDB(BaseRDB):
+    __tablename__ = 'analysis_mlp_rdb'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    markers = relationship('MarkerMLPRDB', back_populates='analysis')
+    markups = relationship('MarkupMLPRDB', back_populates='analysis')
+
+
+class MarkerMLPRDB(BaseRDB):
+    __tablename__ = 'marker_mlp_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp_rdb.id'))
+    title = Column(String)
+    color = Column(String)
+
+    analysis = relationship('AnalysisMLPRDB', back_populates='markers')
+    markups = relationship('MarkupMLPRDB', back_populates='marker')
+
+
+class MarkupMLPRDB(BaseRDB):
+    __tablename__ = 'markup_mlp_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp_rdb.id'))
+    well_id = Column(Integer, ForeignKey('well_rdb.id'))
+    profile_id = Column(Integer, ForeignKey('profile_rdb.id'))
+    formation_id = Column(Integer, ForeignKey('formation_rdb.id'))
+    marker_id = Column(Integer, ForeignKey('marker_mlp_rdb.id'))
+    list_measure = Column(Text)
+    type_markup = Column(String)
+
+    analysis = relationship('AnalysisMLPRDB', back_populates='markups')
+    well = relationship("WellRDB", back_populates="markups_mlp")
+    profile = relationship("ProfileRDB", back_populates="markups_mlp")
+    formation = relationship("FormationRDB", back_populates="markups_mlp")
+    marker = relationship("MarkerMLPRDB", back_populates="markups")
+

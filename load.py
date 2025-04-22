@@ -18,6 +18,7 @@ def add_object():
     def object_to_db():
         name_object = ui_ob.lineEdit.text()
         date_research = ui_ob.dateEdit.date().toPyDate()
+        added_obj_count = 0
         if name_object != '':
             obj = session.query(GeoradarObject).filter(GeoradarObject.title == name_object).first()
             if not obj:
@@ -26,12 +27,16 @@ def add_object():
                 session.commit()
                 obj_id = new_object.id
                 set_info(f'Объект "{name_object}" добавлен в базу данных.', 'green')
+                added_obj_count += 1
             else:
                 obj_id = obj.id
             new_research = Research(object_id=obj_id, date_research=date_research)
             session.add(new_research)
             session.commit()
-            update_object(new_obj=True)
+            if added_obj_count == 1:
+                update_object(new_obj=True)
+            else:
+                update_research_combobox()
             Add_Object.close()
             set_info(f'Добавлено исследование /{date_research.strftime("%m.%Y")}/ для объекта "{name_object}".', 'green')
 
