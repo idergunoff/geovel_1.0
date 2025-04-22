@@ -32,11 +32,7 @@ def check_rdb_dependencies():
 
             for local_marker in local_markers:
                 local_markups = session.query(MarkupMLP) \
-                    .options(
-                    selectinload(MarkupMLP.well),
-                    selectinload(MarkupMLP.profile),
-                    selectinload(MarkupMLP.formation)
-                ).filter_by(
+                    .filter_by(
                     analysis_id=local_analysis.id,
                     marker_id=local_marker.id
                 ).all()
@@ -129,11 +125,7 @@ def unload_mlp_func(Window):
                     set_info(f'Маркер "{local_marker.title}" есть в удаленной БД', 'blue')
 
                 local_markups = session.query(MarkupMLP) \
-                    .options(
-                    selectinload(MarkupMLP.well),
-                    selectinload(MarkupMLP.profile),
-                    selectinload(MarkupMLP.formation)
-                ).filter_by(
+                   .filter_by(
                     analysis_id=local_analysis.id,
                     marker_id=local_marker.id
                 ).all()
