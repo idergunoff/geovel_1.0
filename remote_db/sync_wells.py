@@ -55,7 +55,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
 
         n += 1
 
-def create_sync_func():
+def sync_wells():
     batch_size=5000
 
     try:

@@ -7,12 +7,11 @@ from qt.rem_db_window import *
 from func import *
 import hashlib
 import logging
-from remote_db.sync_wells import create_sync_func
+from remote_db.sync_wells import sync_wells
 from remote_db.sync_well_relations import load_well_relations, unload_well_relations
 from remote_db.sync_formations import load_formations, unload_formations
 from remote_db.sync_objects import sync_objects_direction
 from remote_db.unload_mlp import unload_mlp_func
-from sqlalchemy.orm import selectinload
 from mlp import update_list_mlp
 
 def open_rem_db_window():
@@ -673,12 +672,13 @@ def open_rem_db_window():
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
 
+
     update_mlp_rdb_combobox()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
     ui_rdb.pushButton_sync_objects.clicked.connect(sync_all_objects)
-    ui_rdb.pushButton_sync_wells.clicked.connect(create_sync_func)
+    ui_rdb.pushButton_sync_wells.clicked.connect(sync_wells)
     ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
     ui_rdb.pushButton_load_well_rel.clicked.connect(load_well_relations)
     ui_rdb.pushButton_unload_well_rel.clicked.connect(unload_well_relations)

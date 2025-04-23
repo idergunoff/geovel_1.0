@@ -927,7 +927,7 @@ def remove_all_param_geovel_mlp():
 
 def update_list_well_markup_mlp():
     """Обновление списка обучающих скважин MLP"""
-    print('update_list_well_markup_mlp')
+    # print('update_list_well_markup_mlp')
     ui.listWidget_well_mlp.clear()
     count_markup, count_measure, count_fake = 0, 0, 0
     for i in session.query(MarkupMLP).filter(MarkupMLP.analysis_id == get_MLP_id()).all():

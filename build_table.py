@@ -33,13 +33,14 @@ def build_table_train(db=False, analisis='lda'):
                 try:
                     data_train = pd.DataFrame(json.loads(data[0]))
                 except JSONDecodeError:
-                    if analisis == 'mlp':
-                        session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({"up_data": False})
-                    elif analisis == 'regmod':
-                        session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({"up_data": False})
-                    session.commit()
-                    data_train, _ = build_table_train_no_db(analisis, analisis_id, list_param)
-                    return data_train, list_param
+                    # if analisis == 'mlp':
+                    #     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({"up_data": False})
+                    # elif analisis == 'regmod':
+                    #     session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({"up_data": False})
+                    # session.commit()
+                    # data_train, _ = build_table_train_no_db(analisis, analisis_id, list_param)
+                    # return data_train, list_param
+                    return
 
             return data_train, list_param
 
