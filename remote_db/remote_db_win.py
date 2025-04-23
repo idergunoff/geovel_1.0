@@ -427,7 +427,8 @@ def open_rem_db_window():
         with get_session() as remote_session:
             ui_rdb.comboBox_mlp_rdb.clear()
             for i in remote_session.query(AnalysisMLPRDB.id, AnalysisMLPRDB.title).order_by(AnalysisMLPRDB.title).all():
-                ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title} id{i.id}')
+                count_markup = remote_session.query(MarkupMLPRDB).filter_by(analysis_id=i.id).count()
+                ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title}({count_markup}) id{i.id}')
 
     def unload_mlp():
         unload_mlp_func(RemoteDB)
@@ -450,10 +451,10 @@ def open_rem_db_window():
                 for w in session.query(Well.well_hash, Well.id).all()
             }
 
-            local_profiles = {
-                p.signal_hash_md5: p.id
-                for p in session.query(Profile.signal_hash_md5, Profile.id).all()
-            }
+            # local_profiles = {
+            #     p.signal_hash_md5: p.id
+            #     for p in session.query(Profile.signal_hash_md5, Profile.id).all()
+            # }
 
             local_formations = {}
             for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
@@ -482,10 +483,10 @@ def open_rem_db_window():
                         except AttributeError:
                             pass
 
-                        # Проверяем профиль
-                        remote_profile_hash = remote_markup.profile.signal_hash_md5
-                        if remote_profile_hash not in local_profiles:
-                            related_tables.append('Profile')
+                        # # Проверяем профиль
+                        # remote_profile_hash = remote_markup.profile.signal_hash_md5
+                        # if remote_profile_hash not in local_profiles:
+                        #     related_tables.append('Profile')
 
                         # Проверяем пласт
                         remote_formation_up_hash = remote_markup.formation.up_hash
@@ -574,15 +575,16 @@ def open_rem_db_window():
                         for w in session.query(Well.well_hash, Well.id).all()
                     }
 
-                    local_profiles = {
-                        p.signal_hash_md5: p.id
-                        for p in session.query(Profile.signal_hash_md5, Profile.id).all()
-                    }
+                    # local_profiles = {
+                    #     p.signal_hash_md5: p.id
+                    #     for p in session.query(Profile.signal_hash_md5, Profile.id).all()
+                    # }
 
                     local_formations = {}
-                    for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
-                        local_formations[f.up_hash] = f.id
-                        local_formations[f.down_hash] = f.id
+                    for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id,
+                                           Formation.profile_id).all():
+                        local_formations[f.up_hash] = [f.id, f.profile_id]
+                        local_formations[f.down_hash] = [f.id, f.profile_id]
 
                     added_markups_count = 0
 
@@ -593,18 +595,18 @@ def open_rem_db_window():
 
                         local_well_id = local_wells[remote_markup.well.well_hash] \
                             if remote_markup.well_id != None else 0
-                        local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
+                        # local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
 
                         # Получаем ID пласта
-                        local_formation_id = local_formations.get(remote_markup.formation.up_hash)
-                        if not local_formation_id:
-                            local_formation_id = local_formations.get(remote_markup.formation.down_hash)
+                        local_formation_list = local_formations.get(remote_markup.formation.up_hash)
+                        if not local_formation_list:
+                            local_formation_list = local_formations.get(remote_markup.formation.down_hash)
 
                         local_markup = session.query(MarkupMLP).filter_by(
                             analysis_id=local_analysis.id,
                             well_id=local_well_id,
-                            profile_id=local_profile_id,
-                            formation_id=local_formation_id,
+                            profile_id=local_formation_list[1],
+                            formation_id=local_formation_list[0],
                             marker_id=local_marker.id
                         ).first()
 
@@ -612,8 +614,8 @@ def open_rem_db_window():
                             new_markup = MarkupMLP(
                                 analysis_id=local_analysis.id,
                                 well_id=local_well_id,
-                                profile_id=local_profile_id,
-                                formation_id=local_formation_id,
+                                profile_id=local_formation_list[1],
+                                formation_id=local_formation_list[0],
                                 marker_id=local_marker.id,
                                 list_measure=remote_markup.list_measure,
                                 type_markup=remote_markup.type_markup

@@ -17,10 +17,10 @@ def check_rdb_dependencies():
             for w in remote_session.query(WellRDB.well_hash, WellRDB.id).all()
         }
 
-        remote_profiles = {
-            p.signal_hash_md5: p.id
-            for p in remote_session.query(ProfileRDB.signal_hash_md5, ProfileRDB.id).all()
-        }
+        # remote_profiles = {
+        #     p.signal_hash_md5: p.id
+        #     for p in remote_session.query(ProfileRDB.signal_hash_md5, ProfileRDB.id).all()
+        # }
 
         remote_formations = {}
         for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id).all():
@@ -48,10 +48,10 @@ def check_rdb_dependencies():
                     except AttributeError:
                         pass
 
-                    # Проверяем профиль
-                    local_profile_hash = local_markup.profile.signal_hash_md5
-                    if local_profile_hash not in remote_profiles:
-                        related_tables.append('ProfileRDB')
+                    # # Проверяем профиль
+                    # local_profile_hash = local_markup.profile.signal_hash_md5
+                    # if local_profile_hash not in remote_profiles:
+                    #     related_tables.append('ProfileRDB')
 
                     # Проверяем пласт
                     local_formation_up_hash = local_markup.formation.up_hash
@@ -139,15 +139,16 @@ def unload_mlp_func(Window):
                     for w in remote_session.query(WellRDB.well_hash, WellRDB.id).all()
                 }
 
-                remote_profiles = {
-                    p.signal_hash_md5: p.id
-                    for p in remote_session.query(ProfileRDB.signal_hash_md5, ProfileRDB.id).all()
-                }
+                # remote_profiles = {
+                #     p.signal_hash_md5: p.id
+                #     for p in remote_session.query(ProfileRDB.signal_hash_md5, ProfileRDB.id).all()
+                # }
 
                 remote_formations = {}
-                for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id).all():
-                    remote_formations[f.up_hash] = f.id
-                    remote_formations[f.down_hash] = f.id
+                for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id,
+                                              FormationRDB.profile_id).all():
+                    remote_formations[f.up_hash] = [f.id, f.profile_id]
+                    remote_formations[f.down_hash] = [f.id, f.profile_id]
 
                 added_markups_count = 0
                 ui.progressBar.setMaximum(len(local_markups))
@@ -156,18 +157,18 @@ def unload_mlp_func(Window):
                     ui.progressBar.setValue(n + 1)
 
                     remote_well_id = remote_wells[local_markup.well.well_hash] if local_markup.well_id != 0 else None
-                    remote_profile_id = remote_profiles[local_markup.profile.signal_hash_md5]
+                    # remote_profile_id = remote_profiles[local_markup.profile.signal_hash_md5]
 
                     # Получаем ID пласта
-                    remote_formation_id = remote_formations.get(local_markup.formation.up_hash)
-                    if not remote_formation_id:
-                        remote_formation_id = remote_formations.get(local_markup.formation.down_hash)
+                    remote_formation_list = remote_formations.get(local_markup.formation.up_hash)
+                    if not remote_formation_list:
+                        remote_formation_list = remote_formations.get(local_markup.formation.down_hash)
 
                     remote_markup = remote_session.query(MarkupMLPRDB).filter_by(
                         analysis_id=remote_analysis.id,
                         well_id=remote_well_id,
-                        profile_id=remote_profile_id,
-                        formation_id=remote_formation_id,
+                        profile_id=remote_formation_list[1],
+                        formation_id=remote_formation_list[0],
                         marker_id=remote_marker.id
                     ).first()
 
@@ -175,8 +176,8 @@ def unload_mlp_func(Window):
                         new_markup = MarkupMLPRDB(
                             analysis_id=remote_analysis.id,
                             well_id=remote_well_id,
-                            profile_id=remote_profile_id,
-                            formation_id=remote_formation_id,
+                            profile_id=remote_formation_list[1],
+                            formation_id=remote_formation_list[0],
                             marker_id=remote_marker.id,
                             list_measure=local_markup.list_measure,
                             type_markup=local_markup.type_markup
@@ -191,21 +192,3 @@ def unload_mlp_func(Window):
                     'green')
 
     set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

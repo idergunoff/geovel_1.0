@@ -955,7 +955,8 @@ def update_list_well_markup_mlp():
             count_fake += fake
             # ui.listWidget_well_mlp.setItemData(ui.listWidget_well_mlp.findText(item), QBrush(QColor(i.marker.color)), Qt.BackgroundRole)
         except AttributeError:
-            set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
+            set_info(f'Обучающая скважина для профиля {i.profile.title} удалена из-за отсутствия одного из параметров',
+                     'red')
             session.delete(i)
             session.commit()
     ui.label_count_markup_mlp.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; '
