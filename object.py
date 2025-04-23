@@ -61,6 +61,7 @@ import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 import pandas as pd
 import json
+from json import JSONDecodeError
 import pywt
 from nolds import hurst_rs, dfa, corr_dim, sampen, lyap_r
 from pyentrp import entropy as entr
