@@ -913,6 +913,7 @@ class GeneticAlgorithmCLS(Base):
     list_params = Column(Text)
     population_size = Column(Integer)
     comment = Column(Text)
+    type_problem = Column(String)
 
     analysis_mlp = relationship('AnalysisMLP', back_populates='genetic_algorithms')
 
