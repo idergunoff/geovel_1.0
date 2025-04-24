@@ -8,7 +8,7 @@ from classification_func import train_classifier
 def update_checkfile(remote_ga, local_ga):
 
     with open(local_ga.checkfile_path, "rb") as f:
-        local_data = f.read()
+        local_data = pickle.load(f)
 
     remote_data = pickle.loads(remote_ga.checkfile_path)
 
@@ -131,7 +131,7 @@ def unload_genetic_func():
             remote_ga = remote_session.query(GeneticAlgorithmCLSRDB).filter_by(
                 analysis_id=remote_analysis_id,
                 title=local_ga.title,
-                pipeline=local_ga.pipline,
+                pipeline=local_ga.pipeline,
                 list_params=local_ga.list_params,
                 population_size=local_ga.population_size,
                 type_problem=local_ga.type_problem
@@ -141,12 +141,12 @@ def unload_genetic_func():
                 update_checkfile(remote_ga, local_ga)
             else:
                 with open(local_ga.checkfile_path, "rb") as f:
-                    data = f.read()
+                    data = pickle.load(f)
                 data_checkfile = pickle.dumps(data)
                 new_remote_ga = GeneticAlgorithmCLSRDB(
                     analysis_id=remote_analysis_id,
                     title=local_ga.title,
-                    pipeline=local_ga.pipline,
+                    pipeline=local_ga.pipeline,
                     checkfile_path=data_checkfile,
                     list_params=local_ga.list_params,
                     population_size=local_ga.population_size,

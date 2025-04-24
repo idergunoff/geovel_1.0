@@ -689,6 +689,7 @@ def open_rem_db_window():
                 ui_rdb.comboBox_genetic_rdb.addItem(f'{ga.title} id{ga.id}')
 
 
+
     def load_genetic():
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
