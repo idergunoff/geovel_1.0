@@ -1250,7 +1250,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             ui_ga.comboBox_gen_analysis.clear()
             gen_analysis = session.query(GeneticAlgorithmCLS).filter_by(analysis_id=get_MLP_id()).order_by(desc(GeneticAlgorithmCLS.id)).all()
             for ga in gen_analysis:
-                ui_ga.comboBox_gen_analysis.addItem(f'{ga.title} id{ga.id}')
+                ui_ga.comboBox_gen_analysis.addItem(f'{ga.type_problem} {ga.title} id{ga.id}')
 
 
         def update_list_population():
@@ -1264,9 +1264,18 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                     return
 
                 for x, fobj in zip(data["X"], data["F"]):
-                    ui_ga.listWidget_population.addItem(f'{fobj[0]} N{fobj[1]}')
+                    try:
+                        ui_ga.listWidget_population.addItem(f'{fobj[0]} N{fobj[1]}')
+                    except IndexError:
+                        ui_ga.listWidget_population.addItem(f'{fobj} N{np.sum(x)}')
 
                 ui_ga.lcdNumber_generation.display(data["ngen"])
+                if ga.type_problem == 'min':
+                    ui_ga.radioButton_pareto_min.setChecked(True)
+                if ga.type_problem == 'max':
+                    ui_ga.radioButton_pareto_max.setChecked(True)
+                if ga.type_problem == 'no':
+                    ui_ga.radioButton_pareto_no.setChecked(True)
 
                 # update_list_params()
                 draw_pareto_front(data)
@@ -1286,17 +1295,26 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 n_features = training_sample.shape[1]
                 list_p = json.loads(ga.list_params)
 
-                problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+                problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
 
                 # создаем отдельный объект Binary для каждой переменной
                 for i in range(n_features):
                     problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
 
                 problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
-                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                if ui_ga.radioButton_pareto_min.isChecked():
+                    problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                elif ui_ga.radioButton_pareto_max.isChecked():
+                    problem.directions[1] = Problem.MAXIMIZE
+                else:
+                    pass
 
-                with open(ga.checkfile_path, "rb") as f:
-                    saved = pickle.load(f)
+                try:
+                    with open(ga.checkfile_path, "rb") as f:
+                        saved = pickle.load(f)
+                except FileNotFoundError:
+                    QMessageBox.critical(GenAlg, "Error", "File not found")
+                    return
 
                 pop = []
                 for x, fobj in zip(saved["X"], saved["F"]):
@@ -1344,46 +1362,47 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 ui_ga.verticalLayout_table_pop.addWidget(table)
 
 
-        def update_list_params():
-            ui_ga.listWidget_features.clear()
-            ga = get_gen_an()
-            if ga:
-                list_p = json.loads(ga.list_params)
-                for i_param in tqdm(list_p):
-                    check_box_widget = QCheckBox(i_param)
-                    # check_box_widget.setChecked(True)
-                    list_item = QListWidgetItem()
-                    ui_ga.listWidget_features.addItem(list_item)
-                    ui_ga.listWidget_features.setItemWidget(list_item, check_box_widget)
+        # def update_list_params():
+        #     ui_ga.listWidget_features.clear()
+        #     ga = get_gen_an()
+        #     if ga:
+        #         list_p = json.loads(ga.list_params)
+        #         for i_param in tqdm(list_p):
+        #             check_box_widget = QCheckBox(i_param)
+        #             # check_box_widget.setChecked(True)
+        #             list_item = QListWidgetItem()
+        #             ui_ga.listWidget_features.addItem(list_item)
+        #             ui_ga.listWidget_features.setItemWidget(list_item, check_box_widget)
+        #
 
-
-
-        def update_list_features():
-            ga = get_gen_an()
-            if ga:
-                with open(ga.checkfile_path, "rb") as f:
-                    data = pickle.load(f)
-
-                list_x = []
-                try:
-                    point = ui_ga.listWidget_population.currentItem().text().split(' N')
-                except AttributeError:
-                    return
-                for x, fobj in zip(data["X"], data["F"]):
-                    if str(fobj[0]) == point[0] and fobj[1] == int(point[1]):
-                        list_x = list(x)
-                        break
-
-                if list_x:
-                    for i in range(ui_ga.listWidget_features.count()):
-                        checkbox = ui_ga.listWidget_features.itemWidget(ui_ga.listWidget_features.item(i))
-                        checkbox.setChecked(list_x[i][0])
+        #
+        # def update_list_features():
+        #     ga = get_gen_an()
+        #     if ga:
+        #         with open(ga.checkfile_path, "rb") as f:
+        #             data = pickle.load(f)
+        #
+        #         list_x = []
+        #         try:
+        #             point = ui_ga.listWidget_population.currentItem().text().split(' N')
+        #         except AttributeError:
+        #             return
+        #         for x, fobj in zip(data["X"], data["F"]):
+        #             if str(fobj[0]) == point[0] and fobj[1] == int(point[1]):
+        #                 list_x = list(x)
+        #                 break
+        #
+        #         if list_x:
+        #             for i in range(ui_ga.listWidget_features.count()):
+        #                 checkbox = ui_ga.listWidget_features.itemWidget(ui_ga.listWidget_features.item(i))
+        #                 checkbox.setChecked(list_x[i][0])
 
 
         def show_gen_an_info():
             ui_ga.textEdit_info.clear()
             ga = get_gen_an()
             if ga:
+                ui_ga.textEdit_info.append(ga.type_problem)
                 ui_ga.textEdit_info.append(ga.title)
                 ui_ga.textEdit_info.append(ga.pipeline)
                 ui_ga.textEdit_info.append(ga.comment)
@@ -1409,8 +1428,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             ax = figure_pareto.add_subplot(111)
 
             # Построение точек на графике
-            counts = [f[1] for f in data["F"]]
-            accuracy = [f[0] for f in data["F"]]
+            if isinstance(data["F"][0], (float, int)):
+                counts = [np.sum(x) for x in data["X"]]
+                accuracy = [data["F"]]
+            else:
+
+                counts = [f[1] for f in data["F"]]
+                accuracy = [f[0] for f in data["F"]]
 
             ax.scatter(counts, accuracy, alpha=0.5)
             ax.set_xlabel("Количество признаков")
@@ -1436,27 +1460,39 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
              text_model, training_sample_train) = build_pipeline(markup, training_sample)
 
             title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
+            if ui_ga.radioButton_pareto_min.isChecked():
+                p_type = 'min'
+            elif ui_ga.radioButton_pareto_max.isChecked():
+                p_type = 'max'
+            else:
+                p_type = 'no'
             ga = session.query(GeneticAlgorithmCLS).filter_by(
                 analysis_id=get_MLP_id(),
                 title=title,
                 pipeline=text_model,
                 list_params=json.dumps(list_param),
-                population_size=ui_ga.spinBox_pop_size.value()
+                population_size=ui_ga.spinBox_pop_size.value(),
+                type_problem=p_type
             ).first()
             if not ga:
-                ga = new_gen_an(model_name, text_model, list_param)
+                ga = new_gen_an(model_name, text_model, list_param, p_type)
 
             # Определение задачи
             n_features = training_sample.shape[1]
 
-            problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+            problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
 
             # создаем отдельный объект Binary для каждой переменной
             for i in range(n_features):
                 problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
 
             problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
-            problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+            if ui_ga.radioButton_pareto_min.isChecked():
+                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+            elif ui_ga.radioButton_pareto_max.isChecked():
+                problem.directions[1] = Problem.MAXIMIZE
+            else:
+                pass
 
             # Целевая функция
             def objectives(features):
@@ -1481,7 +1517,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
                 for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
                     ui.progressBar.setValue(n_progress)
-                    start_time = datetime.datetime.now()
 
                     if ui_cls.checkBox_cov_percent.isChecked():
                         if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
@@ -1496,7 +1531,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 count = np.sum(selected_features)
                 print(np.mean(scores), count)
                 ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
-                return [np.mean(scores), count]
+
+                if ui_ga.radioButton_pareto_no.isChecked():
+                    return [np.mean(scores)]
+                else:
+                    return [np.mean(scores), count]
+
+
 
             problem.function = objectives
 
@@ -1523,12 +1564,22 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                     print(f"Ошибка при загрузке файла {checkpoint_file}: {e}")
                     print("Начинаем новый запуск.")
 
-                    algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+                    if ui_ga.radioButton_pareto_no.isChecked():
+                        algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                    else:
+                        algorithm = NSGAII(problem, population_size=population_size)
+
 
             else:
 
                 print("Файл состояния не найден. Начинаем новый запуск.")
-                algorithm = NSGAII(problem, population_size=population_size)  # Создаем новый объект
+
+                if ui_ga.radioButton_pareto_no.isChecked():
+                    algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                else:
+                    algorithm = NSGAII(problem, population_size=population_size)
+
 
             # --- Основной цикл выполнения с сохранением ---
             print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
@@ -1564,7 +1615,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             update_combobox_gen_an()
 
 
-        def new_gen_an(model_name, text_model, list_param):
+        def new_gen_an(model_name, text_model, list_param, p_type):
             title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
             p_sep = os.path.sep
             filepath = f'genetic{p_sep}cls{p_sep}{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}{title}.pkl'
@@ -1574,7 +1625,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 pipeline = text_model,
                 checkfile_path = filepath,
                 list_params = json.dumps(list_param),
-                population_size = ui_ga.spinBox_pop_size.value()
+                population_size = ui_ga.spinBox_pop_size.value(),
+                type_problem=p_type
             )
             session.add(new_gen)
             session.commit()
@@ -1590,7 +1642,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def save_population(alg, fname):
             data = dict(
                 X=[s.variables[:] for s in alg.population],
-                F=[s.objectives[:] for s in alg.population],
+                F=[
+                    s.objectives[0] if len(s.objectives) == 1 else s.objectives[:]
+                    for s in alg.population
+                ],
                 nfe=alg.nfe,
                 rng=random.getstate(),
                 ngen=alg.nfe // alg.population_size
@@ -1607,7 +1662,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             for x, fobj in zip(data["X"], data["F"]):
                 s = Solution(problem)
                 s.variables[:] = x
-                s.objectives[:] = fobj
+                if problem.nobjs == 1:
+                    # Одноцелевой: fobj — это скаляр
+                    s.objectives[0] = fobj
+                else:
+                    # Многоцелевой: fobj — это список
+                    s.objectives[:] = fobj
                 s.evaluated = True
                 pop.append(s)
                 print(x)
@@ -1617,10 +1677,17 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             crossover = HUX()
             mutation = BitFlip(probability=1 / n_features)
             variator = CompoundOperator(crossover, mutation)
-            alg = NSGAII(problem,
-                         generator=InjectedPopulation(pop),
-                         variator=variator,
-                         population_size=len(pop))
+            # Выбор алгоритма по количеству целей
+            if problem.nobjs == 1:
+                alg = GeneticAlgorithm(problem,
+                                       generator=InjectedPopulation(pop),
+                                       variator=variator,
+                                       population_size=len(pop))
+            else:
+                alg = NSGAII(problem,
+                             generator=InjectedPopulation(pop),
+                             variator=variator,
+                             population_size=len(pop))
 
             alg.nfe = data["nfe"]
             if is_master_node:
@@ -1649,7 +1716,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             for x, fobj in zip(d["X"], d["F"]):
                 s = Solution(problem)
                 s.variables[:] = x
-                s.objectives[:] = fobj
+                if problem.nobjs == 1:
+                    # Одноцелевой: fobj — это скаляр
+                    s.objectives[0] = fobj
+                else:
+                    # Многоцелевой: fobj — это список
+                    s.objectives[:] = fobj
                 s.evaluated = True
                 pop.append(s)
             return pop, d["nfe"]
@@ -1658,7 +1730,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def _write_pop(pop, nfe, fname):
             data = dict(
                 X=[s.variables[:] for s in pop],
-                F=[s.objectives[:] for s in pop],
+
+                F=[
+                    s.objectives[0] if len(s.objectives) == 1 else s.objectives[:]
+                    for s in pop
+                ],
                 nfe=nfe,
                 rng=random.getstate(),  # актуальное состояние ГСЧ
                 ngen=nfe // len(pop) if len(pop) else 0
@@ -1753,14 +1829,19 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
                 n_features = training_sample.shape[1]
 
-                problem = Problem(n_features, 2)  # n_features переменных, 2 цели
+                problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
 
                 # создаем отдельный объект Binary для каждой переменной
                 for i in range(n_features):
                     problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
 
                 problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
-                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                if ui_ga.radioButton_pareto_min.isChecked():
+                    problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                elif ui_ga.radioButton_pareto_max.isChecked():
+                    problem.directions[1] = Problem.MAXIMIZE
+                else:
+                    pass
 
                 merge_checkpoints_to_file(problem, [file_name, file_name_new], file_name,
                                           target_size=ui_ga.spinBox_pop_size.value(), nfe_mode="max")
