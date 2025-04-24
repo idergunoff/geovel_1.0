@@ -6,6 +6,16 @@ from func import *
 from classification_func import train_classifier
 
 def update_checkfile(remote_ga, local_ga):
+
+    with open(local_ga.checkfile_path, "rb") as f:
+        local_data = f.read()
+
+    remote_data = pickle.loads(remote_ga.checkfile_path)
+
+    if local_data == remote_data:
+        set_info(f"Файлы для {local_ga.title} совпадают.", 'blue')
+        return
+
     set_info(f'Обновление файла...', 'blue')
     problem = Problem(len(json.loads(local_ga.list_params)), 1 if local_ga.type_problem == "no" else 2)
 
@@ -20,11 +30,6 @@ def update_checkfile(remote_ga, local_ga):
         problem.directions[1] = Problem.MAXIMIZE
     else:
         pass
-
-    with open(local_ga.checkfile_path, "rb") as f:
-        local_data = f.read()
-
-    remote_data = pickle.loads(remote_ga.checkfile_path)
 
     all_pop, nfe_list = [], []
 
