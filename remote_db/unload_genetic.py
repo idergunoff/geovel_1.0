@@ -13,10 +13,10 @@ def update_checkfile(remote_ga, local_ga):
     remote_data = pickle.loads(remote_ga.checkfile_path)
 
     if local_data == remote_data:
-        set_info(f"Файлы для {local_ga.title} совпадают.", 'blue')
+        set_info(f"Файлы для {local_ga.title} совпадают", 'blue')
         return
 
-    set_info(f'Обновление файла...', 'blue')
+    set_info(f'Обновление файла {local_ga.title}...', 'blue')
     problem = Problem(len(json.loads(local_ga.list_params)), 1 if local_ga.type_problem == "no" else 2)
 
     # создаем отдельный объект Binary для каждой переменной
@@ -45,7 +45,7 @@ def update_checkfile(remote_ga, local_ga):
     print(f"Записан объединённый чек‑пойнт "
           f"({len(front)} решений, nfe={new_nfe})")
 
-    set_info(f'Обновление файла выполнено', 'green')
+    set_info(f'Обновление файла {local_ga.title} выполнено', 'green')
 
 def _read_pop(check_data, problem):
     pop = []
@@ -114,7 +114,7 @@ def select_best(population, k):
 
     return selected
 
-def unload_genetic_func():
+def unload_genetic_func(ui_rdb):
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
     with get_session() as remote_session:
@@ -126,16 +126,26 @@ def unload_genetic_func():
 
         remote_analysis_id = remote_session.query(AnalysisMLPRDB).filter_by(title=local_analysis_name).first().id
 
-        for local_ga in local_gen_analyzes:
+        for local_ga in tqdm(local_gen_analyzes, desc='Выгрузка генетического анализа'):
 
-            remote_ga = remote_session.query(GeneticAlgorithmCLSRDB).filter_by(
-                analysis_id=remote_analysis_id,
-                title=local_ga.title,
-                pipeline=local_ga.pipeline,
-                list_params=local_ga.list_params,
-                population_size=local_ga.population_size,
-                type_problem=local_ga.type_problem
-            ).first()
+            if ui_rdb.checkBox_check_ga_params.isChecked():
+                remote_ga = remote_session.query(GeneticAlgorithmCLSRDB).filter_by(
+                    analysis_id=remote_analysis_id,
+                    title=local_ga.title,
+                    pipeline=local_ga.pipeline,
+                    population_size=local_ga.population_size,
+                    type_problem=local_ga.type_problem
+                ).first()
+
+            else:
+                remote_ga = remote_session.query(GeneticAlgorithmCLSRDB).filter_by(
+                    analysis_id=remote_analysis_id,
+                    title=local_ga.title,
+                    pipeline=local_ga.pipeline,
+                    list_params=local_ga.list_params,
+                    population_size=local_ga.population_size,
+                    type_problem=local_ga.type_problem
+                ).first()
 
             if remote_ga:
                 update_checkfile(remote_ga, local_ga)
@@ -155,6 +165,6 @@ def unload_genetic_func():
                 )
                 remote_session.add(new_remote_ga)
                 remote_session.commit()
-                set_info(f"Генетический анализ выгружен на удаленную БД", 'green')
+                set_info(f"Генетический анализ {local_ga.title} выгружен на удаленную БД", 'green')
 
     set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')

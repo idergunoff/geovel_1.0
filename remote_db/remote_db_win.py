@@ -675,19 +675,7 @@ def open_rem_db_window():
                     remote_session.rollback()
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
-    def get_gen_an_rdb():
-        with get_session() as remote_session:
-            return remote_session.query(GeneticAlgorithmCLSRDB).filter_by(
-                id=ui_rdb.comboBox_genetic_rdb.currentText().split(' id')[-1]).first()
-
-    def update_combobox_genetic_rdb():
-        ui_rdb.comboBox_genetic_rdb.clear()
-        with get_session() as remote_session:
-            gen_analysis = remote_session.query(GeneticAlgorithmCLSRDB).filter_by(analysis_id=get_MLP_rdb_id()).order_by(
-                desc(GeneticAlgorithmCLSRDB.id)).all()
-            for ga in gen_analysis:
-                ui_rdb.comboBox_genetic_rdb.addItem(f'{ga.title} id{ga.id}')
-
+    ui_rdb.checkBox_check_ga_params.setChecked(False)
 
 
     def load_genetic():
@@ -710,7 +698,7 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
     ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
     ui_rdb.pushButton_delete_mlp_rdb.clicked.connect(delete_mlp_rdb)
-    ui_rdb.pushButton_unload_ga.clicked.connect(unload_genetic_func)
+    ui_rdb.pushButton_unload_ga.clicked.connect(unload_genetic_func(ui_rdb))
 
 
     calc_count_wells()
