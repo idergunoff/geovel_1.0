@@ -114,6 +114,7 @@ def select_best(population, k):
 
     return selected
 
+
 def unload_genetic_func(ui_rdb):
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 

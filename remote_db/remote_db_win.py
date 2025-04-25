@@ -678,10 +678,8 @@ def open_rem_db_window():
     ui_rdb.checkBox_check_ga_params.setChecked(False)
 
 
-    def load_genetic():
-        set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
-
-
+    def start_unload_ga():
+        unload_genetic_func(ui_rdb)
 
 
     update_mlp_rdb_combobox()
@@ -698,7 +696,7 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
     ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
     ui_rdb.pushButton_delete_mlp_rdb.clicked.connect(delete_mlp_rdb)
-    ui_rdb.pushButton_unload_ga.clicked.connect(unload_genetic_func(ui_rdb))
+    ui_rdb.pushButton_unload_ga.clicked.connect(start_unload_ga)
 
 
     calc_count_wells()
