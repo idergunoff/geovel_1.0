@@ -94,6 +94,17 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     if count_nan > 0:
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
+        analysis_data = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+        try:
+            data_train.to_parquet(analysis_data.data)
+        except OSError:
+            p_sep = os.path.sep
+            name = f'{analysis_data.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+            filepath = f'data_tables{p_sep}cls{p_sep}{name}.parquet'
+            data_train.to_parquet(filepath)
+            session.query(AnalysisMLP).filter_by(id=analysis_data.id).update({'data': str(filepath)}, synchronize_session='fetch')
+            session.commit()
+
         set_info(f'Заполнены пропуски в {count_nan} образцах в параметрах {", ".join(list_nan_param)}', 'red')
 
     training_sample = np.array(data_train[list_param].values.tolist())
