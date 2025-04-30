@@ -1092,6 +1092,9 @@ def draw_MLP():
 def remove_trained_model_class():
     """ Удаление модели """
     model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+    if model_mask:
+        session.delete(model_mask)
     os.remove(model.path_model)
     session.delete(model)
     session.commit()
@@ -1805,10 +1808,10 @@ def export_model_class():
         id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
 
         model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
-        if model_mask:
-            list_param_mask = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
-        else:
-            list_param_mask = model.list_params
+
+        list_param_mask = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask) if \
+            model_mask else 0
+
     except FileNotFoundError:
         return set_info('Не выбрана модель', 'red')
     analysis = session.query(AnalysisMLP).filter_by(id=model.analysis_id).first()
@@ -1892,7 +1895,8 @@ def import_model_class():
     session.add(new_trained_model)
     session.commit()
 
-    if mask != list_params:
+    if mask:
+        set_info(f'Импорт модели с маской', 'blue')
         param_mask = session.query(ParameterMask).filter_by(mask=json.dumps(mask)).first()
         if param_mask:
             new_trained_model_mask = TrainedModelClassMask(

@@ -148,6 +148,7 @@ class AnalysisMLPRDB(BaseRDB):
     markers = relationship('MarkerMLPRDB', back_populates='analysis')
     markups = relationship('MarkupMLPRDB', back_populates='analysis')
     genetic_algorithms = relationship('GeneticAlgorithmCLSRDB', back_populates='analysis_mlp')
+    trained_models = relationship('TrainedModelClassRDB', back_populates='analysis')
 
 
 class MarkerMLPRDB(BaseRDB):
@@ -195,4 +196,22 @@ class GeneticAlgorithmCLSRDB(BaseRDB):
     type_problem = Column(String)
 
     analysis_mlp = relationship('AnalysisMLPRDB', back_populates='genetic_algorithms')
+
+
+class TrainedModelClassRDB(BaseRDB):
+    __tablename__ = 'trained_model_class_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_mlp_rdb.id'))
+    title = Column(String)
+    file_model = Column(LargeBinary)
+    list_params = Column(Text)
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
+    comment = Column(Text)
+    mask = Column(Text)
+
+    analysis = relationship('AnalysisMLPRDB', back_populates='trained_models')
+
+
 

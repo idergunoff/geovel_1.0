@@ -15,7 +15,7 @@ from remote_db.unload_mlp import unload_mlp_func
 from mlp import update_list_mlp
 from classification_func import train_classifier
 from remote_db.unload_genetic import unload_genetic_func
-
+from remote_db.unload_models import unload_models_func, get_trained_model_id
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
@@ -424,20 +424,36 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
-    def update_mlp_rdb_combobox():
+    def update_mlp_rdb_combobox(from_local=False):
         """Обновить список анализов MLP"""
         with get_session() as remote_session:
             ui_rdb.comboBox_mlp_rdb.clear()
             for i in remote_session.query(AnalysisMLPRDB.id, AnalysisMLPRDB.title).order_by(AnalysisMLPRDB.title).all():
                 count_markup = remote_session.query(MarkupMLPRDB).filter_by(analysis_id=i.id).count()
                 ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title}({count_markup}) id{i.id}')
+            if from_local:
+                # Отдельно находим последний добавленный объект (по ID или дате создания)
+                last_added = remote_session.query(AnalysisMLPRDB).order_by(AnalysisMLPRDB.id.desc()).first()
+
+                # Если такой объект есть - выбираем его в комбобоксе
+                if last_added:
+                    last_item_text = f'{last_added.title} id{last_added.id}'
+                    index = ui_rdb.comboBox_mlp_rdb.findText(last_item_text)
+                    if index >= 0:
+                        ui_rdb.comboBox_mlp_rdb.setCurrentIndex(index)
+
+        update_trained_models_rdb(from_local=True)
 
     def unload_mlp():
         unload_mlp_func(RemoteDB)
-        update_mlp_rdb_combobox()
+        update_trained_models_rdb()
 
     def get_MLP_rdb_id():
-        return ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[-1]
+        try:
+            return int(ui_rdb.comboBox_mlp_rdb.currentText().split('id')[-1])
+        except ValueError:
+            pass
+
 
     # Функция для проверки зависимостей MLP
     def check_dependencies():
@@ -452,11 +468,6 @@ def open_rem_db_window():
                 w.well_hash: w.id
                 for w in session.query(Well.well_hash, Well.id).all()
             }
-
-            # local_profiles = {
-            #     p.signal_hash_md5: p.id
-            #     for p in session.query(Profile.signal_hash_md5, Profile.id).all()
-            # }
 
             local_formations = {}
             for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
@@ -484,11 +495,6 @@ def open_rem_db_window():
                                 related_tables.append('Well')
                         except AttributeError:
                             pass
-
-                        # # Проверяем профиль
-                        # remote_profile_hash = remote_markup.profile.signal_hash_md5
-                        # if remote_profile_hash not in local_profiles:
-                        #     related_tables.append('Profile')
 
                         # Проверяем пласт
                         remote_formation_up_hash = remote_markup.formation.up_hash
@@ -577,11 +583,6 @@ def open_rem_db_window():
                         for w in session.query(Well.well_hash, Well.id).all()
                     }
 
-                    # local_profiles = {
-                    #     p.signal_hash_md5: p.id
-                    #     for p in session.query(Profile.signal_hash_md5, Profile.id).all()
-                    # }
-
                     local_formations = {}
                     for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id,
                                            Formation.profile_id).all():
@@ -597,7 +598,6 @@ def open_rem_db_window():
 
                         local_well_id = local_wells[remote_markup.well.well_hash] \
                             if remote_markup.well_id != None else 0
-                        # local_profile_id = local_profiles[remote_markup.profile.signal_hash_md5]
 
                         # Получаем ID пласта
                         local_formation_list = local_formations.get(remote_markup.formation.up_hash)
@@ -631,7 +631,7 @@ def open_rem_db_window():
                         f'{pluralize(added_markups_count, ["обучающая скважина", "обучающие скважины", "обучающих скважин"])}',
                         'green')
 
-        update_list_mlp()
+        update_list_trained_models_class()
 
         set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
@@ -661,13 +661,24 @@ def open_rem_db_window():
                         .filter(MarkerMLPRDB.analysis_id == analysis_id) \
                         .delete(synchronize_session=False)
 
+                    # Удаляем все генетические анализы анализа
+                    remote_session.query(GeneticAlgorithmCLSRDB) \
+                        .filter(GeneticAlgorithmCLSRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все модели анализа
+                    remote_session.query(TrainedModelClassRDB) \
+                        .filter(TrainedModelClassRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
                     # Удаляем сам анализ
                     remote_session.query(AnalysisMLPRDB) \
                         .filter(AnalysisMLPRDB.id == analysis_id) \
                         .delete()
 
                     remote_session.commit()
-                    set_info(f'Анализ "{title_analysis}" и все его маркеры и обучающие скважины удалены в удаленной '
+                    set_info(f'Анализ "{title_analysis}" и все его маркеры, обучающие скважины, генетические анализы и '
+                             f'тренированные модели удалены в удаленной '
                              f'БД', 'green')
                     update_mlp_rdb_combobox()
 
@@ -677,9 +688,163 @@ def open_rem_db_window():
 
     ui_rdb.checkBox_check_ga_params.setChecked(False)
 
-
     def start_unload_ga():
         unload_genetic_func(ui_rdb)
+
+    def update_trained_models_rdb(from_local=False):
+        """ Обновление списка моделей в выпадающем списке """
+        # Очистка выпадающего списка
+        ui_rdb.comboBox_trained_model_rdb.clear()
+        with get_session() as remote_session:
+            try:
+                models_rdb = remote_session.query(TrainedModelClassRDB.id, TrainedModelClassRDB.title).filter(
+                    TrainedModelClassRDB.analysis_id == get_MLP_rdb_id()
+                ).order_by(TrainedModelClassRDB.id).all()
+            except ValueError:
+                return
+            # Запрос на получение всех моделей, относящихся к анализу, и их добавление в выпадающий список
+            for i in models_rdb:
+                ui_rdb.comboBox_trained_model_rdb.addItem(f'{i[1]} id{i[0]}')
+            if from_local:
+                # Отдельно находим последний добавленный объект (по ID или дате создания)
+                last_added = remote_session.query(TrainedModelClassRDB).order_by(TrainedModelClassRDB.id.desc()).first()
+
+                # Если такой объект есть - выбираем его в комбобоксе
+                if last_added:
+                    last_item_text = f'{last_added.title} id{last_added.id}'
+                    index = ui_rdb.comboBox_trained_model_rdb.findText(last_item_text)
+                    if index >= 0:
+                        ui_rdb.comboBox_trained_model_rdb.setCurrentIndex(index)
+
+        # При изменении анализа -> обновить модели
+    ui_rdb.comboBox_mlp_rdb.currentIndexChanged.connect(update_trained_models_rdb)
+
+    def start_unload_model():
+        unload_models_func()
+        update_trained_models_rdb()
+
+    def get_trained_model_rdb_id():
+        """ Получение id выбранного объекта """
+        try:
+            return int(ui_rdb.comboBox_trained_model_rdb.currentText().split('id')[-1])
+        except ValueError:
+            pass
+
+    def load_models_func():
+        set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+
+        model_id = get_trained_model_rdb_id()
+        if model_id is None:
+            set_info("Модель не выбрана", "red")
+            return
+
+        with get_session() as remote_session:
+
+            remote_analysis_name = remote_session.query(AnalysisMLPRDB.title).filter_by(id=get_MLP_rdb_id()).first()[0]
+            local_analysis = session.query(AnalysisMLP).filter_by(title=remote_analysis_name).first()
+            if not local_analysis:
+                set_info(f"Соответствующий анализ '{remote_analysis_name}' не найден в удаленной БД. Сначала загрузите "
+                         f"анализ.", "red")
+                return
+
+            remote_model = remote_session.query(TrainedModelClassRDB).filter(
+                TrainedModelClassRDB.analysis_id == get_MLP_rdb_id(),
+                TrainedModelClassRDB.id == model_id
+            ).first()
+
+            local_model = session.query(TrainedModelClass).filter_by(
+                analysis_id=local_analysis.id,
+                title=remote_model.title,
+                list_params=remote_model.list_params,
+                except_signal=remote_model.except_signal,
+                except_crl=remote_model.except_crl,
+                comment=remote_model.comment,
+            ).first()
+
+            if local_model:
+                set_info(f'Модель {remote_model.title} анализа {remote_analysis_name} есть в удаленной БД', 'red')
+                QMessageBox.critical(MainWindow, 'Error',
+                                     f'Модель {remote_model.title} анализа {remote_analysis_name} есть в '
+                                     f'удаленной БД')
+            else:
+                loaded_model = pickle.loads(remote_model.file_model)
+                path_model = f'models/classifier/{remote_model.title}.pkl'
+                with open(path_model, 'wb') as f:
+                    pickle.dump(loaded_model, f)
+
+                new_local_model = TrainedModelClass(
+                    analysis_id=local_analysis.id,
+                    title=remote_model.title,
+                    path_model=path_model,
+                    list_params=remote_model.list_params,
+                    except_signal=remote_model.except_signal,
+                    except_crl=remote_model.except_crl,
+                    comment=remote_model.comment,
+                )
+                session.add(new_local_model)
+                session.commit()
+
+                if remote_model.mask:
+                    set_info(f'Загрузка модели с маской', 'blue')
+                    param_mask = session.query(ParameterMask).filter_by(mask=remote_model.mask).first()
+                    if param_mask:
+                        new_trained_model_mask = TrainedModelClassMask(
+                            mask_id=param_mask.id,
+                            model_id=new_local_model.id
+                        )
+
+                    else:
+                        info = (f'cls analysis: {remote_analysis_name}\n'
+                                f'pareto analysis: REMOTE MODEL')
+                        new_param_mask = ParameterMask(
+                            count_param=len(json.loads(remote_model.mask)),
+                            mask=remote_model.mask,
+                            mask_info=info
+                        )
+                        session.add(new_param_mask)
+                        session.commit()
+                        new_trained_model_mask = TrainedModelClassMask(
+                            mask_id=new_param_mask.id,
+                            model_id=new_local_model.id
+                        )
+
+                    session.add(new_trained_model_mask)
+                    session.commit()
+
+                set_info(f"Модель {remote_model.title} загружена на локальную БД", 'green')
+
+        update_list_trained_models_class()
+        set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
+
+
+    def delete_model_rdb():
+        title_model = ui_rdb.comboBox_trained_model_rdb.currentText().split(' id')[0]
+        title_analysis = ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[0]
+        analysis_id = get_MLP_rdb_id()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete trained model in RemoteDB',
+            f'Вы уверены, что хотите удалить модель "{title_model}" анализа "{title_analysis}"?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
+        if result == QtWidgets.QMessageBox.Yes:
+            with get_session() as remote_session:
+                try:
+                    remote_session.query(TrainedModelClassRDB) \
+                        .filter(TrainedModelClassRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.commit()
+                    set_info(f'Модель "{title_model}" анализа "{title_analysis}" удалена в удаленной '
+                             f'БД', 'green')
+                    update_trained_models_rdb()
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
 
     update_mlp_rdb_combobox()
@@ -697,6 +862,9 @@ def open_rem_db_window():
     ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
     ui_rdb.pushButton_delete_mlp_rdb.clicked.connect(delete_mlp_rdb)
     ui_rdb.pushButton_unload_ga.clicked.connect(start_unload_ga)
+    ui_rdb.pushButton_unload_model.clicked.connect(start_unload_model)
+    ui_rdb.pushButton_load_model.clicked.connect(load_models_func)
+    ui_rdb.pushButton_delete_model_rdb.clicked.connect(delete_model_rdb)
 
 
     calc_count_wells()

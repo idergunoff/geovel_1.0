@@ -3,7 +3,6 @@ import pickle
 from remote_db.model_remote_db import *
 from models_db.model import *
 from func import *
-from classification_func import train_classifier
 
 def update_checkfile(remote_ga, local_ga):
 
@@ -78,8 +77,6 @@ def _write_pop(pop, nfe, local_ga, remote_ga):
         pickle.dump(data, f)
     with get_session() as remote_session:
         remote_session.query(GeneticAlgorithmCLSRDB).filter_by(id=remote_ga.id).update({'checkfile_path': pickle.dumps(data)})
-
-
 
 def select_best(population, k):
     """Возвратить k решений по рангу+crowding (NSGA‑II style)."""
