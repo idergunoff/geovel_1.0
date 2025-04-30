@@ -1803,6 +1803,12 @@ def export_model_class():
     try:
         model = session.query(TrainedModelClass).filter_by(
         id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+
+        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_mask = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+        else:
+            list_param_mask = model.list_params
     except FileNotFoundError:
         return set_info('Не выбрана модель', 'red')
     analysis = session.query(AnalysisMLP).filter_by(id=model.analysis_id).first()
@@ -1813,7 +1819,8 @@ def export_model_class():
         'list_params': model.list_params,
         'comment': model.comment,
         'except_crl': model.except_crl,
-        'except_signal': model.except_signal
+        'except_signal': model.except_signal,
+        'mask': list_param_mask
     }
 
     # Сохранение словаря с параметрами в файл *.pkl
@@ -1858,6 +1865,7 @@ def import_model_class():
     comment = loaded_parameters['comment']
     except_crl = loaded_parameters['except_crl']
     except_signal = loaded_parameters['except_signal']
+    mask = loaded_parameters['mask']
 
     path_model = f'models/classifier/{model_name}.pkl'
 
@@ -1883,6 +1891,33 @@ def import_model_class():
     )
     session.add(new_trained_model)
     session.commit()
+
+    if mask != list_params:
+        param_mask = session.query(ParameterMask).filter_by(mask=json.dumps(mask)).first()
+        if param_mask:
+            new_trained_model_mask = TrainedModelClassMask(
+                mask_id=param_mask.id,
+                model_id=new_trained_model.id
+            )
+
+        else:
+            info = (f'cls analysis: {analysis_title}\n'
+                    f'pareto analysis: IMPORT MODEL')
+            new_param_mask = ParameterMask(
+                count_param=len(mask),
+                mask=json.dumps(mask),
+                mask_info=info
+            )
+            session.add(new_param_mask)
+            session.commit()
+            new_trained_model_mask = TrainedModelClassMask(
+                mask_id=new_param_mask.id,
+                model_id=new_trained_model.id
+            )
+
+        session.add(new_trained_model_mask)
+        session.commit()
+
     try:
         shutil.rmtree('extracted_data')
         os.remove('model_parameters.pkl')
