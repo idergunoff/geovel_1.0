@@ -886,6 +886,7 @@ class TrainedModelClass(Base):
     except_signal = Column(String, default="")
     except_crl = Column(String, default="")
     comment = Column(Text)
+    model_hash = Column(String(12))
 
     analysis = relationship('AnalysisMLP', back_populates='trained_models')
     model_mask = relationship('TrainedModelClassMask', back_populates='model')
@@ -987,6 +988,7 @@ class TrainedModelReg(Base):
     except_signal = Column(String, default="")
     except_crl = Column(String, default="")
     comment = Column(Text)
+    model_hash = Column(String(12))
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')
 

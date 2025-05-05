@@ -720,7 +720,7 @@ def open_rem_db_window():
     ui_rdb.comboBox_mlp_rdb.currentIndexChanged.connect(update_trained_models_rdb)
 
     def start_unload_model():
-        unload_models_func()
+        unload_models_func(RemoteDB)
         update_trained_models_rdb()
 
     def get_trained_model_rdb_id():
@@ -762,10 +762,9 @@ def open_rem_db_window():
             ).first()
 
             if local_model:
-                set_info(f'Модель {remote_model.title} анализа {remote_analysis_name} есть в удаленной БД', 'red')
-                QMessageBox.critical(MainWindow, 'Error',
-                                     f'Модель {remote_model.title} анализа {remote_analysis_name} есть в '
-                                     f'удаленной БД')
+                set_info(f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' есть в удаленной БД", 'red')
+                QMessageBox.critical(RemoteDB, 'Error',
+                                     f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' есть в удаленной БД")
             else:
                 loaded_model = pickle.loads(remote_model.file_model)
                 path_model = f'models/classifier/{remote_model.title}.pkl'
@@ -811,7 +810,7 @@ def open_rem_db_window():
                     session.add(new_trained_model_mask)
                     session.commit()
 
-                set_info(f"Модель {remote_model.title} загружена на локальную БД", 'green')
+                set_info(f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' загружена на локальную БД", 'green')
 
         update_list_trained_models_class()
         set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')

@@ -12,7 +12,7 @@ def get_trained_model_id():
         return current_item.data(Qt.UserRole)
     return None
 
-def unload_models_func():
+def unload_models_func(RemoteDB):
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
     model_id = get_trained_model_id()
@@ -25,7 +25,7 @@ def unload_models_func():
         local_analysis_name = session.query(AnalysisMLP.title).filter_by(id=get_MLP_id()).first()[0]
         remote_analysis = remote_session.query(AnalysisMLPRDB).filter_by(title=local_analysis_name).first()
         if not remote_analysis:
-            set_info(f"Соответствующий анализ '{local_analysis_name}' не найден в local БД. Сначала выгрузите или "
+            set_info(f"Соответствующий анализ '{local_analysis_name}' не найден в локальной БД. Сначала выгрузите или "
                      f"создайте анализ.", "red")
             return
 
@@ -49,14 +49,12 @@ def unload_models_func():
         ).first()
 
         if remote_model:
-            set_info(f'Модель {local_model.title} анализа {local_analysis_name} есть в удаленной БД', 'red')
-            QMessageBox.critical(MainWindow, 'Error', f'Модель {local_model.title} анализа {local_analysis_name} есть в '
-                                           f'удаленной БД')
+            set_info(f"Модель '{local_model.title}' анализа '{local_analysis_name}' есть в удаленной БД", 'red')
+            QMessageBox.critical(RemoteDB, 'Error',
+                                 f"Модель '{local_model.title}' анализа '{local_analysis_name}' есть в удаленной БД")
         else:
             with open(local_model.path_model, "rb") as f:
                 data = pickle.load(f)
-            size_mb = len(pickle.dumps(data)) / (1024 * 1024)
-            print(f"Размер модели: {size_mb:.2f} MB")
             data_model = pickle.dumps(data)
             new_remote_model = TrainedModelClassRDB(
                 analysis_id=remote_analysis.id,
@@ -70,7 +68,7 @@ def unload_models_func():
             )
             remote_session.add(new_remote_model)
             remote_session.commit()
-            set_info(f"Модель {local_model.title} анализа {local_analysis_name} выгружена на удаленную БД", 'green')
+            set_info(f"Модель '{local_model.title}' анализа '{local_analysis_name}' выгружена на удаленную БД", 'green')
 
     set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
