@@ -24,24 +24,12 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def get_model_hash(file_path: str, length: int = 12) -> str:
-    """
-    Генерирует хэш модели через временную сериализацию в память.
-    Возвращает первые `length` символов MD5 хэша.
-    """
+def get_model_hash(file_path: str, length=12) -> str:
     try:
-        model = load(file_path)
-
-        # Сериализуем модель в оперативную память (без временных файлов)
-        buf = BytesIO()
-        dump(model, buf)
-        buf.seek(0)  # Перемещаем указатель в начало
-
-        return hashlib.md5(buf.read()).hexdigest()[:length]
-
-    except Exception as e:
-        logging.error(f"Ошибка хэширования модели {file_path}: {str(e)}")
-        return ""  # Явное возвращение строки при ошибке
+        with open(file_path, 'rb') as f:
+            return hashlib.md5(f.read()).hexdigest()[:length]
+    except:
+        return ""
 
 
 def upgrade():
