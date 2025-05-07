@@ -1,0 +1,65 @@
+"""update_model_hashes_in_trained_models
+
+Revision ID: 436670216df8
+Revises: 37ccb495425d
+Create Date: 2025-05-06 16:08:39.655099
+
+"""
+from typing import Sequence, Union
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.sql import text
+import os
+import hashlib
+from joblib import load, dump
+import tempfile
+import logging
+from io import BytesIO
+
+
+# revision identifiers, used by Alembic.
+revision: str = '436670216df8'
+down_revision: Union[str, None] = '37ccb495425d'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def get_model_hash(file_path: str, length: int = 12) -> str:
+    """
+    Генерирует хэш модели через временную сериализацию в память.
+    Возвращает первые `length` символов MD5 хэша.
+    """
+    try:
+        model = load(file_path)
+
+        # Сериализуем модель в оперативную память (без временных файлов)
+        buf = BytesIO()
+        dump(model, buf)
+        buf.seek(0)  # Перемещаем указатель в начало
+
+        return hashlib.md5(buf.read()).hexdigest()[:length]
+
+    except Exception as e:
+        logging.error(f"Ошибка хэширования модели {file_path}: {str(e)}")
+        return ""  # Явное возвращение строки при ошибке
+
+
+def upgrade():
+    conn = op.get_bind()
+    # Обновляем хэши для всех моделей
+    for table in ['trained_model_class', 'trained_model_reg']:
+        for id, path in conn.execute(text(f"SELECT id, path_model FROM {table}")):
+            if path and os.path.exists(path):
+                new_hash = get_model_hash(path)  # Новая реализация
+                conn.execute(
+                    text(f"UPDATE {table} SET model_hash = :hash WHERE id = :id"),
+                    {"hash": new_hash, "id": id}
+                )
+
+
+def downgrade():
+    conn = op.get_bind()
+    for table in ['trained_model_class', 'trained_model_reg']:
+        conn.execute(
+            text(f"UPDATE {table} SET model_hash = NULL")  # Обнуляем хэши
+        )
