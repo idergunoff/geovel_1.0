@@ -11,10 +11,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 import os
 import hashlib
-from joblib import load, dump
-import tempfile
-import logging
-from io import BytesIO
 
 
 # revision identifiers, used by Alembic.
@@ -24,10 +20,15 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def get_model_hash(file_path: str, length=12) -> str:
+
+def get_model_hash(file_path: str, length: int = 12) -> str:
     try:
+        md5 = hashlib.md5()
         with open(file_path, 'rb') as f:
-            return hashlib.md5(f.read()).hexdigest()[:length]
+            # Чтение фиксированными блоками (устраняет различия ОС)
+            for chunk in iter(lambda: f.read(4096), b""):
+                md5.update(chunk)
+        return md5.hexdigest()[:length]
     except:
         return ""
 
