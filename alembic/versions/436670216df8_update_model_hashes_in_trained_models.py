@@ -23,12 +23,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def get_model_hash(file_path: str, length: int = 12) -> str:
     try:
-        md5 = hashlib.md5()
-        with open(file_path, 'rb') as f:
-            # Чтение фиксированными блоками (устраняет различия ОС)
-            for chunk in iter(lambda: f.read(4096), b""):
-                md5.update(chunk)
-        return md5.hexdigest()[:length]
+        # Нормализация пути и контента
+        abs_path = os.path.abspath(os.path.normpath(file_path))
+        with open(abs_path, 'rb') as f:
+            content = f.read().replace(b'\r\n', b'\n')  # Унификация переводов строк
+            return hashlib.md5(content).hexdigest()[:length]
     except:
         return ""
 
