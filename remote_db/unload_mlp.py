@@ -17,6 +17,11 @@ def check_rdb_dependencies():
             for w in remote_session.query(WellRDB.well_hash, WellRDB.id).all()
         }
 
+        remote_profiles = {
+            p.signal_hash_md5: p.id
+            for p in remote_session.query(ProfileRDB.signal_hash_md5, ProfileRDB.id).all()
+        }
+
         remote_formations = {}
         for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id).all():
             remote_formations[f.up_hash] = f.id
@@ -43,6 +48,14 @@ def check_rdb_dependencies():
                     except AttributeError:
                         pass
 
+                        # Проверяем профиль
+                        try:
+                            local_profile_hash = local_markup.profile.signal_hash_md5
+                            if local_profile_hash not in remote_profiles:
+                                related_tables.append('ProfileRDB')
+                        except AttributeError:
+                            pass
+
                     # Проверяем пласт
                     local_formation_up_hash = local_markup.formation.up_hash
                     local_formation_down_hash = local_markup.formation.down_hash
@@ -50,16 +63,15 @@ def check_rdb_dependencies():
                             local_formation_down_hash not in remote_formations):
                         related_tables.append('FormationRDB')
 
-                    if related_tables:
-                        try:
-                            error_msg = (
-                                f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
-                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                                f'Скважина: {local_markup.well.name}'
-                            )
-                            errors.append(error_msg)
-                        except AttributeError:
-                            pass
+                if related_tables:
+                    try:
+                        error_msg = (
+                            f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
+                            f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                        )
+                        errors.append(error_msg)
+                    except AttributeError:
+                        pass
 
     return errors
 

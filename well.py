@@ -291,13 +291,31 @@ def show_data_well():
 
     else:
         well = session.query(Well).filter_by(id=get_well_id()).first()
-        if well:
-            ui.textEdit_datawell.append(f'<p><b>Скважина №</b> {well.name}</p>'
-                                f'<p><b>X:</b> {well.x_coord}</p>'
-                                f'<p><b>Y:</b> {well.y_coord}</p>'
-                                f'<p><b>Альтитуда:</b> {well.alt} м.</p>')
-            for opt in session.query(WellOptionally).filter_by(well_id=well.id):
-                ui.textEdit_datawell.append(f'<p><b>{opt.option}:</b> {opt.value}</p>')
+        if not well:
+            return
+
+        count_well_log = session.query(WellLog).filter_by(well_id=well.id).count()
+
+        text_content = []
+        if count_well_log > 0:
+            text_content.append(
+                f'<p style="background-color:#ADFCDF">'
+                f'<b>Количество каротажных кривых:</b> {count_well_log}</p>'
+            )
+
+        text_content.extend([
+            f'<p><b>Скважина №</b> {well.name}</p>',
+            f'<p><b>X:</b> {well.x_coord}</p>',
+            f'<p><b>Y:</b> {well.y_coord}</p>',
+            f'<p><b>Альтитуда:</b> {well.alt} м.</p>'
+        ])
+
+        for opt in session.query(WellOptionally).filter_by(well_id=well.id):
+            text_content.append(f'<p><b>{opt.option}:</b> {opt.value}</p>')
+
+        ui.textEdit_datawell.setHtml(''.join(text_content))
+
+
 
 
 

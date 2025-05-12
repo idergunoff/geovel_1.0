@@ -1173,7 +1173,8 @@ def update_formation_combobox():
         ui.comboBox_plast.addItem(f'{form.title} id{form.id}')
     # Обновляем список выбора параметров для выбранного пласта
     update_param_combobox()
-    update_list_well()
+    if ui.checkBox_profile_well.isChecked():
+        update_list_well()
 
 
 def check_coordinates_profile():
@@ -1348,6 +1349,11 @@ def update_list_well():
         if key.startswith('bound_') or key.startswith('well_'):
             radarogramma.removeItem(globals()[key])
     ui.listWidget_well.clear()
+
+    # Создаем два временных списка
+    wells_with_logs = []
+    wells_without_logs = []
+
     if ui.checkBox_profile_intersec.isChecked():
         intersections = session.query(Intersection).order_by(Intersection.name).all()
         if ui.checkBox_profile_well.isChecked():
@@ -1363,12 +1369,36 @@ def update_list_well():
             wells = get_list_nearest_well(get_profile_id())
             if wells:
                 for w in wells:
-                    ui.listWidget_well.addItem(f'скв.№ {w[0].name} - ({w[1]}) {round(w[2], 2)} м. id{w[0].id}')
+                    item_text = f'скв.№ {w[0].name} - ({w[1]}) {round(w[2], 2)} м. id{w[0].id}'
+                    item = QListWidgetItem(item_text)
+
+                    # Проверяем наличие логов для скважины
+                    if w[0].well_logs:  # Если есть связанные логи
+                        item.setBackground(QBrush(QColor('#FBD59E')))
+                        item.setToolTip(f"Обнаружено {len(w[0].well_logs)} каротажных кривых")
+                        wells_with_logs.append(item)
+                    else:
+                        wells_without_logs.append(item)
+
+                for item in wells_with_logs + wells_without_logs:
+                    ui.listWidget_well.addItem(item)
                 draw_wells()
         else:
-            wells = session.query(Well).order_by(Well.name).all()
+            wells = session.query(Well).options(selectinload(Well.well_logs)).order_by(Well.name).all()
             for w in wells:
-                ui.listWidget_well.addItem(f'скв.№ {w.name} id{w.id}')
+                item_text = f'скв.№ {w.name} id{w.id}'
+                item = QListWidgetItem(item_text)
+
+                if w.well_logs:
+                    item.setBackground(QBrush(QColor('#FBD59E')))
+                    wells_with_logs.append(item)
+                    item.setToolTip(f"Обнаружено {len(w.well_logs)} каротажных кривых")
+                else:
+                    wells_without_logs.append(item)
+
+                # Сначала добавляем скважины с логами, затем без
+            for item in wells_with_logs + wells_without_logs:
+                ui.listWidget_well.addItem(item)
 
         ui.label_11.setText(f'Wells: {ui.listWidget_well.count()}')
 

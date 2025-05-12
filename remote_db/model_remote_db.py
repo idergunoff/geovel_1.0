@@ -69,6 +69,7 @@ class ProfileRDB(BaseRDB):
     research = relationship('ResearchRDB', back_populates='profiles')
     formations = relationship('FormationRDB', back_populates='profile')
     markups_mlp = relationship('MarkupMLPRDB', back_populates='profile')
+    markups_reg = relationship('MarkupRegRDB', back_populates='profile')
 
 
 class WellRDB(BaseRDB):
@@ -85,6 +86,7 @@ class WellRDB(BaseRDB):
     well_optionally = relationship("WellOptionallyRDB", back_populates="well")
     well_logs = relationship("WellLogRDB", back_populates="well")
     markups_mlp = relationship('MarkupMLPRDB', back_populates='well')
+    markups_reg = relationship('MarkupRegRDB', back_populates='well')
 
 class BoundaryRDB(BaseRDB):
     __tablename__ = 'boundary_rdb'
@@ -133,6 +135,7 @@ class FormationRDB(BaseRDB):
 
     profile = relationship('ProfileRDB', back_populates='formations')
     markups_mlp = relationship('MarkupMLPRDB', back_populates='formation')
+    markups_reg = relationship('MarkupRegRDB', back_populates='formation')
 
 
 #####################################################
@@ -212,6 +215,55 @@ class TrainedModelClassRDB(BaseRDB):
     mask = Column(Text)
 
     analysis = relationship('AnalysisMLPRDB', back_populates='trained_models')
+
+
+#####################################################
+###################  Regression  ####################
+#####################################################
+
+class AnalysisRegRDB(BaseRDB):
+    __tablename__ = 'analysis_reg_rdb'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    markups = relationship('MarkupRegRDB', back_populates='analysis')
+    trained_models = relationship('TrainedModelRegRDB', back_populates='analysis')
+
+
+class MarkupRegRDB(BaseRDB):
+    __tablename__ = 'markup_reg_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg_rdb.id'))
+    well_id = Column(Integer, ForeignKey('well_rdb.id'))    # возможно не нужно
+    profile_id = Column(Integer, ForeignKey('profile_rdb.id'))
+    formation_id = Column(Integer, ForeignKey('formation_rdb.id'))
+    target_value = Column(Float)
+    list_measure = Column(Text)
+    type_markup = Column(String)
+
+    analysis = relationship('AnalysisRegRDB', back_populates='markups')
+    well = relationship("WellRDB", back_populates="markups_reg")
+    profile = relationship("ProfileRDB", back_populates="markups_reg")
+    formation = relationship("FormationRDB", back_populates="markups_reg")
+
+
+class TrainedModelRegRDB(BaseRDB):
+    __tablename__ = 'trained_model_reg_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg_rdb.id'))
+    title = Column(String)
+    path_model = Column(String)
+    path_scaler = Column(String)
+    list_params = Column(Text)
+    except_signal = Column(String, default="")
+    except_crl = Column(String, default="")
+    comment = Column(Text)
+    mask = Column(Text)
+
+    analysis = relationship('AnalysisRegRDB', back_populates='trained_models')
 
 
 
