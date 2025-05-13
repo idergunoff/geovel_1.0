@@ -567,7 +567,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         data_train_cov = data_train.copy()
         data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
 
+
+        if ui_cls.checkBox_mask_param.isChecked():
+            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
+
         training_sample = np.array(data_train_cov[list_param].values.tolist())
+
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
 
@@ -1241,6 +1246,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         data_train['mark'] = data_train['mark'].replace(labels)
         feature_selection_calc(data_train[list_param], data_train['mark'], mode='classif')
 
+    ###########################################################
+    ################## Генетический алгоритм ##################
+    ###########################################################
 
     def genetic_algorithm():
 
@@ -1263,6 +1271,56 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             gen_analysis = session.query(GeneticAlgorithmCLS).filter_by(analysis_id=get_MLP_id()).order_by(desc(GeneticAlgorithmCLS.id)).all()
             for ga in gen_analysis:
                 ui_ga.comboBox_gen_analysis.addItem(f'{ga.type_problem} {ga.title} id{ga.id}')
+
+
+        def save_mask():
+            ga = get_gen_an()
+            if ga:
+                try:
+                    list_p = json.loads(ga.list_params)
+                    with open(ga.checkfile_path, "rb") as f:
+                        data = pickle.load(f)
+                except FileNotFoundError:
+                    return
+
+                selected_mask = ui_ga.listWidget_population.currentItem().text().split(' N')
+
+                for x, fobj in zip(data["X"], data["F"]):
+                    if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
+                        print(f'{fobj[0]} N{fobj[1]}')
+                        print(x)
+                        flattened_mask = [m[0] for m in x]
+                        mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                        print(mask_param)
+
+                        info = (f'cls analysis: {ui.comboBox_mlp_analysis.currentText()}\n'
+                                f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                        new_mask = ParameterMask(
+                            count_param=len(mask_param),
+                            mask=json.dumps(mask_param),
+                            mask_info=info
+                        )
+                        session.add(new_mask)
+                        session.commit()
+                        QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                        update_list_saved_mask()
+                        update_list_mask()
+            else:
+                return
+
+        def update_list_mask():
+            ui_ga.listWidget_save_mask.clear()
+            for i in session.query(ParameterMask).all():
+                item = QListWidgetItem(f'{i.count_param} id{i.id}')
+                item.setToolTip(i.mask_info)
+                ui_ga.listWidget_save_mask.addItem(item)
+
+
+        def remove_mask():
+            session.query(ParameterMask).filter_by(id=ui_ga.listWidget_save_mask.currentItem().text().split(' id')[-1]).delete()
+            session.commit()
+            update_list_mask()
+            update_list_saved_mask()
 
 
         def update_list_population():
@@ -1869,8 +1927,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         ui_ga.toolButton_remove_gen_an.clicked.connect(remove_gen_an)
         # ui_ga.listWidget_population.currentItemChanged.connect(update_list_features)
         ui_ga.pushButton_add_file.clicked.connect(add_file_gen_an)
+        ui_ga.pushButton_save_mask.clicked.connect(save_mask)
+        ui_ga.pushButton_remove_mask.clicked.connect(remove_mask)
 
-
+        update_list_mask()
         update_combobox_gen_an()
 
         GenAlg.exec_()

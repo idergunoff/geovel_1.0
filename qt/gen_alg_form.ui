@@ -30,6 +30,9 @@
       <layout class="QGridLayout" name="gridLayout_7">
        <item row="0" column="0">
         <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="1">
+          <widget class="QListWidget" name="listWidget_population"/>
+         </item>
          <item row="0" column="0">
           <layout class="QGridLayout" name="gridLayout_4">
            <item row="0" column="0">
@@ -60,11 +63,36 @@
            </item>
           </layout>
          </item>
-         <item row="0" column="1">
-          <widget class="QListWidget" name="listWidget_population"/>
-         </item>
          <item row="0" column="2">
-          <widget class="QListWidget" name="listWidget_features"/>
+          <layout class="QGridLayout" name="gridLayout_11">
+           <item row="0" column="0">
+            <widget class="QListWidget" name="listWidget_save_mask"/>
+           </item>
+           <item row="1" column="0">
+            <layout class="QGridLayout" name="gridLayout_12">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="pushButton_save_mask">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(209, 182, 249);</string>
+               </property>
+               <property name="text">
+                <string>SAVE MASK</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="pushButton_remove_mask">
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 162, 190);</string>
+               </property>
+               <property name="text">
+                <string>RM MASK</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>

@@ -935,6 +935,7 @@ class AnalysisReg(Base):
     markups = relationship('MarkupReg', back_populates='analysis')
     trained_models = relationship('TrainedModelReg', back_populates='analysis')
     exceptions = relationship('ExceptionReg', back_populates='analysis')
+    genetic_algorithms = relationship('GeneticAlgorithmReg', back_populates='analysis_reg')
 
 
 class ParameterReg(Base):
@@ -1010,6 +1011,21 @@ class LineupTrain(Base):
     random_seed = Column(Integer, default=0)
     cvw = Column(Boolean, default=False)
 
+
+class GeneticAlgorithmReg(Base):
+    __tablename__ = 'genetic_algorithm_reg'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg.id'))
+    title = Column(String)
+    pipeline = Column(Text)
+    checkfile_path = Column(String)
+    list_params = Column(Text)
+    population_size = Column(Integer)
+    comment = Column(Text)
+    type_problem = Column(String)
+
+    analysis_reg = relationship('AnalysisReg', back_populates='genetic_algorithms')
 
 #####################################################
 ###################  Monitoring  ####################

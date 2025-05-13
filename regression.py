@@ -442,10 +442,21 @@ def split_well_train_test():
         set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
 
 
+def set_updata_false_reg():
+    analysis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+    try:
+        filepath = Path(analysis.data)
+        if filepath.exists():
+            filepath.unlink()
+    except OSError:
+        pass
+    analysis.up_data = False
+    session.commit()
+
+
 def add_param_signal_reg():
     """ Добавление одного параметра Signal """
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     param = ui.comboBox_signal_reg.currentText()
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
@@ -461,9 +472,7 @@ def add_param_signal_reg():
 
 def add_param_crl_reg():
     """ Добавление одного параметра CRL """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
             parameter='CRL'
@@ -479,9 +488,7 @@ def add_param_crl_reg():
 
 def add_param_crl_nf_reg():
     """ Добавление параметра CRL NF """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
             parameter='CRL_NF'
@@ -497,9 +504,7 @@ def add_param_crl_nf_reg():
 
 def add_all_param_signal_reg():
     """ Добавление всех параметров Signal """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     list_param_signal = ['Signal_Abase', 'Signal_diff', 'Signal_At', 'Signal_Vt', 'Signal_Pht', 'Signal_Wt']
     for param in list_param_signal:
         if session.query(ParameterReg).filter_by(
@@ -516,9 +521,7 @@ def add_all_param_signal_reg():
 
 def add_param_geovel_reg():
     """ Добавление основных атрибутов """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     param = ui.comboBox_geovel_param_reg.currentText()
     if not param in list_all_additional_features + ['X', 'Y']:
         for m in session.query(MarkupReg).filter(MarkupReg.analysis_id == get_regmod_id()).all():
@@ -553,8 +556,8 @@ def add_all_param_geovel_reg():
             set_info(f'Параметр {param} уже добавлен', 'red')
             continue
         add_param_regmod(param)
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
+    set_updata_false_reg()
     # update_list_param_regmod()
     update_list_param_reg_no_update()
     set_color_button_updata_regmod()
@@ -562,9 +565,7 @@ def add_all_param_geovel_reg():
 
 def add_param_profile_reg():
     """ Добавление параметров PROF """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     param = ui.comboBox_prof_ftr_reg.currentText()
     if session.query(ParameterReg).filter_by(
             analysis_id=get_regmod_id(),
@@ -579,9 +580,7 @@ def add_param_profile_reg():
 
 def add_all_param_profile_reg():
     """ Добавление всех параметров PROF """
-
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     for param in list_all_additional_features:
         if param in ['fractal_dim', 'hht_marg_spec_min']:
             continue
@@ -608,8 +607,7 @@ def add_param_distr_reg():
                      f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
             return
     add_param_regmod('distr')
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     update_list_param_reg_no_update()
     set_color_button_updata_regmod()
     set_info(f'В параметры добавлены {ui.spinBox_count_distr_reg.value()} интервалов распределения по '
@@ -630,8 +628,7 @@ def add_param_sep_reg():
                      f'{ui.comboBox_atrib_distr_reg.currentText()}', 'green')
             return
     add_param_regmod('sep')
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
     update_list_param_reg_no_update()
@@ -653,7 +650,7 @@ def add_all_param_distr_reg():
         new_param = f'{distr_param}_{count}'
         new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=new_param)
         session.add(new_param_reg)
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
@@ -675,7 +672,7 @@ def add_param_mfcc_reg():
                      f'{ui.comboBox_atrib_mfcc_reg.currentText()}', 'green')
             return
     add_param_regmod('mfcc')
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
@@ -697,7 +694,7 @@ def add_all_param_mfcc_reg():
         new_param = f'{mfcc_param}_{count}'
         new_param_mlp = ParameterReg(analysis_id=get_regmod_id(), parameter=new_param)
         session.add(new_param_mlp)
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     # update_list_param_regmod()
     set_color_button_updata_regmod()
@@ -723,7 +720,7 @@ def add_predict_reg():
     else:
         new_param_reg = ParameterReg(analysis_id=get_regmod_id(), parameter=param)
         session.add(new_param_reg)
-        session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+        set_updata_false_reg()
         session.commit()
         set_color_button_updata_regmod()
         update_list_param_reg_no_update()
@@ -749,8 +746,7 @@ def remove_param_geovel_reg():
             session.query(ParameterReg).filter_by(analysis_id=get_regmod_id(), parameter=param ).delete()
         session.commit()
         ui.listWidget_param_reg.takeItem(ui.listWidget_param_reg.currentRow())
-        session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-        session.commit()
+        set_updata_false_reg()
         set_color_button_updata_regmod()
     update_list_param_reg_no_update()
 
@@ -759,8 +755,8 @@ def remove_all_param_geovel_reg():
     """ Удаление всех параметров """
 
     session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
     session.commit()
+    set_updata_false_reg()
     update_list_param_regmod()
     update_list_param_reg_no_update()
 
@@ -824,7 +820,7 @@ def add_param_list_reg():
 
     analysis_id = get_regmod_id()
     session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
-    session.query(AnalysisReg).filter_by(id=analysis_id).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     check_except = False
     for i in ui.lineEdit_string.text().split('//'):
@@ -928,6 +924,18 @@ def train_regression_model():
     if count_nan > 0:
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
+
+        analysis_data = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+        try:
+            data_train.to_parquet(analysis_data.data)
+        except OSError:
+            p_sep = os.path.sep
+            name = f'{analysis_data.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+            filepath = f'data_tables{p_sep}reg{p_sep}{name}.parquet'
+            data_train.to_parquet(filepath)
+            session.query(AnalysisReg).filter_by(id=analysis_data.id).update({'data': str(filepath)}, synchronize_session='fetch')
+            session.commit()
+
         set_info(f'Заполнены пропуски в {count_nan} параметрах {", ".join(list_nan_param)}', 'red')
 
     training_sample = data_train[list_param_reg].values.tolist()
@@ -942,6 +950,14 @@ def train_regression_model():
     ui_r.spinBox_pca.setMaximum(len(list_param_reg))
     ui_r.spinBox_pca.setValue(len(list_param_reg) // 2)
 
+    def update_list_saved_mask():
+        ui_r.listWidget_mask_param.clear()
+        for i in session.query(ParameterMask).all():
+            item = QListWidgetItem(f'{i.count_param} id{i.id}')
+            item.setToolTip(i.mask_info)
+            ui_r.listWidget_mask_param.addItem(item)
+
+    update_list_saved_mask()
 
     def build_torch_model(training_sample_train):
         """ Сбор модели PyTorch """
@@ -2029,6 +2045,7 @@ def train_regression_model():
 
         for p in list_param_reg:
             ui_pdp.comboBox_pdp_2.addItem(f'{p}')
+
         def draw_dependence():
             param = ui_pdp.comboBox_pdp.currentText()
             param_2 = ui_pdp.comboBox_pdp_2.currentText()
@@ -2076,6 +2093,153 @@ def train_regression_model():
             update_list_trained_models_regmod()
         else:
             pass
+
+
+    def calc_cov():
+        """ Кросс-объектная валидация """
+
+        def get_obj_title(prof_well_index):
+            prof_id = prof_well_index.split('_')[0]
+            obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
+            return obj.title
+
+        data_train_cov = data_train.copy()
+        data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+
+
+        # if ui_cls.checkBox_mask_param.isChecked():
+        #     list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
+
+        training_sample = np.array(data_train_cov[list_param_reg].values.tolist())
+
+        markup = np.array(sum(data_train[['target_value']].values.tolist(), []))
+        groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
+
+
+        # Нормализация данных
+        text_scaler = ''
+
+        pipe_steps = []
+        if ui_r.checkBox_stdscaler_reg.isChecked():
+            std_scaler = StandardScaler()
+            pipe_steps.append(('scaler', std_scaler))
+            text_scaler += '\nStandardScaler'
+        if ui_r.checkBox_robscaler_reg.isChecked():
+            robust_scaler = RobustScaler()
+            pipe_steps.append(('scaler', robust_scaler))
+            text_scaler += '\nRobustScaler'
+        if ui_r.checkBox_mnmxscaler_reg.isChecked():
+            minmax_scaler = MinMaxScaler()
+            pipe_steps.append(('scaler', minmax_scaler))
+            text_scaler += '\nMinMaxScaler'
+        if ui_r.checkBox_mxabsscaler_reg.isChecked():
+            maxabs_scaler = MaxAbsScaler()
+            pipe_steps.append(('scaler', maxabs_scaler))
+            text_scaler += '\nMaxAbsScaler'
+
+        if ui_r.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0)
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+        model_name = ui_r.buttonGroup.checkedButton().text()
+        model_class, text_model = choice_model_regressor(model_name, training_sample)
+
+        text_model += text_scaler
+        text_model += text_pca
+
+        pipe_steps.append(('model', model_class))
+        pipe = Pipeline(pipe_steps)
+
+        # logo = LeaveOneGroupOut()
+
+        # Передаём groups и logo как cv
+        # scores = cross_val_score(pipe, training_sample, markup, cv=logo, groups=groups)
+
+        scores = []
+        group_order = []
+        group_sizes = []
+        group_r2 = []
+        all_list = []
+
+        ui.progressBar.setMaximum(len(set(list(groups))))
+        n_progress = 1
+        for train_idx, test_idx in LeaveOneGroupOut().split(training_sample, markup, groups):
+            ui.progressBar.setValue(n_progress)
+            start_time = datetime.datetime.now()
+
+            if ui_r.checkBox_cov_percent.isChecked():
+                if len(test_idx) / len(markup) < ui_r.spinBox_cov_percent.value() / 100:
+                    n_progress += 1
+                    continue
+
+            pipe.fit(training_sample[train_idx], markup[train_idx])
+            y_pred = pipe.predict(training_sample[test_idx])
+            score = pipe.score(training_sample[test_idx], markup[test_idx])
+            r2 = r2_score(markup[test_idx], y_pred)
+            # scores.append(score)
+
+            test_group = np.unique(groups[test_idx])[0]
+            # group_order.append(test_group)
+
+            group_size = int(len(test_idx)/10) if len(test_idx)%10 == 0 else int(len(test_idx)/10) + 1
+            # group_sizes.append(group_size)
+
+            # # Подсчёт классов
+            # classes = list(set(list(markup)))
+            # y_test = markup[test_idx]
+            # counter = Counter(y_test)
+            # count_0 = counter.get(classes[0], 0)
+            # count_1 = counter.get(classes[1], 0)
+            # total = count_0 + count_1
+            #
+            # if total == 0:
+            #     ratio_str = "0.00/0.00"
+            # else:
+            #     perc_0 = count_0 / total
+            #     perc_1 = count_1 / total
+            #     ratio_str = f"{perc_0:.2f}/{perc_1:.2f}"
+
+            all_list.append([score, test_group, group_size, r2])
+
+            # class_ratios.append(ratio_str)
+            finish_time = datetime.datetime.now()
+            inter_time = finish_time - start_time
+            set_info(f'Качество "{test_group}": {score}. Время выполнения: {inter_time}, осталось: {(len(set(list(groups))) - n_progress) * inter_time}', 'blue')
+            n_progress += 1
+
+
+        # Сортируем по group_sizes
+
+        all_list = sorted(all_list, key=lambda x: x[2], reverse=True)
+        for i in all_list:
+            scores.append(i[0])
+            group_order.append(i[1])
+            group_sizes.append(i[2])
+            group_r2.append(i[3])
+
+        # Собираем подписи
+        labels = [f"{g}\n(n={s}\nr2={r2})" for g, s, r2 in zip(group_order, group_sizes, group_r2)]
+
+        # Рисуем график
+        plt.figure(figsize=(15, 12))
+        bars = plt.bar(range(len(scores)), scores, color='skyblue', edgecolor='black')
+
+        # Подписываем столбики снизу
+        plt.xticks(ticks=range(len(scores)), labels=labels, rotation=90, fontsize=12)
+
+        # Значения сверху столбиков
+        for i, bar in enumerate(bars):
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f'{yval:.2f}', ha='center', va='bottom')
+
+        plt.title(f'{model_name}\nMean acc: {np.mean(scores):.2f} Std: {np.std(scores):.2f}\nMean r2: {np.mean(group_r2):.2f} Std: {np.std(group_r2):.2f}')
+        plt.ylabel('Score')
+        # plt.ylim(0, 1.05)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.show()
 
 
     def calc_lof():
@@ -2286,6 +2450,743 @@ def train_regression_model():
     def call_feature_selection():
         feature_selection_calc(data_train[list_param_reg], data_train['target_value'], mode='reg')
 
+
+
+
+
+    ###########################################################
+    ################## Генетический алгоритм ##################
+    ###########################################################
+
+    def genetic_algorithm():
+
+        GenAlg = QtWidgets.QDialog()
+        ui_ga = Ui_GeneticForm()
+        ui_ga.setupUi(GenAlg)
+        GenAlg.show()
+        GenAlg.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+
+        m_width, m_height = get_width_height_monitor()
+        GenAlg.resize(m_width - 500, m_height - 400)
+
+        def get_gen_an():
+            return session.query(GeneticAlgorithmReg).filter_by(
+                id=ui_ga.comboBox_gen_analysis.currentText().split(' id')[-1]).first()
+
+        def update_combobox_gen_an():
+            ui_ga.comboBox_gen_analysis.clear()
+            gen_analysis = session.query(GeneticAlgorithmReg).filter_by(analysis_id=get_regmod_id()).order_by(
+                desc(GeneticAlgorithmReg.id)).all()
+            for ga in gen_analysis:
+                ui_ga.comboBox_gen_analysis.addItem(f'{ga.type_problem} {ga.title} id{ga.id}')
+
+        def save_mask():
+            ga = get_gen_an()
+            if ga:
+                try:
+                    list_p = json.loads(ga.list_params)
+                    with open(ga.checkfile_path, "rb") as f:
+                        data = pickle.load(f)
+                except FileNotFoundError:
+                    return
+
+                selected_mask = ui_ga.listWidget_population.currentItem().text().split(' N')
+
+                for x, fobj in zip(data["X"], data["F"]):
+                    if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
+                        print(f'{fobj[0]} N{fobj[1]}')
+                        print(x)
+                        flattened_mask = [m[0] for m in x]
+                        mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                        print(mask_param)
+
+                        info = (f'regression analysis: {ui.comboBox_regmod.currentText()}\n'
+                                f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                        new_mask = ParameterMask(
+                            count_param=len(mask_param),
+                            mask=json.dumps(mask_param),
+                            mask_info=info
+                        )
+                        session.add(new_mask)
+                        session.commit()
+                        QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                        update_list_saved_mask()
+                        update_list_mask()
+            else:
+                return
+
+        def update_list_mask():
+            ui_ga.listWidget_save_mask.clear()
+            for i in session.query(ParameterMask).all():
+                item = QListWidgetItem(f'{i.count_param} id{i.id}')
+                item.setToolTip(i.mask_info)
+                ui_ga.listWidget_save_mask.addItem(item)
+
+
+        def remove_mask():
+            session.query(ParameterMask).filter_by(
+                id=ui_ga.listWidget_save_mask.currentItem().text().split(' id')[-1]).delete()
+            session.commit()
+            update_list_mask()
+            update_list_saved_mask()
+
+
+        def update_list_population():
+            ui_ga.listWidget_population.clear()
+            ga = get_gen_an()
+            if ga:
+                try:
+                    with open(ga.checkfile_path, "rb") as f:
+                        data = pickle.load(f)
+                except FileNotFoundError:
+                    return
+
+                for x, fobj in zip(data["X"], data["F"]):
+                    try:
+                        ui_ga.listWidget_population.addItem(f'{fobj[0]} N{fobj[1]}')
+                    except IndexError:
+                        ui_ga.listWidget_population.addItem(f'{fobj} N{np.sum(x)}')
+
+                ui_ga.lcdNumber_generation.display(data["ngen"])
+                if ga.type_problem == 'min':
+                    ui_ga.radioButton_pareto_min.setChecked(True)
+                if ga.type_problem == 'max':
+                    ui_ga.radioButton_pareto_max.setChecked(True)
+                if ga.type_problem == 'no':
+                    ui_ga.radioButton_pareto_no.setChecked(True)
+
+                # update_list_params()
+                draw_pareto_front(data)
+
+        def show_population():
+            # Очищаем существующий layout перед добавлением новой таблицы
+            while ui_ga.verticalLayout_table_pop.count():
+                item = ui_ga.verticalLayout_table_pop.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            ga = get_gen_an()
+
+            if ga:
+                n_features = len(list_param_reg)
+                list_p = json.loads(ga.list_params)
+
+                problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
+
+                # создаем отдельный объект Binary для каждой переменной
+                for i in range(n_features):
+                    problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+                problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+                if ui_ga.radioButton_pareto_min.isChecked():
+                    problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                elif ui_ga.radioButton_pareto_max.isChecked():
+                    problem.directions[1] = Problem.MAXIMIZE
+                else:
+                    pass
+
+                try:
+                    with open(ga.checkfile_path, "rb") as f:
+                        saved = pickle.load(f)
+                except FileNotFoundError:
+                    QMessageBox.critical(GenAlg, "Error", "File not found")
+                    return
+
+                pop = []
+                for x, fobj in zip(saved["X"], saved["F"]):
+                    s = Solution(problem)
+                    flat_x = [bool(v[0]) if isinstance(v, (list, tuple)) else bool(v)
+                              for v in x]
+                    s.variables[:] = flat_x
+                    s.objectives[:] = fobj
+                    s.evaluated = True
+                    pop.append(s)
+
+                data_dict = {}
+                for sol in pop:
+                    acc = sol.objectives[0]
+                    n_feat = sum(sol.variables)
+                    col_name = f"{acc:.4f}-{n_feat}"
+
+                    # Добавляем каждое значение как список значений для каждого признака
+                    for i, val in enumerate(sol.variables):
+                        if i not in data_dict:
+                            data_dict[i] = {}
+                        data_dict[i][col_name] = val
+
+                df = pd.DataFrame.from_dict(data_dict, orient='index')
+                df.index = list_p
+
+                rows, cols = df.shape
+
+                table = QTableWidget(rows, cols)
+
+                table.setHorizontalHeaderLabels(df.columns.tolist())
+                table.setVerticalHeaderLabels(df.index.tolist())
+
+                # заполняем ячейки
+                for row in range(df.shape[0]):
+                    for col in range(df.shape[1]):
+                        val = df.iat[row, col]
+                        item = QTableWidgetItem()
+                        # можно не показывать текст, оставить пусто
+                        # item.setText("1" if val else "0")
+                        color = QColor('#ABF37F') if val else QColor('#FF8080')
+                        item.setBackground(color)
+                        table.setItem(row, col, item)
+
+                ui_ga.verticalLayout_table_pop.addWidget(table)
+
+        # def update_list_params():
+        #     ui_ga.listWidget_features.clear()
+        #     ga = get_gen_an()
+        #     if ga:
+        #         list_p = json.loads(ga.list_params)
+        #         for i_param in tqdm(list_p):
+        #             check_box_widget = QCheckBox(i_param)
+        #             # check_box_widget.setChecked(True)
+        #             list_item = QListWidgetItem()
+        #             ui_ga.listWidget_features.addItem(list_item)
+        #             ui_ga.listWidget_features.setItemWidget(list_item, check_box_widget)
+        #
+
+        #
+        # def update_list_features():
+        #     ga = get_gen_an()
+        #     if ga:
+        #         with open(ga.checkfile_path, "rb") as f:
+        #             data = pickle.load(f)
+        #
+        #         list_x = []
+        #         try:
+        #             point = ui_ga.listWidget_population.currentItem().text().split(' N')
+        #         except AttributeError:
+        #             return
+        #         for x, fobj in zip(data["X"], data["F"]):
+        #             if str(fobj[0]) == point[0] and fobj[1] == int(point[1]):
+        #                 list_x = list(x)
+        #                 break
+        #
+        #         if list_x:
+        #             for i in range(ui_ga.listWidget_features.count()):
+        #                 checkbox = ui_ga.listWidget_features.itemWidget(ui_ga.listWidget_features.item(i))
+        #                 checkbox.setChecked(list_x[i][0])
+
+        def show_gen_an_info():
+            ui_ga.textEdit_info.clear()
+            ga = get_gen_an()
+            if ga:
+                ui_ga.textEdit_info.append(ga.type_problem)
+                ui_ga.textEdit_info.append(ga.title)
+                ui_ga.textEdit_info.append(ga.pipeline)
+                ui_ga.textEdit_info.append(ga.comment)
+                ui_ga.spinBox_pop_size.setValue(ga.population_size)
+                # with open(ga.checkfile_path, "rb") as f:
+                #     data = pickle.load(f)
+                # ui_ga.lcdNumber_generation.display(data["ngen"])
+
+                update_list_population()
+
+        def draw_pareto_front(data):
+
+            clear_layout(ui_ga.verticalLayout_pareto)
+            figure_pareto = plt.figure()
+            canvas_pareto = FigureCanvas(figure_pareto)
+            mpl_toolbar = NavigationToolbar(canvas_pareto, GenAlg)
+            ui_ga.verticalLayout_pareto.addWidget(mpl_toolbar)
+            ui_ga.verticalLayout_pareto.addWidget(canvas_pareto)
+
+            # Создание осей внутри фигуры
+            ax = figure_pareto.add_subplot(111)
+
+            # Построение точек на графике
+            if isinstance(data["F"][0], (float, int)):
+                counts = [np.sum(x) for x in data["X"]]
+                accuracy = [data["F"]]
+            else:
+
+                counts = [f[1] for f in data["F"]]
+                accuracy = [f[0] for f in data["F"]]
+
+            ax.scatter(counts, accuracy, alpha=0.5)
+            ax.set_xlabel("Количество признаков")
+            ax.set_ylabel("Точность модели")
+            ax.set_title("Парето-фронт")
+            ax.grid(True)
+
+            # Обновление канвы
+            canvas_pareto.draw()
+
+        def start_gen_algorithm():
+
+            data_train_cov = data_train.copy()
+            data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+
+            training_sample = data_train_cov[list_param_reg]
+
+            markup = data_train_cov[['target_value']]
+            groups = data_train_cov[['obj_title']]
+
+            # Нормализация данных
+            text_scaler = ''
+
+            pipe_steps = []
+            if ui_r.checkBox_stdscaler_reg.isChecked():
+                std_scaler = StandardScaler()
+                pipe_steps.append(('scaler', std_scaler))
+                text_scaler += '\nStandardScaler'
+            if ui_r.checkBox_robscaler_reg.isChecked():
+                robust_scaler = RobustScaler()
+                pipe_steps.append(('scaler', robust_scaler))
+                text_scaler += '\nRobustScaler'
+            if ui_r.checkBox_mnmxscaler_reg.isChecked():
+                minmax_scaler = MinMaxScaler()
+                pipe_steps.append(('scaler', minmax_scaler))
+                text_scaler += '\nMinMaxScaler'
+            if ui_r.checkBox_mxabsscaler_reg.isChecked():
+                maxabs_scaler = MaxAbsScaler()
+                pipe_steps.append(('scaler', maxabs_scaler))
+                text_scaler += '\nMaxAbsScaler'
+
+            if ui_r.checkBox_pca.isChecked():
+                n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+                pca = PCA(n_components=n_comp, random_state=0)
+                pipe_steps.append(('pca', pca))
+            text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+            model_name = ui_r.buttonGroup.checkedButton().text()
+            model_class, text_model = choice_model_regressor(model_name, training_sample)
+
+            text_model += text_scaler
+            text_model += text_pca
+
+            pipe_steps.append(('model', model_class))
+            pipe = Pipeline(pipe_steps)
+
+            title = f'{model_name}_{len(list_param_reg)}_{str(ui_ga.spinBox_pop_size.value())}'
+            if ui_ga.radioButton_pareto_min.isChecked():
+                p_type = 'min'
+            elif ui_ga.radioButton_pareto_max.isChecked():
+                p_type = 'max'
+            else:
+                p_type = 'no'
+            ga = session.query(GeneticAlgorithmReg).filter_by(
+                analysis_id=get_regmod_id(),
+                title=title,
+                pipeline=text_model,
+                list_params=json.dumps(list_param_reg),
+                population_size=ui_ga.spinBox_pop_size.value(),
+                type_problem=p_type
+            ).first()
+            if not ga:
+                ga = new_gen_an(model_name, text_model, list_param_reg, p_type)
+
+            # Определение задачи
+            n_features = training_sample.shape[1]
+
+            problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
+
+            # создаем отдельный объект Binary для каждой переменной
+            for i in range(n_features):
+                problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+            problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+            if ui_ga.radioButton_pareto_min.isChecked():
+                problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+            elif ui_ga.radioButton_pareto_max.isChecked():
+                problem.directions[1] = Problem.MAXIMIZE
+            else:
+                pass
+
+            # Целевая функция
+            def objectives(features):
+
+                selected_features = np.array(features, dtype=int)
+                if np.sum(selected_features) == 0:
+                    return [0, n_features]
+
+                # Выбор активных признаков
+                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
+
+                markup_subset = np.array(sum(markup.values.tolist(), []))
+                groups_subset = np.array(sum(groups.values.tolist(), []))
+
+                scores = []
+
+                # Нормализация данных
+                text_scaler = ''
+
+                pipe_steps = []
+                if ui_r.checkBox_stdscaler_reg.isChecked():
+                    std_scaler = StandardScaler()
+                    pipe_steps.append(('scaler', std_scaler))
+                    text_scaler += '\nStandardScaler'
+                if ui_r.checkBox_robscaler_reg.isChecked():
+                    robust_scaler = RobustScaler()
+                    pipe_steps.append(('scaler', robust_scaler))
+                    text_scaler += '\nRobustScaler'
+                if ui_r.checkBox_mnmxscaler_reg.isChecked():
+                    minmax_scaler = MinMaxScaler()
+                    pipe_steps.append(('scaler', minmax_scaler))
+                    text_scaler += '\nMinMaxScaler'
+                if ui_r.checkBox_mxabsscaler_reg.isChecked():
+                    maxabs_scaler = MaxAbsScaler()
+                    pipe_steps.append(('scaler', maxabs_scaler))
+                    text_scaler += '\nMaxAbsScaler'
+
+                if ui_r.checkBox_pca.isChecked():
+                    n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+                    pca = PCA(n_components=n_comp, random_state=0)
+                    pipe_steps.append(('pca', pca))
+                text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+                model_name = ui_r.buttonGroup.checkedButton().text()
+                model_class, text_model = choice_model_regressor(model_name, training_sample)
+
+                text_model += text_scaler
+                text_model += text_pca
+
+                pipe_steps.append(('model', model_class))
+                pipe = Pipeline(pipe_steps)
+
+                ui.progressBar.setMaximum(len(set(list(groups_subset))))
+                n_progress = 1
+
+                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset,
+                                                                    groups_subset):
+                    ui.progressBar.setValue(n_progress)
+
+                    if ui_r.checkBox_cov_percent.isChecked():
+                        if len(test_idx) / len(markup_subset) < ui_r.spinBox_cov_percent.value() / 100:
+                            n_progress += 1
+                            continue
+
+                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
+                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
+                    scores.append(score)
+
+                count = np.sum(selected_features)
+                print(np.mean(scores), count)
+                ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
+
+                if ui_ga.radioButton_pareto_no.isChecked():
+                    return [np.mean(scores)]
+                else:
+                    return [np.mean(scores), count]
+
+            problem.function = objectives
+
+            # --- Параметры сохранения и выполнения ---
+            population_size = ui_ga.spinBox_pop_size.value()  # Размер популяции
+            total_generations = ui_ga.spinBox_n_gen.value()  # Общее количество поколений для выполнения
+            save_interval = ui_ga.spinBox_save_int.value()  # Сохранять каждые N поколений
+            checkpoint_file = ga.checkfile_path  # Файл для сохранения состояния
+
+            ui_ga.progressBar_pop.setMaximum(population_size)
+            ui_ga.progressBar_gen.setMaximum(total_generations)
+
+            # --- Логика загрузки или инициализации ---
+            start_gen = 0
+            if os.path.exists(checkpoint_file):
+                try:
+                    print(f"Загрузка состояния из файла: {checkpoint_file}")
+
+                    algorithm, start_gen = load_checkpoint(problem, checkpoint_file)
+                    print(f"Возобновление с поколения {start_gen + 1}")
+
+                except Exception as e:
+
+                    print(f"Ошибка при загрузке файла {checkpoint_file}: {e}")
+                    print("Начинаем новый запуск.")
+
+                    if ui_ga.radioButton_pareto_no.isChecked():
+                        algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                    else:
+                        algorithm = NSGAII(problem, population_size=population_size)
+
+
+            else:
+
+                print("Файл состояния не найден. Начинаем новый запуск.")
+
+                if ui_ga.radioButton_pareto_no.isChecked():
+                    algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                else:
+                    algorithm = NSGAII(problem, population_size=population_size)
+
+            # --- Основной цикл выполнения с сохранением ---
+            print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
+
+            n_gen = 0
+            for gen in range(start_gen, total_generations + start_gen):
+                ui_ga.lcdNumber_generation.display(gen)
+                ui_ga.progressBar_pop.setValue(0)
+                print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
+                algorithm.step()  # Выполняем одно поколение
+
+                # Проверяем, нужно ли сохраняться
+                if (gen + 1) % save_interval == 0:
+                    print(f"Сохранение состояния в {checkpoint_file} после поколения {gen + 1}...")
+                    try:
+                        save_population(algorithm, checkpoint_file)
+                        print("Состояние успешно сохранено.")
+                    except Exception as e:
+                        print(f"Ошибка при сохранении состояния: {e}")
+
+                n_gen += 1
+                ui_ga.progressBar_gen.setValue(n_gen)
+
+            print("Оптимизация завершена.")
+
+            # Получение результатов после завершения цикла
+            results = algorithm.result
+            # Дальнейшая обработка результатов...
+            for solution in results:
+                print(solution.objectives)
+                print(solution.variables)
+
+            update_combobox_gen_an()
+
+        def new_gen_an(model_name, text_model, list_param, p_type):
+            title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
+            p_sep = os.path.sep
+            filepath = f'genetic{p_sep}reg{p_sep}{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}{title}.pkl'
+            new_gen = GeneticAlgorithmReg(
+                analysis_id=get_regmod_id(),
+                title=title,
+                pipeline=text_model,
+                checkfile_path=filepath,
+                list_params=json.dumps(list_param),
+                population_size=ui_ga.spinBox_pop_size.value(),
+                type_problem=p_type
+            )
+            session.add(new_gen)
+            session.commit()
+            return new_gen
+
+        def get_obj_title(prof_well_index):
+            prof_id = prof_well_index.split('_')[0]
+            obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
+            return obj.title
+
+        def save_population(alg, fname):
+            data = dict(
+                X=[s.variables[:] for s in alg.population],
+                F=[
+                    s.objectives[0] if len(s.objectives) == 1 else s.objectives[:]
+                    for s in alg.population
+                ],
+                nfe=alg.nfe,
+                rng=random.getstate(),
+                ngen=alg.nfe // alg.population_size
+            )
+            with open(fname, "wb") as f:
+                pickle.dump(data, f)
+
+        def load_checkpoint(problem, fname, is_master_node=False):
+            with open(fname, "rb") as f:
+                data = pickle.load(f)
+
+            pop = []
+            for x, fobj in zip(data["X"], data["F"]):
+                s = Solution(problem)
+                s.variables[:] = x
+                if problem.nobjs == 1:
+                    # Одноцелевой: fobj — это скаляр
+                    s.objectives[0] = fobj
+                else:
+                    # Многоцелевой: fobj — это список
+                    s.objectives[:] = fobj
+                s.evaluated = True
+                pop.append(s)
+                print(x)
+                print(fobj)
+
+            n_features = problem.nvars
+            crossover = HUX()
+            mutation = BitFlip(probability=1 / n_features)
+            variator = CompoundOperator(crossover, mutation)
+            # Выбор алгоритма по количеству целей
+            if problem.nobjs == 1:
+                alg = GeneticAlgorithm(problem,
+                                       generator=InjectedPopulation(pop),
+                                       variator=variator,
+                                       population_size=len(pop))
+            else:
+                alg = NSGAII(problem,
+                             generator=InjectedPopulation(pop),
+                             variator=variator,
+                             population_size=len(pop))
+
+            alg.nfe = data["nfe"]
+            if is_master_node:
+                random.setstate(data["rng"])  # воспроизводимость
+            else:
+                random.seed()  # новое зерно из /dev/urandom
+
+            alg.initialize()
+
+            return alg, data["ngen"]
+
+        def remove_gen_an():
+            gen_an = get_gen_an()
+            if os.path.exists(gen_an.checkfile_path):
+                os.unlink(gen_an.checkfile_path)
+            session.delete(gen_an)
+            session.commit()
+            update_combobox_gen_an()
+
+        def _read_pop(fname, problem):
+            with open(fname, "rb") as f:
+                d = pickle.load(f)
+
+            pop = []
+            for x, fobj in zip(d["X"], d["F"]):
+                s = Solution(problem)
+                s.variables[:] = x
+                if problem.nobjs == 1:
+                    # Одноцелевой: fobj — это скаляр
+                    s.objectives[0] = fobj
+                else:
+                    # Многоцелевой: fobj — это список
+                    s.objectives[:] = fobj
+                s.evaluated = True
+                pop.append(s)
+            return pop, d["nfe"]
+
+        def _write_pop(pop, nfe, fname):
+            data = dict(
+                X=[s.variables[:] for s in pop],
+
+                F=[
+                    s.objectives[0] if len(s.objectives) == 1 else s.objectives[:]
+                    for s in pop
+                ],
+                nfe=nfe,
+                rng=random.getstate(),  # актуальное состояние ГСЧ
+                ngen=nfe // len(pop) if len(pop) else 0
+            )
+            with open(fname, "wb") as f:
+                pickle.dump(data, f)
+
+        def select_best(population, k):
+            """Возвратить k решений по рангу+crowding (NSGA‑II style)."""
+            # Применяем nondominated_sort к популяции (функция модифицирует объекты)
+            nondominated_sort(population)
+
+            # Группируем решения по рангам
+            ranks = {}
+            for solution in population:
+                if not hasattr(solution, 'rank'):
+                    print("Warning: solution does not have 'rank' attribute after nondominated_sort")
+                    continue
+
+                rank = solution.rank
+                if rank not in ranks:
+                    ranks[rank] = []
+                ranks[rank].append(solution)
+
+            # Теперь мы имеем словарь, где ключи - ранги, значения - списки решений
+            selected = []
+
+            # Обрабатываем ранги в порядке возрастания (сначала лучшие)
+            for rank in sorted(ranks.keys()):
+                front = ranks[rank]
+                crowding_distance(front)  # нужно для сортировки
+                front.sort(key=lambda s: -s.crowding_distance)
+
+                space_left = k - len(selected)
+                selected.extend(front[:space_left])  # добираем столько, сколько нужно
+                if len(selected) >= k:
+                    break  # набрали k, выходим
+
+            return selected
+
+        def merge_checkpoints_to_file(problem,
+                                      filenames: list[str],
+                                      out_fname: str,
+                                      target_size: int | None = None,
+                                      nfe_mode: str = "max"):
+            """Склеить pkl-файлы и записать новый.
+
+            Parameters
+            ----------
+            problem      : ваш объект Problem (нужен для Solution)
+            filenames    : список путей к pkl-файлам
+            out_fname    : куда сохранить объединённый файл
+            target_size  : None -> не ограничивать;
+                           k    -> оставить k лучших по crowding
+            nfe_mode     : 'max'  -> взять max(nfe)  из файлов;
+                           'sum'  -> сумму; любое др. -> 0
+            """
+            all_pop, nfe_list = [], []
+
+            for fn in filenames:
+                pop, nfe = _read_pop(fn, problem)
+                all_pop.extend(pop)
+                nfe_list.append(nfe)
+
+            if target_size:
+                front = select_best(all_pop, target_size)
+            else:
+                front = select_best(all_pop, len(all_pop))
+
+            # 3. выбираем счётчик nfe
+            if nfe_mode == "max":
+                new_nfe = max(nfe_list)
+            elif nfe_mode == "sum":
+                new_nfe = sum(nfe_list)
+            else:
+                new_nfe = 0
+
+            # 4. сохраняем
+
+            _write_pop(front, new_nfe, out_fname)
+            print(f"Записан объединённый чек‑пойнт «{out_fname}» "
+                  f"({len(front)} решений, nfe={new_nfe})")
+
+        def add_file_gen_an():
+            file_name_new = QFileDialog.getOpenFileName(filter='Pickle files (*.pkl)')[0]
+            if file_name_new:
+                gen_an = get_gen_an()
+                file_name = gen_an.checkfile_path
+
+                n_features = training_sample.shape[1]
+
+                problem = Problem(n_features, 1 if ui_ga.radioButton_pareto_no.isChecked() else 2)
+
+                # создаем отдельный объект Binary для каждой переменной
+                for i in range(n_features):
+                    problem.types[i] = Binary(1)  # Указываем размерность 1 для каждой переменной
+
+                problem.directions[0] = Problem.MAXIMIZE  # Максимизация средней accuracy
+                if ui_ga.radioButton_pareto_min.isChecked():
+                    problem.directions[1] = Problem.MINIMIZE  # Минимизация числа признаков
+                elif ui_ga.radioButton_pareto_max.isChecked():
+                    problem.directions[1] = Problem.MAXIMIZE
+                else:
+                    pass
+
+                merge_checkpoints_to_file(problem, [file_name, file_name_new], file_name,
+                                          target_size=ui_ga.spinBox_pop_size.value(), nfe_mode="max")
+
+                update_list_population()
+
+        ui_ga.pushButton_start_gen.clicked.connect(start_gen_algorithm)
+        ui_ga.comboBox_gen_analysis.currentIndexChanged.connect(show_gen_an_info)
+        ui_ga.comboBox_gen_analysis.currentIndexChanged.connect(show_population)
+        ui_ga.toolButton_remove_gen_an.clicked.connect(remove_gen_an)
+        # ui_ga.listWidget_population.currentItemChanged.connect(update_list_features)
+        ui_ga.pushButton_add_file.clicked.connect(add_file_gen_an)
+        ui_ga.pushButton_save_mask.clicked.connect(save_mask)
+        ui_ga.pushButton_remove_mask.clicked.connect(remove_mask)
+
+        update_list_mask()
+        update_combobox_gen_an()
+
+        GenAlg.exec_()
+
     ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
@@ -2293,6 +3194,8 @@ def train_regression_model():
     ui_r.pushButton_random_param.clicked.connect(Regressor.close)
     ui_r.pushButton_random_param.clicked.connect(push_random_param_reg)
     ui_r.pushButton_feature_selection.clicked.connect(call_feature_selection)
+    ui_r.pushButton_cov.clicked.connect(calc_cov)
+    ui_r.pushButton_gen_alg.clicked.connect(genetic_algorithm)
     Regressor.exec_()
 
 
@@ -2912,8 +3815,7 @@ def clear_fake_reg():
                                                                                   synchronize_session='fetch')
     session.commit()
     set_info(f'Выбросы для анализа "{ui.comboBox_regmod.currentText()}" очищены.', 'green')
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
-    session.commit()
+    set_updata_false_reg()
     build_table_train(False, 'regmod')
     update_list_well_markup_reg()
 
@@ -3198,7 +4100,7 @@ def add_signal_except_reg():
             except_signal=except_line
         )
         session.add(new_except)
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     set_color_button_updata_regmod()
     set_info('Исключения добавлены', 'green')
@@ -3220,7 +4122,7 @@ def add_crl_except_reg():
             except_crl=except_line
         )
         session.add(new_except)
-    session.query(AnalysisReg).filter_by(id=get_regmod_id()).update({'up_data': False}, synchronize_session='fetch')
+    set_updata_false_reg()
     session.commit()
     set_color_button_updata_regmod()
     set_info('Исключения добавлены', 'green')
@@ -3317,3 +4219,5 @@ def markup_to_excel_reg():
     file_name = QFileDialog.getSaveFileName()[0]
     if file_name:
         pd_markup.to_excel(file_name, index=False)
+
+
