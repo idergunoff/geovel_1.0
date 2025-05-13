@@ -16,6 +16,9 @@ from mlp import update_list_mlp
 from classification_func import train_classifier
 from remote_db.unload_genetic import unload_genetic_func
 from remote_db.unload_models import unload_models_func, get_trained_model_id
+from remote_db.unload_regmod import unload_regmod_func
+from regression import update_list_reg
+
 def open_rem_db_window():
     try:
         BaseRDB.metadata.create_all(engine_remote)
@@ -322,7 +325,8 @@ def open_rem_db_window():
         result = QtWidgets.QMessageBox.question(
             RemoteDB,
             'Delete object in RemoteDB',
-            f'Вы уверены, что хотите удалить объект "{title_object}" со всеми исследованиями, профилями и пластами?',
+            f'Вы уверены, что хотите удалить объект "{title_object}" со всеми исследованиями, профилями, пластами и '
+            f'обучающими скважинами?',
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No
         )
@@ -330,6 +334,20 @@ def open_rem_db_window():
         if result == QtWidgets.QMessageBox.Yes:
             with get_session() as remote_session:
                 try:
+                    # Удаляем все markups mlp, связанные с профилями
+                    remote_session.query(MarkupMLPRDB) \
+                        .filter(MarkupMLPRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все markups reg, связанные с профилями
+                    remote_session.query(MarkupRegRDB) \
+                        .filter(MarkupRegRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
                     # Удаляем все пласты, связанные с объектом
                     remote_session.query(FormationRDB) \
                         .filter(FormationRDB.profile_id == ProfileRDB.id) \
@@ -354,7 +372,8 @@ def open_rem_db_window():
                         .delete()
 
                     remote_session.commit()
-                    set_info(f'Объект "{title_object}" и все его исследования, профили и пласты удалены в удаленной БД',
+                    set_info(f'Объект "{title_object}" и все его исследования, профили, пласты и обучающие скважины '
+                             f'удалены в удаленной БД',
                              'green')
                     update_object_rem_combobox()
 
@@ -424,13 +443,18 @@ def open_rem_db_window():
                     profile.signal_hash_md5 = calculate_hash(profile.signal)
         session.commit()
 
+    #####################################################
+    ##################  Classification  #################
+    #####################################################
+
     def update_mlp_rdb_combobox(from_local=False):
         """Обновить список анализов MLP"""
         with get_session() as remote_session:
             ui_rdb.comboBox_mlp_rdb.clear()
             for i in remote_session.query(AnalysisMLPRDB.id, AnalysisMLPRDB.title).order_by(AnalysisMLPRDB.title).all():
-                count_markup = remote_session.query(MarkupMLPRDB).filter_by(analysis_id=i.id).count()
-                ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title}({count_markup}) id{i.id}')
+                # count_markup = remote_session.query(MarkupMLPRDB).filter_by(analysis_id=i.id).count()
+                # ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title}({count_markup}) id{i.id}')
+                ui_rdb.comboBox_mlp_rdb.addItem(f'{i.title} id{i.id}')
             if from_local:
                 # Отдельно находим последний добавленный объект (по ID или дате создания)
                 last_added = remote_session.query(AnalysisMLPRDB).order_by(AnalysisMLPRDB.id.desc()).first()
@@ -446,7 +470,7 @@ def open_rem_db_window():
 
     def unload_mlp():
         unload_mlp_func(RemoteDB)
-        update_trained_models_rdb()
+        update_mlp_rdb_combobox(from_local=True)
 
     def get_MLP_rdb_id():
         try:
@@ -467,6 +491,11 @@ def open_rem_db_window():
             local_wells = {
                 w.well_hash: w.id
                 for w in session.query(Well.well_hash, Well.id).all()
+            }
+
+            local_profiles = {
+                p.signal_hash_md5: p.id
+                for p in session.query(Profile.signal_hash_md5, Profile.id).all()
             }
 
             local_formations = {}
@@ -496,6 +525,14 @@ def open_rem_db_window():
                         except AttributeError:
                             pass
 
+                        # Проверяем профиль
+                        try:
+                            remote_profile_hash = remote_markup.profile.signal_hash_md5
+                            if remote_profile_hash not in local_profiles:
+                                related_tables.append('Profile')
+                        except AttributeError:
+                            pass
+
                         # Проверяем пласт
                         remote_formation_up_hash = remote_markup.formation.up_hash
                         remote_formation_down_hash = remote_markup.formation.down_hash
@@ -503,16 +540,15 @@ def open_rem_db_window():
                                 remote_formation_down_hash not in local_formations):
                             related_tables.append('Formation')
 
-                        if related_tables:
-                            try:
-                                error_msg = (
-                                    f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
-                                    f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                                    f'Скважина: {remote_markup.well.name}'
-                                )
-                                errors.append(error_msg)
-                            except AttributeError:
-                                pass
+                    if related_tables:
+                        try:
+                            error_msg = (
+                                f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
+                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                            )
+                            errors.append(error_msg)
+                        except AttributeError:
+                            pass
 
         return errors
 
@@ -846,7 +882,252 @@ def open_rem_db_window():
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
 
+    #####################################################
+    ###################  Regression  ####################
+    #####################################################
+
+    def update_regmod_rdb_combobox(from_local=False):
+        """Обновить список анализов MLP"""
+        with get_session() as remote_session:
+            ui_rdb.comboBox_regmod_rdb.clear()
+            for i in remote_session.query(AnalysisRegRDB.id, AnalysisRegRDB.title).order_by(AnalysisRegRDB.title).all():
+                # count_markup = remote_session.query(MarkupRegRDB).filter_by(analysis_id=i.id).count()
+                # ui_rdb.comboBox_regmod_rdb.addItem(f'{i.title}({count_markup}) id{i.id}')
+                ui_rdb.comboBox_regmod_rdb.addItem(f'{i.title} id{i.id}')
+            if from_local:
+                # Отдельно находим последний добавленный объект (по ID или дате создания)
+                last_added = remote_session.query(AnalysisRegRDB).order_by(AnalysisRegRDB.id.desc()).first()
+
+                # Если такой объект есть - выбираем его в комбобоксе
+                if last_added:
+                    last_item_text = f'{last_added.title} id{last_added.id}'
+                    index = ui_rdb.comboBox_regmod_rdb.findText(last_item_text)
+                    if index >= 0:
+                        ui_rdb.comboBox_regmod_rdb.setCurrentIndex(index)
+
+
+    def unload_regmod():
+        unload_regmod_func(RemoteDB)
+        update_regmod_rdb_combobox(from_local=True)
+
+    def get_regmod_rdb_id():
+        try:
+            return int(ui_rdb.comboBox_regmod_rdb.currentText().split('id')[-1])
+        except ValueError:
+            pass
+
+    def delete_regmod_rdb():
+        title_analysis = ui_rdb.comboBox_regmod_rdb.currentText().split(' id')[0]
+        analysis_id = get_regmod_rdb_id()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete RegMod in RemoteDB',
+            f'Вы уверены, что хотите удалить анализ "{title_analysis}" со всеми обучающими скважинами?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
+        if result == QtWidgets.QMessageBox.Yes:
+            with get_session() as remote_session:
+                try:
+                    # Удаляем все обучающие скважины, связанные с анализом
+                    remote_session.query(MarkupRegRDB) \
+                        .filter(MarkupRegRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
+
+                    # # Удаляем все генетические анализы анализа
+                    # remote_session.query(GeneticAlgorithmCLSRDB) \
+                    #     .filter(GeneticAlgorithmCLSRDB.analysis_id == analysis_id) \
+                    #     .delete(synchronize_session=False)
+
+                    # # Удаляем все модели анализа
+                    # remote_session.query(TrainedModelClassRDB) \
+                    #     .filter(TrainedModelClassRDB.analysis_id == analysis_id) \
+                    #     .delete(synchronize_session=False)
+
+                    # Удаляем сам анализ
+                    remote_session.query(AnalysisRegRDB) \
+                        .filter(AnalysisRegRDB.id == analysis_id) \
+                        .delete()
+
+                    remote_session.commit()
+                    set_info(f'Анализ "{title_analysis}" и все его обучающие скважины, генетические анализы и '
+                             f'тренированные модели удалены в удаленной '
+                             f'БД', 'green')
+                    update_regmod_rdb_combobox()
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
+
+        # Функция для проверки зависимостей MLP
+    def check_reg_dependencies():
+        set_info('Проверка наличия всех связанных данных в локальной БД', 'blue')
+        errors = []
+        with get_session() as remote_session:
+            remote_analyzes = remote_session.query(AnalysisRegRDB).filter(AnalysisRegRDB.id == get_regmod_rdb_id())
+
+            # Предзагрузка данных из локальной БД для проверки
+            # Проверяем наличие всех связанных данных в локальной БД
+            local_wells = {
+                w.well_hash: w.id
+                for w in session.query(Well.well_hash, Well.id).all()
+            }
+
+            local_profiles = {
+                p.signal_hash_md5: p.id
+                for p in session.query(Profile.signal_hash_md5, Profile.id).all()
+            }
+
+            local_formations = {}
+            for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
+                local_formations[f.up_hash] = f.id
+                local_formations[f.down_hash] = f.id
+
+            for remote_analysis in tqdm(remote_analyzes, desc='Проверка зависимостей MLP'):
+
+                remote_markups = remote_session.query(MarkupRegRDB) \
+                    .filter_by(
+                    analysis_id=remote_analysis.id
+                ).all()
+
+                for remote_markup in remote_markups:
+                    related_tables = []
+
+                    # Проверяем скважину
+                    try:
+                        remote_well_hash = remote_markup.well.well_hash
+                        if remote_well_hash not in local_wells:
+                            related_tables.append('Well')
+                    except AttributeError:
+                        pass
+
+                    # Проверяем профиль
+                    try:
+                        remote_profile_hash = remote_markup.profile.signal_hash_md5
+                        if remote_profile_hash not in local_profiles:
+                            related_tables.append('Profile')
+                    except AttributeError:
+                        pass
+
+                    # Проверяем пласт
+                    remote_formation_up_hash = remote_markup.formation.up_hash
+                    remote_formation_down_hash = remote_markup.formation.down_hash
+                    if (remote_formation_up_hash not in local_formations and
+                            remote_formation_down_hash not in local_formations):
+                        related_tables.append('Formation')
+
+                if related_tables:
+                    try:
+                        error_msg = (
+                            f'Для анализа "{remote_analysis.title}" '
+                            f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                        )
+                        errors.append(error_msg)
+                    except AttributeError:
+                        pass
+
+        return errors
+
+    def load_regmod():
+        """Загрузка таблиц AnalysisReg, MarkupReg с удаленной БД на локальную"""
+
+        set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+
+        # Сначала выполняем проверку
+        dependency_errors = check_reg_dependencies()
+
+        if dependency_errors:
+            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+            set_info('Обнаружены проблемы с зависимостями', 'red')
+            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+            return
+        else:
+            set_info('Проблем с зависимостями нет', 'green')
+
+        # Если проверка пройдена, выполняем выгрузку
+        with get_session() as remote_session:
+            remote_analyzes = remote_session.query(AnalysisRegRDB).filter(AnalysisRegRDB.id == get_regmod_rdb_id())
+
+            for remote_analysis in tqdm(remote_analyzes, desc='Загрузка анализа'):
+
+                local_analysis = session.query(AnalysisReg).filter_by(title=remote_analysis.title).first()
+
+                if not local_analysis:
+                    new_analysis = AnalysisReg(title=remote_analysis.title)
+                    session.add(new_analysis)
+                    session.commit()
+                    local_analysis = new_analysis
+                    set_info(f'Анализ "{remote_analysis.title}" загружен с удаленной БД', 'green')
+                else:
+                    set_info(f'Анализ "{remote_analysis.title}" есть в локальной БД', 'blue')
+
+                remote_markups = remote_session.query(MarkupRegRDB) \
+                    .filter_by(
+                    analysis_id=remote_analysis.id
+                ).all()
+
+                # Повторно загружаем данные
+                local_wells = {
+                    w.well_hash: w.id
+                    for w in session.query(Well.well_hash, Well.id).all()
+                }
+
+                local_formations = {}
+                for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id,
+                                       Formation.profile_id).all():
+                    local_formations[f.up_hash] = [f.id, f.profile_id]
+                    local_formations[f.down_hash] = [f.id, f.profile_id]
+
+                added_markups_count = 0
+
+                ui.progressBar.setMaximum(len(remote_markups))
+
+                for n, remote_markup in tqdm(enumerate(remote_markups), desc='Загрузка обучающих скважин'):
+                    ui.progressBar.setValue(n + 1)
+
+                    local_well_id = local_wells[remote_markup.well.well_hash] \
+                        if remote_markup.well_id != None else 0
+
+                    # Получаем ID пласта
+                    local_formation_list = local_formations.get(remote_markup.formation.up_hash)
+                    if not local_formation_list:
+                        local_formation_list = local_formations.get(remote_markup.formation.down_hash)
+
+                    local_markup = session.query(MarkupReg).filter_by(
+                        analysis_id=local_analysis.id,
+                        well_id=local_well_id,
+                        profile_id=local_formation_list[1],
+                        formation_id=local_formation_list[0]
+                    ).first()
+
+                    if not local_markup:
+                        new_markup = MarkupReg(
+                            analysis_id=local_analysis.id,
+                            well_id=local_well_id,
+                            profile_id=local_formation_list[1],
+                            formation_id=local_formation_list[0],
+                            target_value=remote_markup.target_value,
+                            list_measure=remote_markup.list_measure,
+                            type_markup=remote_markup.type_markup
+                        )
+                        session.add(new_markup)
+                        added_markups_count += 1
+
+                session.commit()
+                set_info(
+                    f'Загружено: '
+                    f'{pluralize(added_markups_count, ["обучающая скважина", "обучающие скважины", "обучающих скважин"])}',
+                    'green')
+
+        update_list_reg()
+
+        set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
+
     update_mlp_rdb_combobox()
+    update_regmod_rdb_combobox()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
@@ -864,6 +1145,9 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_model.clicked.connect(start_unload_model)
     ui_rdb.pushButton_load_model.clicked.connect(load_models_func)
     ui_rdb.pushButton_delete_model_rdb.clicked.connect(delete_model_rdb)
+    ui_rdb.pushButton_unload_regmod.clicked.connect(unload_regmod)
+    ui_rdb.pushButton_delete_regmod_rdb.clicked.connect(delete_regmod_rdb)
+    ui_rdb.pushButton_load_regmod.clicked.connect(load_regmod)
 
 
     calc_count_wells()
