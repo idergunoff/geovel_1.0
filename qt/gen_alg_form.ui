@@ -240,7 +240,7 @@
             <enum>QFrame::Raised</enum>
            </property>
            <property name="lineWidth">
-            <number>2</number>
+            <number>4</number>
            </property>
            <property name="midLineWidth">
             <number>0</number>
@@ -249,7 +249,7 @@
             <bool>false</bool>
            </property>
            <property name="digitCount">
-            <number>4</number>
+            <number>5</number>
            </property>
           </widget>
          </item>

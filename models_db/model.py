@@ -992,6 +992,18 @@ class TrainedModelReg(Base):
     model_hash = Column(String(12))
 
     analysis = relationship('AnalysisReg', back_populates='trained_models')
+    model_mask = relationship('TrainedModelRegMask', back_populates='model')
+
+
+class TrainedModelRegMask(Base):
+    __tablename__ = 'trained_model_reg_mask'
+
+    id = Column(Integer, primary_key=True)
+    model_id = Column(Integer, ForeignKey('trained_model_reg.id'))
+    mask_id = Column(Integer, ForeignKey('parameter_mask.id'))
+
+    model = relationship('TrainedModelReg', back_populates='model_mask')
+    mask = relationship('ParameterMask', back_populates='model_mask_reg')
 
 
 class LineupTrain(Base):
@@ -1476,5 +1488,6 @@ class ParameterMask(Base):
     mask_info = Column(Text)
 
     model_mask = relationship("TrainedModelClassMask", back_populates="mask")
+    model_mask_reg = relationship("TrainedModelRegMask", back_populates="mask")
 
 

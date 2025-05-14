@@ -130,9 +130,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     ui_cls.label.setText(text_label)
 
-    def get_list_param_by_mask(mask_id):
-        return json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask)
-
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
             ui_cls.checkBox_adasyn.setChecked(False)
@@ -558,6 +555,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_cov():
         """ Кросс-объектная валидация """
+        nonlocal list_param
 
         def get_obj_title(prof_well_index):
             prof_id = prof_well_index.split('_')[0]
@@ -857,6 +855,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if not ui_cls.checkBox_baggig.isChecked():
                 imp_name_params, imp_params = [], []
                 if not ui_cls.checkBox_calibr.isChecked():
+                    if ui_cls.checkBox_mask_param.isChecked():
+                        list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
                     for n, i in enumerate(model_class.feature_importances_):
                         if ui_cls.checkBox_all_imp.isChecked():
                             imp_name_params.append(list_param[n])
@@ -900,7 +900,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                     title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}, \n' \
                                    f'roc_auc: {round(roc_auc, 7)}'
 
-        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name == 'ABC') and not ui_cls.checkBox_cross_val.isChecked():
+        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name ==
+            'ABC' or model_name == 'LGBM') and not ui_cls.checkBox_cross_val.isChecked():
             if not ui_cls.checkBox_calibr.isChecked():
                 if not ui_cls.checkBox_baggig.isChecked():
                     axes[2].bar(imp_name_params, imp_params)

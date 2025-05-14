@@ -1883,6 +1883,7 @@ def train_regression_model():
 
     def calc_model_reg():
         """ Создание и тренировка модели """
+        nonlocal training_sample, list_param_reg
 
         start_time = datetime.datetime.now()
         # Нормализация данных
@@ -1906,12 +1907,14 @@ def train_regression_model():
             pipe_steps.append(('scaler', maxabs_scaler))
             text_scaler += '\nMaxAbsScaler'
 
+        if ui_r.checkBox_mask_param.isChecked():
+            list_param = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
+            training_sample = np.array(data_train[list_param].values.tolist())
 
         # Разделение данных на обучающую и тестовую выборки
         x_train, x_test, y_train, y_test = train_test_split(
             training_sample, target, test_size=0.2, random_state=42
         )
-
 
         if ui_r.checkBox_pca.isChecked():
             n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
@@ -1986,6 +1989,8 @@ def train_regression_model():
 
         try:
             ipm_name_params, imp_params = [], []
+            if ui_r.checkBox_mask_param.isChecked():
+                list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
             for n, i in enumerate(pipe['model'].feature_importances_):
                 if i >= np.mean(pipe['model'].feature_importances_):
                     ipm_name_params.append(list_param_reg[n])
@@ -2090,6 +2095,16 @@ def train_regression_model():
             )
             session.add(new_trained_model)
             session.commit()
+
+            if ui_r.checkBox_mask_param.isChecked():
+                mask_id = int(ui_r.listWidget_mask_param.currentItem().text().split(' id')[-1])
+                new_trained_model_mask = TrainedModelRegMask(
+                    model_id=new_trained_model.id,
+                    mask_id=mask_id
+                )
+                session.add(new_trained_model_mask)
+                session.commit()
+
             update_list_trained_models_regmod()
         else:
             pass
@@ -2097,6 +2112,7 @@ def train_regression_model():
 
     def calc_cov():
         """ Кросс-объектная валидация """
+        nonlocal list_param_reg
 
         def get_obj_title(prof_well_index):
             prof_id = prof_well_index.split('_')[0]
@@ -2107,8 +2123,8 @@ def train_regression_model():
         data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
 
 
-        # if ui_cls.checkBox_mask_param.isChecked():
-        #     list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
+        if ui_r.checkBox_mask_param.isChecked():
+            list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
 
         training_sample = np.array(data_train_cov[list_param_reg].values.tolist())
 
@@ -2493,25 +2509,48 @@ def train_regression_model():
                 selected_mask = ui_ga.listWidget_population.currentItem().text().split(' N')
 
                 for x, fobj in zip(data["X"], data["F"]):
-                    if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
-                        print(f'{fobj[0]} N{fobj[1]}')
-                        print(x)
-                        flattened_mask = [m[0] for m in x]
-                        mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
-                        print(mask_param)
+                    try:
+                        if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
+                            print(f'{fobj[0]} N{fobj[1]}')
+                            print(x)
+                            flattened_mask = [m[0] for m in x]
+                            mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                            print(mask_param)
 
-                        info = (f'regression analysis: {ui.comboBox_regmod.currentText()}\n'
-                                f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
-                        new_mask = ParameterMask(
-                            count_param=len(mask_param),
-                            mask=json.dumps(mask_param),
-                            mask_info=info
-                        )
-                        session.add(new_mask)
-                        session.commit()
-                        QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
-                        update_list_saved_mask()
-                        update_list_mask()
+                            info = (f'regression analysis: {ui.comboBox_regmod.currentText()}\n'
+                                    f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                            new_mask = ParameterMask(
+                                count_param=len(mask_param),
+                                mask=json.dumps(mask_param),
+                                mask_info=info
+                            )
+                            session.add(new_mask)
+                            session.commit()
+                            QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                            update_list_saved_mask()
+                            update_list_mask()
+                            break
+                    except IndexError:
+                        if fobj == float(selected_mask[0]) and np.sum(x) == int(selected_mask[1]):
+                            print(f'{fobj} N{np.sum(x)}')
+                            print(x)
+                            flattened_mask = [m[0] for m in x]
+                            mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                            print(mask_param)
+
+                            info = (f'regression analysis: {ui.comboBox_regmod.currentText()}\n'
+                                    f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                            new_mask = ParameterMask(
+                                count_param=len(mask_param),
+                                mask=json.dumps(mask_param),
+                                mask_info=info
+                            )
+                            session.add(new_mask)
+                            session.commit()
+                            QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                            update_list_saved_mask()
+                            update_list_mask()
+                            break
             else:
                 return
 
@@ -3434,6 +3473,9 @@ def update_list_trained_models_regmod():
 def remove_trained_model_regmod():
     """ Удаление модели """
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+    model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+    if model_mask:
+        session.delete(model_mask)
     os.remove(model.path_model)
     session.delete(model)
     session.commit()
@@ -3460,6 +3502,11 @@ def calc_profile_model_regmod():
         model = session.query(TrainedModelReg).filter_by(
         id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
         try:
             working_sample = working_data[list_param_num].values.tolist()
         except KeyError:
@@ -3606,6 +3653,10 @@ def calc_object_model_regmod():
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
+        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
@@ -3654,6 +3705,11 @@ def calc_object_model_regmod():
             reg_model = pickle.load(f)
 
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+
+        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+
         working_sample = working_data_result_copy[list_param_num].values.tolist()
 
         try:

@@ -2879,3 +2879,8 @@ def pluralize(number, word_forms):
         return f"{number} {word_forms[1]}"
     else:
         return f"{number} {word_forms[2]}"
+
+
+def get_list_param_by_mask(mask_id):
+    return json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask)
+
