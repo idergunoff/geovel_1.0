@@ -14,10 +14,11 @@ from remote_db.sync_objects import sync_objects_direction
 from remote_db.unload_mlp import unload_mlp_func
 from mlp import update_list_mlp
 from classification_func import train_classifier
-from remote_db.unload_genetic import unload_genetic_func
-from remote_db.unload_models import unload_models_func, get_trained_model_id
+from remote_db.sync_genetic import *
+from remote_db.unload_mlp_models import unload_cls_models_func
 from remote_db.unload_regmod import unload_regmod_func
-from regression import update_list_reg
+from regression import update_list_reg, update_list_trained_models_class
+from remote_db.unload_reg_models import unload_reg_models_func
 
 def open_rem_db_window():
     try:
@@ -466,7 +467,7 @@ def open_rem_db_window():
                     if index >= 0:
                         ui_rdb.comboBox_mlp_rdb.setCurrentIndex(index)
 
-        update_trained_models_rdb(from_local=True)
+        update_trained_models_class_rdb(from_local=True)
 
     def unload_mlp():
         unload_mlp_func(RemoteDB)
@@ -724,10 +725,10 @@ def open_rem_db_window():
 
     ui_rdb.checkBox_check_ga_params.setChecked(False)
 
-    def start_unload_ga():
-        unload_genetic_func(ui_rdb)
+    def start_sync_ga_cls():
+        sync_genetic_cls_func(ui_rdb)
 
-    def update_trained_models_rdb(from_local=False):
+    def update_trained_models_class_rdb(from_local=False):
         """ Обновление списка моделей в выпадающем списке """
         # Очистка выпадающего списка
         ui_rdb.comboBox_trained_model_rdb.clear()
@@ -753,13 +754,13 @@ def open_rem_db_window():
                         ui_rdb.comboBox_trained_model_rdb.setCurrentIndex(index)
 
         # При изменении анализа -> обновить модели
-    ui_rdb.comboBox_mlp_rdb.currentIndexChanged.connect(update_trained_models_rdb)
+    ui_rdb.comboBox_mlp_rdb.currentIndexChanged.connect(update_trained_models_class_rdb)
 
-    def start_unload_model():
-        unload_models_func(RemoteDB)
-        update_trained_models_rdb()
+    def start_unload_mlp_model():
+        unload_cls_models_func(RemoteDB)
+        update_trained_models_class_rdb()
 
-    def get_trained_model_rdb_id():
+    def get_trained_model_class_rdb_id():
         """ Получение id выбранного объекта """
         try:
             return int(ui_rdb.comboBox_trained_model_rdb.currentText().split('id')[-1])
@@ -769,7 +770,7 @@ def open_rem_db_window():
     def load_models_func():
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-        model_id = get_trained_model_rdb_id()
+        model_id = get_trained_model_class_rdb_id()
         if model_id is None:
             set_info("Модель не выбрана", "red")
             return
@@ -875,7 +876,7 @@ def open_rem_db_window():
                     remote_session.commit()
                     set_info(f'Модель "{title_model}" анализа "{title_analysis}" удалена в удаленной '
                              f'БД', 'green')
-                    update_trained_models_rdb()
+                    update_trained_models_class_rdb()
 
                 except Exception as e:
                     remote_session.rollback()
@@ -936,15 +937,15 @@ def open_rem_db_window():
                         .filter(MarkupRegRDB.analysis_id == analysis_id) \
                         .delete(synchronize_session=False)
 
-                    # # Удаляем все генетические анализы анализа
-                    # remote_session.query(GeneticAlgorithmCLSRDB) \
-                    #     .filter(GeneticAlgorithmCLSRDB.analysis_id == analysis_id) \
-                    #     .delete(synchronize_session=False)
+                    # Удаляем все генетические анализы анализа
+                    remote_session.query(GeneticAlgorithmRegRDB) \
+                        .filter(GeneticAlgorithmRegRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
 
-                    # # Удаляем все модели анализа
-                    # remote_session.query(TrainedModelClassRDB) \
-                    #     .filter(TrainedModelClassRDB.analysis_id == analysis_id) \
-                    #     .delete(synchronize_session=False)
+                    # Удаляем все модели анализа
+                    remote_session.query(TrainedModelRegRDB) \
+                        .filter(TrainedModelRegRDB.analysis_id == analysis_id) \
+                        .delete(synchronize_session=False)
 
                     # Удаляем сам анализ
                     remote_session.query(AnalysisRegRDB) \
@@ -1126,6 +1127,137 @@ def open_rem_db_window():
 
         set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
+    ui_rdb.checkBox_check_ga_params_reg.setChecked(False)
+
+    def start_sync_ga_reg():
+        sync_genetic_reg_func(ui_rdb, RemoteDB)
+
+    def update_trained_models_reg_rdb(from_local=False):
+        """ Обновление списка моделей в выпадающем списке """
+        # Очистка выпадающего списка
+        ui_rdb.comboBox_trained_model_reg_rdb.clear()
+        with get_session() as remote_session:
+            try:
+                models_rdb = remote_session.query(TrainedModelRegRDB.id, TrainedModelRegRDB.title).filter(
+                    TrainedModelRegRDB.analysis_id == get_regmod_rdb_id()
+                ).order_by(TrainedModelRegRDB.id).all()
+            except ValueError:
+                return
+            # Запрос на получение всех моделей, относящихся к анализу, и их добавление в выпадающий список
+            for i in models_rdb:
+                ui_rdb.comboBox_trained_model_reg_rdb.addItem(f'{i[1]} id{i[0]}')
+            if from_local:
+                # Отдельно находим последний добавленный объект (по ID или дате создания)
+                last_added = remote_session.query(TrainedModelRegRDB).order_by(TrainedModelRegRDB.id.desc()).first()
+
+                # Если такой объект есть - выбираем его в комбобоксе
+                if last_added:
+                    last_item_text = f'{last_added.title} id{last_added.id}'
+                    index = ui_rdb.comboBox_trained_model_reg_rdb.findText(last_item_text)
+                    if index >= 0:
+                        ui_rdb.comboBox_trained_model_reg_rdb.setCurrentIndex(index)
+
+        # При изменении анализа -> обновить модели
+
+    ui_rdb.comboBox_regmod_rdb.currentIndexChanged.connect(update_trained_models_reg_rdb)
+
+    def start_unload_reg_model():
+        unload_reg_models_func(RemoteDB)
+        update_trained_models_reg_rdb()
+
+    # def get_trained_model_reg_rdb_id():
+    #     """ Получение id выбранного объекта """
+    #     try:
+    #         return int(ui_rdb.comboBox_trained_model_reg_rdb.currentText().split('id')[-1])
+    #     except ValueError:
+    #         pass
+    #
+    # def load_reg_models_func():
+    #     set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+    #
+    #     model_id = get_trained_model_reg_rdb_id()
+    #     if model_id is None:
+    #         set_info("Модель не выбрана", "red")
+    #         return
+    #
+    #     with get_session() as remote_session:
+    #
+    #         remote_analysis_name = remote_session.query(AnalysisRegRDB.title).filter_by(id=get_regmod_rdb_id()).first()[0]
+    #         local_analysis = session.query(AnalysisReg).filter_by(title=remote_analysis_name).first()
+    #         if not local_analysis:
+    #             set_info(f"Соответствующий анализ '{remote_analysis_name}' не найден в удаленной БД. Сначала загрузите "
+    #                      f"анализ.", "red")
+    #             return
+    #
+    #         remote_model = remote_session.query(TrainedModelRegRDB).filter(
+    #             TrainedModelRegRDB.analysis_id == get_regmod_rdb_id(),
+    #             TrainedModelRegRDB.id == model_id
+    #         ).first()
+    #
+    #         local_model = session.query(TrainedModelReg).filter_by(
+    #             analysis_id=local_analysis.id,
+    #             title=remote_model.title,
+    #             list_params=remote_model.list_params,
+    #             except_signal=remote_model.except_signal,
+    #             except_crl=remote_model.except_crl,
+    #             comment=remote_model.comment,
+    #         ).first()
+    #
+    #         if local_model:
+    #             set_info(f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' есть в удаленной БД", 'red')
+    #             QMessageBox.critical(RemoteDB, 'Error',
+    #                                  f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' есть в удаленной БД")
+    #         else:
+    #             loaded_model = pickle.loads(remote_model.file_model)
+    #             path_model = f'models/regression/{remote_model.title}.pkl'
+    #             with open(path_model, 'wb') as f:
+    #                 pickle.dump(loaded_model, f)
+    #
+    #             new_local_model = TrainedModelReg(
+    #                 analysis_id=local_analysis.id,
+    #                 title=remote_model.title,
+    #                 file_model=path_model,
+    #                 list_params=remote_model.list_params,
+    #                 except_signal=remote_model.except_signal,
+    #                 except_crl=remote_model.except_crl,
+    #                 comment=remote_model.comment,
+    #             )
+    #             session.add(new_local_model)
+    #             session.commit()
+    #
+    #             if remote_model.mask:
+    #                 set_info(f'Загрузка модели с маской', 'blue')
+    #                 param_mask = session.query(ParameterMask).filter_by(mask=remote_model.mask).first()
+    #                 if param_mask:
+    #                     new_trained_model_mask = TrainedModelRegMask(
+    #                         mask_id=param_mask.id,
+    #                         model_id=new_local_model.id
+    #                     )
+    #
+    #                 else:
+    #                     info = (f'cls analysis: {remote_analysis_name}\n'
+    #                             f'pareto analysis: REMOTE MODEL')
+    #                     new_param_mask = ParameterMask(
+    #                         count_param=len(json.loads(remote_model.mask)),
+    #                         mask=remote_model.mask,
+    #                         mask_info=info
+    #                     )
+    #                     session.add(new_param_mask)
+    #                     session.commit()
+    #                     new_trained_model_mask = TrainedModelRegMask(
+    #                         mask_id=new_param_mask.id,
+    #                         model_id=new_local_model.id
+    #                     )
+    #
+    #                 session.add(new_trained_model_mask)
+    #                 session.commit()
+    #
+    #             set_info(f"Модель '{remote_model.title}' анализа '{remote_analysis_name}' загружена на локальную БД", 'green')
+    #
+    #     update_list_trained_models_regmod()
+    #     set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
+
+
     update_mlp_rdb_combobox()
     update_regmod_rdb_combobox()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
@@ -1141,13 +1273,15 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
     ui_rdb.pushButton_load_mlp.clicked.connect(load_mlp)
     ui_rdb.pushButton_delete_mlp_rdb.clicked.connect(delete_mlp_rdb)
-    ui_rdb.pushButton_unload_ga.clicked.connect(start_unload_ga)
-    ui_rdb.pushButton_unload_model.clicked.connect(start_unload_model)
+    ui_rdb.pushButton_sync_ga_cls.clicked.connect(start_sync_ga_cls)
+    ui_rdb.pushButton_unload_model.clicked.connect(start_unload_mlp_model)
     ui_rdb.pushButton_load_model.clicked.connect(load_models_func)
     ui_rdb.pushButton_delete_model_rdb.clicked.connect(delete_model_rdb)
     ui_rdb.pushButton_unload_regmod.clicked.connect(unload_regmod)
     ui_rdb.pushButton_delete_regmod_rdb.clicked.connect(delete_regmod_rdb)
     ui_rdb.pushButton_load_regmod.clicked.connect(load_regmod)
+    ui_rdb.pushButton_sync_ga_reg.clicked.connect(start_sync_ga_reg)
+    ui_rdb.pushButton_unload_model_reg.clicked.connect(start_unload_reg_model)
 
 
     calc_count_wells()

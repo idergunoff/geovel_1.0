@@ -229,6 +229,7 @@ class AnalysisRegRDB(BaseRDB):
 
     markups = relationship('MarkupRegRDB', back_populates='analysis')
     trained_models = relationship('TrainedModelRegRDB', back_populates='analysis')
+    genetic_algorithms = relationship('GeneticAlgorithmRegRDB', back_populates='analysis_reg')
 
 
 class MarkupRegRDB(BaseRDB):
@@ -248,6 +249,21 @@ class MarkupRegRDB(BaseRDB):
     profile = relationship("ProfileRDB", back_populates="markups_reg")
     formation = relationship("FormationRDB", back_populates="markups_reg")
 
+class GeneticAlgorithmRegRDB(BaseRDB):
+    __tablename__ = 'genetic_algorithm_reg_rdb'
+
+    id = Column(Integer, primary_key=True)
+    analysis_id = Column(Integer, ForeignKey('analysis_reg_rdb.id'))
+    title = Column(String)
+    pipeline = Column(Text)
+    checkfile_path = Column(LargeBinary)
+    list_params = Column(Text)
+    population_size = Column(Integer)
+    comment = Column(Text)
+    type_problem = Column(String)
+
+    analysis_reg = relationship('AnalysisRegRDB', back_populates='genetic_algorithms')
+
 
 class TrainedModelRegRDB(BaseRDB):
     __tablename__ = 'trained_model_reg_rdb'
@@ -255,8 +271,7 @@ class TrainedModelRegRDB(BaseRDB):
     id = Column(Integer, primary_key=True)
     analysis_id = Column(Integer, ForeignKey('analysis_reg_rdb.id'))
     title = Column(String)
-    path_model = Column(String)
-    path_scaler = Column(String)
+    file_model = Column(String)
     list_params = Column(Text)
     except_signal = Column(String, default="")
     except_crl = Column(String, default="")
