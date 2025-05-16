@@ -1796,7 +1796,11 @@ def update_trained_model_comment():
         update_list_trained_models_class()
         FormComment.close()
 
+    def cancel_update():
+        FormComment.close()
+
     ui_cmt.buttonBox.accepted.connect(update_comment)
+    ui_cmt.buttonBox.rejected.connect(cancel_update)
 
     FormComment.exec_()
 

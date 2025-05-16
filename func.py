@@ -2342,10 +2342,16 @@ def check_trained_model():
             session.query(TrainedModel).filter_by(id=model.id).delete()
 
     for model in session.query(TrainedModelReg).all():
+        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            session.delete(model_mask)
         if not os.path.exists(model.path_model):
             session.query(TrainedModelReg).filter_by(id=model.id).delete()
 
     for model in session.query(TrainedModelClass).all():
+        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+        if model_mask:
+            session.delete(model_mask)
         if not os.path.exists(model.path_model):
             session.query(TrainedModelClass).filter_by(id=model.id).delete()
     session.commit()
@@ -2387,6 +2393,13 @@ def get_dict_check_checkbox(list_widget):
         checkbox = list_widget.itemWidget(list_widget.item(i))
         dict_checkbox[checkbox.text()] = checkbox.isChecked()
     return dict_checkbox
+
+def get_checked_parameters(list_view):
+    """Возвращает список только отмеченных параметров"""
+    model = list_view.model()
+    return [model.item(row).text()
+            for row in range(model.rowCount())
+            if model.item(row).checkState() == Qt.Checked]
 
 
 def clear_layout(layout):

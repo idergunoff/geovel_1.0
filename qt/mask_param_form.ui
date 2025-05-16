@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MaskParamForm</class>
+ <widget class="QWidget" name="MaskParamForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>666</width>
+    <height>625</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Mask Param Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_10">
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout_9" rowstretch="4,0,0">
+     <item row="2" column="0">
+      <layout class="QGridLayout" name="gridLayout_7">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="1" column="0">
+          <layout class="QGridLayout" name="gridLayout_4">
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gridLayout_3"/>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLabel" name="label_parameters">
+           <property name="styleSheet">
+            <string notr="true">font: italic 10pt &quot;Arial&quot;;</string>
+           </property>
+           <property name="text">
+            <string>Параметры:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QListWidget" name="listWidget_masks"/>
+         </item>
+         <item row="1" column="3" colspan="2">
+          <widget class="QListView" name="listView_mask_params"/>
+         </item>
+         <item row="2" column="3" colspan="2">
+          <widget class="QLineEdit" name="search_edit"/>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLabel" name="label_masks">
+           <property name="styleSheet">
+            <string notr="true">font: italic 10pt &quot;Arial&quot;;</string>
+           </property>
+           <property name="text">
+            <string>Маски:</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="1">
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="1" column="0">
+            <widget class="QPushButton" name="pushButton_save">
+             <property name="toolTip">
+              <string>Применить изменения</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(255, 200, 152);</string>
+             </property>
+             <property name="text">
+              <string>SAVE</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="pushButton_save_as">
+             <property name="toolTip">
+              <string>Схранить изменения</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(212, 215, 255);</string>
+             </property>
+             <property name="text">
+              <string>SAVE AS</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButton_mask_info">
+             <property name="toolTip">
+              <string>Смотреть комментарии</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(181, 219, 255);</string>
+             </property>
+             <property name="text">
+              <string>MASK INFO</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QPushButton" name="pushButton_delete">
+             <property name="toolTip">
+              <string>Удалить</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(170, 234, 170);</string>
+             </property>
+             <property name="text">
+              <string>DELETE</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item row="0" column="0">
+      <layout class="QGridLayout" name="gridLayout_8">
+       <item row="0" column="0">
+        <layout class="QVBoxLayout" name="verticalLayout_table_mp"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

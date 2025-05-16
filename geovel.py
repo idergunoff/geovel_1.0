@@ -25,6 +25,7 @@ from index_productivity import *
 from pareto import *
 from remote_db.remote_db_win import *
 from well_log import *
+from mask_params import *
 
 MainWindow.show()
 
@@ -200,6 +201,7 @@ ui.toolButton_list_param_to_line.clicked.connect(list_param_to_lineEdit)
 ui.toolButton_feature_importance.clicked.connect(get_feature_importance_cls)
 ui.toolButton_excel_markup_mlp.clicked.connect(markup_to_excel_mlp)
 ui.pushButton_pareto.clicked.connect(pareto_start)
+ui.pushButton_mask_param.clicked.connect(mask_param_form)
 ui.toolButton_rm_well_fake.clicked.connect(remove_fake_current_markup)
 
 # torch
