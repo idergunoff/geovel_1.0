@@ -271,7 +271,7 @@ class TrainedModelRegRDB(BaseRDB):
     id = Column(Integer, primary_key=True)
     analysis_id = Column(Integer, ForeignKey('analysis_reg_rdb.id'))
     title = Column(String)
-    file_model = Column(String)
+    file_model = Column(LargeBinary)
     list_params = Column(Text)
     except_signal = Column(String, default="")
     except_crl = Column(String, default="")
