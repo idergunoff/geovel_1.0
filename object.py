@@ -75,7 +75,7 @@ from scipy.fftpack import fft2, ifft2, dctn, idctn
 from scipy.signal import (savgol_filter, hilbert, wiener, medfilt, medfilt2d, filtfilt, butter, argrelmin, argrelmax,
                           find_peaks, peak_widths, correlate)
 from scipy.fft import rfft2, irfft2, rfft, irfft, rfftfreq, fftfreq, fft, dct
-from scipy.interpolate import splrep, splev
+from scipy.interpolate import splrep, splev, splprep
 from scipy.signal.windows import cosine
 from scipy.special import softmax
 from scipy.spatial import cKDTree, ConvexHull
@@ -153,7 +153,12 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.patches import Rectangle
+
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
 from mpl_toolkits.mplot3d import Axes3D
+
 import seaborn as sns
 from python_speech_features import mfcc
 import lasio as ls

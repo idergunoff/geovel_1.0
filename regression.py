@@ -6,7 +6,7 @@ from mlxtend.cluster import Kmeans
 from pandas.core.common import random_state
 from scipy.cluster.vq import kmeans
 
-from draw import draw_radarogram, draw_formation, draw_fill, draw_fake
+from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_groups_with_smoothed_hull
 from func import *
 from build_table import *
 from krige import draw_map
@@ -2119,8 +2119,24 @@ def train_regression_model():
             obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
             return obj.title
 
+        def get_coordinates_x(prof_well_index):
+            well_id = int(prof_well_index.split('_')[1])
+            try:
+                return session.query(Well).filter(Well.id == well_id).first().x_coord
+            except AttributeError:
+                return None
+
+        def get_coordinates_y(prof_well_index):
+            well_id = int(prof_well_index.split('_')[1])
+            try:
+                return session.query(Well).filter(Well.id == well_id).first().y_coord
+            except AttributeError:
+                return None
+
         data_train_cov = data_train.copy()
         data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+        data_train_cov['x_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_x)
+        data_train_cov['y_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_y)
 
 
         if ui_r.checkBox_mask_param.isChecked():
@@ -2235,6 +2251,13 @@ def train_regression_model():
             group_sizes.append(i[2])
             group_r2.append(i[3])
 
+
+        # Создаём словарь: group -> score
+        group_to_score = dict(zip(group_order, scores))
+
+        # Добавляем столбец score для каждой строки по obj_title
+        data_train_cov['group_score'] = data_train_cov['obj_title'].map(group_to_score)
+
         # Собираем подписи
         labels = [f"{g}\n(n={s}\nr2={r2})" for g, s, r2 in zip(group_order, group_sizes, group_r2)]
 
@@ -2256,6 +2279,8 @@ def train_regression_model():
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
         plt.show()
+
+        plot_groups_with_smoothed_hull(data_train_cov)
 
 
     def calc_lof():

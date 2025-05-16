@@ -1174,3 +1174,58 @@ def draw_profile_intersection():
             text_item.setPos(intersection[0][2], -15)
             radarogramma.addItem(text_item)
             globals()[f'profile_intersection_text_{p.id}'] = text_item
+
+def plot_groups_with_smoothed_hull(df, x='x_coord', y='y_coord', group='obj_title', score_col='group_score', smoothing=0.5):
+    df = df.drop_duplicates(subset=['x_coord', 'y_coord'])
+    df = df.dropna(subset=['x_coord', 'y_coord'])
+    groups = df[group].unique()
+    norm = mcolors.Normalize(vmin=df[score_col].min(), vmax=df[score_col].max())
+    cmap = cm.get_cmap('rainbow')
+
+    plt.figure(figsize=(12, 10))
+    plt.scatter(df[x], df[y], s=1, color='lightgrey', alpha=0.3)
+
+    for g in groups:
+        group_data = df[df[group] == g]
+        if len(group_data) < 3:
+            continue
+
+        points = group_data[[x, y]].values
+        score = group_data[score_col].iloc[0]
+        color = 'lightgray' if np.isnan(score) else cmap(norm(score))
+
+        try:
+            hull = ConvexHull(points)
+            hull_points = points[hull.vertices]
+
+            # Замыкаем контур
+            hull_points = np.vstack([hull_points, hull_points[0]])
+
+            # Интерполяция сплайном для сглаживания
+            tck, u = splprep([hull_points[:, 0], hull_points[:, 1]], s=smoothing, per=True)
+            unew = np.linspace(0, 1.0, 200)
+            smoothed = np.array(splev(unew, tck)).T
+
+            plt.fill(smoothed[:, 0], smoothed[:, 1], color=color, alpha=0.4)
+            plt.plot(smoothed[:, 0], smoothed[:, 1], color='black', lw=1)
+
+            # Подпись по центру
+            centroid = points.mean(axis=0)
+            label = f'{g}\n{score:.2f}' if not np.isnan(score) else f'{g}\nNA'
+            plt.text(centroid[0], centroid[1], label, fontsize=9, ha='center')
+
+        except Exception as e:
+            print(f'Ошибка ConvexHull для группы {g}: {e}')
+            continue
+
+    plt.xlabel(x)
+    plt.ylabel(y)
+    plt.title('Группы со сглаженным контуром ConvexHull')
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    ax = plt.gca()
+    plt.colorbar(sm, label='Score', ax=ax)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+

@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
+
+from draw import plot_groups_with_smoothed_hull
 from func import *
 
 from build_table import *
@@ -562,9 +564,24 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             obj = session.query(GeoradarObject).join(Research).join(Profile).filter(Profile.id == prof_id).first()
             return obj.title
 
+        def get_coordinates_x(prof_well_index):
+            well_id = int(prof_well_index.split('_')[1])
+            try:
+                return session.query(Well).filter(Well.id == well_id).first().x_coord
+            except AttributeError:
+                return None
+
+        def get_coordinates_y(prof_well_index):
+            well_id = int(prof_well_index.split('_')[1])
+            try:
+                return session.query(Well).filter(Well.id == well_id).first().y_coord
+            except AttributeError:
+                return None
+
         data_train_cov = data_train.copy()
         data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
-
+        data_train_cov['x_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_x)
+        data_train_cov['y_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_y)
 
         if ui_cls.checkBox_mask_param.isChecked():
             list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
@@ -642,6 +659,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             group_sizes.append(i[2])
             class_ratios.append(i[3])
 
+        # Создаём словарь: group -> score
+        group_to_score = dict(zip(group_order, scores))
+
+        # Добавляем столбец score для каждой строки по obj_title
+        data_train_cov['group_score'] = data_train_cov['obj_title'].map(group_to_score)
+
         # Собираем подписи
         labels = [f"{g}\n(n={s})\n{r}" for g, s, r in zip(group_order, group_sizes, class_ratios)]
 
@@ -664,6 +687,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         plt.tight_layout()
         plt.show()
 
+        plot_groups_with_smoothed_hull(data_train_cov)
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
