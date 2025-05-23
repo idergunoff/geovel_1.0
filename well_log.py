@@ -26,26 +26,43 @@ def show_well_log():
             item.setToolTip(f'{log.begin} - {log.end}; {log.step}\n{log.description}')
             ui_wl.listWidget_well_log.addItem(item)
 
-
     def draw_well_log():
         try:
-            well_log = session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).first()
+            well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+            well_log = session.query(WellLog).filter_by(id=well_log_id).first()
         except AttributeError:
             return
 
-        if well_log:
-            ui_wl.widget_graph_well_log.clear()
+        if not well_log:
+            return
+
+        try:
             Y = json.loads(well_log.curve_data)
-            X = np.arange(well_log.begin - well_log.step, well_log.end, well_log.step)
-            try:
-                curve = pg.PlotCurveItem(Y, X)
-            except:
-                X = np.arange(well_log.begin, well_log.begin + len(Y)*well_log.step, well_log.step)
-                curve = pg.PlotCurveItem(Y, X)
+            Y = np.array(Y)
+
+            # Проверка на нулевой шаг
+            if well_log.step == 0:
+                print("Ошибка: шаг (step) равен нулю.")
+                well_log.step = 0.1
+
+            # Подсчёт длины массива X, чтобы совпадал с Y
+            X = np.arange(well_log.begin, well_log.begin + len(Y) * well_log.step, well_log.step)
+
+            # В случае если длины всё равно не совпадают — подрежем X
+            if len(X) > len(Y):
+                X = X[:len(Y)]
+            elif len(Y) > len(X):
+                Y = Y[:len(X)]
+
+            curve = pg.PlotCurveItem(Y, X)
+
+            ui_wl.widget_graph_well_log.clear()
             ui_wl.widget_graph_well_log.showGrid(x=True, y=True)
             ui_wl.widget_graph_well_log.invertY(True)
-
             ui_wl.widget_graph_well_log.addItem(curve)
+
+        except Exception as e:
+            print(f"Ошибка при построении графика: {e}")
 
 
     def load_well_log():
@@ -70,22 +87,36 @@ def show_well_log():
                     add_well_log_to_db(f'{filename}/{file}')
         update_list_well_log()
 
+    import chardet
 
     def add_well_log_to_db(las_file):
-        las = ls.read(las_file)
+        # Определение кодировки файла
+        with open(las_file, 'rb') as f:
+            raw_data = f.read(10000)  # первые 10 КБ обычно достаточно
+            result = chardet.detect(raw_data)
+            encoding = result['encoding'] or 'utf-8'  # fallback, если не определилось
+
+        try:
+            las = ls.read(las_file, encoding=encoding)
+        except Exception as e:
+            print(f"Ошибка чтения файла {las_file} с кодировкой {encoding}: {e}")
+            return
+
         list_curves = las.keys()
 
         for curve in list_curves:
             if curve in ['DEPT', 'DEPH', 'MD', 'DEPTH']:
                 continue
+
             try:
                 description = (f'Скв.: {las.well["WELL"].value}\n'
-                               f'Площ.:' f'{las.well["AREA"].value}\n'
+                               f'Площ.: {las.well["AREA"].value}\n'
                                f'Дата: {las.well["DATE"].value}')
             except KeyError:
                 description = (f'Скв.: {las.well["WELL"].value}\n'
-                               f'Площ.:' f'{las.well["FLD"].value}\n'
+                               f'Площ.: {las.well["FLD"].value}\n'
                                f'Дата: {las.well["DATE"].value}')
+
             new_well_log = WellLog(
                 well_id=get_well_id(),
                 curve_name=curve,
@@ -96,8 +127,8 @@ def show_well_log():
                 description=description
             )
             session.add(new_well_log)
-        session.commit()
 
+        session.commit()
 
     def remove_well_log():
         session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()

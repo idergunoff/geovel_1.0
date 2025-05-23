@@ -1275,8 +1275,11 @@ def check_grid_relief():
         return
     list_x, list_y = [], []
     for pr in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
-        list_x += json.loads(pr.x_pulc)
-        list_y += json.loads(pr.y_pulc)
+        try:
+            list_x += json.loads(pr.x_pulc)
+            list_y += json.loads(pr.y_pulc)
+        except TypeError:
+            continue
     pd_relief = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'z'])
     if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and
             pd_relief['y'].max() > max(list_y) > pd_relief['y'].min() and

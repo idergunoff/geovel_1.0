@@ -4274,7 +4274,7 @@ def markup_to_excel_reg():
     """ Сохранение результатов анализа в файл Excel """
 
     list_col = ['целевое значение', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
-                'альтитуда', 'удаленность', 'X', 'Y']
+                'альтитуда', 'удаленность', 'X', 'Y', 'Примечание']
     analisis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
     pd_markup = pd.DataFrame(columns=list_col)
     ui.progressBar.setMaximum(len(analisis.markups))
@@ -4293,6 +4293,10 @@ def markup_to_excel_reg():
         mrp_dict['X'] = mrp.well.x_coord
         mrp_dict['Y'] = mrp.well.y_coord
         mrp_dict['удаленность'] = closest_point(mrp.well.x_coord, mrp.well.y_coord, json.loads(mrp.profile.x_pulc), json.loads(mrp.profile.y_pulc))[1]
+        list_opt = []
+        for opt in mrp.well.well_optionally:
+            list_opt.append(f'{opt.option} - {opt.value}')
+        mrp_dict['Примечание'] = " ;".join(list_opt)
 
         pd_markup = pd.concat([pd_markup, pd.DataFrame(data=mrp_dict, columns=list_col, index=[0])], axis = 0, ignore_index=True)
         n += 1
