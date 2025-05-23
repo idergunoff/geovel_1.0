@@ -87,36 +87,22 @@ def show_well_log():
                     add_well_log_to_db(f'{filename}/{file}')
         update_list_well_log()
 
-    import chardet
 
     def add_well_log_to_db(las_file):
-        # Определение кодировки файла
-        with open(las_file, 'rb') as f:
-            raw_data = f.read(10000)  # первые 10 КБ обычно достаточно
-            result = chardet.detect(raw_data)
-            encoding = result['encoding'] or 'utf-8'  # fallback, если не определилось
-
-        try:
-            las = ls.read(las_file, encoding=encoding)
-        except Exception as e:
-            print(f"Ошибка чтения файла {las_file} с кодировкой {encoding}: {e}")
-            return
-
+        las = ls.read(las_file)
         list_curves = las.keys()
 
         for curve in list_curves:
             if curve in ['DEPT', 'DEPH', 'MD', 'DEPTH']:
                 continue
-
             try:
                 description = (f'Скв.: {las.well["WELL"].value}\n'
-                               f'Площ.: {las.well["AREA"].value}\n'
+                               f'Площ.:' f'{las.well["AREA"].value}\n'
                                f'Дата: {las.well["DATE"].value}')
             except KeyError:
                 description = (f'Скв.: {las.well["WELL"].value}\n'
-                               f'Площ.: {las.well["FLD"].value}\n'
+                               f'Площ.:' f'{las.well["FLD"].value}\n'
                                f'Дата: {las.well["DATE"].value}')
-
             new_well_log = WellLog(
                 well_id=get_well_id(),
                 curve_name=curve,
@@ -127,8 +113,8 @@ def show_well_log():
                 description=description
             )
             session.add(new_well_log)
-
         session.commit()
+
 
     def remove_well_log():
         session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
