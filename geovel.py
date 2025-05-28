@@ -26,7 +26,7 @@ from pareto import *
 from remote_db.remote_db_win import *
 from well_log import *
 from mask_params import *
-from test_tsfresh import *
+# from test_tsfresh import *
 
 MainWindow.show()
 
@@ -98,7 +98,7 @@ def log_uncaught_exceptions(ex_cls, ex, tb):
 img.scene().sigMouseClicked.connect(mouseClicked)
 img.scene().sigMouseMoved.connect(mouseLine)
 
-ui.pushButton_test_tsfresh.clicked.connect(extract_signal_features)
+# ui.pushButton_test_tsfresh.clicked.connect(extract_signal_features)
 
 ui.pushButton_rem_db.clicked.connect(open_rem_db_window)
 ui.pushButton_save_signal.clicked.connect(save_signal)

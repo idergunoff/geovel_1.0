@@ -28,16 +28,6 @@
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout">
-       <item row="2" column="0">
-        <widget class="QPushButton" name="pushButton_add_dir_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(180, 255, 205);</string>
-         </property>
-         <property name="text">
-          <string>ADD DIR</string>
-         </property>
-        </widget>
-       </item>
        <item row="2" column="1">
         <widget class="QPushButton" name="pushButton_rm_all_well_db">
          <property name="styleSheet">
@@ -58,8 +48,12 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="QListWidget" name="listWidget_well_log"/>
+       <item row="4" column="0">
+        <widget class="QCheckBox" name="checkBox_raar_signal">
+         <property name="text">
+          <string>radar</string>
+         </property>
+        </widget>
        </item>
        <item row="1" column="0">
         <widget class="QPushButton" name="pushButton_add_well_log">
@@ -71,10 +65,23 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QCheckBox" name="checkBox_raar_signal">
+       <item row="2" column="0">
+        <widget class="QPushButton" name="pushButton_add_dir_well_log">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(180, 255, 205);</string>
+         </property>
          <property name="text">
-          <string>radar</string>
+          <string>ADD DIR</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QListWidget" name="listWidget_well_log"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="checkBox_cp1251">
+         <property name="text">
+          <string>cp1251</string>
          </property>
         </widget>
        </item>

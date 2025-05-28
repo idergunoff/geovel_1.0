@@ -243,12 +243,16 @@ def add_wells():
 
 def add_data_well():
     """ Добавить данные по скважинам """
-    category, value = ui.lineEdit_string.text().split('; ')[0], ui.lineEdit_string.text().split('; ')[1]
-    new_data_well = WellOptionally(
-        well_id = get_well_id(),
-        option = category,
-        value = value
-    )
+    try:
+        category, value = ui.lineEdit_string.text().split('; ')[0], ui.lineEdit_string.text().split('; ')[1]
+        new_data_well = WellOptionally(
+            well_id = get_well_id(),
+            option = category,
+            value = value
+        )
+    except IndexError:
+        set_info('Введите данные в формате "Категория; Значение"', 'red')
+        return
     session.add(new_data_well)
     session.commit()
     show_data_well()
