@@ -2969,3 +2969,38 @@ def universal_expand_parameters(list_param):
 
     return sorted(expanded_list, key=natural_sort_key)
 
+
+def get_median_by_depth(data_list, initial_depth, step, target_depth, interval):
+    """
+    Функция для получения медианного значения среза списка по заданной глубине.
+
+    Args:
+        data_list (list): Исходный список данных
+        initial_depth (float): Глубина для первого элемента списка
+        step (float): Шаг увеличения глубины между элементами
+        target_depth (float): Заданная глубина начала среза
+        interval (float): Заданный интервал глубины
+
+    Returns:
+        float: Медианное значение среза или None, если срез пуст
+    """
+    if not data_list:
+        return None
+
+    # Создаем список глубин для каждого элемента
+    depths = [initial_depth + i * step for i in range(len(data_list))]
+
+    # Определяем границы среза по глубине
+    start_depth = target_depth
+    end_depth = target_depth + interval
+
+    # Находим элементы, которые попадают в заданный диапазон глубин
+    slice_values = []
+    for i, depth in enumerate(depths):
+        if start_depth <= depth <= end_depth:
+            slice_values.append(data_list[i])
+    # Возвращаем медиану среза
+    if slice_values:
+        return round(np.median(slice_values), 3)
+    else:
+        return None

@@ -31,6 +31,7 @@ def show_well_log():
                 item.setToolTip(f'{log.begin} - {log.end}; {log.step}\n{log.description}')
                 ui_wl.listWidget_well_log.addItem(item)
 
+
         def draw_well_log():
             try:
                 well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
@@ -169,6 +170,13 @@ def show_well_log():
         def add_all_well_log_to_regression():
             pass
 
+        def get_median_value_from_interval(well_log_id, begin, interval):
+            well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+            if not well_log:
+                return
+            value = get_median_by_depth(json.loads(well_log.curve_data), well_log.begin, well_log.step, begin, interval)
+            return value
+
 
         def remove_well_log():
             session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
@@ -204,6 +212,13 @@ def show_well_log():
             # Добавление линий на соответствующие графики
             ui_wl.widget_graph_well_log.addItem(hor_line_dep)
             ui_wl.widget_graph_well_log.addItem(hor_line_int)
+
+            try:
+                well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+            except AttributeError:
+                return
+            median_value = get_median_value_from_interval(well_log_id, value_dep, value_int)
+            ui_wl.label_value.setText(str(median_value))
 
 
 
