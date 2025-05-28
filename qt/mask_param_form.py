@@ -87,13 +87,13 @@ class Ui_MaskParamForm(object):
         MaskParamForm.setWindowTitle(_translate("MaskParamForm", "Mask Param Form"))
         self.label_parameters.setText(_translate("MaskParamForm", "Параметры:"))
         self.label_masks.setText(_translate("MaskParamForm", "Маски:"))
-        self.pushButton_save.setToolTip(_translate("MaskParamForm", "Применить изменения"))
+        self.pushButton_save.setToolTip(_translate("MaskParamForm", "Сохранить изменения для текущей маски"))
         self.pushButton_save.setText(_translate("MaskParamForm", "SAVE"))
-        self.pushButton_save_as.setToolTip(_translate("MaskParamForm", "Схранить изменения"))
+        self.pushButton_save_as.setToolTip(_translate("MaskParamForm", "Создать новую маску"))
         self.pushButton_save_as.setText(_translate("MaskParamForm", "SAVE AS"))
-        self.pushButton_mask_info.setToolTip(_translate("MaskParamForm", "Смотреть комментарии"))
+        self.pushButton_mask_info.setToolTip(_translate("MaskParamForm", "Редактировать информацию о текущей маске"))
         self.pushButton_mask_info.setText(_translate("MaskParamForm", "MASK INFO"))
-        self.pushButton_delete.setToolTip(_translate("MaskParamForm", "Удалить"))
+        self.pushButton_delete.setToolTip(_translate("MaskParamForm", "Удалить текущую маску"))
         self.pushButton_delete.setText(_translate("MaskParamForm", "DELETE"))
 
 

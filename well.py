@@ -39,47 +39,51 @@ def add_well():
 
 
 def edit_well():
-    """Изменить параметры скважины в БД"""
-    Add_Well = QtWidgets.QDialog()
-    ui_w = Ui_add_well()
-    ui_w.setupUi(Add_Well)
-    Add_Well.show()
-    Add_Well.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    if not get_well_id():
+        set_info('Скважина не выбрана', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
+    else:
+        """Изменить параметры скважины в БД"""
+        Add_Well = QtWidgets.QDialog()
+        ui_w = Ui_add_well()
+        ui_w.setupUi(Add_Well)
+        Add_Well.show()
+        Add_Well.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
-    well = session.query(Well).filter(Well.id == get_well_id()).first()
-    ui_w.lineEdit_well_x.setText(str(well.x_coord))
-    ui_w.lineEdit_well_y.setText(str(well.y_coord))
-    ui_w.lineEdit_well_alt.setText(str(well.alt))
-    ui_w.lineEdit_well_name.setText(well.name)
-    def well_update():
-        name_well = ui_w.lineEdit_well_name.text()
-        x_well = ui_w.lineEdit_well_x.text()
-        y_well = ui_w.lineEdit_well_y.text()
-        alt_well = ui_w.lineEdit_well_alt.text()
-        if name_well != '' and x_well != '' and y_well != '' and alt_well != '':
-            session.query(Well).filter(Well.id == get_well_id()).update(
-                {'name': name_well, 'x_coord': float(x_well), 'y_coord': float(y_well), 'alt': float(alt_well)},
-                synchronize_session="fetch")
+        well = session.query(Well).filter(Well.id == get_well_id()).first()
+        ui_w.lineEdit_well_x.setText(str(well.x_coord))
+        ui_w.lineEdit_well_y.setText(str(well.y_coord))
+        ui_w.lineEdit_well_alt.setText(str(well.alt))
+        ui_w.lineEdit_well_name.setText(well.name)
+        def well_update():
+            name_well = ui_w.lineEdit_well_name.text()
+            x_well = ui_w.lineEdit_well_x.text()
+            y_well = ui_w.lineEdit_well_y.text()
+            alt_well = ui_w.lineEdit_well_alt.text()
+            if name_well != '' and x_well != '' and y_well != '' and alt_well != '':
+                session.query(Well).filter(Well.id == get_well_id()).update(
+                    {'name': name_well, 'x_coord': float(x_well), 'y_coord': float(y_well), 'alt': float(alt_well)},
+                    synchronize_session="fetch")
+                session.commit()
+                update_list_well()
+                Add_Well.close()
+                set_info(f'Изменены параметры скважины - "{name_well}".', 'rgb(188, 160, 3)')
+
+        def cancel_add_well():
+            Add_Well.close()
+
+        def well_delete():
+            name_well = ui.listWidget_well.currentItem().text()
+            session.query(Well).filter(Well.id == get_well_id()).delete()
             session.commit()
             update_list_well()
             Add_Well.close()
-            set_info(f'Изменены параметры скважины - "{name_well}".', 'rgb(188, 160, 3)')
+            set_info(f'Удалена скважина - "{name_well}".', 'rgb(188, 160, 3)')
 
-    def cancel_add_well():
-        Add_Well.close()
-
-    def well_delete():
-        name_well = ui.listWidget_well.currentItem().text()
-        session.query(Well).filter(Well.id == get_well_id()).delete()
-        session.commit()
-        update_list_well()
-        Add_Well.close()
-        set_info(f'Удалена скважина - "{name_well}".', 'rgb(188, 160, 3)')
-
-    ui_w.buttonBox.accepted.connect(well_update)
-    ui_w.buttonBox.rejected.connect(cancel_add_well)
-    ui_w.toolButton_del.clicked.connect(well_delete)
-    Add_Well.exec_()
+        ui_w.buttonBox.accepted.connect(well_update)
+        ui_w.buttonBox.rejected.connect(cancel_add_well)
+        ui_w.toolButton_del.clicked.connect(well_delete)
+        Add_Well.exec_()
 
 
 def add_wells():

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>537</width>
-    <height>498</height>
+    <width>591</width>
+    <height>503</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -262,15 +262,34 @@
         <string>Classification</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_3">
+        <item row="1" column="3" colspan="2">
+         <widget class="QPushButton" name="pushButton_sync_ga_cls">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 206, 228);</string>
+           <string notr="true">background-color: rgb(255, 221, 215);</string>
           </property>
           <property name="text">
-           <string>Анализ MLP:</string>
+           <string>Synchronize genetic analysis</string>
           </property>
          </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="pushButton_delete_mlp_rdb">
+          <property name="toolTip">
+           <string>Удалить анализ MLP в удаленной БД</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(255, 181, 182);</string>
+          </property>
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="comboBox_mlp_rdb"/>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="comboBox_trained_model_rdb"/>
         </item>
         <item row="2" column="3">
          <widget class="QPushButton" name="pushButton_load_model">
@@ -282,8 +301,28 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QComboBox" name="comboBox_mlp_rdb"/>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(124, 192, 255);</string>
+          </property>
+          <property name="text">
+           <string>Genetic:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QPushButton" name="pushButton_delete_model_rdb">
+          <property name="toolTip">
+           <string>Удалить модель в удаленной БД</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(255, 181, 182);</string>
+          </property>
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_7">
@@ -292,6 +331,16 @@
           </property>
           <property name="text">
            <string>Trained model:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QPushButton" name="pushButton_unload_model">
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(255, 233, 196);</string>
+          </property>
+          <property name="text">
+           <string>LOC -&gt; REM</string>
           </property>
          </widget>
         </item>
@@ -315,49 +364,13 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="pushButton_delete_model_rdb">
-          <property name="toolTip">
-           <string>Удалить модель в удаленной БД</string>
-          </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_3">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 181, 182);</string>
+           <string notr="true">background-color: rgb(255, 206, 228);</string>
           </property>
           <property name="text">
-           <string>Delete</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="3" colspan="2">
-         <widget class="QPushButton" name="pushButton_sync_ga_cls">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 221, 215);</string>
-          </property>
-          <property name="text">
-           <string>Synchronize genetic analysis</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="4">
-         <widget class="QPushButton" name="pushButton_unload_model">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 233, 196);</string>
-          </property>
-          <property name="text">
-           <string>LOC -&gt; REM</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QPushButton" name="pushButton_delete_mlp_rdb">
-          <property name="toolTip">
-           <string>Удалить анализ MLP в удаленной БД</string>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 181, 182);</string>
-          </property>
-          <property name="text">
-           <string>Delete</string>
+           <string>Анализ MLP:</string>
           </property>
          </widget>
         </item>
@@ -373,19 +386,6 @@
            <string>LOC -&gt; REM</string>
           </property>
          </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_6">
-          <property name="styleSheet">
-           <string notr="true">background-color: rgb(124, 192, 255);</string>
-          </property>
-          <property name="text">
-           <string>Genetic:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="comboBox_trained_model_rdb"/>
         </item>
        </layout>
       </widget>

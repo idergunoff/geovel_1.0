@@ -56,6 +56,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
         n += 1
 
 def sync_wells():
+    """Запуск синхронизаци скважин"""
     batch_size=5000
 
     try:
@@ -93,7 +94,7 @@ def calculate_well_hash(x_coord, y_coord):
     """
     Вычисляет хэш-сумму на основе координат x и y.
     """
-    hash_input = f"{x_coord}:{y_coord}".encode('utf-8')
+    hash_input = f"{round(x_coord)}:{round(y_coord)}".encode('utf-8')
     return hashlib.md5(hash_input).hexdigest()
 
 

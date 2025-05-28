@@ -5,7 +5,7 @@ from models_db.model import *
 from func import *
 
 def update_checkfile(remote_ga, local_ga, GeneticAlgorithmRDB):
-
+    """Обновление файла генетического анализа"""
     with open(local_ga.checkfile_path, "rb") as f:
         local_data = pickle.load(f)
 
@@ -113,6 +113,7 @@ def select_best(population, k):
 
 
 def sync_genetic_cls_func(ui_rdb):
+    """ Синхронизация GeneticAlgorithmCLS """
     set_info('Начало синхронизации данных', 'blue')
 
     with get_session() as remote_session:
@@ -177,6 +178,7 @@ def sync_genetic_cls_func(ui_rdb):
     set_info('Синхронизация данных завершена', 'blue')
 
 def sync_genetic_reg_func(ui_rdb, Window):
+    """ Синхронизация GeneticAlgorithmReg """
     set_info('Начало синхронизации данных', 'blue')
 
     with get_session() as remote_session:

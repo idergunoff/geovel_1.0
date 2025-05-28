@@ -10,6 +10,7 @@ from build_table import build_table_train
 
 
 def mask_param_form():
+    """ Форма MaskParam """
     MaskParam = QtWidgets.QDialog()
     ui_mp = Ui_MaskParamForm()
     ui_mp.setupUi(MaskParam)
@@ -27,8 +28,10 @@ def mask_param_form():
     # Создание модели параметров
     model = QStandardItemModel()
     # list_param = get_list_param_numerical_for_train(get_list_param_mlp())
-    data, list_param = build_table_train(False, 'mlp')
-    list_param = data.columns.tolist()[2:]
+    list_param = universal_expand_parameters(get_unique_parameters_from_mlp())
+    # data, list_param_ex = build_table_train(False, 'mlp')
+    # list_param_ex = data.columns.tolist()[2:]
+
 
     for param in list_param:
         item = QStandardItem(param)
@@ -44,6 +47,7 @@ def mask_param_form():
     ui_mp.search_edit.setPlaceholderText("Поиск параметров...")
 
     def filter_parameters(text):
+        """ Фильтрация параметров для строки поиска """
         for row in range(model.rowCount()):
             item = model.item(row)
             match = text.lower() in item.text().lower()
@@ -55,7 +59,9 @@ def mask_param_form():
     ui_mp.search_edit.textChanged.connect(filter_parameters)
 
     def on_mask_selected():
+        """ Отметка чекбоксов параметров, относящихся к текущей маске """
         selected_items = ui_mp.listWidget_masks.selectedItems()
+        ui_mp.listWidget_masks.setProperty("user_selected", bool(selected_items))
         if not selected_items:
             return
 
@@ -66,7 +72,9 @@ def mask_param_form():
             mask_parameters = json.loads(mask_str)
         except json.JSONDecodeError:
             mask_parameters = []
-            set_info(f"Ошибка в данных маски id{selected_mask.id}", 'red')
+            info = f"Ошибка в данных маски id{selected_mask.id}"
+            set_info(info, 'red')
+            QMessageBox.critical(MaskParam, 'Ошибка', info)
 
         # Сбрасываем все чекбоксы
         for row in range(model.rowCount()):
@@ -78,15 +86,64 @@ def mask_param_form():
             if items:
                 items[0].setCheckState(Qt.Checked)
 
-    # Соединяем сигнал вне функции
-    ui_mp.listWidget_masks.itemSelectionChanged.connect(on_mask_selected)
+    def update_mask_info():
+        """ Форма для обновления mask_info текущей маски """
+        user_selected = ui_mp.listWidget_masks.property("user_selected")
+        if not user_selected:
+            set_info('Не выбрана маска', 'red')
+            QMessageBox.critical(MaskParam, 'Ошибка', 'Не выбрана маска')
+            return
+
+        current_item = ui_mp.listWidget_masks.currentItem()
+        if not current_item:
+            set_info('Не выбрана маска', 'red')
+            QMessageBox.critical(MaskParam, 'Ошибка', 'Не выбрана маска')
+            return
+
+        try:
+            current_mask = current_item.data(Qt.UserRole)
+            mask = session.query(ParameterMask).filter_by(id=current_mask.id).first()
+        except Exception as e:
+            set_info('Ошибка загрузки маски', 'red')
+            QMessageBox.critical(MaskParam, 'Ошибка', f'Ошибка при загрузке маски: {e}')
+            return
+
+        FormMaskInfo = QtWidgets.QDialog()
+        ui_mi = Ui_Form_Mask_Info()
+        ui_mi.setupUi(FormMaskInfo)
+        FormMaskInfo.show()
+        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
+
+        ui_mi.textEdit.setText(mask.mask_info)
+
+        def update_info():
+            """ Обновление mask_info """
+            new_info = ui_mi.textEdit.toPlainText()
+            # Обновляем в базе данных
+            session.query(ParameterMask).filter_by(id=current_mask.id).update(
+                {'mask_info': new_info},
+                synchronize_session='fetch'
+            )
+            session.commit()
+
+            current_item.setToolTip(new_info)
+            FormMaskInfo.close()
+
+        def cancel_update():
+            FormMaskInfo.close()
+
+        ui_mi.buttonBox.accepted.connect(update_info)
+        ui_mi.buttonBox.rejected.connect(cancel_update)
+
+        FormMaskInfo.exec_()
 
     def save_mask_changes():
+        """ Сохранение изменений для текущей маски """
         selected_items = ui_mp.listWidget_masks.selectedItems()
         if not selected_items:
             info = "Маска не выбрана, изменения не сохранятся"
-            QMessageBox.critical(MaskParam, 'Сохранение изменений', info)
             set_info(info, 'red')
+            QMessageBox.critical(MaskParam, 'Сохранение изменений', info)
             return
 
         selected_mask = selected_items[0].data(Qt.UserRole)
@@ -103,13 +160,14 @@ def mask_param_form():
             # Обновляем отображение в списке масок
             selected_items[0].setText(f'{selected_mask.count_param} id{selected_mask.id}')
             info = f"Маска id{selected_mask.id} успешно обновлена"
-            QMessageBox.information(MaskParam, 'Сохранение изменений', info)
             set_info(info, 'green')
+            QMessageBox.information(MaskParam, 'Сохранение изменений', info)
         except Exception as e:
             session.rollback()
             set_info(f"Ошибка при сохранении: {str(e)}", 'red')
 
     def save_as_new_mask():
+        """ Создание новой маски (сохранение изменений текущей маски в новой маске) """
         selected_items = ui_mp.listWidget_masks.selectedItems()
 
         # Используем функцию для получения отмеченных параметров
@@ -145,69 +203,33 @@ def mask_param_form():
             QTimer.singleShot(100, lambda: on_mask_selected())
 
             info = f"Создана новая маска id{new_mask.id}"
-            QMessageBox.information(MaskParam, 'Создание новой маски', info)
             set_info(info, 'green')
+            QMessageBox.information(MaskParam, 'Создание новой маски', info)
 
         except Exception as e:
             session.rollback()
             info = f'Ошибка при создании новой маски: {str(e)}'
-            QMessageBox.critical(MaskParam, 'Создание новой маски', info)
             set_info(info, 'red')
+            QMessageBox.critical(MaskParam, 'Создание новой маски', info)
 
-    def update_mask_info():
-        """ Изменить комментарий маски """
-        try:
-            current_item = ui_mp.listWidget_masks.currentItem()
-            current_mask = current_item.data(Qt.UserRole)
-            mask = session.query(ParameterMask).filter_by(id=current_mask.id).first()
-        except AttributeError:
-            QMessageBox.critical(MaskParam, 'Ошибка', 'Не выбрана маска')
-            set_info('Не выбрана маска', 'red')
-            return
-
-        FormMaskInfo = QtWidgets.QDialog()
-        ui_mi = Ui_Form_Mask_Info()
-        ui_mi.setupUi(FormMaskInfo)
-        FormMaskInfo.show()
-        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
-
-        ui_mi.textEdit.setText(mask.mask_info)
-
-        def update_info():
-            new_info = ui_mi.textEdit.toPlainText()
-            # Обновляем в базе данных
-            session.query(ParameterMask).filter_by(id=current_mask.id).update(
-                {'mask_info': new_info},
-                synchronize_session='fetch'
-            )
-            session.commit()
-
-            current_item.setToolTip(new_info)
-            FormMaskInfo.close()
-
-        def cancel_update():
-            FormMaskInfo.close()
-
-        ui_mi.buttonBox.accepted.connect(update_info)
-        ui_mi.buttonBox.rejected.connect(cancel_update)
-
-        FormMaskInfo.exec_()
 
     def delete_mask():
+        """ Удаление текущей маски """
         selected_items = ui_mp.listWidget_masks.selectedItems()
         if not selected_items:
             info = "Маска не выбрана"
-            QMessageBox.critical(MaskParam, 'Удаление маски', info)
             set_info(info, 'red')
+            QMessageBox.critical(MaskParam, 'Удаление маски', info)
             return
 
         selected_mask = selected_items[0].data(Qt.UserRole)
 
         existing_model_mask = session.query(TrainedModelClassMask).filter_by(mask_id=selected_mask.id).first()
-        if existing_model_mask:
+        existing_model_reg_mask = session.query(TrainedModelRegMask).filter_by(mask_id=selected_mask.id).first()
+        if existing_model_mask or existing_model_reg_mask:
             info = f"Невозможно удалить маску id{selected_mask.id}: она используется в обучении моделей"
-            QMessageBox.critical(MaskParam, 'Удаление маски', info)
             set_info(info, 'red')
+            QMessageBox.critical(MaskParam, 'Удаление маски', info)
             return
         else:
             result = QtWidgets.QMessageBox.question(
@@ -235,10 +257,11 @@ def mask_param_form():
                 except Exception as e:
                     session.rollback()
                     info = f'Ошибка при удалении маски: {str(e)}'
-                    QMessageBox.critical(MaskParam, 'Удаление маски', info)
                     set_info(info, 'red')
+                    QMessageBox.critical(MaskParam, 'Удаление маски', info)
 
     def table_mask_params():
+        """ Таблица зависимостей масок и параметров """
         # Очищаем существующий layout перед добавлением новой таблицы
         while ui_mp.verticalLayout_table_mp.count():
             item = ui_mp.verticalLayout_table_mp.takeAt(0)
@@ -283,6 +306,8 @@ def mask_param_form():
 
     if model.rowCount() > 0:
         table_mask_params()
+
+    ui_mp.listWidget_masks.itemSelectionChanged.connect(on_mask_selected)
     ui_mp.pushButton_save.clicked.connect(save_mask_changes)
     ui_mp.pushButton_save_as.clicked.connect(save_as_new_mask)
     ui_mp.pushButton_mask_info.clicked.connect(update_mask_info)
