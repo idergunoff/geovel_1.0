@@ -65,6 +65,7 @@ def show_well_log():
                 ui_wl.widget_graph_well_log.showGrid(x=True, y=True)
                 ui_wl.widget_graph_well_log.invertY(True)
                 ui_wl.widget_graph_well_log.addItem(curve)
+                draw_depth_spinbox()
 
             except Exception as e:
                 print(f"Ошибка при построении графика: {e}")
@@ -132,12 +133,39 @@ def show_well_log():
             session.commit()
             update_list_well_log()
 
+        def draw_depth_spinbox():
+            """ Отслеживаем координаты курсора и отображение на графике сигнала """
+            global hor_line_dep, hor_line_int
+
+            # Удаление предыдущих линий при движении мыши
+            if 'hor_line_dep' in globals():
+                ui_wl.widget_graph_well_log.removeItem(hor_line_dep)
+                ui_wl.widget_graph_well_log.removeItem(hor_line_int)
+
+
+            # Создание бесконечных линий
+            value_dep = ui_wl.doubleSpinBox_depth.value()
+            value_int = ui_wl.doubleSpinBox_interval.value()
+
+            hor_line_dep = pg.InfiniteLine(pos=value_dep, angle=0,
+                                           pen=pg.mkPen(color='red', width=1.5, dash=[4, 7]))
+            hor_line_int = pg.InfiniteLine(pos=value_dep+value_int, angle=0,
+                                           pen=pg.mkPen(color='yellow', width=1.5, dash=[4, 7]))
+
+
+            # Добавление линий на соответствующие графики
+            ui_wl.widget_graph_well_log.addItem(hor_line_dep)
+            ui_wl.widget_graph_well_log.addItem(hor_line_int)
+
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_dir_well_log.clicked.connect(load_well_log_by_dir)
         ui_wl.pushButton_rm_well_log.clicked.connect(remove_well_log)
         ui_wl.pushButton_rm_all_well_db.clicked.connect(remove_all_well_log)
         ui_wl.listWidget_well_log.currentItemChanged.connect(draw_well_log)
+        ui_wl.doubleSpinBox_depth.valueChanged.connect(draw_depth_spinbox)
+        ui_wl.doubleSpinBox_interval.valueChanged.connect(draw_depth_spinbox)
 
         update_list_well_log()
 
