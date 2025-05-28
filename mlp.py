@@ -417,7 +417,7 @@ def choose_markup_mlp(markup):
 
 
 def split_well_train_test_mlp():
-    """ Размеление AnalysisMLP на train и test выборки методами clusters/greedy """
+    """ Разделение AnalysisMLP на train и test выборки методами clusters/greedy """
 
     markups = session.query(MarkupMLP).filter_by(analysis_id=get_MLP_id()).all()
     list_markers = [mrk.id for mrk in session.query(MarkerMLP).filter_by(analysis_id=get_MLP_id()).all()]

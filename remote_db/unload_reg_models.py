@@ -3,13 +3,14 @@ from models_db.model import *
 from func import *
 
 def get_trained_model_reg_id():
-    """ Получение ID текущей выбранной модели """
+    """ Получение ID текущей выбранной модели в локальной БД """
     current_item = ui.listWidget_trained_model_reg.currentItem()
     if current_item is not None:
         return current_item.data(Qt.UserRole)
     return None
 
 def unload_reg_models_func(RemoteDB):
+    """ Выгрузка регрессионных моделей с локальной БД на удаленную """
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
     model_id = get_trained_model_reg_id()

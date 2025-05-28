@@ -106,7 +106,7 @@ def load_formations():
             session.commit()
             set_info(f'Загружено: {pluralize(added_formations_count, ["пласт", "пласта", "пластов"])}',
                      'green')
-            set_info(f'В локальную БД добавлено:'
+            set_info(f'В локальную БД добавлено: '
                      f'{pluralize(added_layers_count, ["новый слой", "новых слоя", "новых слоев"])}',
                      'green')
             if skipped_profiles_count:
@@ -210,7 +210,7 @@ def calculate_hash(value):
     return hashlib.md5(str(value).encode()).hexdigest()
 
 def update_formation_hashes(session):
-    """Обновляет только пустые хэши в таблице Formation"""
+    """Обновление пустых хэшей в таблице Formation"""
     # Выбираем только записи с пустыми хэшами
     formations = session.query(Formation)\
         .options(
@@ -242,7 +242,7 @@ def update_formation_hashes(session):
 
 
 def update_formation_hashes_rdb(session):
-    """Обновляет хэши up_hash и down_hash в таблице FormationRDB,"""
+    """Обновление хэшей up_hash и down_hash в таблице FormationRDB,"""
     # Загружаем только те записи, где нужно обновить хэши
     formations = session.query(FormationRDB) \
         .filter(

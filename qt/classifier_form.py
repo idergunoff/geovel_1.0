@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'qt/classifier_form.ui'
+# Form implementation generated from reading ui file '.\qt\classifier_form.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -918,15 +918,18 @@ class Ui_ClassifierForm(object):
         self.checkBox_pca_mle.setText(_translate("ClassifierForm", "mle"))
         self.checkBox_save_model.setText(_translate("ClassifierForm", "save"))
         self.checkBox_save_table.setText(_translate("ClassifierForm", "table"))
+        self.pushButton_add_to_lineup.setToolTip(_translate("ClassifierForm", "Добавить модель в лайнап"))
         self.pushButton_add_to_lineup.setText(_translate("ClassifierForm", "LINEUP"))
         self.pushButton_cvw.setToolTip(_translate("ClassifierForm", "Cross Validate by Well"))
         self.pushButton_cvw.setText(_translate("ClassifierForm", "CVW"))
         self.pushButton_yellow_brick.setText(_translate("ClassifierForm", "YB"))
         self.pushButton_feature_selection.setText(_translate("ClassifierForm", "FS"))
+        self.pushButton_calc.setToolTip(_translate("ClassifierForm", "Создание и тернировка модели"))
         self.pushButton_calc.setText(_translate("ClassifierForm", "CALC"))
         self.pushButton_random_search.setToolTip(_translate("ClassifierForm", "Подбор гиперпараметров"))
         self.pushButton_random_search.setText(_translate("ClassifierForm", "RndSrcCV"))
         self.pushButton_random_param.setText(_translate("ClassifierForm", "RndPrm"))
+        self.pushButton_gen.setToolTip(_translate("ClassifierForm", "Генетический алгоритм"))
         self.pushButton_gen.setText(_translate("ClassifierForm", "Genetic"))
         self.groupBox_2.setTitle(_translate("ClassifierForm", "KNeighborsClassifier"))
         self.radioButton_knn.setToolTip(_translate("ClassifierForm", "K-Nearest Neighbors classifier"))

@@ -467,6 +467,9 @@
         <layout class="QGridLayout" name="gridLayout_35">
          <item row="0" column="0">
           <widget class="QPushButton" name="pushButton_add_to_lineup">
+           <property name="toolTip">
+            <string>Добавить модель в лайнап</string>
+           </property>
            <property name="styleSheet">
             <string notr="true">background-color: rgb(252, 204, 165);</string>
            </property>
@@ -518,6 +521,9 @@
                <height>0</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>Создание и тернировка модели</string>
+             </property>
              <property name="styleSheet">
               <string notr="true">background-color: rgb(255, 204, 121);</string>
              </property>
@@ -554,6 +560,9 @@
            </item>
            <item row="0" column="4">
             <widget class="QPushButton" name="pushButton_gen">
+             <property name="toolTip">
+              <string>Генетический алгоритм</string>
+             </property>
              <property name="styleSheet">
               <string notr="true">background-color: rgb(209, 182, 249);</string>
              </property>
@@ -2047,7 +2056,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_stack_vote"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

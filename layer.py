@@ -588,13 +588,18 @@ def filter_layer():
 
 def remove_well():
     w_id = get_well_id()
-    if ui.checkBox_profile_intersec.isChecked():
-        session.query(Intersection).filter_by(id=w_id).delete()
-        set_info('Пересечение удалено', 'green')
+    w_name = session.query(Well).filter_by(id=w_id).first().name
+    if not w_id:
+        set_info('Скважина не выбрана', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
     else:
-        session.query(Boundary).filter_by(well_id=w_id).delete()
-        session.query(MarkupMLP).filter_by(well_id=w_id).delete()
-        session.query(Well).filter_by(id=w_id).delete()
-        set_info('Скважина удалена', 'green')
-    session.commit()
-    update_list_well()
+        if ui.checkBox_profile_intersec.isChecked():
+            session.query(Intersection).filter_by(id=w_id).delete()
+            set_info('Пересечение удалено', 'green')
+        else:
+            session.query(Boundary).filter_by(well_id=w_id).delete()
+            session.query(MarkupMLP).filter_by(well_id=w_id).delete()
+            session.query(Well).filter_by(id=w_id).delete()
+            set_info(f'Скважина "{w_name}" удалена', 'green')
+        session.commit()
+        update_list_well()

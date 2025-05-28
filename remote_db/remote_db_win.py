@@ -126,7 +126,7 @@ def open_rem_db_window():
     ui_rdb.comboBox_research_rem.currentIndexChanged.connect(update_profile_rem_combobox)
 
     def load_object_rem():
-        """ Загрузка данных с удаленной БД на локальную """
+        """ Загрузка объектов, исследований и профилей с удаленной БД на локальную """
 
         with get_session() as remote_session:
 
@@ -223,7 +223,7 @@ def open_rem_db_window():
 
 
     def unload_object_rem():
-        """ Выгрузка данных с локальной БД на удаленную """
+        """ Выгрузка объектов, исследований и профилей с локальной БД на удаленную """
 
         with get_session() as remote_session:
 
@@ -320,6 +320,7 @@ def open_rem_db_window():
         set_info(f'Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
     def delete_object_rem():
+        """ Удаление текущего объекта вместе со всеми связанными данными """
         title_object = ui_rdb.comboBox_object_rem.currentText().split(' id')[0]
         object_id = get_object_rem_id()
 
@@ -449,7 +450,7 @@ def open_rem_db_window():
     #####################################################
 
     def update_mlp_rdb_combobox(from_local=False):
-        """Обновить список анализов MLP"""
+        """ Обновление списка анализов MLP """
         with get_session() as remote_session:
             ui_rdb.comboBox_mlp_rdb.clear()
             for i in remote_session.query(AnalysisMLPRDB.id, AnalysisMLPRDB.title).order_by(AnalysisMLPRDB.title).all():
@@ -470,19 +471,21 @@ def open_rem_db_window():
         update_trained_models_class_rdb(from_local=True)
 
     def unload_mlp():
+        """ Запуск выгрузки анализов MLP """
         unload_mlp_func(RemoteDB)
         update_mlp_rdb_combobox(from_local=True)
 
     def get_MLP_rdb_id():
+        """Получение id текущего анализа MLP в удаленной БД"""
         try:
             return int(ui_rdb.comboBox_mlp_rdb.currentText().split('id')[-1])
         except ValueError:
             pass
 
 
-    # Функция для проверки зависимостей MLP
     def check_dependencies():
-        set_info('Проверка наличия всех связанных данных в локальной БД', 'blue')
+        """Проверка наличия связанных данных MarkupMLP в локальной БД"""
+        set_info('Проверка наличия всех связанных данных MarkupMLP в локальной БД', 'blue')
         errors = []
         with get_session() as remote_session:
             remote_analyzes = remote_session.query(AnalysisMLPRDB).filter(AnalysisMLPRDB.id == get_MLP_rdb_id())
@@ -674,6 +677,7 @@ def open_rem_db_window():
 
 
     def delete_mlp_rdb():
+        """Удаление текущего анализа MLP в удаленной БД"""
         title_analysis = ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[0]
         analysis_id = get_MLP_rdb_id()
 
@@ -726,10 +730,11 @@ def open_rem_db_window():
     ui_rdb.checkBox_check_ga_params.setChecked(False)
 
     def start_sync_ga_cls():
+        """ Запуск синхронизации генетического анализа MLP """
         sync_genetic_cls_func(ui_rdb)
 
     def update_trained_models_class_rdb(from_local=False):
-        """ Обновление списка моделей в выпадающем списке """
+        """ Обновление списка моделей MLP в выпадающем списке """
         # Очистка выпадающего списка
         ui_rdb.comboBox_trained_model_rdb.clear()
         with get_session() as remote_session:
@@ -757,6 +762,7 @@ def open_rem_db_window():
     ui_rdb.comboBox_mlp_rdb.currentIndexChanged.connect(update_trained_models_class_rdb)
 
     def start_unload_mlp_model():
+        """ Запуск выгрузки моделей MLP """
         unload_cls_models_func(RemoteDB)
         update_trained_models_class_rdb()
 
@@ -768,6 +774,7 @@ def open_rem_db_window():
             pass
 
     def load_cls_models_func():
+        """Загрузка модели MLP с удаленной БД на локальную"""
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
         model_id = get_trained_model_class_rdb_id()
@@ -854,6 +861,7 @@ def open_rem_db_window():
 
 
     def delete_cls_model_rdb():
+        """ Удаление текущей модели MLP """
         title_model = ui_rdb.comboBox_trained_model_rdb.currentText().split(' id')[0]
         title_analysis = ui_rdb.comboBox_mlp_rdb.currentText().split(' id')[0]
         analysis_id = get_MLP_rdb_id()
@@ -908,16 +916,19 @@ def open_rem_db_window():
 
 
     def unload_regmod():
+        """ Запуск выгрузки регрессионного анализа """
         unload_regmod_func(RemoteDB)
         update_regmod_rdb_combobox(from_local=True)
 
     def get_regmod_rdb_id():
+        """ Получение id текущего регрессионного анализа """
         try:
             return int(ui_rdb.comboBox_regmod_rdb.currentText().split('id')[-1])
         except ValueError:
             pass
 
     def delete_regmod_rdb():
+        """ Удаление текущего регрессионного анализа в удаленной БД (вместе с данными в связанных таблицах) """
         title_analysis = ui_rdb.comboBox_regmod_rdb.currentText().split(' id')[0]
         analysis_id = get_regmod_rdb_id()
 
@@ -962,8 +973,8 @@ def open_rem_db_window():
                     remote_session.rollback()
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
-        # Функция для проверки зависимостей MLP
     def check_reg_dependencies():
+        """ Проверка наличия связанных данных таблицы MarkupReg в локальной БД """
         set_info('Проверка наличия всех связанных данных в локальной БД', 'blue')
         errors = []
         with get_session() as remote_session:
@@ -1032,7 +1043,7 @@ def open_rem_db_window():
         return errors
 
     def load_regmod():
-        """Загрузка таблиц AnalysisReg, MarkupReg с удаленной БД на локальную"""
+        """Загрузка данных таблиц AnalysisReg, MarkupReg с удаленной БД на локальную"""
 
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
@@ -1130,6 +1141,7 @@ def open_rem_db_window():
     ui_rdb.checkBox_check_ga_params_reg.setChecked(False)
 
     def start_sync_ga_reg():
+        """ Запуск синхронизации регрессионного генетического анализа """
         sync_genetic_reg_func(ui_rdb, RemoteDB)
 
     def update_trained_models_reg_rdb(from_local=False):
@@ -1162,17 +1174,19 @@ def open_rem_db_window():
     ui_rdb.comboBox_regmod_rdb.currentIndexChanged.connect(update_trained_models_reg_rdb)
 
     def start_unload_reg_model():
+        """ Запуск выгрузки регрессионной модели """
         unload_reg_models_func(RemoteDB)
         update_trained_models_reg_rdb()
 
     def get_trained_model_reg_rdb_id():
-        """ Получение id выбранного объекта """
+        """ Получение id текущей регрессионной модели в удаленной БД """
         try:
             return int(ui_rdb.comboBox_trained_model_reg_rdb.currentText().split('id')[-1])
         except ValueError:
             pass
 
     def load_reg_models_func():
+        """ Загрузка регрессионной модели """
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
         model_id = get_trained_model_reg_rdb_id()
@@ -1235,7 +1249,7 @@ def open_rem_db_window():
                         )
 
                     else:
-                        info = (f'cls analysis: {remote_analysis_name}\n'
+                        info = (f'reg analysis: {remote_analysis_name}\n'
                                 f'pareto analysis: REMOTE MODEL')
                         new_param_mask = ParameterMask(
                             count_param=len(json.loads(remote_model.mask)),
@@ -1259,6 +1273,7 @@ def open_rem_db_window():
 
 
     def delete_reg_model_rdb():
+        """ Удаление регрессионной модели в удаленной БД """
         title_model = ui_rdb.comboBox_trained_model_reg_rdb.currentText().split(' id')[0]
         title_analysis = ui_rdb.comboBox_regmod_rdb.currentText().split(' id')[0]
         analysis_id = get_regmod_rdb_id()

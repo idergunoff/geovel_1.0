@@ -1,6 +1,7 @@
 # from torch.cuda import graph
 import os.path
 import numpy as np
+import re
 from object import *
 
 
@@ -2899,4 +2900,72 @@ def pluralize(number, word_forms):
 
 def get_list_param_by_mask(mask_id):
     return json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask)
+
+
+def get_unique_parameters_from_mlp():
+    """Получение уникальных значений параметров из таблицы parameter_mlp"""
+    try:
+        # Получаем уникальные значения параметров
+        unique_params = session.query(distinct(ParameterMLP.parameter)).all()
+
+        # Преобразуем результат из списка кортежей в плоский список
+        return [param[0] for param in unique_params if param[0] is not None]
+
+    except Exception as e:
+        print(f"Ошибка при получении параметров: {e}")
+        return []
+
+def natural_sort_key(s):
+    """
+    Ключ для естественной сортировки строк с числами
+    Пример: 'Signal_2' -> ('Signal_', 2)
+    """
+    return [int(text) if text.isdigit() else text.lower()
+            for text in re.split('([0-9]+)', s)]
+
+def universal_expand_parameters(list_param):
+    """ Универсальное преобразование сокращенного списка параметров в полный """
+    expanded_list = []
+
+    for param in list_param:
+        # Параметры распределения/интерполяции/MFCC (distr_*, sep_*, mfcc_*)
+        if any(param.startswith(p) for p in ('distr', 'sep', 'mfcc')):
+            try:
+                p, atr, n = param.split('_')
+                expanded_list.extend(f'{p}_{atr}_{i + 1}' for i in range(int(n)))
+            except (ValueError, IndexError):
+                expanded_list.append(param)
+            continue
+
+        # Параметры сигналов (Signal_*)
+        if param.startswith('Signal_'):
+            try:
+                p, atr = param.split('_')[:2]
+                n = 511 if atr in ('diff', 'Wt') else 512
+                expanded_list.extend(f'{p}_{atr}_{i + 1}'
+                                     for i in range(n))
+            except (ValueError, IndexError):
+                expanded_list.append(param)
+            continue
+
+        # CRL параметры (CRL, CRL_NF)
+        if param.startswith('CRL'):
+            if param.startswith('CRL_NF'):
+                prefix = 'CRL_NF'
+            elif param not in list_param_geovel:
+                prefix = 'CRL'
+            else:
+                expanded_list.append(param)
+                continue
+
+            expanded_list.extend(f'{prefix}_{i + 1}'
+                                 for i in range(512))
+            continue
+
+        # Все остальные параметры
+        expanded_list.append(param)
+
+    expanded_list = list(set(expanded_list))
+
+    return sorted(expanded_list, key=natural_sort_key)
 

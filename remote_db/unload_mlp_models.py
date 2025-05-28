@@ -3,13 +3,14 @@ from models_db.model import *
 from func import *
 
 def get_trained_model_class_id():
-    """ Получение ID текущей выбранной модели """
+    """ Получение ID текущей выбранной модели в локальной БД"""
     current_item = ui.listWidget_trained_model_class.currentItem()
     if current_item is not None:
         return current_item.data(Qt.UserRole)
     return None
 
 def unload_cls_models_func(RemoteDB):
+    """ Выгрузка моделей MLP c локальной БД на удаленную """
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
     model_id = get_trained_model_class_id()
