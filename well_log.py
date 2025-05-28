@@ -3,7 +3,7 @@ import json
 from numba.scripts.generate_lower_listing import description
 
 from func import *
-
+from regression import update_list_reg
 
 
 def show_well_log():
@@ -122,6 +122,54 @@ def show_well_log():
             session.commit()
 
 
+        def create_regression_analysis_by_current_well_log():
+            try:
+                well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+                well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+            except AttributeError:
+                set_info('Выберите каротаж', 'red')
+                return
+
+            if not well_log:
+                set_info('Каротаж не найден', 'red')
+                return
+
+            new_regression_analysis(well_log.curve_name)
+            update_list_reg()
+
+
+
+        def create_regression_analysis_by_all_well_log():
+            for row in range(ui_wl.listWidget_well_log.count()):
+                well_log_id = ui_wl.listWidget_well_log.item(row).text().split(' ID')[-1]
+                well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+                if well_log:
+                    new_regression_analysis(well_log.curve_name)
+            update_list_reg()
+
+
+        def new_regression_analysis(well_log_name):
+            if session.query(AnalysisReg).filter_by(title=well_log_name).first():
+                set_info(f'Анализ {well_log_name} уже существует', 'red')
+                return
+
+            new_regression = AnalysisReg(
+                title=well_log_name
+            )
+            session.add(new_regression)
+            session.commit()
+
+            set_info(f'Анализ {well_log_name} создан', 'green')
+
+
+        def add_current_well_log_to_regression():
+            pass
+
+
+        def add_all_well_log_to_regression():
+            pass
+
+
         def remove_well_log():
             session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
             session.commit()
@@ -166,6 +214,8 @@ def show_well_log():
         ui_wl.listWidget_well_log.currentItemChanged.connect(draw_well_log)
         ui_wl.doubleSpinBox_depth.valueChanged.connect(draw_depth_spinbox)
         ui_wl.doubleSpinBox_interval.valueChanged.connect(draw_depth_spinbox)
+        ui_wl.pushButton_create_an.clicked.connect(create_regression_analysis_by_current_well_log)
+        ui_wl.pushButton_create_all_an.clicked.connect(create_regression_analysis_by_all_well_log)
 
         update_list_well_log()
 
