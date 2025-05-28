@@ -1,9 +1,5 @@
-import json
-
-from numba.scripts.generate_lower_listing import description
-
 from func import *
-from regression import update_list_reg
+from regression import update_list_reg, remove_all_param_geovel_reg, update_list_well_markup_reg
 
 
 def show_well_log():
@@ -164,11 +160,29 @@ def show_well_log():
 
 
         def add_current_well_log_to_regression():
-            pass
+            well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+            well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+
+            analysis_id = get_regmod_id()
+            well_id = well_log.well_id
+            profile_id = get_profile_id()
+            formation_id = get_formation_id()
+
+            if analysis_id and well_id and profile_id and formation_id:
+                remove_all_param_geovel_reg()
+                target_value = get_median_value_from_interval(well_log_id, ui_wl.doubleSpinBox_depth.value(), ui_wl.doubleSpinBox_interval.value())
+
+                add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value)
+
+                update_list_well_markup_reg()
+            else:
+                set_info('выбраны не все параметры - скважина и пласт', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'выберите все параметры для добавления обучающей скважины!')
 
 
         def add_all_well_log_to_regression():
             pass
+
 
         def get_median_value_from_interval(well_log_id, begin, interval):
             well_log = session.query(WellLog).filter_by(id=well_log_id).first()
@@ -221,6 +235,26 @@ def show_well_log():
             ui_wl.label_value.setText(str(median_value))
 
 
+        def add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value):
+            """Добавить новую обучающую скважину для обучения регрессионной модели"""
+
+            well = session.query(Well).filter(Well.id == well_id).first()
+            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == profile_id).first()[0])
+            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == profile_id).first()[0])
+            index, _ = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+            well_dist = ui.spinBox_well_dist_reg.value()
+            start = index - well_dist if index - well_dist > 0 else 0
+            stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
+            list_measure = list(range(start, stop))
+            new_markup_reg = MarkupReg(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id,
+                                       formation_id=formation_id, target_value=target_value,
+                                       list_measure=json.dumps(list_measure))
+            session.add(new_markup_reg)
+            session.commit()
+            set_info(
+                f'Добавлена новая обучающая скважина для регрессионной модели - "{well.name} со значенем '
+                f'{target_value}"', 'green')
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_dir_well_log.clicked.connect(load_well_log_by_dir)
@@ -231,6 +265,8 @@ def show_well_log():
         ui_wl.doubleSpinBox_interval.valueChanged.connect(draw_depth_spinbox)
         ui_wl.pushButton_create_an.clicked.connect(create_regression_analysis_by_current_well_log)
         ui_wl.pushButton_create_all_an.clicked.connect(create_regression_analysis_by_all_well_log)
+        ui_wl.pushButton_add_current.clicked.connect(add_current_well_log_to_regression)
+        ui_wl.pushButton_add_all.clicked.connect(add_all_well_log_to_regression)
 
         update_list_well_log()
 
