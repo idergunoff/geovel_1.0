@@ -124,6 +124,19 @@
             </property>
            </widget>
           </item>
+          <item row="7" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton">
+            <property name="toolTip">
+             <string>Передать среднее значение в target value</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 239, 175);</string>
+            </property>
+            <property name="text">
+             <string>TO TARGET VALUE</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QLabel" name="label_3">
             <property name="text">
@@ -131,7 +144,7 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
+          <item row="6" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_add_all">
             <property name="toolTip">
              <string>Добавить среднее значение в выделенном интервале по всем кривым </string>
@@ -164,7 +177,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_create_an">
             <property name="toolTip">
              <string>Создать анализ</string>
@@ -177,7 +190,7 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
+          <item row="5" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_add_current">
             <property name="toolTip">
              <string>Добавить среднее значение в выделенном интервале по текущей кривой</string>
@@ -190,7 +203,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="4" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_create_all_an">
             <property name="toolTip">
              <string>Создать анализ на всех каротажных кривых</string>
@@ -203,16 +216,32 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton">
-            <property name="toolTip">
-             <string>Передать среднее значение в target value</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 239, 175);</string>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <pointsize>12</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
             </property>
             <property name="text">
-             <string>TO TARGET VALUE</string>
+             <string>Медиана:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="label_value">
+            <property name="font">
+             <font>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>value</string>
             </property>
            </widget>
           </item>
