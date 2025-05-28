@@ -131,6 +131,19 @@
             </property>
            </widget>
           </item>
+          <item row="5" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_add_all">
+            <property name="toolTip">
+             <string>Добавить среднее значение в выделенном интервале по всем кривым </string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(85, 170, 255);</string>
+            </property>
+            <property name="text">
+             <string>ADD ALL</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1">
            <widget class="QDoubleSpinBox" name="doubleSpinBox_interval">
             <property name="decimals">
@@ -153,29 +166,53 @@
           </item>
           <item row="2" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_create_an">
+            <property name="toolTip">
+             <string>Создать анализ</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 197, 155);</string>
+            </property>
             <property name="text">
              <string>CREATE ANALYSIS</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_create_all_an">
-            <property name="text">
-             <string>CREATE ANALYSIS FROM ALL</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="0" colspan="2">
            <widget class="QPushButton" name="pushButton_add_current">
+            <property name="toolTip">
+             <string>Добавить среднее значение в выделенном интервале по текущей кривой</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(134, 197, 255);</string>
+            </property>
             <property name="text">
              <string>ADD CURRENT</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_add_all">
+          <item row="3" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_create_all_an">
+            <property name="toolTip">
+             <string>Создать анализ на всех каротажных кривых</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 170, 127);</string>
+            </property>
             <property name="text">
-             <string>ADD ALL</string>
+             <string>CREATE ANALYSIS FROM ALL</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton">
+            <property name="toolTip">
+             <string>Передать среднее значение в target value</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 239, 175);</string>
+            </property>
+            <property name="text">
+             <string>TO TARGET VALUE</string>
             </property>
            </widget>
           </item>

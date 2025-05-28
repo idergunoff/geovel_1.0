@@ -65,7 +65,7 @@ def show_well_log():
                 ui_wl.widget_graph_well_log.showGrid(x=True, y=True)
                 ui_wl.widget_graph_well_log.invertY(True)
                 ui_wl.widget_graph_well_log.addItem(curve)
-                draw_depth_spinbox()
+                draw_depth_interval_spinboxes()
 
             except Exception as e:
                 print(f"Ошибка при построении графика: {e}")
@@ -133,8 +133,7 @@ def show_well_log():
             session.commit()
             update_list_well_log()
 
-        def draw_depth_spinbox():
-            """ Отслеживаем координаты курсора и отображение на графике сигнала """
+        def draw_depth_interval_spinboxes():
             global hor_line_dep, hor_line_int
 
             # Удаление предыдущих линий при движении мыши
@@ -164,8 +163,8 @@ def show_well_log():
         ui_wl.pushButton_rm_well_log.clicked.connect(remove_well_log)
         ui_wl.pushButton_rm_all_well_db.clicked.connect(remove_all_well_log)
         ui_wl.listWidget_well_log.currentItemChanged.connect(draw_well_log)
-        ui_wl.doubleSpinBox_depth.valueChanged.connect(draw_depth_spinbox)
-        ui_wl.doubleSpinBox_interval.valueChanged.connect(draw_depth_spinbox)
+        ui_wl.doubleSpinBox_depth.valueChanged.connect(draw_depth_interval_spinboxes)
+        ui_wl.doubleSpinBox_interval.valueChanged.connect(draw_depth_interval_spinboxes)
 
         update_list_well_log()
 
