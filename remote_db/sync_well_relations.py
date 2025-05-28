@@ -141,7 +141,7 @@ def load_well_relations():
             # Синхронизация данных скважин (удаленная -> локальная)
             set_info(f'Обновление данных скважин в локальной БД...', 'blue')
             sync_well_relations(remote_session, session, WellRDB, Well, Boundary, WellOptionally, WellLog, batch_size)
-
+            update_list_well()
             set_info(f'Обновление данных скважин в локальной БД завершено', 'blue')
 
     except Exception as e:

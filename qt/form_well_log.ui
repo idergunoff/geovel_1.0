@@ -87,7 +87,7 @@
        </item>
       </layout>
      </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <spacer name="verticalSpacer">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -99,6 +99,90 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item row="1" column="0">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Regression</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="1" column="0">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_depth">
+            <property name="decimals">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <double>10000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
+            </property>
+            <property name="value">
+             <double>100.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Интервал</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_interval">
+            <property name="decimals">
+             <number>1</number>
+            </property>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
+            </property>
+            <property name="value">
+             <double>10.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Глубина </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_create_an">
+            <property name="text">
+             <string>CREATE ANALYSIS</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_create_all_an">
+            <property name="text">
+             <string>CREATE ANALYSIS FROM ALL</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_3">
+            <property name="text">
+             <string>ADD CURRENT</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_4">
+            <property name="text">
+             <string>ADD ALL</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
    </item>

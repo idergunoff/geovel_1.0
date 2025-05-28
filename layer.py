@@ -588,7 +588,6 @@ def filter_layer():
 
 def remove_well():
     w_id = get_well_id()
-    w_name = session.query(Well).filter_by(id=w_id).first().name
     if not w_id:
         set_info('Скважина не выбрана', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
@@ -600,6 +599,6 @@ def remove_well():
             session.query(Boundary).filter_by(well_id=w_id).delete()
             session.query(MarkupMLP).filter_by(well_id=w_id).delete()
             session.query(Well).filter_by(id=w_id).delete()
-            set_info(f'Скважина "{w_name}" удалена', 'green')
+            set_info(f'Скважина id{w_id} удалена', 'green')
         session.commit()
         update_list_well()

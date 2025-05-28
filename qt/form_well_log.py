@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'qt/form_well_log.ui'
+# Form implementation generated from reading ui file '.\qt\form_well_log.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -54,7 +54,46 @@ class Ui_Form_well_log(object):
         self.gridLayout.addWidget(self.checkBox_cp1251, 3, 0, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout_2.addItem(spacerItem, 1, 0, 1, 1)
+        self.gridLayout_2.addItem(spacerItem, 2, 0, 1, 1)
+        self.groupBox = QtWidgets.QGroupBox(Form_well_log)
+        self.groupBox.setObjectName("groupBox")
+        self.gridLayout_4 = QtWidgets.QGridLayout(self.groupBox)
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.gridLayout_5 = QtWidgets.QGridLayout()
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.doubleSpinBox_depth = QtWidgets.QDoubleSpinBox(self.groupBox)
+        self.doubleSpinBox_depth.setDecimals(1)
+        self.doubleSpinBox_depth.setMaximum(10000.0)
+        self.doubleSpinBox_depth.setSingleStep(0.5)
+        self.doubleSpinBox_depth.setProperty("value", 100.0)
+        self.doubleSpinBox_depth.setObjectName("doubleSpinBox_depth")
+        self.gridLayout_5.addWidget(self.doubleSpinBox_depth, 1, 0, 1, 1)
+        self.label_3 = QtWidgets.QLabel(self.groupBox)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout_5.addWidget(self.label_3, 0, 1, 1, 1)
+        self.doubleSpinBox_interval = QtWidgets.QDoubleSpinBox(self.groupBox)
+        self.doubleSpinBox_interval.setDecimals(1)
+        self.doubleSpinBox_interval.setSingleStep(0.5)
+        self.doubleSpinBox_interval.setProperty("value", 10.0)
+        self.doubleSpinBox_interval.setObjectName("doubleSpinBox_interval")
+        self.gridLayout_5.addWidget(self.doubleSpinBox_interval, 1, 1, 1, 1)
+        self.label_2 = QtWidgets.QLabel(self.groupBox)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_5.addWidget(self.label_2, 0, 0, 1, 1)
+        self.pushButton_create_an = QtWidgets.QPushButton(self.groupBox)
+        self.pushButton_create_an.setObjectName("pushButton_create_an")
+        self.gridLayout_5.addWidget(self.pushButton_create_an, 2, 0, 1, 2)
+        self.pushButton_create_all_an = QtWidgets.QPushButton(self.groupBox)
+        self.pushButton_create_all_an.setObjectName("pushButton_create_all_an")
+        self.gridLayout_5.addWidget(self.pushButton_create_all_an, 3, 0, 1, 2)
+        self.pushButton_3 = QtWidgets.QPushButton(self.groupBox)
+        self.pushButton_3.setObjectName("pushButton_3")
+        self.gridLayout_5.addWidget(self.pushButton_3, 4, 0, 1, 2)
+        self.pushButton_4 = QtWidgets.QPushButton(self.groupBox)
+        self.pushButton_4.setObjectName("pushButton_4")
+        self.gridLayout_5.addWidget(self.pushButton_4, 5, 0, 1, 2)
+        self.gridLayout_4.addLayout(self.gridLayout_5, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.groupBox, 1, 0, 1, 1)
         self.gridLayout_3.addLayout(self.gridLayout_2, 1, 1, 1, 1)
 
         self.retranslateUi(Form_well_log)
@@ -70,6 +109,13 @@ class Ui_Form_well_log(object):
         self.pushButton_add_well_log.setText(_translate("Form_well_log", "ADD"))
         self.pushButton_add_dir_well_log.setText(_translate("Form_well_log", "ADD DIR"))
         self.checkBox_cp1251.setText(_translate("Form_well_log", "cp1251"))
+        self.groupBox.setTitle(_translate("Form_well_log", "Regression"))
+        self.label_3.setText(_translate("Form_well_log", "Интервал"))
+        self.label_2.setText(_translate("Form_well_log", "Глубина "))
+        self.pushButton_create_an.setText(_translate("Form_well_log", "CREATE ANALYSIS"))
+        self.pushButton_create_all_an.setText(_translate("Form_well_log", "CREATE ANALYSIS FROM ALL"))
+        self.pushButton_3.setText(_translate("Form_well_log", "ADD CURRENT"))
+        self.pushButton_4.setText(_translate("Form_well_log", "ADD ALL"))
 from pyqtgraph import PlotWidget
 
 
