@@ -448,7 +448,7 @@ def set_updata_false_reg():
         filepath = Path(analysis.data)
         if filepath.exists():
             filepath.unlink()
-    except OSError:
+    except (OSError, TypeError):
         pass
     analysis.up_data = False
     session.commit()

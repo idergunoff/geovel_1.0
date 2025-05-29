@@ -2998,7 +2998,8 @@ def get_median_by_depth(data_list, initial_depth, step, target_depth, interval):
     slice_values = []
     for i, depth in enumerate(depths):
         if start_depth <= depth <= end_depth:
-            slice_values.append(data_list[i])
+            if data_list[i] is not None and not np.isnan(data_list[i]):
+                slice_values.append(data_list[i])
     # Возвращаем медиану среза
     if slice_values:
         return round(np.median(slice_values), 3)

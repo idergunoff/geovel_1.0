@@ -173,6 +173,7 @@ def show_well_log():
                 target_value = get_median_value_from_interval(well_log_id, ui_wl.doubleSpinBox_depth.value(), ui_wl.doubleSpinBox_interval.value())
 
                 add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value)
+                set_info(f'Обучающая скважина {well_log.well.name} добавлена в анализ {well_log.curve_name}', 'green')
 
                 update_list_well_markup_reg()
             else:
@@ -181,7 +182,57 @@ def show_well_log():
 
 
         def add_all_well_log_to_regression():
-            pass
+            list_analysis, list_info = [], []
+
+            for row in range(ui_wl.listWidget_well_log.count()):
+                well_log_id = ui_wl.listWidget_well_log.item(row).text().split(' ID')[-1]
+                well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+
+                if well_log:
+                    reg_analysis = session.query(AnalysisReg).filter_by(title=well_log.curve_name).first()
+
+                    if not reg_analysis:
+                        set_info(f'Анализ {well_log.curve_name} не найден', 'red')
+                        continue
+
+                    analysis_id = reg_analysis.id
+                    well_id = well_log.well_id
+                    profile_id = get_profile_id()
+                    formation_id = get_formation_id()
+
+                    if analysis_id and well_id and profile_id and formation_id:
+                        if session.query(MarkupReg).filter_by(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id, formation_id=formation_id).first():
+                            set_info(f'Обучающая скважина уже добавлена в анализ {well_log.curve_name}', 'red')
+                            continue
+
+                        target_value = get_median_value_from_interval(well_log_id, ui_wl.doubleSpinBox_depth.value(), ui_wl.doubleSpinBox_interval.value())
+                        if not target_value:
+                            set_info(f'Каротаж {well_log.curve_name} не представлен в выбранном интервале', 'red')
+                            continue
+
+                        if target_value < 0:
+                            set_info(f'Отрицательное значение каротажа {well_log.curve_name} в интервале', 'red')
+                            continue
+
+                        list_analysis.append(f'{reg_analysis.title} id{reg_analysis.id}')
+                        list_info.append(f'{well_log.curve_name}: {target_value}')
+                        add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value)
+                        set_info(f'Обучающая скважина {well_log.well.name} добавлена в анализ {well_log.curve_name}', 'green')
+                    else:
+                        set_info('выбраны не все параметры - скважина и пласт', 'red')
+                        QMessageBox.critical(MainWindow, 'Ошибка', 'выберите все параметры для добавления обучающей скважины!')
+                        return
+
+            for i in list_analysis:
+                ui.comboBox_regmod.setCurrentText(i)
+                remove_all_param_geovel_reg()
+                update_list_well_markup_reg()
+
+            well_name = well_log.well.name if well_log else ''
+            set_info(f'Добавлены обучающие скважины {well_name} в {len(list_info)} моделей.', 'blue')
+            for i in list_info:
+                ui.info.append(i)
+
 
 
         def get_median_value_from_interval(well_log_id, begin, interval):
