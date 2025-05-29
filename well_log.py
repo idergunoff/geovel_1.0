@@ -125,10 +125,12 @@ def show_well_log():
                 well_log = session.query(WellLog).filter_by(id=well_log_id).first()
             except AttributeError:
                 set_info('Выберите каротаж', 'red')
+                QMessageBox.critical(WellLogForm, 'Ошибка', 'Необходимо выбрать каротаж!')
                 return
 
             if not well_log:
                 set_info('Каротаж не найден', 'red')
+                QMessageBox.critical(WellLogForm, 'Ошибка', 'Каротаж не найден')
                 return
 
             new_regression_analysis(well_log.curve_name)
@@ -148,6 +150,8 @@ def show_well_log():
         def new_regression_analysis(well_log_name):
             if session.query(AnalysisReg).filter_by(title=well_log_name).first():
                 set_info(f'Анализ {well_log_name} уже существует', 'red')
+                QMessageBox.information(WellLogForm, 'Создание нового анализа', f'Анализ {well_log_name} уже '
+                                                                                f'существует')
                 return
 
             new_regression = AnalysisReg(
@@ -177,8 +181,8 @@ def show_well_log():
 
                 update_list_well_markup_reg()
             else:
-                set_info('выбраны не все параметры - скважина и пласт', 'red')
-                QMessageBox.critical(MainWindow, 'Ошибка', 'выберите все параметры для добавления обучающей скважины!')
+                set_info('Выбраны не все параметры - скважина и пласт', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите все параметры для добавления обучающей скважины!')
 
 
         def add_all_well_log_to_regression():
@@ -235,6 +239,18 @@ def show_well_log():
 
 
 
+        def median_to_target_value():
+            try:
+                well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+                median_value = get_median_value_from_interval(well_log_id, ui_wl.doubleSpinBox_depth.value(), ui_wl.doubleSpinBox_interval.value())
+            except AttributeError:
+                set_info('Выберите каротаж', 'red')
+                QMessageBox.critical(WellLogForm, 'Ошибка', 'Необходимо выбрать каротаж!')
+                return
+
+            ui.doubleSpinBox_target_val.setValue(median_value)
+
+
         def get_median_value_from_interval(well_log_id, begin, interval):
             well_log = session.query(WellLog).filter_by(id=well_log_id).first()
             if not well_log:
@@ -255,10 +271,10 @@ def show_well_log():
             update_list_well_log()
 
         def draw_depth_spinbox():
-            """ Отслеживаем координаты курсора и отображение на графике сигнала """
+            """ Добавление линий глубины и интервала на график """
             global hor_line_dep, hor_line_int
 
-            # Удаление предыдущих линий при движении мыши
+            # Удаление предыдущих линий
             if 'hor_line_dep' in globals():
                 ui_wl.widget_graph_well_log.removeItem(hor_line_dep)
                 ui_wl.widget_graph_well_log.removeItem(hor_line_int)
@@ -318,6 +334,7 @@ def show_well_log():
         ui_wl.pushButton_create_all_an.clicked.connect(create_regression_analysis_by_all_well_log)
         ui_wl.pushButton_add_current.clicked.connect(add_current_well_log_to_regression)
         ui_wl.pushButton_add_all.clicked.connect(add_all_well_log_to_regression)
+        ui_wl.pushButton_to_tar_val.clicked.connect(median_to_target_value)
 
         update_list_well_log()
 
