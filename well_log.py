@@ -173,8 +173,19 @@ def show_well_log():
             formation_id = get_formation_id()
 
             if analysis_id and well_id and profile_id and formation_id:
+                if session.query(MarkupReg).filter_by(analysis_id=analysis_id, well_id=well_id, profile_id=profile_id, formation_id=formation_id).first():
+                    set_info(f'Обучающая скважина уже добавлена в анализ {well_log.curve_name}', 'red')
+                    return
+
                 remove_all_param_geovel_reg()
                 target_value = get_median_value_from_interval(well_log_id, ui_wl.doubleSpinBox_depth.value(), ui_wl.doubleSpinBox_interval.value())
+                if not target_value:
+                    set_info(f'Каротаж {well_log.curve_name} не представлен в выбранном интервале', 'red')
+                    return
+
+                if target_value < 0:
+                    set_info(f'Отрицательное значение каротажа {well_log.curve_name} в интервале', 'red')
+                    return
 
                 add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value)
                 set_info(f'Обучающая скважина {well_log.well.name} добавлена в анализ {well_log.curve_name}', 'green')
