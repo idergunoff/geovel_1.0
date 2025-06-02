@@ -1013,6 +1013,10 @@ class Ui_RegressorForm(object):
         self.pushButton_gen_alg.setStyleSheet("background-color: rgb(153, 193, 241);")
         self.pushButton_gen_alg.setObjectName("pushButton_gen_alg")
         self.gridLayout.addWidget(self.pushButton_gen_alg, 6, 0, 1, 1)
+        self.pushButton_cvw = QtWidgets.QPushButton(RegressorForm)
+        self.pushButton_cvw.setStyleSheet("background-color: rgb(161, 245, 173);")
+        self.pushButton_cvw.setObjectName("pushButton_cvw")
+        self.gridLayout.addWidget(self.pushButton_cvw, 6, 1, 1, 1)
         self.gridLayout_72.addLayout(self.gridLayout, 0, 1, 1, 1)
         self.line_2 = QtWidgets.QFrame(RegressorForm)
         self.line_2.setFrameShape(QtWidgets.QFrame.VLine)
@@ -1245,6 +1249,7 @@ class Ui_RegressorForm(object):
         self.checkBox_stv_lr.setText(_translate("RegressorForm", "LR"))
         self.checkBox_stv_abr.setText(_translate("RegressorForm", "ABR"))
         self.pushButton_gen_alg.setText(_translate("RegressorForm", "GenAlg"))
+        self.pushButton_cvw.setText(_translate("RegressorForm", "CVW"))
 
 
 if __name__ == "__main__":
