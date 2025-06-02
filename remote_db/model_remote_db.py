@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
                         Date, Text, text, literal_column, or_, func, Index, desc, select, update, bindparam, literal)
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload
 
 DATABASE_NAME = 'geovel_local:123qaz456wsx@ovz2.j56960636.0n03n.vps.myjino.ru:49221/geovel_remote'
 
@@ -81,6 +81,7 @@ class WellRDB(BaseRDB):
     y_coord = Column(Float)
     alt = Column(Float)
     well_hash = Column(String)
+    ignore = Column(Boolean)
 
     boundaries = relationship("BoundaryRDB", back_populates="well")
     well_optionally = relationship("WellOptionallyRDB", back_populates="well")

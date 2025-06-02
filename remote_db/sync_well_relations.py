@@ -3,7 +3,7 @@ from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 from sqlalchemy.orm import selectinload
-from remote_db.sync_wells import sync_wells
+from remote_db.sync_wells import sync_wells_func
 
 
 def sync_well_relations(source_session, target_session, source_well_model, target_well_model, target_bound_model, 
@@ -59,7 +59,7 @@ def sync_well_relations(source_session, target_session, source_well_model, targe
                 target_well = target_wells_map.get(source_well.well_hash)
 
                 if not target_well:
-                    sync_wells()
+                    sync_wells_func()
                     set_info(f'Произведена синхронизация скважин, заново запустите синхронизацию данных '
                              f'скважин!!!', 'red')
                     return

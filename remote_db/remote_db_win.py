@@ -1,13 +1,14 @@
 import psycopg2
 from psycopg2 import OperationalError
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtWidgets import QListWidget
 from remote_db.model_remote_db import *
 from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 import hashlib
 import logging
-from remote_db.sync_wells import sync_wells
+from remote_db.sync_wells import sync_wells_func
 from remote_db.sync_well_relations import load_well_relations, unload_well_relations
 from remote_db.sync_formations import load_formations, unload_formations
 from remote_db.sync_objects import sync_objects_direction
@@ -33,12 +34,6 @@ def open_rem_db_window():
     RemoteDB.show()
 
     RemoteDB.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-
-    def calc_count_wells():
-        with get_session() as remote_session:
-            count_wells = remote_session.query(WellRDB).count()
-        ui_rdb.label_wells_count.setText(f'Кол-во скважин: {count_wells}')
-
 
     def get_object_rem_id():
         """ Получение id выбранного объекта """
@@ -1302,17 +1297,142 @@ def open_rem_db_window():
                     remote_session.rollback()
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
+    #####################################################
+    ######################  Wells  ######################
+    #####################################################
+
+    def sync_wells():
+        sync_wells_func()
+        update_list_well_rdb()
+        ui_rdb.label_wells.setText(f'Wells: {ui_rdb.listWidget_wells.count()}')
+
+    def start_unload_well_rel():
+        unload_well_relations()
+        if get_well_id_rdb():
+            show_data_well_rdb()
+            update_boundaries_rdb()
+
+    def update_list_well_rdb():
+        """Обновить виджет списка скважин"""
+        ui_rdb.listWidget_wells.clear()
+        with get_session() as remote_session:
+            wells = remote_session.query(WellRDB).order_by(WellRDB.name).all()
+            inactive_brush = QBrush(QColor(255, 230, 230))  # Заранее создаем кисть
+
+            for w in wells:
+                item = QListWidgetItem(f'скв.№ {w.name} id{w.id}')
+
+                if w.ignore:  # Проверяем флаг ignore
+                    item.setBackground(inactive_brush)
+                    item.setForeground(QColor(150, 150, 150))
+                    item.setToolTip("Неактивная скважина")
+
+                ui_rdb.listWidget_wells.addItem(item)
+
+    def get_well_id_rdb():
+        if ui_rdb.listWidget_wells.currentItem():
+            return ui_rdb.listWidget_wells.currentItem().text().split(' id')[-1]
+
+    def filter_wells():
+        """Фильтрация с подсветкой и автопрокруткой к первому совпадению"""
+        search_text = ui_rdb.lineEdit_well_search.text().lower().strip()
+        first_match = None  # Для хранения первого совпадения
+
+        ui_rdb.listWidget_wells.setUpdatesEnabled(False)
+        try:
+            highlight_brush = QBrush(QColor(230, 255, 230))  # Cветло-зеленый фон
+            default_brush = QBrush(QColor(255, 255, 255))  # Белый фон
+
+            for i in range(ui_rdb.listWidget_wells.count()):
+                item = ui_rdb.listWidget_wells.item(i)
+                item_text = item.text().lower()
+                matches = search_text in item_text if search_text else False
+
+                # Визуальное выделение
+                item.setBackground(highlight_brush if matches else default_brush)
+
+                # Запоминаем первое совпадение
+                if matches and first_match is None:
+                    first_match = item
+
+            # Прокручиваем к первому совпадению
+            if first_match:
+                ui_rdb.listWidget_wells.scrollToItem(
+                    first_match,
+                    QListWidget.PositionAtTop  # Прокрутить чтобы элемент был сверху
+                )
+                ui_rdb.listWidget_wells.setCurrentItem(first_match)  # Опционально: выделить элемент
+        finally:
+            ui_rdb.listWidget_wells.setUpdatesEnabled(True)
+
+    def ignore_activate_well():
+        w_id = get_well_id_rdb()
+        if not w_id:
+            set_info('Скважина не выбрана', 'red')
+            QMessageBox.critical(RemoteDB, 'Ошибка', 'Скважина не выбрана')
+        else:
+            with get_session() as remote_session:
+                well = remote_session.query(WellRDB).filter_by(id=w_id).first()
+                if well.ignore == True:
+                   well.ignore = None
+                   remote_session.commit()
+                   set_info(f'Скважина id{w_id} помечена как активная в удаленной БД', 'blue')
+                else:
+                    well.ignore = True
+                    remote_session.commit()
+                    set_info(f'Скважина id{w_id} помечена как неативная в удаленной БД', 'blue')
+            update_list_well_rdb()
+            ui_rdb.textEdit_wells_data.clear()
+            ui_rdb.listWidget_boundary.clear()
+
+    def show_data_well_rdb():
+        ui_rdb.textEdit_wells_data.clear()
+        with get_session() as remote_session:
+            well = remote_session.query(WellRDB).filter_by(id=get_well_id_rdb()).first()
+            if not well:
+                return
+
+            count_well_log = remote_session.query(WellLogRDB).filter_by(well_id=well.id).count()
+
+            text_content = []
+            if count_well_log > 0:
+                text_content.append(
+                    f'<p style="background-color:#ADFCDF">'
+                    f'<b>Количество каротажных кривых:</b> {count_well_log}</p>'
+                )
+
+            text_content.extend([
+                f'<p><b>Скважина №</b> {well.name}</p>',
+                f'<p><b>X:</b> {well.x_coord}</p>',
+                f'<p><b>Y:</b> {well.y_coord}</p>',
+                f'<p><b>Альтитуда:</b> {well.alt} м.</p>'
+            ])
+
+            for opt in remote_session.query(WellOptionallyRDB).filter_by(well_id=well.id):
+                text_content.append(f'<p><b>{opt.option}:</b> {opt.value}</p>')
+
+            ui_rdb.textEdit_wells_data.setHtml(''.join(text_content))
+
+    def update_boundaries_rdb():
+        ui_rdb.listWidget_boundary.clear()
+        with get_session() as remote_session:
+            boundaries = remote_session.query(BoundaryRDB).filter(BoundaryRDB.well_id == get_well_id_rdb()).order_by(
+                BoundaryRDB.depth).all()
+            for b in boundaries:
+                ui_rdb.listWidget_boundary.addItem(f'{b.title} - {b.depth}m. id{b.id}')
+
+
 
     update_mlp_rdb_combobox()
     update_regmod_rdb_combobox()
+    update_list_well_rdb()
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
     ui_rdb.pushButton_sync_objects.clicked.connect(sync_all_objects)
     ui_rdb.pushButton_sync_wells.clicked.connect(sync_wells)
-    ui_rdb.toolButton_cw.clicked.connect(calc_count_wells)
     ui_rdb.pushButton_load_well_rel.clicked.connect(load_well_relations)
-    ui_rdb.pushButton_unload_well_rel.clicked.connect(unload_well_relations)
+    ui_rdb.pushButton_unload_well_rel.clicked.connect(start_unload_well_rel)
     ui_rdb.pushButton_load_formations.clicked.connect(load_formations)
     ui_rdb.pushButton_unload_formations.clicked.connect(unload_formations)
     ui_rdb.pushButton_unload_mlp.clicked.connect(unload_mlp)
@@ -1329,8 +1449,11 @@ def open_rem_db_window():
     ui_rdb.pushButton_unload_model_reg.clicked.connect(start_unload_reg_model)
     ui_rdb.pushButton_load_model_reg.clicked.connect(load_reg_models_func)
     ui_rdb.pushButton_delete_model_reg_rdb.clicked.connect(delete_reg_model_rdb)
-
-
-    calc_count_wells()
+    ui_rdb.label_wells.setText(f'Wells: {ui_rdb.listWidget_wells.count()}')
+    ui_rdb.pushButton_ignore_well_rdb.clicked.connect(ignore_activate_well)
+    ui_rdb.listWidget_wells.currentItemChanged.connect(show_data_well_rdb)
+    ui_rdb.listWidget_wells.currentItemChanged.connect(update_boundaries_rdb)
+    ui_rdb.lineEdit_well_search.setPlaceholderText("Поиск скважины...")
+    ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
 
     RemoteDB.exec_()

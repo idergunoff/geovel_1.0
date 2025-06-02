@@ -13,27 +13,48 @@ def sync_direction(source_session, target_session, source_model, target_model, b
     :param target_model: Модель таблицы целевой базы данных.
     :param batch_size: Размер пакета для обработки данных.
     """
-    total_wells = source_session.query(source_model).count()
+    # Проверяем наличие поля ignore в модели
+    has_ignore = hasattr(source_model, 'ignore')
+
+    # Базовый запрос без фильтрации
+    base_query = source_session.query(source_model).order_by(source_model.id)
+
+    # Добавляем фильтр по ignore=None если поле существует
+    if has_ignore:
+        base_query = base_query.filter(source_model.ignore == None)
+        total_wells = source_session.query(source_model).filter(source_model.ignore == None).count()
+    else:
+        total_wells = source_session.query(source_model).count()
+
     ui.progressBar.setMaximum((total_wells + batch_size - 1) // batch_size)
     n = 0
     offset = 0
+    ignored_count = 0  # Счетчик пропущенных скважин
 
     while True:
         ui.progressBar.setValue(n)
-        source_well = source_session.query(source_model).order_by(source_model.id).offset(offset).limit(
-            batch_size).all()
+        # Получаем пакет данных с учетом фильтрации
+        source_well = base_query.offset(offset).limit(batch_size).all()
 
         if not source_well:
             break
+
+        # Дополнительная фильтрация на случай, если ignore добавился после первого запроса
+        if has_ignore:
+            source_well = [w for w in source_well if not w.ignore]
+            ignored_count += batch_size - len(source_well)
 
         source_hashes = {w.well_hash: w for w in source_well}
         hash_list = list(source_hashes.keys())
 
         existing = target_session.query(target_model).filter(target_model.well_hash.in_(hash_list)).all()
-
         existing_hashes = {e.well_hash for e in existing}
 
-        new_wells = [w for h, w in source_hashes.items() if h not in existing_hashes]
+        # Создаем список новых скважин для добавления
+        new_wells = [
+            w for w in source_well
+            if w.well_hash not in existing_hashes
+        ]
 
         # Пакетное добавление
         if new_wells:
@@ -55,7 +76,7 @@ def sync_direction(source_session, target_session, source_model, target_model, b
 
         n += 1
 
-def sync_wells():
+def sync_wells_func():
     """Запуск синхронизаци скважин"""
     batch_size=5000
 
