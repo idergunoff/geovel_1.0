@@ -515,6 +515,18 @@ def load_param():
 #         set_info(f'Параметры загружены ({get_object_name()}, {get_profile_name()})', 'green')
 #         update_param_combobox()
 
+def move_profile():
+    if ui.lineEdit_string.text() == '':
+        set_info('Впишите id исследования в строке ввода наверху страницы!', 'red')
+        return
+    try:
+        profile = session.query(Profile).filter_by(id = get_profile_id()).first()
+        profile.research_id = ui.lineEdit_string.text()
+        session.commit()
+        update_profile_combobox()
+    except AttributeError:
+        set_info('Профиль не выбран', 'red')
+
 
 def delete_profile():
     """Удаление профиля"""
