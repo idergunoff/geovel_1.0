@@ -87,7 +87,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>5</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -404,7 +404,7 @@
                  </layout>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,0,1,0,1">
+                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,0,1,1">
                   <item>
                    <widget class="QLabel" name="label_5">
                     <property name="styleSheet">
@@ -442,19 +442,6 @@
                     </property>
                     <property name="text">
                      <string>load</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QToolButton" name="toolButton_move_prof">
-                    <property name="toolTip">
-                     <string>Прикрепить профиль к другому исследованию</string>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 233, 108);</string>
-                    </property>
-                    <property name="text">
-                     <string>move</string>
                     </property>
                    </widget>
                   </item>
@@ -1202,7 +1189,7 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>546</width>
+                       <width>446</width>
                        <height>174</height>
                       </rect>
                      </property>
@@ -5560,7 +5547,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

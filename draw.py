@@ -1229,3 +1229,65 @@ def plot_groups_with_smoothed_hull(df, x='x_coord', y='y_coord', group='obj_titl
     plt.tight_layout()
     plt.show()
 
+
+def plot_graphs_by_group(graphs, names):
+    """
+    Строит набор графиков зависимости x от y для каждого датафрейма
+
+    Parameters:
+    graphs (list): список датафреймов с колонками 'x' и 'y'
+    names (list): список названий для каждого графика
+    """
+    # Проверяем, что количество графиков совпадает с количеством названий
+    if len(graphs) != len(names):
+        raise ValueError("Количество графиков должно совпадать с количеством названий")
+
+    # Определяем количество графиков и размещение подграфиков
+    n_graphs = len(graphs)
+
+    # Вычисляем оптимальное количество строк и столбцов
+    n_cols = int(np.ceil(np.sqrt(n_graphs)))  # корень квадратный, округленный вверх
+    n_rows = int(np.ceil(n_graphs / n_cols))  # количество строк
+
+    # Создаем фигуру с подграфиками
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
+
+    # Если только один график, axes не будет массивом
+    if n_graphs == 1:
+        axes = [axes]
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+
+    # Делаем axes плоским массивом для удобства
+    axes_flat = axes.flatten() if n_graphs > 1 else axes
+
+    # Строим графики
+    for i, (graph, name) in enumerate(zip(graphs, names)):
+        ax = axes_flat[i]
+
+        # Проверяем наличие нужных колонок
+        if 'x' not in graph.columns or 'y' not in graph.columns:
+            raise ValueError(f"Датафрейм {i} должен содержать колонки 'x' и 'y'")
+
+        # Строим график
+        ax.scatter(graph['x'], graph['y'], alpha=0.6, s=20)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_title(name)
+        ax.grid(True, alpha=0.3)
+
+        # Добавляем линию тренда для лучшей визуализации
+        z = np.polyfit(graph['x'], graph['y'], 1)
+        p = np.poly1d(z)
+        ax.plot(graph['x'], p(graph['x']), "r--", alpha=0.8, linewidth=1)
+
+    # Скрываем лишние подграфики, если они есть
+    for i in range(n_graphs, len(axes_flat)):
+        axes_flat[i].set_visible(False)
+
+    # Настраиваем расположение подграфиков
+    plt.tight_layout()
+    plt.show()
+
+
+

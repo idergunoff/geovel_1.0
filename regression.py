@@ -6,7 +6,8 @@ from mlxtend.cluster import Kmeans
 from pandas.core.common import random_state
 from scipy.cluster.vq import kmeans
 
-from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_groups_with_smoothed_hull
+from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_groups_with_smoothed_hull, \
+    plot_graphs_by_group
 from func import *
 from build_table import *
 from krige import draw_map
@@ -2193,6 +2194,7 @@ def train_regression_model():
         group_order = []
         group_sizes = []
         group_r2 = []
+        graphs = []
         all_list = []
 
         ui.progressBar.setMaximum(len(set(list(groups))))
@@ -2210,32 +2212,16 @@ def train_regression_model():
             y_pred = pipe.predict(training_sample[test_idx])
             score = pipe.score(training_sample[test_idx], markup[test_idx])
             r2 = r2_score(markup[test_idx], y_pred)
-            # scores.append(score)
+
+            for_graph = pd.DataFrame({'x': markup[test_idx], 'y': y_pred})
 
             test_group = np.unique(groups[test_idx])[0]
-            # group_order.append(test_group)
 
             group_size = int(len(test_idx)/10) if len(test_idx)%10 == 0 else int(len(test_idx)/10) + 1
-            # group_sizes.append(group_size)
 
-            # # Подсчёт классов
-            # classes = list(set(list(markup)))
-            # y_test = markup[test_idx]
-            # counter = Counter(y_test)
-            # count_0 = counter.get(classes[0], 0)
-            # count_1 = counter.get(classes[1], 0)
-            # total = count_0 + count_1
-            #
-            # if total == 0:
-            #     ratio_str = "0.00/0.00"
-            # else:
-            #     perc_0 = count_0 / total
-            #     perc_1 = count_1 / total
-            #     ratio_str = f"{perc_0:.2f}/{perc_1:.2f}"
 
-            all_list.append([score, test_group, group_size, r2])
+            all_list.append([score, test_group, group_size, r2, for_graph])
 
-            # class_ratios.append(ratio_str)
             finish_time = datetime.datetime.now()
             inter_time = finish_time - start_time
             set_info(f'Качество "{test_group}": {score}. Время выполнения: {inter_time}, осталось: {(len(set(list(groups))) - n_progress) * inter_time}', 'blue')
@@ -2250,6 +2236,7 @@ def train_regression_model():
             group_order.append(i[1])
             group_sizes.append(i[2])
             group_r2.append(i[3])
+            graphs.append(i[4])
 
 
         # Создаём словарь: group -> score
@@ -2281,6 +2268,85 @@ def train_regression_model():
         plt.show()
 
         plot_groups_with_smoothed_hull(data_train_cov)
+        plot_graphs_by_group(graphs, group_order)
+
+    def calc_model_regression_by_cvw():
+        """ Кросс-валидация по скважинам """
+        nonlocal list_param_reg
+
+        if ui_r.checkBox_mask_param.isChecked():
+            list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
+
+        training_sample = np.array(data_train[list_param_reg].values.tolist())
+
+        # Нормализация данных
+        text_scaler = ''
+
+        pipe_steps = []
+        if ui_r.checkBox_stdscaler_reg.isChecked():
+            std_scaler = StandardScaler()
+            pipe_steps.append(('scaler', std_scaler))
+            text_scaler += '\nStandardScaler'
+        if ui_r.checkBox_robscaler_reg.isChecked():
+            robust_scaler = RobustScaler()
+            pipe_steps.append(('scaler', robust_scaler))
+            text_scaler += '\nRobustScaler'
+        if ui_r.checkBox_mnmxscaler_reg.isChecked():
+            minmax_scaler = MinMaxScaler()
+            pipe_steps.append(('scaler', minmax_scaler))
+            text_scaler += '\nMinMaxScaler'
+        if ui_r.checkBox_mxabsscaler_reg.isChecked():
+            maxabs_scaler = MaxAbsScaler()
+            pipe_steps.append(('scaler', maxabs_scaler))
+            text_scaler += '\nMaxAbsScaler'
+
+        if ui_r.checkBox_pca.isChecked():
+            n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
+            pca = PCA(n_components=n_comp, random_state=0)
+            pipe_steps.append(('pca', pca))
+        text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
+
+        model_name = ui_r.buttonGroup.checkedButton().text()
+        model_class, text_model = choice_model_regressor(model_name, training_sample)
+
+        text_model += text_scaler
+        text_model += text_pca
+
+        pipe_steps.append(('model', model_class))
+        pipe = Pipeline(pipe_steps)
+
+
+        list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
+        data_train_by_well = data_train.copy()
+        data_train_by_well['well_id'] = list_well
+
+        list_cvw = split_list_cvw(list_well, 5)
+
+        list_accuracy = []
+
+        ui.progressBar.setMaximum(len(list_cvw))
+        for n_cv, lcvw in enumerate(list_cvw):
+            ui.progressBar.setValue(n_cv + 1)
+
+            cvw_row, cvw_col = n_cv // 3, n_cv % 3
+
+            data_test_well = data_train_by_well[data_train_by_well['well_id'].isin(lcvw)]
+            data_train_well = data_train_by_well[~data_train_by_well['well_id'].isin(lcvw)]
+
+            training_sample_train = np.array(data_train_well[list_param_reg].values.tolist())
+            training_sample_test = np.array(data_test_well[list_param_reg].values.tolist())
+            markup_train = np.array(sum(data_train_well[['target_value']].values.tolist(), []))
+            markup_test = np.array(sum(data_test_well[['target_value']].values.tolist(), []))
+
+            pipe.fit(training_sample_train, markup_train)
+
+            # Оценка точности на всей обучающей выборке
+            test_accuracy = pipe.score(training_sample_test, markup_test)
+
+            list_accuracy.append(test_accuracy)
+
+        plt.bar(range(5), list_accuracy)
+        plt.show()
 
 
     def calc_lof():
@@ -3260,6 +3326,7 @@ def train_regression_model():
     ui_r.pushButton_feature_selection.clicked.connect(call_feature_selection)
     ui_r.pushButton_cov.clicked.connect(calc_cov)
     ui_r.pushButton_gen_alg.clicked.connect(genetic_algorithm)
+    ui_r.pushButton_cvw.clicked.connect(calc_model_regression_by_cvw)
     Regressor.exec_()
 
 
@@ -3794,6 +3861,40 @@ def copy_regmod():
     session.add(new_regmod)
     session.commit()
     for old_markup in session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()):
+        new_markup = MarkupReg(
+            analysis_id=new_regmod.id,
+            well_id=old_markup.well_id,
+            profile_id=old_markup.profile_id,
+            formation_id=old_markup.formation_id,
+            target_value=old_markup.target_value,
+            list_measure=old_markup.list_measure,
+            type_markup=old_markup.type_markup
+        )
+        session.add(new_markup)
+    session.commit()
+    update_list_reg()
+    set_info(f'Скопирован набор для регрессионного анализа - "{old_regmod.title}"', 'green')
+
+
+def copy_regmod_by_except():
+    if ui.lineEdit_string.text() == '':
+        set_info('Введите ID анализа для проверки наличия в нем скважин', 'red')
+        return
+    old_regmod = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+    check_regmod = session.query(AnalysisReg).filter_by(id=int(ui.lineEdit_string.text())).first()
+    if not check_regmod:
+        set_info('Нет анализа с таким ID для проверки', 'red')
+        return
+    new_regmod = AnalysisReg(title=f'{old_regmod.title}_check_by_ID{ui.lineEdit_string.text()}')
+    session.add(new_regmod)
+    session.commit()
+    for old_markup in session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()):
+        if not session.query(MarkupReg).filter_by(
+                analysis_id=check_regmod.id,
+                well_id=old_markup.well_id,
+                profile_id=old_markup.profile_id
+        ).first():
+            continue
         new_markup = MarkupReg(
             analysis_id=new_regmod.id,
             well_id=old_markup.well_id,
