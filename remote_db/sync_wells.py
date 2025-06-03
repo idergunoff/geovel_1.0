@@ -29,7 +29,6 @@ def sync_direction(source_session, target_session, source_model, target_model, b
     ui.progressBar.setMaximum((total_wells + batch_size - 1) // batch_size)
     n = 0
     offset = 0
-    ignored_count = 0  # Счетчик пропущенных скважин
 
     while True:
         ui.progressBar.setValue(n)
@@ -42,7 +41,6 @@ def sync_direction(source_session, target_session, source_model, target_model, b
         # Дополнительная фильтрация на случай, если ignore добавился после первого запроса
         if has_ignore:
             source_well = [w for w in source_well if not w.ignore]
-            ignored_count += batch_size - len(source_well)
 
         source_hashes = {w.well_hash: w for w in source_well}
         hash_list = list(source_hashes.keys())
