@@ -87,7 +87,7 @@
              <enum>QTabWidget::Triangular</enum>
             </property>
             <property name="currentIndex">
-             <number>5</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
@@ -404,7 +404,7 @@
                  </layout>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,0,1,1">
+                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,9,0,1,0,1">
                   <item>
                    <widget class="QLabel" name="label_5">
                     <property name="styleSheet">
@@ -442,6 +442,16 @@
                     </property>
                     <property name="text">
                      <string>load</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QToolButton" name="toolButton_move_prof">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(235, 234, 129);</string>
+                    </property>
+                    <property name="text">
+                     <string>move</string>
                     </property>
                    </widget>
                   </item>
@@ -1189,8 +1199,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>446</width>
-                       <height>174</height>
+                       <width>544</width>
+                       <height>170</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4609,10 +4619,13 @@ Therm</string>
                   </item>
                   <item row="1" column="0">
                    <layout class="QGridLayout" name="gridLayout_71">
-                    <item row="0" column="1">
-                     <widget class="QLabel" name="label_19">
+                    <item row="1" column="3">
+                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
                       <property name="text">
-                       <string>Target variable:</string>
+                       <string>add_all_well</string>
                       </property>
                      </widget>
                     </item>
@@ -4626,7 +4639,7 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QDoubleSpinBox" name="doubleSpinBox_target_val">
                       <property name="decimals">
                        <number>3</number>
@@ -4636,13 +4649,10 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="1" column="2">
-                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
+                    <item row="0" column="1">
+                     <widget class="QLabel" name="label_19">
                       <property name="text">
-                       <string>add_all_well</string>
+                       <string>Target variable:</string>
                       </property>
                      </widget>
                     </item>
@@ -4695,6 +4705,13 @@ Therm</string>
                        </widget>
                       </item>
                      </layout>
+                    </item>
+                    <item row="1" column="2">
+                     <widget class="QPushButton" name="pushButton_copy_by_except">
+                      <property name="text">
+                       <string>copy by except</string>
+                      </property>
+                     </widget>
                     </item>
                    </layout>
                   </item>
@@ -5526,7 +5543,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
