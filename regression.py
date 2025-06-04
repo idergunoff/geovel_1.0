@@ -4374,8 +4374,8 @@ def get_feature_importance_reg():
 def markup_to_excel_reg():
     """ Сохранение результатов анализа в файл Excel """
 
-    list_col = ['целевое значение', 'объект', 'профиль', 'интервал', 'измерения', 'выбросы', 'скважина',
-                'альтитуда', 'удаленность', 'X', 'Y', 'Примечание']
+    list_col = ['Целевое значение', 'Объект', 'Профиль', 'Интервал', 'Измерения', 'Выбросы', 'Скважина',
+                'Альтитуда', 'Удаленность', 'X', 'Y', 'Примечание']
     analisis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
     pd_markup = pd.DataFrame(columns=list_col)
     ui.progressBar.setMaximum(len(analisis.markups))
@@ -4383,27 +4383,85 @@ def markup_to_excel_reg():
     for mrp in analisis.markups:
         ui.progressBar.setValue(n)
         mrp_dict = dict()
-        mrp_dict['целевое значение'] = mrp.target_value
-        mrp_dict['объект'] = f'{mrp.profile.research.object.title}_{mrp.profile.research.date_research.year}'
-        mrp_dict['профиль'] = mrp.profile.title
-        mrp_dict['интервал'] = mrp.formation.title
-        mrp_dict['измерения'] = mrp.list_measure
-        mrp_dict['выбросы'] = mrp.list_fake
-        mrp_dict['скважина'] = mrp.well.name
-        mrp_dict['альтитуда'] = mrp.well.alt
+        mrp_dict['Целевое значение'] = mrp.target_value
+        mrp_dict['Объект'] = f'{mrp.profile.research.object.title}_{mrp.profile.research.date_research.year}'
+        mrp_dict['Профиль'] = mrp.profile.title
+        mrp_dict['Интервал'] = mrp.formation.title
+        mrp_dict['Измерения'] = mrp.list_measure
+        mrp_dict['Выбросы'] = mrp.list_fake
+        mrp_dict['Скважина'] = mrp.well.name
+        mrp_dict['Альтитуда'] = mrp.well.alt
         mrp_dict['X'] = mrp.well.x_coord
         mrp_dict['Y'] = mrp.well.y_coord
-        mrp_dict['удаленность'] = closest_point(mrp.well.x_coord, mrp.well.y_coord, json.loads(mrp.profile.x_pulc), json.loads(mrp.profile.y_pulc))[1]
+        mrp_dict['Удаленность'] = closest_point(mrp.well.x_coord, mrp.well.y_coord, json.loads(mrp.profile.x_pulc),
+                                                json.loads(mrp.profile.y_pulc))[1]
         list_opt = []
         for opt in mrp.well.well_optionally:
             list_opt.append(f'{opt.option} - {opt.value}')
-        mrp_dict['Примечание'] = " ;".join(list_opt)
+        mrp_dict['Примечание'] = "\n".join(list_opt)
 
         pd_markup = pd.concat([pd_markup, pd.DataFrame(data=mrp_dict, columns=list_col, index=[0])], axis = 0, ignore_index=True)
         n += 1
 
-    file_name = QFileDialog.getSaveFileName()[0]
-    if file_name:
-        pd_markup.to_excel(file_name, index=False)
+    file_name = QFileDialog.getSaveFileName(
+        None,
+        "Сохранить результаты анализа",
+        "",
+        "Excel Files (*.xlsx)"
+    )[0]
+    if not file_name:
+        return
+    # Добавляем .xlsx, если его нет в конце
+    if not file_name.lower().endswith('.xlsx'):
+        file_name += '.xlsx'
+    pd_markup.to_excel(file_name, index=False)
+
+    # Сохранение с фиксированной шириной столбцов
+    with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
+        pd_markup.to_excel(writer, index=False, sheet_name='Результаты анализа')
+
+        workbook = writer.book
+        worksheet = writer.sheets['Результаты анализа']
+
+        # Создаем форматы
+        header_format = workbook.add_format({
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+
+        cell_format = workbook.add_format({
+            'text_wrap': True,
+            'align': 'left',
+            'valign': 'vcenter'
+        })
+
+        # Устанавливаем фиксированную ширину для всех столбцов (в символах)
+        column_widths = {
+            'Целевое значение': 18,
+            'Объект': 18,
+            'Профиль': 15,
+            'Интревал': 20,
+            'Измерения': 30,
+            'Выбросы': 10,
+            'Скважина': 10,
+            'Альтитуда': 12,
+            'Удаленность': 12,
+            'X': 10,
+            'Y': 10,
+            'Примечание': 40
+        }
+
+        # Применяем к заголовкам
+        worksheet.set_row(0, None, header_format)
+
+        # Применяем ширину и формат
+        for idx, col_name in enumerate(pd_markup.columns):
+            worksheet.set_column(
+                idx, idx,
+                width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
+                cell_format=cell_format
+            )
 
 

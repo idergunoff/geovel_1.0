@@ -414,11 +414,12 @@ def draw_bound_int():
 
 
 def profile_wells_to_Excel():
-
+    """Формирование таблицы Excel для профилей и скважин текущего объекта"""
     list_col = ['Объект', 'Профиль', 'Скважина', 'Расстояние', 'Кол-во каротажей', 'Данные скважины']
 
     object = session.query(GeoradarObject).filter_by(id=get_object_id()).first()
     pd_profile_wells = pd.DataFrame(columns=list_col)
+    set_info('Начало создания таблицы профилей и скважин для текущего объекта...', 'blue')
     for research in object.researches:
         ui.progressBar.setMaximum(len(research.profiles))
         for n, profile in enumerate(research.profiles):
@@ -440,6 +441,8 @@ def profile_wells_to_Excel():
                 pd_profile_wells = pd.concat([pd_profile_wells, pd.DataFrame(data=well_dict, columns=list_col,
                                                                              index=[0])], axis=0, ignore_index=True)
 
+    set_info('Создание таблицы профилей и скважин для текущего объекта завершено', 'blue')
+
     file_name = QFileDialog.getSaveFileName(
         None,
         "Сохранить данные профилей и скважин",
@@ -459,9 +462,6 @@ def profile_wells_to_Excel():
 
         workbook = writer.book
         worksheet = writer.sheets['Данные']
-
-        # Формат с переносом строк
-        wrap_format = workbook.add_format({'text_wrap': True})
 
         # Создаем форматы
         header_format = workbook.add_format({
@@ -492,6 +492,100 @@ def profile_wells_to_Excel():
 
         # Применяем ширину и формат
         for idx, col_name in enumerate(pd_profile_wells.columns):
+            worksheet.set_column(
+                idx, idx,
+                width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
+                cell_format=cell_format
+            )
+
+
+def all_profile_wells_to_Excel():
+    """Формирование таблицы Excel для профилей и скважин всех объектов"""
+    columns = ['Объект', 'Профиль', 'Скважина', 'Расстояние', 'Кол-во каротажей', 'Данные скважины']
+    records = []
+    objects = session.query(GeoradarObject).all()
+    set_info('Начало создания таблицы профилей и скважин для всех объектов...', 'blue')
+    for obj in objects:
+        for research in tqdm(obj.researches, desc=f'Формирование строк для объекта "{obj.title}"'):
+            ui.progressBar.setMaximum(len(research.profiles))
+            for n, profile in enumerate(research.profiles):
+                ui.progressBar.setValue(n + 1)
+                wells = get_list_nearest_well(profile.id)
+                if not wells:
+                    continue
+                for well in wells:
+                    well_data = []
+                    well_obj = well[0]
+
+                    # Основные данные
+                    well_data.append(f"{obj.title}\n\n{research.date_research}")
+                    well_data.append(profile.title)
+                    well_data.append(well_obj.name)
+                    well_data.append(round(well[2], 2))
+                    well_data.append(len(well_obj.well_logs))
+
+                    # Данные скважины
+                    well_info = f"X: {well_obj.x_coord}\nY: {well_obj.y_coord}\nАльтитуда: {well_obj.alt}"
+                    for opt in session.query(WellOptionally).filter_by(well_id=well_obj.id):
+                        well_info += f"\n{opt.option}: {opt.value}"
+
+                    well_data.append(well_info)
+                    records.append(well_data)
+
+        set_info(f'Сформированы строки для объекта "{obj.title}"', 'green')
+
+    df_profile_wells = pd.DataFrame(records, columns=columns)
+
+    set_info('Создание таблицы профилей и скважин для всех объектов завершено', 'blue')
+
+    file_name = QFileDialog.getSaveFileName(
+        None,
+        "Сохранить данные профилей и скважин",
+        "",
+        "Excel Files (*.xlsx)"
+    )[0]
+    if not file_name:
+        return
+    # Добавляем .xlsx, если его нет в конце
+    if not file_name.lower().endswith('.xlsx'):
+        file_name += '.xlsx'
+
+    # Сохранение с фиксированной шириной столбцов
+    with pd.ExcelWriter(file_name, engine='xlsxwriter') as writer:
+        df_profile_wells.to_excel(writer, index=False, sheet_name='Данные')
+
+        workbook = writer.book
+        worksheet = writer.sheets['Данные']
+
+        # Создаем форматы
+        header_format = workbook.add_format({
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+
+        cell_format = workbook.add_format({
+            'text_wrap': True,
+            'align': 'left',
+            'valign': 'vcenter'
+        })
+
+        # Устанавливаем фиксированную ширину для всех столбцов (в символах)
+        column_widths = {
+            'Объект': 15,
+            'Профиль': 15,
+            'Скважина': 12,
+            'Расстояние': 12,
+            'Кол-во каротажей': 17,
+            'Данные скважины': 40
+        }
+
+        # Применяем к заголовкам
+        worksheet.set_row(0, None, header_format)
+
+        # Применяем ширину и формат
+        for idx, col_name in enumerate(df_profile_wells.columns):
             worksheet.set_column(
                 idx, idx,
                 width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
