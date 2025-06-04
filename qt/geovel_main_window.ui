@@ -1018,6 +1018,75 @@
                 </property>
                </widget>
               </item>
+              <item row="23" column="0">
+               <layout class="QGridLayout" name="gridLayout_26">
+                <item row="0" column="1">
+                 <widget class="QSpinBox" name="spinBox_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>1000</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>20</number>
+                  </property>
+                  <property name="value">
+                   <number>450</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин в таблице Excel</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(204, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="text">
+                   <string>Save Image</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <spacer name="horizontalSpacer_3">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save all well</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="tab_4">
@@ -1199,7 +1268,7 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>544</width>
+                       <width>450</width>
                        <height>170</height>
                       </rect>
                      </property>
@@ -1679,19 +1748,6 @@
                   </property>
                   <property name="text">
                    <string>draw deep prof</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин в таблице Excel</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(204, 188, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save to Excel</string>
                   </property>
                  </widget>
                 </item>
@@ -5353,35 +5409,6 @@ Therm</string>
             </property>
             <property name="value">
              <number>42</number>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_save_img">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(153, 193, 241);</string>
-            </property>
-            <property name="text">
-             <string>Save Image</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QSpinBox" name="spinBox_save_img">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(153, 193, 241);</string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="singleStep">
-             <number>20</number>
-            </property>
-            <property name="value">
-             <number>450</number>
             </property>
            </widget>
           </item>
