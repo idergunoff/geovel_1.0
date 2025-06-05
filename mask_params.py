@@ -17,6 +17,9 @@ def mask_param_form():
     MaskParam.show()
     MaskParam.setAttribute(Qt.WA_DeleteOnClose)
 
+    m_width, m_height = get_width_height_monitor()
+    MaskParam.resize(int(m_width/1.5), int(m_height/1.5))
+
     # Загрузка масок
     ui_mp.listWidget_masks.clear()
     for mask in session.query(ParameterMask).all():

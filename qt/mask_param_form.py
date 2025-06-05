@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\qt\mask_param_form.ui'
+# Form implementation generated from reading ui file 'qt/mask_param_form.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
 #
@@ -76,7 +76,8 @@ class Ui_MaskParamForm(object):
         self.verticalLayout_table_mp.setObjectName("verticalLayout_table_mp")
         self.gridLayout_8.addLayout(self.verticalLayout_table_mp, 0, 0, 1, 1)
         self.gridLayout_9.addLayout(self.gridLayout_8, 0, 0, 1, 1)
-        self.gridLayout_9.setRowStretch(0, 4)
+        self.gridLayout_9.setRowStretch(0, 3)
+        self.gridLayout_9.setRowStretch(2, 2)
         self.gridLayout_10.addLayout(self.gridLayout_9, 0, 0, 1, 1)
 
         self.retranslateUi(MaskParamForm)
