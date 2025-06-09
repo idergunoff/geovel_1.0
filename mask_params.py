@@ -1,6 +1,6 @@
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtWidgets import QTableView
+from PyQt5.QtWidgets import QTableView, QPushButton
 from func import *
 from qt.mask_param_form import *
 from qt.mask_info_form import *
@@ -162,6 +162,33 @@ def mask_param_form():
             session.commit()
             # Обновляем отображение в списке масок
             selected_items[0].setText(f'{selected_mask.count_param} id{selected_mask.id}')
+
+            # Получаем текущую таблицу
+            table = ui_mp.verticalLayout_table_mp.itemAt(0).widget()
+
+            if table and table.objectName() == "maskParamsTable":
+                # Находим столбец с текущей маской
+                mask_header = f"{selected_mask.count_param} id{selected_mask.id}"
+                col = -1
+                for i in range(table.columnCount()):
+                    if table.horizontalHeaderItem(i).text().endswith(f"id{selected_mask.id}"):
+                        col = i
+                        break
+
+                if col >= 0:
+                    # Обновляем заголовок столбца
+                    table.horizontalHeaderItem(col).setText(mask_header)
+
+                    # Обновляем все ячейки в столбце
+                    for row in range(table.rowCount()):
+                        param_name = table.verticalHeaderItem(row).text()
+                        is_included = param_name in checked_parameters
+
+                        item = table.item(row, col)
+                        if item:
+                            item.setBackground(QColor('#ABF37F') if is_included else QColor('#FF8080'))
+                            item.setToolTip("Включен" if is_included else "Не включен")
+
             info = f"Маска id{selected_mask.id} успешно обновлена"
             set_info(info, 'green')
             QMessageBox.information(MaskParam, 'Сохранение изменений', info)
@@ -201,6 +228,35 @@ def mask_param_form():
             # Делаем новую маску текущей выбранной
             ui_mp.listWidget_masks.setCurrentItem(item)
             ui_mp.listWidget_masks.scrollToItem(item)  # Прокручиваем список к новой маске
+
+            # Получаем текущую таблицу
+            table = ui_mp.verticalLayout_table_mp.itemAt(0).widget()
+
+            if table and table.objectName() == "maskParamsTable":
+                # Добавляем новый столбец
+                col_position = table.columnCount()
+                table.insertColumn(col_position)
+
+                # Устанавливаем заголовок
+                table.setHorizontalHeaderItem(col_position,
+                                              QTableWidgetItem(f'{new_mask.count_param} id{new_mask.id}'))
+
+                # Заполняем ячейки нового столбца
+                for row in range(table.rowCount()):
+                    param_name = table.verticalHeaderItem(row).text()
+                    is_included = param_name in checked_parameters
+
+                    item = QTableWidgetItem()
+                    item.setBackground(QColor('#ABF37F') if is_included else QColor('#FF8080'))
+                    item.setToolTip("Включен" if is_included else "Не включен")
+                    item.setData(Qt.UserRole, (row, col_position,
+                                               f'{new_mask.count_param} id{new_mask.id}', param_name))
+                    table.setItem(row, col_position, item)
+
+                table.resizeColumnsToContents()
+            else:
+                # Если таблица не найдена, создаем заново
+                table_mask_params()
 
             # Принудительно вызываем обработчик выбора
             QTimer.singleShot(100, lambda: on_mask_selected())
@@ -250,9 +306,24 @@ def mask_param_form():
                     session.query(ParameterMask).filter(ParameterMask.id == selected_mask.id).delete()
                     session.commit()
 
-                    # Удаляем из списка в UI
+                    # Удаляем из списка
                     row = ui_mp.listWidget_masks.row(selected_items[0])
                     ui_mp.listWidget_masks.takeItem(row)
+
+                    #  Удаляем маску в таблице
+                    table = ui_mp.verticalLayout_table_mp.itemAt(0).widget()  # Получаем таблицу
+                    if table and table.objectName() == "maskParamsTable":
+                        mask_header = f"{selected_mask.count_param} id{selected_mask.id}"
+                        try:
+                            col = -1
+                            for i in range(table.columnCount()):
+                                if table.horizontalHeaderItem(i).text() == mask_header:
+                                    col = i
+                                    break
+                            if col >= 0:
+                                table.removeColumn(col)
+                        except:
+                            table_mask_params()  # Если что-то пошло не так, пересоздаем таблицу полностью
 
                     info = 'Маска успешно удалена'
                     QMessageBox.information(MaskParam, 'Удаление маски', info)
@@ -264,8 +335,8 @@ def mask_param_form():
                     QMessageBox.critical(MaskParam, 'Удаление маски', info)
 
     def table_mask_params():
-        """ Таблица зависимостей масок и параметров """
-        # Очищаем существующий layout перед добавлением новой таблицы
+        """Таблица зависимостей масок и параметров с возможностью множественного выделения"""
+        # Очищаем предыдущую таблицу
         while ui_mp.verticalLayout_table_mp.count():
             item = ui_mp.verticalLayout_table_mp.takeAt(0)
             if item.widget():
@@ -273,9 +344,10 @@ def mask_param_form():
 
         # Создаем DataFrame
         data = []
+        masks = session.query(ParameterMask).all()
+
         for param in list_param:
             row_data = {'parameter': param}
-            masks = session.query(ParameterMask).all()
             for mask in masks:
                 mask_params = json.loads(mask.mask.replace("'", '"')) if mask.mask else []
                 row_data[f'{mask.count_param} id{mask.id}'] = param in mask_params
@@ -286,26 +358,96 @@ def mask_param_form():
 
         # Создаем QTableWidget
         table = QTableWidget(df.shape[0], df.shape[1])
+        table.setObjectName("maskParamsTable")
 
         # Устанавливаем заголовки
-        table.setHorizontalHeaderLabels(df.columns)  # Маски
-        table.setVerticalHeaderLabels(df.index)  # Параметры
+        table.setHorizontalHeaderLabels(df.columns)
+        table.setVerticalHeaderLabels(df.index)
 
-        # Заполняем цветными ячейками
+        # Заполняем таблицу
         for row in range(df.shape[0]):
             for col in range(df.shape[1]):
                 val = df.iat[row, col]
                 item = QTableWidgetItem()
                 item.setBackground(QColor('#ABF37F') if val else QColor('#FF8080'))
-                item.setToolTip("включен" if val else "не включен")
+                item.setToolTip("Включен" if val else "Не включен")
+                item.setData(Qt.UserRole,
+                             (row, col, df.columns[col], df.index[row]))  # Добавляем информацию о маске и параметре
                 table.setItem(row, col, item)
+
+        # Включаем множественное выделение
+        table.setSelectionMode(QTableWidget.MultiSelection)
+
+        def table_selection(enable):
+            selected_items = table.selectedItems()
+            if not selected_items:
+                info = 'Не выбраны ячейки в таблице!'
+                set_info(info, 'red')
+                QMessageBox.critical(MaskParam, 'Ошибка', info)
+                return
+
+            # Группируем изменения по маскам
+            mask_changes = {}
+
+            for item in selected_items:
+                row, col, mask_header, param_name = item.data(Qt.UserRole)
+                mask_id = int(mask_header.split('id')[-1])
+
+                if mask_id not in mask_changes:
+                    mask_changes[mask_id] = {
+                        'mask_obj': session.query(ParameterMask).get(mask_id),
+                        'params': set(),
+                        'col': col
+                    }
+                mask_changes[mask_id]['params'].add((param_name, enable))
+
+            # Применяем изменения
+            for mask_id, data in mask_changes.items():
+                if not data['mask_obj']:
+                    continue
+
+                mask = data['mask_obj']
+                mask_params = json.loads(mask.mask.replace("'", '"')) if mask.mask else []
+
+                for param_name, new_state in data['params']:
+                    if new_state and param_name not in mask_params:
+                        mask_params.append(param_name)
+                    elif not new_state and param_name in mask_params:
+                        mask_params.remove(param_name)
+
+                    # Обновляем цвет ячейки
+                    row = df.index.get_loc(param_name)
+                    table.item(row, data['col']).setBackground(
+                        QColor('#ABF37F') if new_state else QColor('#FF8080')
+                    )
+                    table.item(row, data['col']).setToolTip("Включен" if new_state else "Не включен")
+
+                # Обновляем чекбоксы в списке параметров
+                for param_name, new_state in data['params']:
+                    items = model.findItems(param_name, Qt.MatchExactly)
+                    if items:
+                        items[0].setCheckState(Qt.Checked if new_state else Qt.Unchecked)
+
+                # Обновляем отображение в списке масок
+                for i in range(ui_mp.listWidget_masks.count()):
+                    item = ui_mp.listWidget_masks.item(i)
+                    if item.data(Qt.UserRole).id == mask_id:
+                        item.setText(f'{mask.count_param} id{mask.id}')
+                        break
+
+            # Снимаем выделение после применения изменений
+            table.clearSelection()
+
+        ui_mp.pushButton_on.clicked.connect(lambda: table_selection(True))
+        ui_mp.pushButton_off.clicked.connect(lambda: table_selection(False))
 
         # Настройки таблицы
         table.setSortingEnabled(True)
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
-        ui_mp.verticalLayout_table_mp.addWidget(table)
 
+        # Добавляем таблицу в layout
+        ui_mp.verticalLayout_table_mp.addWidget(table)
 
     if model.rowCount() > 0:
         table_mask_params()

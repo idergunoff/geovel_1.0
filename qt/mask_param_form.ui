@@ -62,33 +62,7 @@
         <layout class="QGridLayout" name="gridLayout_6">
          <item row="0" column="0">
           <layout class="QGridLayout" name="gridLayout_2">
-           <item row="1" column="0">
-            <widget class="QPushButton" name="pushButton_save">
-             <property name="toolTip">
-              <string>Сохранить изменения для текущей маски</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(255, 200, 152);</string>
-             </property>
-             <property name="text">
-              <string>SAVE</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="pushButton_save_as">
-             <property name="toolTip">
-              <string>Создать новую маску</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(212, 215, 255);</string>
-             </property>
-             <property name="text">
-              <string>SAVE AS</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
+           <item row="0" column="0" colspan="2">
             <widget class="QPushButton" name="pushButton_mask_info">
              <property name="toolTip">
               <string>Редактировать информацию о текущей маске</string>
@@ -101,13 +75,65 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="3" column="0" colspan="2">
+            <widget class="QPushButton" name="pushButton_save_as">
+             <property name="toolTip">
+              <string>Создать новую маску</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(255, 191, 42);</string>
+             </property>
+             <property name="text">
+              <string>SAVE AS</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="pushButton_off">
+             <property name="toolTip">
+              <string>Отключить в списке параметры, выделенные в таблице</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(255, 128, 128);</string>
+             </property>
+             <property name="text">
+              <string>OFF</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="pushButton_on">
+             <property name="toolTip">
+              <string>Включить в списке параметры, выделенные в таблице</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(171, 243, 127);</string>
+             </property>
+             <property name="text">
+              <string>ON</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QPushButton" name="pushButton_save">
+             <property name="toolTip">
+              <string>Сохранить изменения для текущей маски</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(255, 234, 149);</string>
+             </property>
+             <property name="text">
+              <string>SAVE</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0" colspan="2">
             <widget class="QPushButton" name="pushButton_delete">
              <property name="toolTip">
               <string>Удалить текущую маску</string>
              </property>
              <property name="styleSheet">
-              <string notr="true">background-color: rgb(170, 234, 170);</string>
+              <string notr="true">background-color: rgb(255, 147, 147);</string>
              </property>
              <property name="text">
               <string>DELETE</string>
