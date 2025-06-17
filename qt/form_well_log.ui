@@ -28,6 +28,9 @@
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="0">
       <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0" colspan="2">
+        <widget class="QListWidget" name="listWidget_well_log"/>
+       </item>
        <item row="2" column="1">
         <widget class="QPushButton" name="pushButton_rm_all_well_db">
          <property name="styleSheet">
@@ -35,33 +38,6 @@
          </property>
          <property name="text">
           <string>REMOVE ALL</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QPushButton" name="pushButton_rm_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 185, 185);</string>
-         </property>
-         <property name="text">
-          <string>REMOVE</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="checkBox_raar_signal">
-         <property name="text">
-          <string>radar</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QPushButton" name="pushButton_add_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(191, 255, 191);</string>
-         </property>
-         <property name="text">
-          <string>ADD</string>
          </property>
         </widget>
        </item>
@@ -75,13 +51,57 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="QListWidget" name="listWidget_well_log"/>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="checkBox_raar_signal">
+         <property name="text">
+          <string>radar</string>
+         </property>
+        </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QCheckBox" name="checkBox_cp1251">
          <property name="text">
           <string>cp1251</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="pushButton_rm_well_log">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 185, 185);</string>
+         </property>
+         <property name="text">
+          <string>REMOVE</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="pushButton_add_well_log">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(191, 255, 191);</string>
+         </property>
+         <property name="text">
+          <string>ADD</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="pushButton_add_xls">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(92, 215, 173);</string>
+         </property>
+         <property name="text">
+          <string>ADD XLS</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="pushButton_add_xls_dir">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(64, 191, 176);</string>
+         </property>
+         <property name="text">
+          <string>ADD XLS DIR</string>
          </property>
         </widget>
        </item>

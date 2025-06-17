@@ -1409,22 +1409,25 @@ def update_list_well():
 
 def get_list_nearest_well(profile_id):
     profile = session.query(Profile).filter_by(id=profile_id).first()
-    if session.query(Profile.x_pulc).filter_by(id=profile_id).first()[0]:
-        x_prof = json.loads(profile.x_pulc)
-        y_prof = json.loads(profile.y_pulc)
-        profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
-        wells = session.query(Well).order_by(Well.name).all()
-        list_nearest_well = []
-        for w in wells:
-            start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
-            end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
-            if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
-                index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
-                if dist <= ui.spinBox_well_distance.value():
-                    list_nearest_well.append([w, index, dist])
-        return list_nearest_well
-    else:
-        ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
+    try:
+        if session.query(Profile.x_pulc).filter_by(id=profile_id).first()[0]:
+            x_prof = json.loads(profile.x_pulc)
+            y_prof = json.loads(profile.y_pulc)
+            profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
+            wells = session.query(Well).order_by(Well.name).all()
+            list_nearest_well = []
+            for w in wells:
+                start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
+                end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
+                if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
+                    index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                    if dist <= ui.spinBox_well_distance.value():
+                        list_nearest_well.append([w, index, dist])
+            return list_nearest_well
+        else:
+            ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
+    except TypeError:
+        pass
 
 
 def set_title_list_widget_wells():
@@ -1737,12 +1740,14 @@ def update_list_trained_models_class():
         item_text = model.title
         item = QListWidgetItem(item_text)
         item.setData(Qt.UserRole, model.id)
-        item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+        tool_tip_text = (f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
                         f'ID {model.id}\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '
                         f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
-                        # f'{model.list_params}\nSignal: {model.except_signal}')
+        if model.model_mask:
+            tool_tip_text += f'MASK {str(model.model_mask[0].mask.count_param)}'
+        item.setToolTip(tool_tip_text)
         ui.listWidget_trained_model_class.addItem(item)
     ui.listWidget_trained_model_class.setCurrentRow(0)
 
@@ -2346,17 +2351,19 @@ def check_trained_model():
             session.query(TrainedModel).filter_by(id=model.id).delete()
 
     for model in session.query(TrainedModelReg).all():
-        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
-        if model_mask:
-            session.delete(model_mask)
+
         if not os.path.exists(model.path_model):
+            model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+            if model_mask:
+                session.delete(model_mask)
             session.query(TrainedModelReg).filter_by(id=model.id).delete()
 
     for model in session.query(TrainedModelClass).all():
-        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
-        if model_mask:
-            session.delete(model_mask)
+
         if not os.path.exists(model.path_model):
+            model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+            if model_mask:
+                session.delete(model_mask)
             session.query(TrainedModelClass).filter_by(id=model.id).delete()
     session.commit()
 
