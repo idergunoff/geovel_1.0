@@ -1405,6 +1405,7 @@ def update_list_well():
                 ui.listWidget_well.addItem(item)
 
         ui.label_11.setText(f'Wells: {ui.listWidget_well.count()}')
+    ui.listWidget_well.setCurrentRow(0)
 
 
 def get_list_nearest_well(profile_id):
@@ -3012,3 +3013,40 @@ def get_median_by_depth(data_list, initial_depth, step, target_depth, interval):
         return round(np.median(slice_values), 3)
     else:
         return None
+
+
+def read_well_log_xls(df, depth_col, age_col):
+    bound_values = {}
+    for col in df.columns:
+        if col == depth_col or col == age_col or col == 'ALT':
+            continue
+        notna = df[col].notna()
+        if notna.any():
+            start_depth = df.loc[notna, depth_col].iloc[0]
+            end_depth = df.loc[notna, depth_col].iloc[-1]
+            bound_values[col] = {'start': start_depth, 'end': end_depth}
+        else:
+            bound_values[col] = {'start': None, 'end': None}
+
+    curve_values = {}
+    for col in df.columns:
+        if col not in [depth_col, age_col]:
+            values = df[col].dropna().tolist()
+            curve_values[col] = values
+
+    age_boundaries = {
+        age: depth
+        for depth, age in zip(df[depth_col], df[age_col])
+        if pd.notna(age)
+    }
+
+    print("Значения по кривым:")
+    print(curve_values)
+
+    print("\nГраницы AGE:")
+    print(age_boundaries)
+
+    print(bound_values)
+
+    return curve_values, bound_values, age_boundaries
+

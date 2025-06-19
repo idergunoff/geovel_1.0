@@ -1,3 +1,5 @@
+import pandas as pd
+
 from func import *
 from regression import update_list_reg, remove_all_param_geovel_reg, update_list_well_markup_reg
 
@@ -79,6 +81,18 @@ def show_well_log():
             update_list_well_log()
 
 
+        def load_well_log_xls():
+            filename = QtWidgets.QFileDialog.getOpenFileName(
+                caption='Выберите файл Excel',
+                filter='*.xlsx'
+            )[0]
+
+            if filename:
+                add_well_log_xls_to_db(filename)
+            update_list_well_log()
+            update_list_well()
+
+
         def load_well_log_by_dir():
             filename = QtWidgets.QFileDialog.getExistingDirectory(
                 caption='Выберите папку',
@@ -116,6 +130,38 @@ def show_well_log():
                     description=description
                 )
                 session.add(new_well_log)
+            session.commit()
+
+
+        def add_well_log_xls_to_db(xls_file):
+            sep = os.path.sep
+            well_name = xls_file.split(sep)[-1].split('.')[0]
+
+            pd_table = pd.read_excel(xls_file)
+            curves, bound, age = read_well_log_xls(pd_table, 'DEPTH', 'AGE')
+
+            for name, data  in curves.items():
+                description = well_name
+
+                new_well_log = WellLog(
+                    well_id=get_well_id(),
+                    curve_name=name,
+                    curve_data=json.dumps(data),
+                    begin=bound[name]['start'],
+                    end=bound[name]['end'],
+                    step=0.1,
+                    description=description
+                )
+                session.add(new_well_log)
+
+            for age_name, age_depth in age.items():
+                new_bound = Boundary(
+                    well_id=get_well_id(),
+                    depth=age_depth,
+                    title=f'{age_name}-scan'
+                )
+                session.add(new_bound)
+
             session.commit()
 
 
@@ -400,6 +446,7 @@ def show_well_log():
 
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
+        ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
         ui_wl.pushButton_add_dir_well_log.clicked.connect(load_well_log_by_dir)
         ui_wl.pushButton_rm_well_log.clicked.connect(remove_well_log)
         ui_wl.pushButton_rm_all_well_db.clicked.connect(remove_all_well_log)
