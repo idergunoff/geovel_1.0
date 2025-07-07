@@ -1271,8 +1271,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>443</width>
-                       <height>178</height>
+                       <width>58</width>
+                       <height>38</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -3845,23 +3845,13 @@ Therm</string>
                   <item row="6" column="0">
                    <widget class="QComboBox" name="comboBox_mark_mlp"/>
                   </item>
-                  <item row="6" column="2">
-                   <widget class="QPushButton" name="pushButton_rem_mark_mlp">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 185, 185);</string>
-                    </property>
-                    <property name="text">
-                     <string>remove marker</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_add_mlp">
+                  <item row="6" column="1">
+                   <widget class="QPushButton" name="pushButton_add_mark_mlp">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
                     <property name="text">
-                     <string>add MLP</string>
+                     <string>add marker</string>
                     </property>
                    </widget>
                   </item>
@@ -3872,6 +3862,16 @@ Therm</string>
                     </property>
                     <property name="text">
                      <string>PARETO</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_copy_regmod">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>copy RegMod</string>
                     </property>
                    </widget>
                   </item>
@@ -3912,29 +3912,6 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QComboBox" name="comboBox_mlp_analysis"/>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="pushButton_copy_regmod">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>copy RegMod</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="6" column="1">
-                   <widget class="QPushButton" name="pushButton_add_mark_mlp">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(191, 255, 191);</string>
-                    </property>
-                    <property name="text">
-                     <string>add marker</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="4" column="1">
                    <widget class="QPushButton" name="pushButton_train_test_mlp">
                     <property name="autoFillBackground">
@@ -3948,6 +3925,16 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="pushButton_add_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(191, 255, 191);</string>
+                    </property>
+                    <property name="text">
+                     <string>add MLP</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="1" column="1">
                    <widget class="QPushButton" name="pushButton_copy_mlp">
                     <property name="styleSheet">
@@ -3958,13 +3945,36 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="2" rowspan="2">
+                  <item row="0" column="0">
+                   <widget class="QComboBox" name="comboBox_mlp_analysis"/>
+                  </item>
+                  <item row="6" column="2">
+                   <widget class="QPushButton" name="pushButton_rem_mark_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 185, 185);</string>
+                    </property>
+                    <property name="text">
+                     <string>remove marker</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
                    <widget class="QPushButton" name="pushButton_rem_mlp">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
                     <property name="text">
                      <string>remove MLP</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QPushButton" name="pushButton_filter_mlp">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(200, 171, 252);</string>
+                    </property>
+                    <property name="text">
+                     <string>filter MLP</string>
                     </property>
                    </widget>
                   </item>
@@ -5573,7 +5583,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

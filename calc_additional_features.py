@@ -2,6 +2,7 @@ from func import *
 
 def calc_all_params():
     for r in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
+        calc_relief_profile(r)
         for f in session.query(Formation).filter(Formation.profile_id == r.id).all():
             calc_wavelet_features(f.id)
             calc_fractal_features(f.id)

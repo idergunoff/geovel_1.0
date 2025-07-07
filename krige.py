@@ -334,9 +334,6 @@ def show_profiles():
                 plt.legend(by_label.values(), by_label.keys(), loc='center left', bbox_to_anchor=(1, 0.5))
 
 
-
-
-
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
     if ui.checkBox_profile_title.isChecked():
         r = session.query(Research).filter_by(id=r_id).first()

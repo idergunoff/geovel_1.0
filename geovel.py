@@ -26,6 +26,7 @@ from pareto import *
 from remote_db.remote_db_win import *
 from well_log import *
 from mask_params import *
+from filter_well import *
 
 MainWindow.show()
 
@@ -500,6 +501,9 @@ ui.pushButton_rmv_bind_vel_pred.clicked.connect(rmv_bind_vel_prediction)
 ui.pushButton_draw_vel_pred.clicked.connect(draw_radar_vel_pred)
 ui.checkBox_model_nn.clicked.connect(update_list_model_nn)
 ui.listWidget_model_nn.currentItemChanged.connect(draw_relief)
+
+########## filter well ########
+ui.pushButton_filter_mlp.clicked.connect(open_filter_well_cls)
 
 time = datetime.datetime.now()
 

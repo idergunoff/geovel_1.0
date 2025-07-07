@@ -68,7 +68,7 @@ def load_profile():
         session.add(new_profile)
         session.commit()
         set_info(f'Профиль загружен ("{get_object_name()}")', 'green')
-    except KeyError:
+    except (KeyError, TypeError):
         set_info('Неправильный формат файла', 'red')
         return
     update_profile_combobox()
