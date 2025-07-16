@@ -445,152 +445,146 @@
       <attribute name="title">
        <string>Wells</string>
       </attribute>
-      <widget class="QWidget" name="layoutWidget_2">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>551</width>
-         <height>461</height>
-        </rect>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_5">
-        <item row="0" column="0" colspan="2">
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_wells_count">
-            <property name="text">
-             <string>Синхронизировать скважины:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2" rowspan="3">
-           <layout class="QGridLayout" name="gridLayout_7">
-            <item row="0" column="0" colspan="2">
-             <widget class="QPushButton" name="pushButton_sync_wells">
-              <property name="toolTip">
-               <string>Синхронизировать скважины в локальной и удаленной БД</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 205, 169);</string>
-              </property>
-              <property name="text">
-               <string>Synchronize wells</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QPushButton" name="pushButton_load_well_rel">
-              <property name="toolTip">
-               <string>Загрузить данные скважин с удаленной БД на локальную</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(206, 222, 255);</string>
-              </property>
-              <property name="text">
-               <string>REM -&gt; LOC</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QPushButton" name="pushButton_unload_well_rel">
-              <property name="toolTip">
-               <string>Выгрузить данные скважин с локальной БД на удаленную</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 233, 196);</string>
-              </property>
-              <property name="text">
-               <string>LOC -&gt; REM</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" colspan="2">
-             <widget class="QPushButton" name="pushButton_ignore_well_rdb">
-              <property name="toolTip">
-               <string>Пометить скважину как неактивную/активную</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 181, 182);</string>
-              </property>
-              <property name="text">
-               <string>ignore/activate well</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Синхронизировать данные скважин:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_wells">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Wells:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEdit_well_search"/>
-          </item>
-         </layout>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QListWidget" name="listWidget_wells"/>
-        </item>
-        <item row="2" column="0">
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QLabel" name="label_12">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-              <weight>50</weight>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Data of Well:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QTextEdit" name="textEdit_wells_data"/>
-          </item>
-         </layout>
-        </item>
-        <item row="2" column="1">
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QLabel" name="label_13">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Boundaries:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QListWidget" name="listWidget_boundary"/>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0" colspan="2">
+          <layout class="QGridLayout" name="gridLayout_6">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_wells_count">
+             <property name="text">
+              <string>Синхронизировать скважины:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2" rowspan="3">
+            <layout class="QGridLayout" name="gridLayout_7">
+             <item row="0" column="0" colspan="2">
+              <widget class="QPushButton" name="pushButton_sync_wells">
+               <property name="toolTip">
+                <string>Синхронизировать скважины в локальной и удаленной БД</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 205, 169);</string>
+               </property>
+               <property name="text">
+                <string>Synchronize wells</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QPushButton" name="pushButton_load_well_rel">
+               <property name="toolTip">
+                <string>Загрузить данные скважин с удаленной БД на локальную</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(206, 222, 255);</string>
+               </property>
+               <property name="text">
+                <string>REM -&gt; LOC</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QPushButton" name="pushButton_unload_well_rel">
+               <property name="toolTip">
+                <string>Выгрузить данные скважин с локальной БД на удаленную</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 233, 196);</string>
+               </property>
+               <property name="text">
+                <string>LOC -&gt; REM</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0" colspan="2">
+              <widget class="QPushButton" name="pushButton_ignore_well_rdb">
+               <property name="toolTip">
+                <string>Пометить скважину как неактивную/активную</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 181, 182);</string>
+               </property>
+               <property name="text">
+                <string>ignore/activate well</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Синхронизировать данные скважин:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_wells">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Wells:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEdit_well_search"/>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QListWidget" name="listWidget_wells"/>
+         </item>
+         <item row="2" column="0">
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QLabel" name="label_12">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Data of Well:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextEdit" name="textEdit_wells_data"/>
+           </item>
+          </layout>
+         </item>
+         <item row="2" column="1">
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QLabel" name="label_13">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Boundaries:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="listWidget_boundary"/>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
