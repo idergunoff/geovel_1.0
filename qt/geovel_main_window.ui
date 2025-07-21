@@ -1271,8 +1271,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>58</width>
-                       <height>38</height>
+                       <width>435</width>
+                       <height>182</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -4708,16 +4708,6 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="3">
-                     <widget class="QDoubleSpinBox" name="doubleSpinBox_target_val">
-                      <property name="decimals">
-                       <number>3</number>
-                      </property>
-                      <property name="maximum">
-                       <double>100000.000000000000000</double>
-                      </property>
-                     </widget>
-                    </item>
                     <item row="0" column="1">
                      <widget class="QLabel" name="label_19">
                       <property name="text">
@@ -4779,6 +4769,26 @@ Therm</string>
                      <widget class="QPushButton" name="pushButton_copy_by_except">
                       <property name="text">
                        <string>copy by except</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QDoubleSpinBox" name="doubleSpinBox_target_val">
+                      <property name="decimals">
+                       <number>3</number>
+                      </property>
+                      <property name="maximum">
+                       <double>100000.000000000000000</double>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="3">
+                     <widget class="QPushButton" name="pushButton_filter_reg">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(200, 171, 252);</string>
+                      </property>
+                      <property name="text">
+                       <string>filter Reg</string>
                       </property>
                      </widget>
                     </item>
