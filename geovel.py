@@ -504,6 +504,7 @@ ui.listWidget_model_nn.currentItemChanged.connect(draw_relief)
 
 ########## filter well ########
 ui.pushButton_filter_mlp.clicked.connect(open_filter_well_cls)
+ui.pushButton_filter_reg.clicked.connect(open_filter_well_reg)
 
 time = datetime.datetime.now()
 
