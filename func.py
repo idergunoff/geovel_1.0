@@ -128,7 +128,10 @@ def get_object_id():
 
 # Функция получения id выбранного исследования
 def get_research_id():
-    return int(ui.comboBox_research.currentText().split(' id')[-1])
+    try:
+        return int(ui.comboBox_research.currentText().split(' id')[-1])
+    except ValueError:
+        pass
 
 
 # Функция получения имени выбранного исследования
@@ -553,20 +556,25 @@ def update_object(new_obj=False):
     """ Функция для обновления списка объектов в выпадающем списке """
     # Очистка выпадающего списка объектов
     ui.comboBox_object.clear()
-    # Получение всех объектов из базы данных, отсортированных по дате исследования
-    for i in session.query(GeoradarObject).order_by(GeoradarObject.title).all():
-        # Добавление названия объекта, даты исследования и идентификатора объекта в выпадающий список
-        ui.comboBox_object.addItem(f'{i.title} id{i.id}')
-    if new_obj:
-        # Отдельно находим последний добавленный объект (по ID или дате создания)
-        last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
 
-        # Если такой объект есть - выбираем его в комбобоксе
-        if last_added:
-            last_item_text = f'{last_added.title} id{last_added.id}'
-            index = ui.comboBox_object.findText(last_item_text)
-            if index >= 0:
-                ui.comboBox_object.setCurrentIndex(index)
+    year = get_year_research()
+    year_objects = session.query(Research.object_id).filter(func.strftime('%Y', Research.date_research) == year).all()
+
+    for year_object in year_objects:
+        for i in (session.query(GeoradarObject).filter(GeoradarObject.id == year_object[0])
+                .order_by(GeoradarObject.title)):
+            # Добавление названия объекта идентификатора объекта в выпадающий список
+            ui.comboBox_object.addItem(f'{i.title} id{i.id}')
+        if new_obj:
+            # Отдельно находим последний добавленный объект (по ID или дате создания)
+            last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
+
+            # Если такой объект есть - выбираем его в комбобоксе
+            if last_added:
+                last_item_text = f'{last_added.title} id{last_added.id}'
+                index = ui.comboBox_object.findText(last_item_text)
+                if index >= 0:
+                    ui.comboBox_object.setCurrentIndex(index)
 
     # Обновление выпадающего списка профилей
     update_research_combobox()
@@ -580,13 +588,21 @@ def update_research_combobox():
     for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
         ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
 
-    # Отдельно находим последнее добавленное исследование (по ID или дате создания)
-    last_added = session.query(Research).order_by(Research.id.desc()).first()
+    # # Отдельно находим последнее добавленное исследование (по ID или дате создания)
+    # last_added = session.query(Research).order_by(Research.id.desc()).first()
+    #
+    # # Если такое исследование есть - выбираем его в комбобоксе
+    # if last_added:
+    #     last_item_text = f'{last_added.date_research.strftime("%m.%Y")} id{last_added.id}'
+    #     index = ui.comboBox_research.findText(last_item_text)
+    #     if index >= 0:
+    #         ui.comboBox_research.setCurrentIndex(index)
 
-    # Если такое исследование есть - выбираем его в комбобоксе
-    if last_added:
-        last_item_text = f'{last_added.date_research.strftime("%m.%Y")} id{last_added.id}'
-        index = ui.comboBox_research.findText(last_item_text)
+    year = get_year_research()
+    year_research = session.query(Research).filter(func.strftime('%Y', Research.date_research) == year).first()
+    if year_research:
+        res_text = f'{year_research.date_research.strftime("%m.%Y")} id{year_research.id}'
+        index = ui.comboBox_research.findText(res_text)
         if index >= 0:
             ui.comboBox_research.setCurrentIndex(index)
 
@@ -594,6 +610,34 @@ def update_research_combobox():
     check_coordinates_profile()
     check_coordinates_research()
     update_list_exploration()
+
+
+# Функция получения выбранного года исследований
+def get_year_research():
+    return ui.comboBox_year_research.currentText()
+
+
+def update_year_research_combobox():
+    ui.comboBox_year_research.clear()
+    years = (session.query(func.strftime('%Y', Research.date_research))
+             .group_by(func.strftime('%Y', Research.date_research))
+             .order_by(desc(func.strftime('%Y', Research.date_research)))).all()
+
+    for year in years:
+        ui.comboBox_year_research.addItem(str(int(year[0])))
+
+        # if change_res:
+        #     research_id = get_research_id()
+        #     if research_id:
+        #         current_research = session.query(Research).filter(Research.id == research_id).first()
+        #         if current_research:
+        #             current_year = current_research.date_research.strftime('%Y')
+        #             index = ui.comboBox_year_research.findText(current_year)
+        #             if index >= 0:
+        #                 ui.comboBox_year_research.setCurrentIndex(index)
+
+    update_object()
+
 
 
 def update_param_combobox():
@@ -1282,11 +1326,14 @@ def check_grid_relief():
         except TypeError:
             continue
     pd_relief = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'z'])
-    if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and
-            pd_relief['y'].max() > max(list_y) > pd_relief['y'].min() and
-            pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and
-            pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
-        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
+    try:
+        if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and
+                pd_relief['y'].max() > max(list_y) > pd_relief['y'].min() and
+                pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and
+                pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
+            ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
+    except ValueError:
+        return
 
 
 def check_coordinates_research():

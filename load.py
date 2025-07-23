@@ -35,8 +35,10 @@ def add_object():
             session.commit()
             if added_obj_count == 1:
                 update_object(new_obj=True)
+                update_year_research_combobox()
             else:
                 update_research_combobox()
+                update_year_research_combobox()
             Add_Object.close()
             set_info(f'Добавлено исследование /{date_research.strftime("%m.%Y")}/ для объекта "{name_object}".', 'green')
 
@@ -701,6 +703,7 @@ def remove_object():
                 session.commit()
                 set_info(f'Исследование /{title_research}/ объекта "{title_object}" удалено', 'green')
                 update_research_combobox()
+                update_year_research_combobox()
             else:
                 pass
         else:
@@ -713,6 +716,7 @@ def remove_object():
                 session.commit()
                 set_info(f'Объект "{title_object}" удалён', 'green')
                 update_object()
+                update_year_research_combobox()
             else:
                 pass
     else:

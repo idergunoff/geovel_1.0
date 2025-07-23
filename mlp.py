@@ -391,6 +391,8 @@ def choose_markup_mlp(markup):
         пользовательского интерфейса """
 
     # Установка соответствующих значений виджетов пользовательского интерфейса
+    ui.comboBox_year_research.setCurrentText(markup.profile.research.date_research.strftime('%Y'))
+    update_object()
     ui.comboBox_object.setCurrentText(f'{markup.profile.research.object.title} id{markup.profile.research.object_id}')
     update_research_combobox()
     ui.comboBox_research.setCurrentText(

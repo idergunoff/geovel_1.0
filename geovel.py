@@ -277,6 +277,7 @@ ui.toolButton_feature_importance_reg.clicked.connect(get_feature_importance_reg)
 
 
 
+ui.comboBox_year_research.activated.connect(update_object)
 ui.comboBox_object.activated.connect(update_research_combobox)
 ui.comboBox_research.activated.connect(update_profile_combobox)
 ui.comboBox_research.activated.connect(check_coordinates_research)
@@ -508,6 +509,7 @@ ui.pushButton_filter_reg.clicked.connect(open_filter_well_reg)
 
 time = datetime.datetime.now()
 
+update_year_research_combobox()
 check_trained_model()
 update_object()
 update_list_object_monitor()
