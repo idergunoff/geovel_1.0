@@ -511,17 +511,41 @@ def update_profile_combobox():
     ui.label_4.setText(f'Объект ({n_measures} изм)')
     ui.label_4.setToolTip(f'{str(n_measures * 2.5)} м')
 
-    # Очистка выпадающего списка
+    def get_sort_key(profile):
+        title = profile.title.lower()  # Для регистронезависимого поиска
+        numbers = list(map(int, re.findall(r'\d+', title)))  # Все числа в строке
+
+        # Ищем позицию 'п' (уже в нижнем регистре)
+        p_pos = title.find('п')
+
+        if p_pos != -1 and numbers:
+            # Находим первое число после 'п'
+            for i, num_pos in enumerate(re.finditer(r'\d+', title)):
+                if num_pos.start() > p_pos:
+                    first_num = numbers[i]
+                    # Проверяем есть ли следующие числа для сравнения
+                    if len(numbers) > i + 1:
+                        return (first_num, numbers[i + 1])
+                    return (first_num, 0)  # Если следующего числа нет
+            # Если числа после 'п' не найдены
+            return (0, profile.id)
+        else:
+            # Нет 'п' - сортируем по id
+            return (0, profile.id)
+
     ui.comboBox_profile.clear()
     try:
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
     except ValueError:
         return
 
-    # Запрос на получение всех профилей, относящихся к объекту, и их добавление в выпадающий список
-    for i in profiles:
-        count_measure = len(json.loads(i.signal))
-        ui.comboBox_profile.addItem(f'{i.title} ({count_measure} измерений) id{i.id}')
+    # Сортируем по составному ключу
+    sorted_profiles = sorted(profiles, key=get_sort_key)
+
+    # Добавляем в выпадающий список
+    for profile in sorted_profiles:
+        count_measure = len(json.loads(profile.signal))
+        ui.comboBox_profile.addItem(f'{profile.title} ({count_measure} измерений) id{profile.id}')
 
     # Обновление списка формирований
     update_formation_combobox()
@@ -560,11 +584,13 @@ def update_object(new_obj=False):
     year = get_year_research()
     year_objects = session.query(Research.object_id).filter(func.strftime('%Y', Research.date_research) == year).all()
 
-    for year_object in year_objects:
-        for i in (session.query(GeoradarObject).filter(GeoradarObject.id == year_object[0])
-                .order_by(GeoradarObject.title)):
-            # Добавление названия объекта идентификатора объекта в выпадающий список
-            ui.comboBox_object.addItem(f'{i.title} id{i.id}')
+    object_ids = [obj[0] for obj in year_objects]
+    objects = (session.query(GeoradarObject).filter(GeoradarObject.id.in_(object_ids))
+                .order_by(GeoradarObject.title)).all()
+
+    for obj in objects:
+        # Добавление названия объекта идентификатора объекта в выпадающий список
+        ui.comboBox_object.addItem(f'{obj.title} id{obj.id}')
         if new_obj:
             # Отдельно находим последний добавленный объект (по ID или дате создания)
             last_added = session.query(GeoradarObject).order_by(GeoradarObject.id.desc()).first()
@@ -585,26 +611,33 @@ def update_object(new_obj=False):
 
 def update_research_combobox():
     ui.comboBox_research.clear()
-    for i in session.query(Research).filter(Research.object_id == get_object_id()).order_by(Research.date_research).all():
-        ui.comboBox_research.addItem(f'{i.date_research.strftime("%m.%Y")} id{i.id}')
 
-    # # Отдельно находим последнее добавленное исследование (по ID или дате создания)
-    # last_added = session.query(Research).order_by(Research.id.desc()).first()
-    #
-    # # Если такое исследование есть - выбираем его в комбобоксе
-    # if last_added:
-    #     last_item_text = f'{last_added.date_research.strftime("%m.%Y")} id{last_added.id}'
-    #     index = ui.comboBox_research.findText(last_item_text)
-    #     if index >= 0:
-    #         ui.comboBox_research.setCurrentIndex(index)
+    object_id = get_object_id()
+    current_year = get_year_research()
 
-    year = get_year_research()
-    year_research = session.query(Research).filter(func.strftime('%Y', Research.date_research) == year).first()
-    if year_research:
-        res_text = f'{year_research.date_research.strftime("%m.%Y")} id{year_research.id}'
-        index = ui.comboBox_research.findText(res_text)
-        if index >= 0:
-            ui.comboBox_research.setCurrentIndex(index)
+    if not object_id:
+        return
+
+    researches = (session.query(Research)
+                  .filter(Research.object_id == object_id)
+                  .order_by(Research.date_research)
+                  .all())
+
+    for research in researches:
+        ui.comboBox_research.addItem(f'{research.date_research.strftime("%m.%Y")} id{research.id}')
+
+    if current_year:
+        matching_research = next(
+            (r for r in researches
+             if r.date_research.strftime('%Y') == current_year),
+            None
+        )
+
+        if matching_research:
+            research_text = f'{matching_research.date_research.strftime("%m.%Y")} id{matching_research.id}'
+            index = ui.comboBox_research.findText(research_text)
+            if index >= 0:
+                ui.comboBox_research.setCurrentIndex(index)
 
     update_profile_combobox()
     check_coordinates_profile()
@@ -625,16 +658,6 @@ def update_year_research_combobox():
 
     for year in years:
         ui.comboBox_year_research.addItem(str(int(year[0])))
-
-        # if change_res:
-        #     research_id = get_research_id()
-        #     if research_id:
-        #         current_research = session.query(Research).filter(Research.id == research_id).first()
-        #         if current_research:
-        #             current_year = current_research.date_research.strftime('%Y')
-        #             index = ui.comboBox_year_research.findText(current_year)
-        #             if index >= 0:
-        #                 ui.comboBox_year_research.setCurrentIndex(index)
 
     update_object()
 
