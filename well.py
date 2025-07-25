@@ -26,7 +26,7 @@ def add_well():
             new_well = Well(name=name_well, x_coord=float(x_well), y_coord=float(y_well), alt=float(alt_well))
             session.add(new_well)
             session.commit()
-            update_list_well()
+            update_list_well(select_well=True)
             Add_Well.close()
             set_info(f'Добавлена новая скважина - "{name_well}".', 'green')
 
@@ -65,7 +65,7 @@ def edit_well():
                     {'name': name_well, 'x_coord': float(x_well), 'y_coord': float(y_well), 'alt': float(alt_well)},
                     synchronize_session="fetch")
                 session.commit()
-                update_list_well()
+                update_list_well(select_well=True, selected_well_id=get_well_id())
                 Add_Well.close()
                 set_info(f'Изменены параметры скважины - "{name_well}".', 'rgb(188, 160, 3)')
 
@@ -227,7 +227,7 @@ def add_wells():
             session.commit()
             ui.progressBar.setValue(i + 1)
         session.commit()
-        update_list_well()
+        update_list_well(select_well=True)
         set_info(f'Добавлено {n_new} скважин, обновлено {n_update} скважин', 'green')
 
 
@@ -348,7 +348,7 @@ def add_boundary():
             session.add(new_boundary)
             session.commit()
             update_boundaries()
-            update_list_well()
+            update_list_well(select_well=True, selected_well_id=get_well_id())
             Add_Boundary.close()
             set_info(f'Добавлена новая граница для текущей скважины - "{title_boundary}".', 'green')
 
@@ -361,10 +361,14 @@ def add_boundary():
 
 
 def remove_boundary():
-    session.query(Boundary).filter(Boundary.id == get_boundary_id()).delete()
-    session.commit()
-    update_boundaries()
-    update_list_well()
+    try:
+        session.query(Boundary).filter(Boundary.id == get_boundary_id()).delete()
+        session.commit()
+        update_boundaries()
+        update_list_well(select_well=True, selected_well_id=get_well_id())
+    except AttributeError:
+        set_info('Необходимо выбрать границу для удаления', 'red')
+        return
 
 
 def draw_bound_int():
