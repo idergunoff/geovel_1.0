@@ -1,4 +1,5 @@
 import numpy as np
+from PyQt5.QtWidgets import QListWidget
 
 from func import *
 from monitoring import update_list_h_well
@@ -36,6 +37,33 @@ def add_well():
     ui_w.buttonBox.accepted.connect(well_to_db)
     ui_w.buttonBox.rejected.connect(cancel_add_well)
     Add_Well.exec_()
+
+
+def search_well():
+    """Фильтрация скважин с подсветкой и автопрокруткой к первому совпадению"""
+    search_text = ui.lineEdit_well_search.text().lower().strip()
+    first_match = None  # Для хранения первого совпадения
+
+    ui.listWidget_well.setUpdatesEnabled(False)
+    try:
+        for i in range(ui.listWidget_well.count()):
+            item = ui.listWidget_well.item(i)
+            item_text = item.text().lower()
+            matches = search_text in item_text if search_text else False
+
+            # Запоминаем первое совпадение
+            if matches and first_match is None:
+                first_match = item
+
+        # Прокручиваем к первому совпадению
+        if first_match:
+            ui.listWidget_well.scrollToItem(
+                first_match,
+                QListWidget.PositionAtTop  # Прокрутить чтобы элемент был сверху
+            )
+            ui.listWidget_well.setCurrentItem(first_match)  # Опционально: выделить элемент
+    finally:
+        ui.listWidget_well.setUpdatesEnabled(True)
 
 
 def edit_well():

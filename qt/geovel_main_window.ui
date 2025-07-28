@@ -1489,7 +1489,14 @@
                    </widget>
                   </item>
                   <item row="0" column="0" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_well_search"/>
+                   <widget class="QLineEdit" name="lineEdit_well_search">
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="placeholderText">
+                     <string>Поиск скважины...</string>
+                    </property>
+                   </widget>
                   </item>
                  </layout>
                 </item>
@@ -5623,7 +5630,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
