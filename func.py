@@ -1417,7 +1417,7 @@ def closest_point(well_x, well_y, profile_x, profile_y):
     return (closest, calc_distance(well_x, well_y, profile_x[closest], profile_y[closest]))
 
 
-def update_list_well():
+def update_list_well(select_well=False, selected_well_id=None):
     """Обновить виджет списка скважин"""
     for key, value in globals().items():
         if key.startswith('bound_') or key.startswith('well_'):
@@ -1446,6 +1446,10 @@ def update_list_well():
                     item_text = f'скв.№ {w[0].name} - ({w[1]}) {round(w[2], 2)} м. id{w[0].id}'
                     item = QListWidgetItem(item_text)
 
+                    # Обновляем максимальный ID скважины (если нужно выбрать новую)
+                    if select_well and selected_well_id is None:
+                        selected_well_id = w[0].id
+
                     # Проверяем наличие логов для скважины
                     if w[0].well_logs:  # Если есть связанные логи
                         item.setBackground(QBrush(QColor('#FBD59E')))
@@ -1463,6 +1467,10 @@ def update_list_well():
                 item_text = f'скв.№ {w.name} id{w.id}'
                 item = QListWidgetItem(item_text)
 
+                # Обновляем максимальный ID скважины (если нужно выбрать новую)
+                if select_well and selected_well_id is None:
+                    selected_well_id = w.id
+
                 if w.well_logs:
                     item.setBackground(QBrush(QColor('#FBD59E')))
                     wells_with_logs.append(item)
@@ -1475,7 +1483,15 @@ def update_list_well():
                 ui.listWidget_well.addItem(item)
 
         ui.label_11.setText(f'Wells: {ui.listWidget_well.count()}')
-    ui.listWidget_well.setCurrentRow(0)
+    # ui.listWidget_well.setCurrentRow(0)
+    if select_well and selected_well_id is not None:
+        for i in range(ui.listWidget_well.count()):
+            item = ui.listWidget_well.item(i)
+            if f'id{selected_well_id}' in item.text():
+                ui.listWidget_well.setCurrentRow(i)
+                break
+    elif ui.listWidget_well.count() > 0:  # Иначе выбираем первую скважину
+        ui.listWidget_well.setCurrentRow(0)
 
 
 def get_list_nearest_well(profile_id):

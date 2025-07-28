@@ -90,7 +90,7 @@ def show_well_log():
             if filename:
                 add_well_log_xls_to_db(filename)
             update_list_well_log()
-            update_list_well()
+            update_list_well(select_well=True, selected_well_id=get_well_id())
 
 
         def load_well_log_by_dir():
@@ -382,15 +382,21 @@ def show_well_log():
 
 
         def remove_well_log():
-            session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
-            session.commit()
-            update_list_well_log()
+            try:
+                session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
+                session.commit()
+                update_list_well_log()
+                update_list_well(select_well=True, selected_well_id=get_well_id())
+            except AttributeError:
+                set_info(f'Необходимо выбрать каротаж для удаления', 'red')
+                return
 
 
         def remove_all_well_log():
             session.query(WellLog).filter_by(well_id=get_well_id()).delete()
             session.commit()
             update_list_well_log()
+            update_list_well(select_well=True, selected_well_id=get_well_id())
 
         def draw_depth_spinbox():
             """ Добавление линий глубины и интервала на график """
