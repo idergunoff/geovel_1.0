@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1600</width>
-    <height>1115</height>
+    <height>1190</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -1271,8 +1271,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>435</width>
-                       <height>182</height>
+                       <width>437</width>
+                       <height>212</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1466,7 +1466,14 @@
                <layout class="QGridLayout" name="gridLayout_13">
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_93" columnstretch="1,0">
-                  <item row="0" column="0">
+                  <item row="1" column="1">
+                   <widget class="QCheckBox" name="checkBox_show_bound">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
                    <widget class="QLabel" name="label_13">
                     <property name="font">
                      <font>
@@ -1481,12 +1488,8 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
-                   <widget class="QCheckBox" name="checkBox_show_bound">
-                    <property name="text">
-                     <string/>
-                    </property>
-                   </widget>
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QLineEdit" name="lineEdit_well_search"/>
                   </item>
                  </layout>
                 </item>
@@ -5599,7 +5602,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>29</height>
     </rect>
    </property>
   </widget>
@@ -5620,7 +5623,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>
