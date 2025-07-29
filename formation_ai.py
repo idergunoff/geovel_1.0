@@ -1022,10 +1022,13 @@ def calc_model_profile():
 
 
 def calc_model_object():
+    model = session.query(TrainedModel).filter_by(id=ui.listWidget_trained_model.currentItem().data(Qt.UserRole)).first()
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
         set_info(f'Профиль {prof.title} ({count_measure} измерений)', 'blue')
+        if session.query(Formation).filter_by(title=model.title, profile_id=prof.id).count() > 0:
+            continue
         calc_model_profile()
 
 
