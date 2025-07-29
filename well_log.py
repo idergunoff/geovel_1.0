@@ -1,6 +1,8 @@
 import pandas as pd
 
+from filter_well import get_names_boundary
 from func import *
+from krige import draw_map
 from regression import update_list_reg, remove_all_param_geovel_reg, update_list_well_markup_reg
 
 
@@ -450,6 +452,64 @@ def show_well_log():
                 f'Добавлена новая обучающая скважина для регрессионной модели - "{well.name} со значенем '
                 f'{target_value}"', 'green')
 
+        def map_well_logging():
+            MapWellLog = QtWidgets.QDialog()
+            ui_mwl = Ui_MapWellLogging()
+            ui_mwl.setupUi(MapWellLog)
+            MapWellLog.show()
+            WellLogForm.setAttribute(Qt.WA_DeleteOnClose)
+
+            m_width, m_height = get_width_height_monitor()
+            WellLogForm.resize(int(m_width / 4), m_height - 200)
+
+            for b in get_names_boundary():
+                check = QCheckBox(b)
+                item = QListWidgetItem()
+                if 'uf' in b or 'уф' in b:
+                    check.setChecked(True)
+                ui_mwl.listWidget_title_layer.addItem(item)
+                ui_mwl.listWidget_title_layer.setItemWidget(item, check)
+
+            for l in get_names_logging():
+                check = QCheckBox(l)
+                item = QListWidgetItem()
+                ui_mwl.listWidget_title_log.addItem(item)
+                ui_mwl.listWidget_title_log.setItemWidget(item, check)
+
+            def draw_map_well_log():
+                value_int = ui_wl.doubleSpinBox_interval.value()
+
+                dict_title_depth = get_dict_check_checkbox(ui_mwl.listWidget_title_layer)
+                list_title_depth = [k for k, v in dict_title_depth.items() if v]
+
+                dict_title_log = get_dict_check_checkbox(ui_mwl.listWidget_title_log)
+                list_title_log = [k for k, v in dict_title_log.items() if v]
+
+                well_logging = session.query(WellLog).filter(
+                    WellLog.curve_name.in_(list_title_log)
+                ).all()
+
+                list_x, list_y, list_val = [], [], []
+                for wl in well_logging:
+                    bound = session.query(Boundary).filter(
+                        Boundary.well_id == wl.well_id,
+                        Boundary.title.in_(list_title_depth)
+                    ).first()
+                    if bound:
+                        well = session.query(Well).filter_by(id=bound.well_id).first()
+                        median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
+                        print(well.name, bound.depth, median_value)
+                        if median_value:
+                            list_x.append(well.x_coord)
+                            list_y.append(well.y_coord)
+                            list_val.append(median_value)
+
+                draw_map(list_x, list_y, list_val, list_title_log[0])
+
+
+            ui_mwl.pushButton_draw_map.clicked.connect(draw_map_well_log)
+            MapWellLog.exec_()
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
@@ -465,7 +525,16 @@ def show_well_log():
         ui_wl.pushButton_add_all.clicked.connect(add_all_well_log_to_regression)
         ui_wl.pushButton_to_tar_val.clicked.connect(median_to_target_value)
         ui_wl.pushButton_update_all.clicked.connect(update_all_well_log_in_regression)
+        ui_wl.pushButton_map_well_log.clicked.connect(map_well_logging)
 
         update_list_well_log()
 
         WellLogForm.exec_()
+
+def get_names_logging():
+    logging = session.query(WellLog).all()
+    log_name = []
+    for l in logging:
+        if l.curve_name not in log_name:
+            log_name.append(l.curve_name)
+    return sorted(log_name)

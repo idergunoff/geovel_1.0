@@ -96,12 +96,12 @@
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QPushButton" name="pushButton_add_xls_dir">
+        <widget class="QPushButton" name="pushButton_map_well_log">
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(64, 191, 176);</string>
+          <string notr="true">background-color: rgb(255, 170, 127);</string>
          </property>
          <property name="text">
-          <string>ADD XLS DIR</string>
+          <string>MAP</string>
          </property>
         </widget>
        </item>
