@@ -117,7 +117,7 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param, color_marker=True):
+def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -260,8 +260,26 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True):
                   f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
-        fig_interp.show()
 
+        if profiles:
+
+            list_prof_x, list_prof_y = [], []
+
+            r = session.query(Research).filter_by(id=get_research_id()).first()
+            for profile in r.profiles:
+                try:
+                    list_prof_x += (json.loads(profile.x_pulc))
+                    list_prof_y += (json.loads(profile.y_pulc))
+                except TypeError:
+                    set_info(f'Не загружены координаты {profile.title}', 'red')
+                    pass
+
+            x = np.array(list_prof_x)
+            y = np.array(list_prof_y)
+
+            plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
+
+        fig_interp.show()
 
     ui_dm.pushButton_map.clicked.connect(form_lda_ok)
     Draw_Map.exec_()
