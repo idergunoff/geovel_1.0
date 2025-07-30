@@ -70,6 +70,7 @@ class ProfileRDB(BaseRDB):
     formations = relationship('FormationRDB', back_populates='profile')
     markups_mlp = relationship('MarkupMLPRDB', back_populates='profile')
     markups_reg = relationship('MarkupRegRDB', back_populates='profile')
+    entropy_feature = relationship('EntropyFeatureProfileRDB', back_populates='profile')
 
 
 class WellRDB(BaseRDB):
@@ -137,6 +138,56 @@ class FormationRDB(BaseRDB):
     profile = relationship('ProfileRDB', back_populates='formations')
     markups_mlp = relationship('MarkupMLPRDB', back_populates='formation')
     markups_reg = relationship('MarkupRegRDB', back_populates='formation')
+    entropy_feature = relationship('EntropyFeatureRDB', back_populates='formation')
+
+class EntropyFeatureRDB(BaseRDB):
+    __tablename__ = 'entropy_feature_rdb'
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey('formation_rdb.id'))
+    ent_sh = Column(Text)
+    ent_perm = Column(Text)
+    ent_appr = Column(Text)
+    ent_sample1 = Column(Text)
+    ent_sample2 = Column(Text)
+    ent_ms1 = Column(Text)
+    ent_ms2 = Column(Text)
+    ent_ms3 = Column(Text)
+    ent_ms4 = Column(Text)
+    ent_ms5 = Column(Text)
+    ent_ms6 = Column(Text)
+    ent_ms7 = Column(Text)
+    ent_ms8 = Column(Text)
+    ent_ms9 = Column(Text)
+    ent_ms10 = Column(Text)
+    ent_fft = Column(Text)
+
+    formation = relationship('FormationRDB', back_populates='entropy_feature')
+
+class EntropyFeatureProfileRDB(BaseRDB):
+    __tablename__ = 'entropy_feature_profile_rdb'
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey('profile_rdb.id'))
+
+    ent_sh = Column(Text)
+    ent_perm = Column(Text)
+    ent_appr = Column(Text)
+    ent_sample1 = Column(Text)
+    ent_sample2 = Column(Text)
+    ent_ms1 = Column(Text)
+    ent_ms2 = Column(Text)
+    ent_ms3 = Column(Text)
+    ent_ms4 = Column(Text)
+    ent_ms5 = Column(Text)
+    ent_ms6 = Column(Text)
+    ent_ms7 = Column(Text)
+    ent_ms8 = Column(Text)
+    ent_ms9 = Column(Text)
+    ent_ms10 = Column(Text)
+    ent_fft = Column(Text)
+
+    profile = relationship('ProfileRDB', back_populates='entropy_feature')
 
 
 #####################################################

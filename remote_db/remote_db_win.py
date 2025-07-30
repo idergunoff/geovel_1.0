@@ -20,6 +20,8 @@ from remote_db.unload_mlp_models import unload_cls_models_func
 from remote_db.unload_regmod import unload_regmod_func
 from regression import update_list_reg, update_list_trained_models_regmod
 from remote_db.unload_reg_models import unload_reg_models_func
+from remote_db.sync_entropy_features import *
+from remote_db.sync_entropy_features_profile import *
 
 def open_rem_db_window():
     try:
@@ -341,6 +343,21 @@ def open_rem_db_window():
                     # Удаляем все markups reg, связанные с профилями
                     remote_session.query(MarkupRegRDB) \
                         .filter(MarkupRegRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все энтропии, связанные с объектом
+                    remote_session.query(EntropyFeatureRDB) \
+                        .filter(EntropyFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все энтропии профиля, связанные с объектом
+                    remote_session.query(EntropyFeatureProfileRDB) \
+                        .filter(EntropyFeatureRDB.profile_id == ProfileRDB.id) \
                         .filter(ProfileRDB.research_id == ResearchRDB.id) \
                         .filter(ResearchRDB.object_id == object_id) \
                         .delete(synchronize_session=False)
@@ -1422,6 +1439,15 @@ def open_rem_db_window():
                 ui_rdb.listWidget_boundary.addItem(f'{b.title} - {b.depth}m. id{b.id}')
 
 
+    def sync_entropy_features():
+        load_entropy_feature(RemoteDB)
+        unload_entropy_feature(RemoteDB)
+
+    def sync_entropy_features_profile():
+        load_entropy_feature_profile(RemoteDB)
+        unload_entropy_feature_profile(RemoteDB)
+
+
 
     update_mlp_rdb_combobox()
     update_regmod_rdb_combobox()
@@ -1455,5 +1481,7 @@ def open_rem_db_window():
     ui_rdb.listWidget_wells.currentItemChanged.connect(update_boundaries_rdb)
     ui_rdb.lineEdit_well_search.setPlaceholderText("Поиск скважины...")
     ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
+    ui_rdb.pushButton_sync_entropy.clicked.connect(sync_entropy_features)
+    ui_rdb.pushButton_sync_entropy_profile.clicked.connect(sync_entropy_features_profile)
 
     RemoteDB.exec_()
