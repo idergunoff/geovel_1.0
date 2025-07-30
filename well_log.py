@@ -520,7 +520,54 @@ def show_well_log():
                 else:
                     draw_map(list_x, list_y, list_val, list_title_log[0])
 
+            def to_excel_well_log():
+                min_x, max_x, min_y, max_y = 0, 0, 0, 0
+                value_int = ui_wl.doubleSpinBox_interval.value()
+                if not ui_mwl.checkBox_all_well.isChecked():
+                    list_center = get_center_object_coordinates()
+                    list_min_max = get_min_max_object_coordinates()
+                    min_x = list_min_max[0] - (list_center[0] - list_min_max[0])
+                    max_x = list_min_max[1] + (list_min_max[1] - list_center[0])
+                    min_y = list_min_max[2] - (list_center[1] - list_min_max[2])
+                    max_y = list_min_max[3] + (list_min_max[3] - list_center[1])
+
+                dict_title_depth = get_dict_check_checkbox(ui_mwl.listWidget_title_layer)
+                list_title_depth = [k for k, v in dict_title_depth.items() if v]
+
+                dict_title_log = get_dict_check_checkbox(ui_mwl.listWidget_title_log)
+                list_title_log = [k for k, v in dict_title_log.items() if v]
+
+                well_logging = session.query(WellLog).filter(
+                    WellLog.curve_name.in_(list_title_log)
+                ).all()
+
+                list_for_pd = []
+                for wl in well_logging:
+                    bound = session.query(Boundary).filter(
+                        Boundary.well_id == wl.well_id,
+                        Boundary.title.in_(list_title_depth)
+                    ).first()
+                    if bound:
+                        well = session.query(Well).filter_by(id=bound.well_id).first()
+                        if not ui_mwl.checkBox_all_well.isChecked():
+                            if well.x_coord < min_x or well.x_coord > max_x or well.y_coord < min_y or well.y_coord > max_y:
+                                continue
+                        median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
+                        print(well.name, bound.depth, median_value)
+                        if median_value:
+                            list_for_pd.append([well.name, well.x_coord, well.y_coord, median_value])
+
+                pd_data = pd.DataFrame(list_for_pd, columns=['skv', 'X', 'Y', 'value'])
+                if ui_mwl.checkBox_all_well.isChecked():
+                    file_name = f'all_well__{list_title_log[0]}.xlsx'
+                else:
+                    file_name = f'{get_object_name()}_{get_research_name()}__{list_title_log[0]}.xlsx'
+                fn = QFileDialog.getSaveFileName(caption="Сохранить значения выбранных каротажей в интервале в таблицу", directory=file_name,
+                                                 filter="Excel Files (*.xlsx)")
+                pd_data.to_excel(fn[0])
+
             ui_mwl.pushButton_draw_map.clicked.connect(draw_map_well_log)
+            ui_mwl.pushButton_to_excel.clicked.connect(to_excel_well_log)
             MapWellLog.exec_()
 
 
