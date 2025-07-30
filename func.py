@@ -3137,12 +3137,23 @@ def read_well_log_xls(df, depth_col, age_col):
     return curve_values, bound_values, age_boundaries
 
 
-def get_center_object_coordinates():
+def get_center_object_coordinates(idx_research=None):
     # Получить координаты центра объекта
-
-    idx_research = get_research_id()
+    if not idx_research:
+        idx_research = get_research_id()
     list_x, list_y = [], []
     for p in session.query(Profile).filter_by(research_id=idx_research).all():
         list_x.extend(json.loads(p.x_pulc))
         list_y.extend(json.loads(p.y_pulc))
     return [np.mean(list_x), np.mean(list_y)]
+
+
+def get_min_max_object_coordinates(idx_research=None):
+    # Получить крайние координаты объекта
+    if not idx_research:
+        idx_research = get_research_id()
+    list_x, list_y = [], []
+    for p in session.query(Profile).filter_by(research_id=idx_research).all():
+        list_x.extend(json.loads(p.x_pulc))
+        list_y.extend(json.loads(p.y_pulc))
+    return [np.min(list_x), np.max(list_x), np.min(list_y), np.max(list_y)]
