@@ -4,6 +4,7 @@ from filter_well import get_names_boundary
 from func import *
 from krige import draw_map
 from regression import update_list_reg, remove_all_param_geovel_reg, update_list_well_markup_reg
+from well import show_data_well
 
 
 def show_well_log():
@@ -22,6 +23,11 @@ def show_well_log():
         WellLogForm.resize(int(m_width/4), m_height - 200)
 
         ui_wl.label.setText(f'Каротажные кривые скважины {get_well_name()}')
+        boundaries = session.query(Boundary).filter_by(well_id=get_well_id()).all()
+        for b in boundaries:
+            if 'uf' in b.title or 'уф' in b.title or 'ss' in b.title:
+                ui_wl.doubleSpinBox_depth.setValue(b.depth)
+                break
 
         def update_list_well_log():
             well_log = session.query(WellLog).filter(WellLog.well_id == get_well_id()).all()
@@ -598,6 +604,18 @@ def show_well_log():
             update_list_well(select_well=True, selected_well_id=get_well_id())
             set_info(f'Удалено {n_rem} дублей каротажей.', 'blue')
 
+        def uf_to_well_boundary():
+            new_bound = Boundary(well_id=get_well_id(), depth=ui_wl.doubleSpinBox_depth.value(), title='P2uf GK')
+            session.add(new_bound)
+            session.commit()
+            update_boundaries()
+
+        def m_ss_to_well_data():
+            new_well_opt = WellOptionally(well_id=get_well_id(), option='мощн песч GK', value=str(ui_wl.doubleSpinBox_interval.value()))
+            session.add(new_well_opt)
+            session.commit()
+            show_data_well()
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
@@ -615,6 +633,8 @@ def show_well_log():
         ui_wl.pushButton_update_all.clicked.connect(update_all_well_log_in_regression)
         ui_wl.pushButton_map_well_log.clicked.connect(map_well_logging)
         ui_wl.pushButton_clean.clicked.connect(clean_double_well_logging)
+        ui_wl.pushButton_uf_to_bound.clicked.connect(uf_to_well_boundary)
+        ui_wl.pushButton_mosh_pesch_to_data.clicked.connect(m_ss_to_well_data)
 
         update_list_well_log()
 
