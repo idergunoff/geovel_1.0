@@ -503,7 +503,7 @@ def show_well_log():
                     WellLog.curve_name.in_(list_title_log)
                 ).all()
 
-                list_x, list_y, list_val = [], [], []
+                list_x, list_y, list_val, list_well_name = [], [], [], []
                 for wl in well_logging:
                     bound = session.query(Boundary).filter(
                         Boundary.well_id == wl.well_id,
@@ -517,14 +517,15 @@ def show_well_log():
                         median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
                         print(well.name, bound.depth, median_value)
                         if median_value:
+                            list_well_name.append(well.name)
                             list_x.append(well.x_coord)
                             list_y.append(well.y_coord)
                             list_val.append(median_value)
 
                 if not ui_mwl.checkBox_all_well.isChecked():
-                    draw_map(list_x, list_y, list_val, list_title_log[0], profiles=True)
+                    draw_map(list_x, list_y, list_val, list_title_log[0], profiles=True, list_name=list_well_name)
                 else:
-                    draw_map(list_x, list_y, list_val, list_title_log[0])
+                    draw_map(list_x, list_y, list_val, list_title_log[0], list_name=list_well_name)
 
             def to_excel_well_log():
                 min_x, max_x, min_y, max_y = 0, 0, 0, 0

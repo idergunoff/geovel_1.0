@@ -117,7 +117,7 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False):
+def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -141,6 +141,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False):
         coord = np.column_stack([x, y])
         z = np.array(list_z[::sparse])
         grid_size = ui_dm.spinBox_grid.value()
+
 
         # Создание сетки для интерполяции
         # gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
@@ -235,6 +236,9 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False):
         plt.scatter(x, y, c=z, cmap=color_map)
         plt.colorbar(label=param)
         plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
+        if list_name:
+            for n_ix in range(len(list_name)):
+                plt.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
 
         if ui.checkBox_profile_well.isChecked():
             r = session.query(Research).filter_by(id=get_research_id()).first()
