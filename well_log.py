@@ -570,6 +570,34 @@ def show_well_log():
             ui_mwl.pushButton_to_excel.clicked.connect(to_excel_well_log)
             MapWellLog.exec_()
 
+        def clean_double_well_logging():
+            dict_well_log = {}
+            loggings = session.query(WellLog).all()
+            ui.progressBar.setMaximum(len(loggings))
+            n_rem = 0
+            for n, log in enumerate(loggings):
+                list_log_id = [key for key, value in dict_well_log.items() if value == log.well.name]
+                if list_log_id:
+                    log_rem = False
+                    for log_id in list_log_id:
+                        old_log = session.get(WellLog, log_id)
+                        if old_log.curve_data == log.curve_data:
+                            log_name = log.curve_name
+                            well_name = log.well.name
+                            session.delete(log)
+                            set_info(f'Удален каротаж {log_name} скважины {well_name}', 'orange')
+                            log_rem = True
+                            n_rem += 1
+                            break
+                    if not log_rem:
+                        dict_well_log[log.id] = log.well.name
+                else:
+                    dict_well_log[log.id] = log.well.name
+                ui.progressBar.setValue(n+1)
+            session.commit()
+            update_list_well(select_well=True, selected_well_id=get_well_id())
+            set_info(f'Удалено {n_rem} дублей каротажей.', 'blue')
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
@@ -586,6 +614,7 @@ def show_well_log():
         ui_wl.pushButton_to_tar_val.clicked.connect(median_to_target_value)
         ui_wl.pushButton_update_all.clicked.connect(update_all_well_log_in_regression)
         ui_wl.pushButton_map_well_log.clicked.connect(map_well_logging)
+        ui_wl.pushButton_clean.clicked.connect(clean_double_well_logging)
 
         update_list_well_log()
 
