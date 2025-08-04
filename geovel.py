@@ -27,6 +27,8 @@ from remote_db.remote_db_win import *
 from well_log import *
 from mask_params import *
 from filter_well import *
+from noise import *
+
 
 MainWindow.show()
 
@@ -507,6 +509,11 @@ ui.listWidget_model_nn.currentItemChanged.connect(draw_relief)
 ########## filter well ########
 ui.pushButton_filter_mlp.clicked.connect(open_filter_well_cls)
 ui.pushButton_filter_reg.clicked.connect(open_filter_well_reg)
+
+########## NOISE #############
+ui.pushButton_noise_profile.clicked.connect(check_noise_profile)
+ui.pushButton_noise_object.clicked.connect(check_noise_object)
+
 
 time = datetime.datetime.now()
 

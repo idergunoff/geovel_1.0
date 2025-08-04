@@ -1290,4 +1290,27 @@ def plot_graphs_by_group(graphs, names):
     plt.show()
 
 
+def draw_noise(label_lof):
+    remove_poly_item()
+    list_y1 = [0 for _ in range(len(label_lof))]
+    list_y2 = [511 for _ in range(len(label_lof))]
+
+    list_dupl = []
+    for index, current_element in enumerate(label_lof):
+        if current_element == -1:
+            list_dupl.append(index)
+        else:
+            if list_dupl:
+                list_dupl.append(list_dupl[-1] + 1)
+                y_up = [list_y1[i] for i in list_dupl]
+                y_down = [list_y2[i] for i in list_dupl]
+                draw_fill_result(list_dupl, y_up, y_down, ui.pushButton_color.text())
+            list_dupl = []
+    if len(list_dupl) > 0:
+        y_up = [list_y1[i] for i in list_dupl]
+        y_down = [list_y2[i] for i in list_dupl]
+        draw_fill_result(list_dupl, y_up, y_down, ui.pushButton_color.text())
+
+
+
 
