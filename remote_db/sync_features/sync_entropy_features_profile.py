@@ -39,8 +39,9 @@ def unload_entropy_feature_profile(Window):
         if problems:
             error_info = (f'Отсутствуют данные в таблице ProfileRDB.')
             error_info += "\n\nНеобходимо сначала выгрузить профили с локальной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
+            set_info('Обнаружены проблемы с зависимостями. Выгрузка данных прекращена', 'red')
             QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            return
         else:
             set_info('Проблем с зависимостями нет', 'green')
 
@@ -145,8 +146,9 @@ def load_entropy_feature_profile(Window):
         if problems:
             error_info = (f'Отсутствуют данные в таблице ProfileRDB.')
             error_info += "\n\nНеобходимо сначала загрузить профили с удаленной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
+            set_info('Обнаружены проблемы с зависимостями. Загрузка данных прекращена.', 'red')
             QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            return
         else:
             set_info('Проблем с зависимостями нет', 'green')
 
@@ -211,7 +213,5 @@ def load_entropy_feature_profile(Window):
         set_info(
             f'{added_word} {pluralize(new_ent_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EntropyFeatureProfile',
             'green')
-
-    update_list_trained_models_class()
 
     set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')

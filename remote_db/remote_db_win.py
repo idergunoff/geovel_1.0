@@ -1,27 +1,18 @@
-import psycopg2
 from psycopg2 import OperationalError
-from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QListWidget
-from remote_db.model_remote_db import *
-from models_db.model import *
-from qt.rem_db_window import *
-from func import *
 import hashlib
-import logging
 from remote_db.sync_wells import sync_wells_func
 from remote_db.sync_well_relations import load_well_relations, unload_well_relations
 from remote_db.sync_formations import load_formations, unload_formations
 from remote_db.sync_objects import sync_objects_direction
 from remote_db.unload_mlp import unload_mlp_func
-from mlp import update_list_mlp
-from classification_func import train_classifier
 from remote_db.sync_genetic import *
 from remote_db.unload_mlp_models import unload_cls_models_func
 from remote_db.unload_regmod import unload_regmod_func
 from regression import update_list_reg, update_list_trained_models_regmod
 from remote_db.unload_reg_models import unload_reg_models_func
-from remote_db.sync_entropy_features import *
-from remote_db.sync_entropy_features_profile import *
+from remote_db.sync_features.sync_entropy_features import *
+from remote_db.sync_features.sync_entropy_features_profile import *
 
 def open_rem_db_window():
     try:
@@ -347,7 +338,28 @@ def open_rem_db_window():
                         .filter(ResearchRDB.object_id == object_id) \
                         .delete(synchronize_session=False)
 
-                    # Удаляем все энтропии, связанные с объектом
+                    # Удаляем все праметры пластов, связанные с объектом
+                    remote_session.query(FormationFeatureRDB) \
+                        .filter(FormationFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(WaveletFeatureRDB) \
+                        .filter(WaveletFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(FractalFeatureRDB) \
+                        .filter(FractalFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
                     remote_session.query(EntropyFeatureRDB) \
                         .filter(EntropyFeatureRDB.formation_id == FormationRDB.id) \
                         .filter(FormationRDB.profile_id == ProfileRDB.id) \
@@ -355,9 +367,58 @@ def open_rem_db_window():
                         .filter(ResearchRDB.object_id == object_id) \
                         .delete(synchronize_session=False)
 
+                    remote_session.query(NonlinearFeatureRDB) \
+                        .filter(NonlinearFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(MorphologyFeatureRDB) \
+                        .filter(MorphologyFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(FrequencyFeatureRDB) \
+                        .filter(FrequencyFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(EnvelopeFeatureRDB) \
+                        .filter(EnvelopeFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(AutocorrFeatureRDB) \
+                        .filter(AutocorrFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(EMDFeatureRDB) \
+                        .filter(EMDFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
+                    remote_session.query(HHTFeatureRDB) \
+                        .filter(HHTFeatureRDB.formation_id == FormationRDB.id) \
+                        .filter(FormationRDB.profile_id == ProfileRDB.id) \
+                        .filter(ProfileRDB.research_id == ResearchRDB.id) \
+                        .filter(ResearchRDB.object_id == object_id) \
+                        .delete(synchronize_session=False)
+
                     # Удаляем все энтропии профиля, связанные с объектом
                     remote_session.query(EntropyFeatureProfileRDB) \
-                        .filter(EntropyFeatureRDB.profile_id == ProfileRDB.id) \
+                        .filter(EntropyFeatureProfileRDB.profile_id == ProfileRDB.id) \
                         .filter(ProfileRDB.research_id == ResearchRDB.id) \
                         .filter(ResearchRDB.object_id == object_id) \
                         .delete(synchronize_session=False)
@@ -1481,7 +1542,6 @@ def open_rem_db_window():
     ui_rdb.listWidget_wells.currentItemChanged.connect(update_boundaries_rdb)
     ui_rdb.lineEdit_well_search.setPlaceholderText("Поиск скважины...")
     ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
-    ui_rdb.pushButton_sync_entropy.clicked.connect(sync_entropy_features)
     ui_rdb.pushButton_sync_entropy_profile.clicked.connect(sync_entropy_features_profile)
 
     RemoteDB.exec_()

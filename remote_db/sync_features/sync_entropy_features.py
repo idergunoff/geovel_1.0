@@ -3,12 +3,12 @@ from models_db.model import *
 from qt.rem_db_window import *
 from func import *
 
-def unload_entropy_feature(Window):
+def unload_entropy_feature():
     """Выгрузка таблицы EntropyFeature с локальной БД на удаленную"""
 
-    set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
+    # set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
-    set_info('Проверка наличия связанных пластов в удаленной БД', 'blue')
+    set_info('Проверка наличия связанных пластов для параметров энтропии в удаленной БД', 'blue')
 
     # Предзагрузка данных из удаленной БД для проверки
     with get_session() as remote_session:
@@ -42,7 +42,8 @@ def unload_entropy_feature(Window):
             error_info = (f'Отсутствуют данные в таблице FormationRDB.')
             error_info += "\n\nНеобходимо сначала выгрузить пласты с локальной БД."
             set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей. Выгрузка данных прекращена.', error_info)
+            return
         else:
             set_info('Проблем с зависимостями нет', 'green')
 
@@ -52,7 +53,7 @@ def unload_entropy_feature(Window):
             session.rollback()
             error_info = 'Ошибка при удалении записей без связанных пластов в локальной БД'
             set_info('Обнаружены проблемы с зависимостями в локальной БД', 'red')
-            QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей', error_info)
             return
 
 
@@ -73,7 +74,7 @@ def unload_entropy_feature(Window):
         ui.progressBar.setMaximum(len(local_ent_features))
         new_ent_feature_count = 0
 
-        for n, (local_ent_feature, formation_up_hash, formation_down_hash) in tqdm(enumerate(local_ent_features), desc='Выгрузка энтропии'):
+        for n, (local_ent_feature, formation_up_hash, formation_down_hash) in tqdm(enumerate(local_ent_features), desc='Выгрузка параметров энтропии'):
             ui.progressBar.setValue(n + 1)
 
             # Получаем ID пласта
@@ -114,15 +115,15 @@ def unload_entropy_feature(Window):
             f'{added_word} {pluralize(new_ent_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EntropyFeatureRDB',
             'green')
 
-    set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')
+    # set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')
 
 
-def load_entropy_feature(Window):
+def load_entropy_feature():
     """Загрузка таблицs EntropyFeature с удаленной БД на локальную"""
 
-    set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+    # set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-    set_info('Проверка наличия вязанных пластов в локальной БД', 'blue')
+    set_info('Проверка наличия связанных пластов для параметров энтропии в локальной БД', 'blue')
     with get_session() as remote_session:
 
         local_formations = {}
@@ -151,7 +152,8 @@ def load_entropy_feature(Window):
             error_info = (f'Отсутствуют данные в таблице FormationRDB.')
             error_info += "\n\nНеобходимо сначала загрузить пласты с удаленной БД."
             set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей. Загрузка данных прекращена.', error_info)
+            return
         else:
             set_info('Проблем с зависимостями нет', 'green')
 
@@ -172,7 +174,7 @@ def load_entropy_feature(Window):
         ui.progressBar.setMaximum(len(remote_ent_features))
         new_ent_feature_count = 0
 
-        for n, (remote_ent_feature_id, formation_up_hash, formation_down_hash) in tqdm(enumerate(remote_ent_features), desc='Загрузка энтропии'):
+        for n, (remote_ent_feature_id, formation_up_hash, formation_down_hash) in tqdm(enumerate(remote_ent_features), desc='Загрузка параметров энтропии'):
             ui.progressBar.setValue(n+1)
 
             # Получаем ID пласта
@@ -211,11 +213,9 @@ def load_entropy_feature(Window):
         session.commit()
         added_word = "Добавлена" if new_ent_feature_count == 1 else "Добавлено"
         set_info(
-            f'{added_word} {pluralize(new_ent_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EntropyFeatureProfile',
+            f'{added_word} {pluralize(new_ent_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EntropyFeature',
             'green')
 
-    update_list_trained_models_class()
-
-    set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
+    # set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
 

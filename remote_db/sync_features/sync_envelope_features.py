@@ -1,0 +1,211 @@
+from remote_db.model_remote_db import *
+from models_db.model import *
+from qt.rem_db_window import *
+from func import *
+
+def unload_envelope_feature():
+    """Выгрузка таблицы EnvelopeFeature с локальной БД на удаленную"""
+
+    # set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
+
+    set_info('Проверка наличия связанных пластов для характеристик огибающей в удаленной БД', 'blue')
+
+    # Предзагрузка данных из удаленной БД для проверки
+    with get_session() as remote_session:
+        remote_formations = {}
+        for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id).all():
+            remote_formations[f.up_hash] = f.id
+            remote_formations[f.down_hash] = f.id
+
+        local_features = session.query(
+            EnvelopeFeature,
+            Formation.up_hash,
+            Formation.down_hash
+        ).join(
+            Formation, EnvelopeFeature.formation_id == Formation.id
+        ).all()
+
+        problems = False
+
+        for local_feature, formation_up_hash, formation_down_hash in tqdm(local_features, desc='Проверка наличия связанных пластов в удаленной БД'):
+
+            if local_feature.formation is None:
+                session.delete(local_feature)
+                set_info(f'В таблице EnvelopeFeature удалена запись id{local_feature.id}, для которой отстутствует связанный пласт', 'black')
+                continue
+
+            if (formation_up_hash not in remote_formations and
+                    formation_down_hash not in remote_formations):
+                problems = True
+
+        if problems:
+            error_info = (f'Отсутствуют данные в таблице FormationRDB.')
+            error_info += "\n\nНеобходимо сначала выгрузить пласты с локальной БД."
+            set_info('Обнаружены проблемы с зависимостями', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей. Выгрузка данных прекращена.', error_info)
+            return
+        else:
+            set_info('Проблем с зависимостями нет', 'green')
+
+        try:
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            error_info = 'Ошибка при удалении записей без связанных пластов в локальной БД'
+            set_info('Обнаружены проблемы с зависимостями в локальной БД', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей', error_info)
+            return
+
+
+    # Если проверка пройдена, выполняем выгрузку
+    with get_session() as remote_session:
+        local_features = session.query(
+            EnvelopeFeature,
+            Formation.up_hash,
+            Formation.down_hash
+        ).join(
+            Formation, EnvelopeFeature.formation_id == Formation.id
+        ).all()
+        remote_formations = {}
+        for f in remote_session.query(FormationRDB.up_hash, FormationRDB.down_hash, FormationRDB.id).all():
+            remote_formations[f.up_hash] = [f.id]
+            remote_formations[f.down_hash] = [f.id]
+
+        ui.progressBar.setMaximum(len(local_features))
+        new_feature_count = 0
+
+        for n, (local_feature, formation_up_hash, formation_down_hash) in tqdm(enumerate(local_features), desc='Выгрузка характеристик огибающей'):
+            ui.progressBar.setValue(n + 1)
+
+            # Получаем ID пласта
+            remote_formation_list = remote_formations.get(local_feature.formation.up_hash)
+            if not remote_formation_list:
+                remote_formation_list = remote_formations.get(local_feature.formation.down_hash)
+
+            remote_feature_count = remote_session.query(EnvelopeFeatureRDB).filter_by(
+                formation_id=remote_formation_list[0]
+            ).count()
+
+            if remote_feature_count == 0:
+                new_feature = EnvelopeFeatureRDB(
+                    formation_id=remote_formation_list[0],
+                    env_area=local_feature.env_area,
+                    env_max=local_feature.env_max,
+                    env_t_max=local_feature.env_t_max,
+                    env_mean=local_feature.env_mean,
+                    env_std=local_feature.env_std,
+                    env_skew=local_feature.env_skew,
+                    env_kurt=local_feature.env_kurt,
+                    env_max_mean_ratio=local_feature.env_max_mean_ratio,
+                    env_peak_width=local_feature.env_peak_width,
+                    env_energy_win1=local_feature.env_energy_win1,
+                    env_energy_win2=local_feature.env_energy_win2,
+                    env_energy_win3=local_feature.env_energy_win3
+                )
+                remote_session.add(new_feature)
+                new_feature_count += 1
+
+        remote_session.commit()
+        added_word = "Добавлена" if new_feature_count == 1 else "Добавлено"
+        set_info(
+            f'{added_word} {pluralize(new_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EnvelopeFeatureRDB',
+            'green')
+
+    # set_info('Выгрузка данных с локальной БД на удаленную завершена', 'blue')
+
+
+def load_envelope_feature():
+    """Загрузка таблицs EnvelopeFeature с удаленной БД на локальную"""
+
+    # set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
+
+    set_info('Проверка наличия связанных пластов для характеристик огибающей в локальной БД', 'blue')
+    with get_session() as remote_session:
+
+        local_formations = {}
+        for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
+            local_formations[f.up_hash] = f.id
+            local_formations[f.down_hash] = f.id
+
+        remote_features = remote_session.query(
+            EnvelopeFeatureRDB.id,
+            FormationRDB.up_hash,
+            FormationRDB.down_hash
+        ).join(
+            FormationRDB, EnvelopeFeatureRDB.formation_id == FormationRDB.id
+        ).all()
+
+        problems = False
+
+        for remote_feature, formation_up_hash, formation_down_hash in tqdm(remote_features, desc='Проверка наличия связанных пластов в локальной БД'):
+
+            # Проверяем пласт
+            if (formation_up_hash not in local_formations and
+                    formation_down_hash not in local_formations):
+                problems = True
+
+        if problems:
+            error_info = (f'Отсутствуют данные в таблице FormationRDB.')
+            error_info += "\n\nНеобходимо сначала загрузить пласты с удаленной БД."
+            set_info('Обнаружены проблемы с зависимостями', 'red')
+            QMessageBox.critical(MainWindow, 'Ошибка зависимостей. Загрузка данных прекращена.', error_info)
+            return
+        else:
+            set_info('Проблем с зависимостями нет', 'green')
+
+    # Если проверка пройдена, выполняем выгрузку
+    with get_session() as remote_session:
+        remote_features = remote_session.query(
+            EnvelopeFeatureRDB.id,
+            FormationRDB.up_hash,
+            FormationRDB.down_hash
+        ).join(
+            FormationRDB, EnvelopeFeatureRDB.formation_id == FormationRDB.id
+        ).all()
+        local_formations = {}
+        for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
+            local_formations[f.up_hash] = [f.id]
+            local_formations[f.down_hash] = [f.id]
+
+        ui.progressBar.setMaximum(len(remote_features))
+        new_feature_count = 0
+
+        for n, (remote_feature_id, formation_up_hash, formation_down_hash) in tqdm(enumerate(remote_features), desc='Загрузка характеристик огибающей'):
+            ui.progressBar.setValue(n+1)
+
+            # Получаем ID пласта
+            local_formation_list = local_formations.get(formation_up_hash)
+            if not local_formation_list:
+                local_formation_list = local_formations.get(formation_down_hash)
+
+            local_feature_count = session.query(EnvelopeFeature).filter_by(
+                formation_id=local_formation_list[0]
+            ).count()
+
+            if local_feature_count == 0:
+                remote_feature = remote_session.get(EnvelopeFeatureRDB, remote_feature_id)
+                new_feature = EnvelopeFeature(
+                    formation_id=local_formation_list[0],
+                    env_area=remote_feature.env_area,
+                    env_max=remote_feature.env_max,
+                    env_t_max=remote_feature.env_t_max,
+                    env_mean=remote_feature.env_mean,
+                    env_std=remote_feature.env_std,
+                    env_skew=remote_feature.env_skew,
+                    env_kurt=remote_feature.env_kurt,
+                    env_max_mean_ratio=remote_feature.env_max_mean_ratio,
+                    env_peak_width=remote_feature.env_peak_width,
+                    env_energy_win1=remote_feature.env_energy_win1,
+                    env_energy_win2=remote_feature.env_energy_win2,
+                    env_energy_win3=remote_feature.env_energy_win3
+                )
+                session.add(new_feature)
+                new_feature_count += 1
+
+        session.commit()
+        added_word = "Добавлена" if new_feature_count == 1 else "Добавлено"
+        set_info(
+            f'{added_word} {pluralize(new_feature_count, ["новая запись", "новых записи", "новых записей"])} в таблицу EnvelopeFeature',
+            'green')
+
+    # set_info('Загрузка параметров с удаленной БД на локальную завершена', 'blue')
