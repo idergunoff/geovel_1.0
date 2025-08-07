@@ -1315,8 +1315,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>96</width>
-                       <height>26</height>
+                       <width>437</width>
+                       <height>214</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1440,19 +1440,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_rem_well">
-                  <property name="toolTip">
-                   <string>Удалить скважину</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 153, 153);</string>
-                  </property>
-                  <property name="text">
-                   <string>remove well</string>
-                  </property>
-                 </widget>
-                </item>
                </layout>
               </item>
               <item row="2" column="2">
@@ -1472,19 +1459,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_add_data_well">
-                  <property name="toolTip">
-                   <string>Добавить данные о текущей скважине</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(202, 251, 171);</string>
-                  </property>
-                  <property name="text">
-                   <string>add data well</string>
-                  </property>
-                 </widget>
-                </item>
                 <item row="0" column="1">
                  <widget class="QPushButton" name="pushButton_well_log">
                   <property name="toolTip">
@@ -1495,6 +1469,26 @@
                   </property>
                   <property name="text">
                    <string>LOG</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QToolButton" name="toolButton_add_data_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QToolButton" name="toolButton_del_data_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>del</string>
                   </property>
                  </widget>
                 </item>
@@ -1759,32 +1753,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_add_well">
-                  <property name="toolTip">
-                   <string>Добавить новую скважину</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add well</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_edit_well">
-                  <property name="toolTip">
-                   <string>Редактировать текущую скважину</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>edit well</string>
-                  </property>
-                 </widget>
-                </item>
                 <item row="0" column="1">
                  <widget class="QPushButton" name="pushButton_add_bound">
                   <property name="toolTip">
@@ -1805,6 +1773,45 @@
                   </property>
                   <property name="text">
                    <string>draw deep prof</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QPushButton" name="pushButton_rem_well">
+                  <property name="toolTip">
+                   <string>Удалить скважину</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 153, 153);</string>
+                  </property>
+                  <property name="text">
+                   <string>remove well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_add_well">
+                  <property name="toolTip">
+                   <string>Добавить новую скважину</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>add well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_edit_well">
+                  <property name="toolTip">
+                   <string>Редактировать текущую скважину</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 255, 191);</string>
+                  </property>
+                  <property name="text">
+                   <string>edit well</string>
                   </property>
                  </widget>
                 </item>
@@ -5674,7 +5681,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

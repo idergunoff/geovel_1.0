@@ -114,6 +114,7 @@ def unload_emd_feature():
                     emd_corr_50=local_feature.emd_corr_50,
                     emd_corr_75=local_feature.emd_corr_75,
                     emd_energ_entropy=local_feature.emd_energ_entropy,
+                    emd_oi=local_feature.emd_oi,
                     emd_hi=local_feature.emd_hi
                 )
                 remote_session.add(new_feature)
@@ -225,6 +226,7 @@ def load_emd_feature():
                     emd_corr_50=remote_feature.emd_corr_50,
                     emd_corr_75=remote_feature.emd_corr_75,
                     emd_energ_entropy=remote_feature.emd_energ_entropy,
+                    emd_oi=remote_feature.emd_oi,
                     emd_hi=remote_feature.emd_hi
                 )
                 session.add(new_feature)

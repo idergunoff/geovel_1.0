@@ -1482,7 +1482,7 @@ def update_list_well(select_well=False, selected_well_id=None):
             for item in wells_with_logs + wells_without_logs:
                 ui.listWidget_well.addItem(item)
 
-        ui.label_11.setText(f'Wells: {ui.listWidget_well.count()}')
+        ui.label_11.setText(f'Wells: {len(wells_with_logs)} / {ui.listWidget_well.count()}')
     # ui.listWidget_well.setCurrentRow(0)
     if select_well and selected_well_id is not None:
         for i in range(ui.listWidget_well.count()):

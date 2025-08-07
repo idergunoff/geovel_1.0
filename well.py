@@ -272,19 +272,56 @@ def add_wells():
 def add_data_well():
     """ Добавить данные по скважинам """
     try:
-        category, value = ui.lineEdit_string.text().split('; ')[0], ui.lineEdit_string.text().split('; ')[1]
+        category, value = ui.lineEdit_string.text().split(': ')[0], ui.lineEdit_string.text().split(': ')[1]
+
+        existing_data = session.query(WellOptionally).filter(
+            WellOptionally.well_id == get_well_id(),
+            WellOptionally.option == category,
+            WellOptionally.value == value
+        ).first()
+
+        if existing_data:
+            set_info(f"Данные '{category}: {value}' уже существуют", 'red')
+            return
+
         new_data_well = WellOptionally(
             well_id = get_well_id(),
             option = category,
             value = value
         )
-    except IndexError:
-        set_info('Введите данные в формате "Категория; Значение"', 'red')
-        return
-    session.add(new_data_well)
-    session.commit()
-    show_data_well()
+        session.add(new_data_well)
+        session.commit()
+        set_info(f"Данные '{category}: {value}' успешно добавлены", 'green')
+        show_data_well()
 
+    except IndexError:
+        set_info('Введите данные в формате "Категория: Значение"', 'red')
+        return
+
+
+def delete_data_well():
+    """ Удалить данные по скважинам """
+    try:
+        category, value = ui.lineEdit_string.text().split(': ')[0], ui.lineEdit_string.text().split(': ')[1]
+
+        # Находим запись для удаления
+        data_to_delete = session.query(WellOptionally).filter(
+            WellOptionally.well_id == get_well_id(),
+            WellOptionally.option == category,
+            WellOptionally.value == value
+        ).first()
+
+        if data_to_delete:
+            session.delete(data_to_delete)
+            session.commit()
+            set_info(f"Данные '{category}: {value}' успешно удалены", 'green')
+            show_data_well()
+        else:
+            set_info("Данные не найдены для удаления", 'red')
+
+    except IndexError:
+        set_info('Введите данные в формате "Категория: Значение"', 'red')
+        return
 
 
 
