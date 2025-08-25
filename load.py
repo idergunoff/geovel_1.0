@@ -1,9 +1,327 @@
+import json
+import datetime
+import pandas as pd
 import numpy as np
-from matplotlib.pyplot import title
+from scipy.signal import hilbert
+from scipy.fft import rfft, rfftfreq
+from scipy.stats import skew, kurtosis
 
-from func import *
-from wgs_to_pulc import wgs84_to_pulc42
-from qt.add_obj_dialog import *
+# GUI modules are optional in testing environment
+try:  # pragma: no cover - UI code is not covered by tests
+    from qt.add_obj_dialog import *  # type: ignore
+except Exception:  # pragma: no cover
+    QtWidgets = None
+    QtCore = None
+
+
+def calc_fft_attributes(signal):
+    """Расчёт атрибутов спектра Фурье."""
+    if len(signal) < 3:
+        return np.NaN, np.NaN, np.NaN, np.NaN
+    result = rfft(signal)
+    magnitude = np.abs(result)
+    normalized_magnitude = magnitude / len(signal)
+    area_under_spectrum = np.sum(normalized_magnitude)
+    n = len(signal)
+    frequencies = rfftfreq(n, 8E-9)
+    weighted_average_frequency = np.sum(frequencies * magnitude) / np.sum(magnitude)
+    max_amplitude = np.max(magnitude[1:])
+    index_max_amplitude = list(magnitude[1:]).index(max_amplitude) + 1
+    central_frequency = frequencies[index_max_amplitude]
+    threshold = 0.7 * max_amplitude
+    left_index, right_index = 0, len(frequencies) - 1
+    for i in range(index_max_amplitude, -1, -1):
+        if magnitude[i] < threshold:
+            left_index = i
+            break
+    for i in range(index_max_amplitude, len(frequencies)):
+        if magnitude[i] < threshold:
+            right_index = i
+            break
+    spectrum_width = frequencies[right_index] - frequencies[left_index]
+    q_factor = central_frequency / spectrum_width if spectrum_width else np.NaN
+    return area_under_spectrum, weighted_average_frequency, q_factor, area_under_spectrum / weighted_average_frequency
+
+
+def read_interval_file(file_name: str) -> pd.DataFrame:
+    """Прочитать файл интервала пласта."""
+    pd_int = pd.read_table(file_name, delimiter=';', header=0)
+    pd_int = pd_int.applymap(lambda x: float(str(x).replace(',', '.')))
+    return pd_int
+
+
+def validate_interval_data(signals, pd_int):
+    """Проверить соответствие данных и вернуть границы слоёв."""
+    if len(signals) != len(pd_int.index):
+        raise ValueError('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах')
+    layer_top = list(map(lambda x: int(x / 40), pd_int['T01'].values.tolist()))
+    layer_bottom = list(map(lambda x: int(x / 40), pd_int['D02'].values.tolist()))
+    if all(i == 0 for i in layer_top) or all(i == 0 for i in layer_bottom):
+        raise ValueError('В выбранном файле границы пласта не отрисованы')
+    return layer_top, layer_bottom
+
+
+def extract_coordinates(pd_int):
+    """Получить координаты из таблицы интервала."""
+    from wgs_to_pulc import wgs84_to_pulc42  # локальный импорт, чтобы избежать зависимости при тестах
+    x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l = [], [], [], []
+    for i in pd_int.index:
+        y, x = wgs84_to_pulc42(pd_int['Latd'][i], pd_int['Long'][i])
+        x_wgs_l.append(pd_int['Long'][i])
+        y_wgs_l.append(pd_int['Latd'][i])
+        x_pulc_l.append(x)
+        y_pulc_l.append(y)
+    return x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l
+
+
+def compute_parameters(signals, layer_top, layer_bottom, x_pulc_l=None, y_pulc_l=None,
+                       pd_grid_uf=None, pd_grid_m=None, pd_grid_r=None, progress_callback=None):
+    """Вычислить параметры сигнала для заданных слоёв."""
+    x_pulc_l = x_pulc_l or []
+    y_pulc_l = y_pulc_l or []
+
+    T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
+    Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
+    Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
+    A_max_l, Vt_max_l, At_max_l, Pht_max_l, Wt_max_l, A_T_max_l, Vt_T_max_l, At_T_max_l, Pht_T_max_l, Wt_T_max_l, \
+    A_Sn_l, Vt_Sn_l, At_Sn_l, Pht_Sn_l, Wt_Sn_l, A_wmf_l, Vt_wmf_l, At_wmf_l, Pht_wmf_l, Wt_wmf_l, A_Qf_l, \
+    Vt_Qf_l, At_Qf_l, Pht_Qf_l, Wt_Qf_l, A_Sn_wmf_l, Vt_Sn_wmf_l, At_Sn_wmf_l, Pht_Sn_wmf_l, Wt_Sn_wmf_l, k_r_l = \
+        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
+
+    list_param_1 = []
+    for i in range(len(layer_top)):
+        list_param_2 = []
+        signal = signals[i]
+        analytic_signal = hilbert(signal)
+        At = np.hypot(signal, np.imag(analytic_signal)).tolist()
+        Vt = np.imag(analytic_signal).tolist()
+        Pht = np.angle(analytic_signal).tolist()
+        Wt = np.diff(np.angle(analytic_signal)).tolist()
+        nt = layer_top[i]
+        nb = layer_bottom[i]
+        T_top_l.append(nt * 8)
+        list_param_2.append(T_top_l[-1])
+        T_bottom_l.append(nb * 8)
+        list_param_2.append(T_bottom_l[-1])
+        dT_l.append(nb * 8 - nt * 8)
+        list_param_2.append(dT_l[-1])
+        A_top_l.append(signal[nt])
+        list_param_2.append(A_top_l[-1])
+        A_bottom_l.append(signal[nb])
+        list_param_2.append(A_bottom_l[-1])
+        dA_l.append(signal[nb] - signal[nt])
+        list_param_2.append(dA_l[-1])
+        A_sum_l.append(float(np.sum(signal[nt:nb])))
+        list_param_2.append(A_sum_l[-1])
+        A_mean_l.append(float(np.mean(signal[nt:nb])))
+        list_param_2.append(A_mean_l[-1])
+        dVt_l.append(Vt[nb] - Vt[nt])
+        list_param_2.append(dVt_l[-1])
+        Vt_top_l.append(Vt[nt])
+        list_param_2.append(Vt_top_l[-1])
+        Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
+        list_param_2.append(Vt_sum_l[-1])
+        Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
+        list_param_2.append(Vt_mean_l[-1])
+        dAt_l.append(At[nb] - At[nt])
+        list_param_2.append(dAt_l[-1])
+        At_top_l.append(At[nt])
+        list_param_2.append(At_top_l[-1])
+        At_sum_l.append(float(np.sum(At[nt:nb])))
+        list_param_2.append(At_sum_l[-1])
+        At_mean_l.append(float(np.mean(At[nt:nb])))
+        list_param_2.append(At_mean_l[-1])
+        dPht_l.append(Pht[nb] - Pht[nt])
+        list_param_2.append(dPht_l[-1])
+        Pht_top_l.append(Pht[nt])
+        list_param_2.append(Pht_top_l[-1])
+        Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
+        list_param_2.append(Pht_sum_l[-1])
+        Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
+        list_param_2.append(Pht_mean_l[-1])
+        Wt_top_l.append(Wt[nt])
+        list_param_2.append(Wt_top_l[-1])
+        Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
+        list_param_2.append(Wt_mean_l[-1])
+        Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
+        list_param_2.append(Wt_sum_l[-1])
+        std_l.append(float(np.std(signal[nt:nb])))
+        list_param_2.append(std_l[-1])
+        k_var_l.append(float(np.var(signal[nt:nb])))
+        list_param_2.append(k_var_l[-1])
+        skew_l.append(skew(signal[nt:nb]))
+        list_param_2.append(skew_l[-1])
+        kurt_l.append(kurtosis(signal[nt:nb]))
+        list_param_2.append(kurt_l[-1])
+        A_max_l.append(max(signal[nt:nb]))
+        list_param_2.append(A_max_l[-1])
+        Vt_max_l.append(max(Vt[nt:nb]))
+        list_param_2.append(Vt_max_l[-1])
+        At_max_l.append(max(At[nt:nb]))
+        list_param_2.append(At_max_l[-1])
+        Pht_max_l.append(max(Pht[nt:nb]))
+        list_param_2.append(Pht_max_l[-1])
+        Wt_max_l.append(max(Wt[nt:nb]))
+        list_param_2.append(Wt_max_l[-1])
+        A_T_max_l.append((signal[nt:nb].index(max(signal[nt:nb])) + nt) * 8)
+        list_param_2.append(A_T_max_l[-1])
+        Vt_T_max_l.append((Vt[nt:nb].index(max(Vt[nt:nb])) + nt) * 8)
+        list_param_2.append(Vt_T_max_l[-1])
+        At_T_max_l.append((At[nt:nb].index(max(At[nt:nb])) + nt) * 8)
+        list_param_2.append(At_T_max_l[-1])
+        Pht_T_max_l.append((Pht[nt:nb].index(max(Pht[nt:nb])) + nt) * 8)
+        list_param_2.append(Pht_T_max_l[-1])
+        Wt_T_max_l.append((Wt[nt:nb].index(max(Wt[nt:nb])) + nt) * 8)
+        list_param_2.append(Wt_T_max_l[-1])
+        A_Sn, A_wmf, A_Qf, A_Sn_wmf = calc_fft_attributes(signal[nt:nb])
+        Vt_Sn, Vt_wmf, Vt_Qf, Vt_Sn_wmf = calc_fft_attributes(Vt[nt:nb])
+        At_Sn, At_wmf, At_Qf, At_Sn_wmf = calc_fft_attributes(At[nt:nb])
+        Pht_Sn, Pht_wmf, Pht_Qf, Pht_Sn_wmf = calc_fft_attributes(Pht[nt:nb])
+        Wt_Sn, Wt_wmf, Wt_Qf, Wt_Sn_wmf = calc_fft_attributes(Wt[nt:nb])
+        A_Sn_l.append(A_Sn)
+        list_param_2.append(A_Sn_l[-1])
+        Vt_Sn_l.append(Vt_Sn)
+        list_param_2.append(Vt_Sn_l[-1])
+        At_Sn_l.append(At_Sn)
+        list_param_2.append(At_Sn_l[-1])
+        Pht_Sn_l.append(Pht_Sn)
+        list_param_2.append(Pht_Sn_l[-1])
+        Wt_Sn_l.append(Wt_Sn)
+        list_param_2.append(Wt_Sn_l[-1])
+        A_wmf_l.append(A_wmf)
+        list_param_2.append(A_wmf_l[-1])
+        Vt_wmf_l.append(Vt_wmf)
+        list_param_2.append(Vt_wmf_l[-1])
+        At_wmf_l.append(At_wmf)
+        list_param_2.append(At_wmf_l[-1])
+        Pht_wmf_l.append(Pht_wmf)
+        list_param_2.append(Pht_wmf_l[-1])
+        Wt_wmf_l.append(Wt_wmf)
+        list_param_2.append(Wt_wmf_l[-1])
+        A_Qf_l.append(A_Qf)
+        list_param_2.append(A_Qf_l[-1])
+        Vt_Qf_l.append(Vt_Qf)
+        list_param_2.append(Vt_Qf_l[-1])
+        At_Qf_l.append(At_Qf)
+        list_param_2.append(At_Qf_l[-1])
+        Pht_Qf_l.append(Pht_Qf)
+        list_param_2.append(Pht_Qf_l[-1])
+        Wt_Qf_l.append(Wt_Qf)
+        list_param_2.append(Wt_Qf_l[-1])
+        A_Sn_wmf_l.append(A_Sn_wmf)
+        list_param_2.append(A_Sn_wmf_l[-1])
+        Vt_Sn_wmf_l.append(Vt_Sn_wmf)
+        list_param_2.append(Vt_Sn_wmf_l[-1])
+        At_Sn_wmf_l.append(At_Sn_wmf)
+        list_param_2.append(At_Sn_wmf_l[-1])
+        Pht_Sn_wmf_l.append(Pht_Sn_wmf)
+        list_param_2.append(Pht_Sn_wmf_l[-1])
+        Wt_Sn_wmf_l.append(Wt_Sn_wmf)
+        list_param_2.append(Wt_Sn_wmf_l[-1])
+
+        if pd_grid_uf is not None:
+            pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc_l[i])
+            pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc_l[i])
+            pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc_l[i])
+            pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc_l[i])
+            pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc_l[i])
+            pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc_l[i])
+            i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
+                pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
+            i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
+                pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
+            i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
+                pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+            im = i_m if i_m > 0 else 0
+            width_l.append(im)
+            list_param_2.append(width_l[-1])
+            top_l.append(i_uf)
+            list_param_2.append(top_l[-1])
+            land_l.append(i_r)
+            list_param_2.append(land_l[-1])
+            speed_l.append(im * 100 / (layer_bottom[i] * 8 - layer_top[i] * 8))
+            list_param_2.append(speed_l[-1])
+            speed_cover_l.append((i_r - i_uf) * 100 / (layer_top[i] * 8))
+            list_param_2.append(speed_cover_l[-1])
+
+        if len(list_param_1) == len(list_param_2):
+            k_r_l.append(np.corrcoef(list_param_1, list_param_2)[0, 1])
+        list_param_1 = list_param_2.copy()
+        if progress_callback:
+            progress_callback(i + 1)
+
+    if k_r_l:
+        k_r_l.append(k_r_l[-1])
+    else:
+        k_r_l.append(0.0)
+
+    dict_signal = {'T_top': T_top_l,
+                   'T_bottom': T_bottom_l,
+                   'dT': dT_l,
+                   'A_top': A_top_l,
+                   'A_bottom': A_bottom_l,
+                   'dA': dA_l,
+                   'A_sum': A_sum_l,
+                   'A_mean': A_mean_l,
+                   'dVt': dVt_l,
+                   'Vt_top': Vt_top_l,
+                   'Vt_sum': Vt_sum_l,
+                   'Vt_mean': Vt_mean_l,
+                   'dAt': dAt_l,
+                   'At_top': At_top_l,
+                   'At_sum': At_sum_l,
+                   'At_mean': At_mean_l,
+                   'dPht': dPht_l,
+                   'Pht_top': Pht_top_l,
+                   'Pht_sum': Pht_sum_l,
+                   'Pht_mean': Pht_mean_l,
+                   'Wt_top': Wt_top_l,
+                   'Wt_mean': Wt_mean_l,
+                   'Wt_sum': Wt_sum_l,
+                   'std': std_l,
+                   'k_var': k_var_l,
+                   'skew': skew_l,
+                   'kurt': kurt_l,
+                   'A_max': A_max_l,
+                   'Vt_max': Vt_max_l,
+                   'At_max': At_max_l,
+                   'Pht_max': Pht_max_l,
+                   'Wt_max': Wt_max_l,
+                   'A_T_max': A_T_max_l,
+                   'Vt_T_max': Vt_T_max_l,
+                   'At_T_max': At_T_max_l,
+                   'Pht_T_max': Pht_T_max_l,
+                   'Wt_T_max': Wt_T_max_l,
+                   'A_Sn': A_Sn_l,
+                   'Vt_Sn': Vt_Sn_l,
+                   'At_Sn': At_Sn_l,
+                   'Pht_Sn': Pht_Sn_l,
+                   'Wt_Sn': Wt_Sn_l,
+                   'A_wmf': A_wmf_l,
+                   'Vt_wmf': Vt_wmf_l,
+                   'At_wmf': At_wmf_l,
+                   'Pht_wmf': Pht_wmf_l,
+                   'Wt_wmf': Wt_wmf_l,
+                   'A_Qf': A_Qf_l,
+                   'Vt_Qf': Vt_Qf_l,
+                   'At_Qf': At_Qf_l,
+                   'Pht_Qf': Pht_Qf_l,
+                   'Wt_Qf': Wt_Qf_l,
+                   'A_Sn_wmf': A_Sn_wmf_l,
+                   'Vt_Sn_wmf': Vt_Sn_wmf_l,
+                   'At_Sn_wmf': At_Sn_wmf_l,
+                   'Pht_Sn_wmf': Pht_Sn_wmf_l,
+                   'Wt_Sn_wmf': Wt_Sn_wmf_l,
+                   'k_r': k_r_l}
+
+    if pd_grid_uf is not None:
+        dict_signal.update({'width': width_l,
+                            'top': top_l,
+                            'land': land_l,
+                            'speed': speed_l,
+                            'speed_cover': speed_cover_l})
+
+    return dict_signal
 
 
 def add_object():
@@ -76,446 +394,73 @@ def load_profile():
     update_profile_combobox()
 
 
+
 def load_param():
-    """ Загрузка файла интервала """
+    """Загрузка файла интервала"""
+    from func import (
+        set_info, session, Profile, get_profile_id, get_object_name, get_profile_name,
+        check_coordinates_profile, check_coordinates_research, Layers, Formation, Grid,
+        get_object_id, update_layers, update_formation_combobox, ui
+    )
     try:
         file_name = QFileDialog.getOpenFileName(caption='Выберите файл интервала', filter='*.txt')[0]
         set_info(file_name, 'blue')
-        pd_int = pd.read_table(file_name, delimiter=';', header=0)
-        pd_int = pd_int.applymap(lambda x: float(str(x).replace(',', '.')))
+        pd_int = read_interval_file(file_name)
     except FileNotFoundError:
         return
     signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
-    # проверяем соответствие количества измерений в загруженном файле и в БД
-    if len(signals) != len(pd_int.index):
-        set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах', 'red')
+    try:
+        layer_top, layer_bottom = validate_interval_data(signals, pd_int)
+    except ValueError as e:
+        set_info(str(e), 'red')
+        return
+    x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l = extract_coordinates(pd_int)
+    coord_dict = {'x_wgs': json.dumps(x_wgs_l), 'y_wgs': json.dumps(y_wgs_l),
+                  'x_pulc': json.dumps(x_pulc_l), 'y_pulc': json.dumps(y_pulc_l)}
+    session.query(Profile).filter(Profile.id == get_profile_id()).update(coord_dict, synchronize_session="fetch")
+    session.commit()
+    set_info(f'Загружены координаты ("{get_object_name()}", "{get_profile_name()}")', 'green')
+    check_coordinates_profile()
+    check_coordinates_research()
+
+    if session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_top').count() == 0:
+        new_layer_top = Layers(profile_id=get_profile_id(), layer_title='krot_top', layer_line=json.dumps(layer_top))
+        session.add(new_layer_top)
+        new_layer_bottom = Layers(profile_id=get_profile_id(), layer_title='krot_bottom', layer_line=json.dumps(layer_bottom))
+        session.add(new_layer_bottom)
+        session.commit()
+        new_formation = Formation(title='KROT', profile_id=get_profile_id(), up=new_layer_top.id, down=new_layer_bottom.id)
+        session.add(new_formation)
     else:
-        x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l = [], [], [], []
-        for i in pd_int.index:
-            y, x = wgs84_to_pulc42(pd_int['Latd'][i], pd_int['Long'][i])
-            x_wgs_l.append(pd_int['Long'][i])
-            y_wgs_l.append(pd_int['Latd'][i])
-            x_pulc_l.append(x)
-            y_pulc_l.append(y)
-        dict_signal = {'x_wgs': json.dumps(x_wgs_l), 'y_wgs': json.dumps(y_wgs_l),
-                       'x_pulc': json.dumps(x_pulc_l), 'y_pulc': json.dumps(y_pulc_l)}
-        session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
-        session.commit()
-        set_info(f'Загружены координаты ("{get_object_name()}", "{get_profile_name()}")', 'green')
-        check_coordinates_profile()
-        check_coordinates_research()
-        layer_top = list(map(lambda x: int(x / 40), pd_int['T01'].values.tolist()))
-        layer_bottom = list(map(lambda x: int(x / 40), pd_int['D02'].values.tolist()))
-        if all(i == 0 for i in layer_top) or all(i == 0 for i in layer_bottom):
-            set_info('В выбранном файле границы пласта не отрисованы', 'red')
-            return
-        if session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_top').count() == 0:
-            new_layer_top = Layers(profile_id=get_profile_id(), layer_title='krot_top', layer_line=json.dumps(layer_top))
-            session.add(new_layer_top)
-            new_layer_bottom = Layers(profile_id=get_profile_id(), layer_title='krot_bottom', layer_line=json.dumps(layer_bottom))
-            session.add(new_layer_bottom)
-            session.commit()
-            new_formation = Formation(title='KROT', profile_id=get_profile_id(), up=new_layer_top.id, down=new_layer_bottom.id)
-            session.add(new_formation)
-        else:
-            session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_top').update(
-                {'layer_line': json.dumps(layer_top)}, synchronize_session="fetch")
-            session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_bottom').update(
-                {'layer_line': json.dumps(layer_bottom)}, synchronize_session="fetch")
-        session.commit()
-        set_info(f'Загружены слои из программы KROT ("{get_object_name()}", ""{get_profile_name()}")', 'green')
-        update_layers()
+        session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_top').update(
+            {'layer_line': json.dumps(layer_top)}, synchronize_session="fetch")
+        session.query(Layers).filter(Layers.profile_id == get_profile_id(), Layers.layer_title == 'krot_bottom').update(
+            {'layer_line': json.dumps(layer_bottom)}, synchronize_session="fetch")
+    session.commit()
+    set_info(f'Загружены слои из программы KROT ("{get_object_name()}", ""{get_profile_name()}")', 'green')
+    update_layers()
 
-        ui.progressBar.setMaximum(len(layer_top))
-        grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-        if grid_db:
-            # считываем сетку грида из БД
-            pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
-            pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
-            pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
-        # задаем списки для хранения данных о скважинах
-        T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
-        Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
-        Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l, \
-        A_max_l, Vt_max_l, At_max_l, Pht_max_l, Wt_max_l, A_T_max_l, Vt_T_max_l, At_T_max_l, Pht_T_max_l, Wt_T_max_l, \
-        A_Sn_l, Vt_Sn_l, At_Sn_l, Pht_Sn_l, Wt_Sn_l, A_wmf_l, Vt_wmf_l, At_wmf_l, Pht_wmf_l, Wt_wmf_l, A_Qf_l, \
-        Vt_Qf_l, At_Qf_l, Pht_Qf_l, Wt_Qf_l, A_Sn_wmf_l, Vt_Sn_wmf_l, At_Sn_wmf_l, Pht_Sn_wmf_l, Wt_Sn_wmf_l, k_r_l= \
-        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
-        [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], \
-        [], [], [], [], [], [], []
+    ui.progressBar.setMaximum(len(layer_top))
+    grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
+    pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf)) if grid_db else None
+    pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m)) if grid_db else None
+    pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r)) if grid_db else None
 
-        try:
-            list_param_1 = []
-            for i in range(len(layer_top)):
-                list_param_2 = []
-                signal = signals[i]
-                analytic_signal = hilbert(signal)
-                At = np.hypot(signal, np.imag(analytic_signal)).tolist()
-                Vt = np.imag(analytic_signal).tolist()
-                Pht = np.angle(analytic_signal).tolist()
-                Wt = np.diff(np.angle(analytic_signal)).tolist()
-                nt = layer_top[i]
-                nb = layer_bottom[i]
-                T_top_l.append(layer_top[i] * 8)
-                list_param_2.append(T_top_l[-1])
-                T_bottom_l.append(layer_bottom[i] * 8)
-                list_param_2.append(T_bottom_l[-1])
-                dT_l.append(layer_bottom[i] * 8 - layer_top[i] * 8)
-                list_param_2.append(dT_l[-1])
-                A_top_l.append(signal[nt])
-                list_param_2.append(A_top_l[-1])
-                A_bottom_l.append(signal[nb])
-                list_param_2.append(A_bottom_l[-1])
-                dA_l.append(signal[nb] - signal[nt])
-                list_param_2.append(dA_l[-1])
-                A_sum_l.append(float(np.sum(signal[nt:nb])))
-                list_param_2.append(A_sum_l[-1])
-                A_mean_l.append(float(np.mean(signal[nt:nb])))
-                list_param_2.append(A_mean_l[-1])
-                dVt_l.append(Vt[nb] - Vt[nt])
-                list_param_2.append(dVt_l[-1])
-                Vt_top_l.append(Vt[nt])
-                list_param_2.append(Vt_top_l[-1])
-                Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
-                list_param_2.append(Vt_sum_l[-1])
-                Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
-                list_param_2.append(Vt_mean_l[-1])
-                dAt_l.append(At[nb] - At[nt])
-                list_param_2.append(dAt_l[-1])
-                At_top_l.append(At[nt])
-                list_param_2.append(At_top_l[-1])
-                At_sum_l.append(float(np.sum(At[nt:nb])))
-                list_param_2.append(At_sum_l[-1])
-                At_mean_l.append(float(np.mean(At[nt:nb])))
-                list_param_2.append(At_mean_l[-1])
-                dPht_l.append(Pht[nb] - Pht[nt])
-                list_param_2.append(dPht_l[-1])
-                Pht_top_l.append(Pht[nt])
-                list_param_2.append(Pht_top_l[-1])
-                Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
-                list_param_2.append(Pht_sum_l[-1])
-                Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
-                list_param_2.append(Pht_mean_l[-1])
-                Wt_top_l.append(Wt[nt])
-                list_param_2.append(Wt_top_l[-1])
-                Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
-                list_param_2.append(Wt_mean_l[-1])
-                Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
-                list_param_2.append(Wt_sum_l[-1])
-                std_l.append(float(np.std(signal[nt:nb])))
-                list_param_2.append(std_l[-1])
-                k_var_l.append(float(np.var(signal[nt:nb])))
-                list_param_2.append(k_var_l[-1])
-                skew_l.append(skew(signal[nt:nb]))
-                list_param_2.append(skew_l[-1])
-                kurt_l.append(kurtosis(signal[nt:nb]))
-                list_param_2.append(kurt_l[-1])
-                A_max_l.append(max(signal[nt:nb]))
-                list_param_2.append(A_max_l[-1])
-                Vt_max_l.append(max(Vt[nt:nb]))
-                list_param_2.append(Vt_max_l[-1])
-                At_max_l.append(max(At[nt:nb]))
-                list_param_2.append(At_max_l[-1])
-                Pht_max_l.append(max(Pht[nt:nb]))
-                list_param_2.append(Pht_max_l[-1])
-                Wt_max_l.append(max(Wt[nt:nb]))
-                list_param_2.append(Wt_max_l[-1])
-                A_T_max_l.append((signal[nt:nb].index(max(signal[nt:nb])) + nt) * 8)
-                list_param_2.append(A_T_max_l[-1])
-                Vt_T_max_l.append((Vt[nt:nb].index(max(Vt[nt:nb])) + nt) * 8)
-                list_param_2.append(Vt_T_max_l[-1])
-                At_T_max_l.append((At[nt:nb].index(max(At[nt:nb])) + nt) * 8)
-                list_param_2.append(At_T_max_l[-1])
-                Pht_T_max_l.append((Pht[nt:nb].index(max(Pht[nt:nb])) + nt) * 8)
-                list_param_2.append(Pht_T_max_l[-1])
-                Wt_T_max_l.append((Wt[nt:nb].index(max(Wt[nt:nb])) + nt) * 8)
-                list_param_2.append(Wt_T_max_l[-1])
-                A_Sn, A_wmf, A_Qf, A_Sn_wmf = calc_fft_attributes(signal[nt:nb])
-                Vt_Sn, Vt_wmf, Vt_Qf, Vt_Sn_wmf = calc_fft_attributes(Vt[nt:nb])
-                At_Sn, At_wmf, At_Qf, At_Sn_wmf = calc_fft_attributes(At[nt:nb])
-                Pht_Sn, Pht_wmf, Pht_Qf, Pht_Sn_wmf = calc_fft_attributes(Pht[nt:nb])
-                Wt_Sn, Wt_wmf, Wt_Qf, Wt_Sn_wmf = calc_fft_attributes(Wt[nt:nb])
-                A_Sn_l.append(A_Sn)
-                list_param_2.append(A_Sn_l[-1])
-                Vt_Sn_l.append(Vt_Sn)
-                list_param_2.append(Vt_Sn_l[-1])
-                At_Sn_l.append(At_Sn)
-                list_param_2.append(At_Sn_l[-1])
-                Pht_Sn_l.append(Pht_Sn)
-                list_param_2.append(Pht_Sn_l[-1])
-                Wt_Sn_l.append(Wt_Sn)
-                list_param_2.append(Wt_Sn_l[-1])
-                A_wmf_l.append(At_wmf)
-                list_param_2.append(A_wmf_l[-1])
-                Vt_wmf_l.append(Vt_wmf)
-                list_param_2.append(Vt_wmf_l[-1])
-                At_wmf_l.append(At_wmf)
-                list_param_2.append(At_wmf_l[-1])
-                Pht_wmf_l.append(Pht_wmf)
-                list_param_2.append(Pht_wmf_l[-1])
-                Wt_wmf_l.append(Wt_wmf)
-                list_param_2.append(Wt_wmf_l[-1])
-                A_Qf_l.append(A_Qf)
-                list_param_2.append(A_Qf_l[-1])
-                Vt_Qf_l.append(Vt_Qf)
-                list_param_2.append(Vt_Qf_l[-1])
-                At_Qf_l.append(At_Qf)
-                list_param_2.append(At_Qf_l[-1])
-                Pht_Qf_l.append(Pht_Qf)
-                list_param_2.append(Pht_Qf_l[-1])
-                Wt_Qf_l.append(Wt_Qf)
-                list_param_2.append(Wt_Qf_l[-1])
-                A_Sn_wmf_l.append(A_Sn_wmf)
-                list_param_2.append(A_Sn_wmf_l[-1])
-                Vt_Sn_wmf_l.append(Vt_Sn_wmf)
-                list_param_2.append(Vt_Sn_wmf_l[-1])
-                At_Sn_wmf_l.append(At_Sn_wmf)
-                list_param_2.append(At_Sn_wmf_l[-1])
-                Pht_Sn_wmf_l.append(Pht_Sn_wmf)
-                list_param_2.append(Pht_Sn_wmf_l[-1])
-                Wt_Sn_wmf_l.append(Wt_Sn_wmf)
-                list_param_2.append(Wt_Sn_wmf_l[-1])
+    try:
+        params = compute_parameters(signals, layer_top, layer_bottom, x_pulc_l, y_pulc_l,
+                                    pd_grid_uf=pd_grid_uf, pd_grid_m=pd_grid_m, pd_grid_r=pd_grid_r,
+                                    progress_callback=lambda v: ui.progressBar.setValue(v))
+    except ZeroDivisionError:
+        set_info('ZeroDivisionError, проверьте файл выделенного интервала пласта', 'red')
+        set_info(f'Невозможно добавить пласт - "KROT" на профиле - "{get_profile_name()}".', 'red')
+        return
+    params_json = {k: json.dumps(v) for k, v in params.items()}
+    form_krot = session.query(Formation).filter(Formation.profile_id == get_profile_id(), Formation.title == 'KROT').first()
+    session.query(Formation).filter(Formation.id == form_krot.id).update(params_json, synchronize_session="fetch")
+    session.commit()
+    update_formation_combobox()
+    set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
 
-                if grid_db:
-                    pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y_pulc_l[i])
-                    pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc_l[i])
-                    pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc_l[i])
-                    pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc_l[i])
-                    pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc_l[i])
-                    pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc_l[i])
-                    i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
-                        pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
-                    i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
-                        pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
-                    i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
-                        pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
-                    im = i_m if i_m > 0 else 0
-                    width_l.append(im)
-                    list_param_2.append(width_l[-1])
-                    top_l.append(i_uf)
-                    list_param_2.append(top_l[-1])
-                    land_l.append(i_r)
-                    list_param_2.append(land_l[-1])
-                    speed_l.append(im * 100 / (layer_bottom[i] * 8 - layer_top[i] * 8))
-                    list_param_2.append(speed_l[-1])
-                    speed_cover_l.append((i_r - i_uf) * 100 / (layer_top[i] * 8))
-                    list_param_2.append(speed_cover_l[-1])
-                if len(list_param_1) == len(list_param_2):
-                    k_r_l.append(np.corrcoef(list_param_1, list_param_2)[0, 1])
-                list_param_1 = list_param_2.copy()
-                ui.progressBar.setValue(i + 1)
-            k_r_l.append(k_r_l[-1])
-            dict_signal = {'T_top': json.dumps(T_top_l),
-                           'T_bottom': json.dumps(T_bottom_l),
-                           'dT': json.dumps(dT_l),
-                           'A_top': json.dumps(A_top_l),
-                           'A_bottom': json.dumps(A_bottom_l),
-                           'dA': json.dumps(dA_l),
-                           'A_sum': json.dumps(A_sum_l),
-                           'A_mean': json.dumps(A_mean_l),
-                           'dVt': json.dumps(dVt_l),
-                           'Vt_top': json.dumps(Vt_top_l),
-                           'Vt_sum': json.dumps(Vt_sum_l),
-                           'Vt_mean': json.dumps(Vt_mean_l),
-                           'dAt': json.dumps(dAt_l),
-                           'At_top': json.dumps(At_top_l),
-                           'At_sum': json.dumps(At_sum_l),
-                           'At_mean': json.dumps(At_mean_l),
-                           'dPht': json.dumps(dPht_l),
-                           'Pht_top': json.dumps(Pht_top_l),
-                           'Pht_sum': json.dumps(Pht_sum_l),
-                           'Pht_mean': json.dumps(Pht_mean_l),
-                           'Wt_top': json.dumps(Wt_top_l),
-                           'Wt_mean': json.dumps(Wt_mean_l),
-                           'Wt_sum': json.dumps(Wt_sum_l),
-                           'std': json.dumps(std_l),
-                           'k_var': json.dumps(k_var_l),
-                           'skew': json.dumps(skew_l),
-                           'kurt': json.dumps(kurt_l),
-                           'A_max': json.dumps(A_max_l),
-                           'Vt_max': json.dumps(Vt_max_l),
-                           'At_max': json.dumps(At_max_l),
-                           'Pht_max': json.dumps(Pht_max_l),
-                           'Wt_max': json.dumps(Wt_max_l),
-                           'A_T_max': json.dumps(A_T_max_l),
-                           'Vt_T_max': json.dumps(Vt_T_max_l),
-                           'At_T_max': json.dumps(At_T_max_l),
-                           'Pht_T_max': json.dumps(Pht_T_max_l),
-                           'Wt_T_max': json.dumps(Wt_T_max_l),
-                           'A_Sn': json.dumps(A_Sn_l),
-                           'Vt_Sn': json.dumps(Vt_Sn_l),
-                           'At_Sn': json.dumps(At_Sn_l),
-                           'Pht_Sn': json.dumps(Pht_Sn_l),
-                           'Wt_Sn': json.dumps(Wt_Sn_l),
-                           'A_wmf': json.dumps(A_wmf_l),
-                           'Vt_wmf': json.dumps(Vt_wmf_l),
-                           'At_wmf': json.dumps(At_wmf_l),
-                           'Pht_wmf': json.dumps(Pht_wmf_l),
-                           'Wt_wmf': json.dumps(Wt_wmf_l),
-                           'A_Qf': json.dumps(A_Qf_l),
-                           'Vt_Qf': json.dumps(Vt_Qf_l),
-                           'At_Qf': json.dumps(At_Qf_l),
-                           'Pht_Qf': json.dumps(Pht_Qf_l),
-                           'Wt_Qf': json.dumps(Wt_Qf_l),
-                           'A_Sn_wmf': json.dumps(A_Sn_wmf_l),
-                           'Vt_Sn_wmf': json.dumps(Vt_Sn_wmf_l),
-                           'At_Sn_wmf': json.dumps(At_Sn_wmf_l),
-                           'Pht_Sn_wmf': json.dumps(Pht_Sn_wmf_l),
-                           'Wt_Sn_wmf': json.dumps(Wt_Sn_wmf_l),
-                           'k_r': json.dumps(k_r_l)}
-
-            if grid_db:
-                dict_signal['width'] = json.dumps(width_l)
-                dict_signal['top'] = json.dumps(top_l)
-                dict_signal['land'] = json.dumps(land_l)
-                dict_signal['speed'] = json.dumps(speed_l)
-                dict_signal['speed_cover'] = json.dumps(speed_cover_l)
-            form_krot = session.query(Formation).filter(Formation.profile_id == get_profile_id(), Formation.title == 'KROT').first()
-            session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
-            session.commit()
-            update_formation_combobox()
-
-            set_info(f'Добавлен новый пласт - "KROT" на профиле - "{get_profile_name()}".', 'green')
-        except ZeroDivisionError:
-            set_info('ZeroDivisionError, проверьте файл выделенного интервала пласта', 'red')
-            set_info(f'Невозможно добавить пласт - "KROT" на профиле - "{get_profile_name()}".', 'red')
-
-
-# def load_param():
-#     """ Загрузка параметров """
-#     try:
-#         # открываем диалоговое окно для выбора файла и получаем имя файла
-#         file_name = QFileDialog.getOpenFileName(caption='Выберите файл выделенного интервала пласта', filter='*.txt')[0]
-#         set_info(file_name, 'blue')  # выводим имя файла в информационное окно приложения
-#         # считываем данные из файла в pandas DataFrame и заменяем запятые на точки
-#         tab_int = pd.read_table(file_name, delimiter=';', header=0)
-#         tab_int = tab_int.applymap(lambda x: float(str(x).replace(',', '.')))
-#     except FileNotFoundError:
-#         return
-#     signals = json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0])
-#     # проверяем соответствие количества измерений в загруженном файле и в БД
-#     if len(signals) != len(tab_int.index):
-#         set_info('ВНИМАНИЕ! ОШИБКА!!! Не совпадает количество измерений в файлах', 'red')
-#     else:
-#         # задаем максимальное значение для прогресс-бара
-#         ui.progressBar.setMaximum(len(tab_int.index))
-#         grid_db = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-#         if grid_db:
-#             # считываем сетку грида из БД
-#             pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
-#             pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
-#             pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
-#         # задаем списки для хранения данных о скважинах
-#         x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l, T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, Vt_mean_l, dAt_l, At_top_l, \
-#         At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, Wt_mean_l, Wt_sum_l, std_l, k_var_l, skew_l, kurt_l, width_l, top_l, land_l, speed_l, speed_cover_l = \
-#             [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
-#         for i in tab_int.index:
-#             y, x = wgs84_to_pulc42(tab_int['Latd'][i], tab_int['Long'][i])
-#             x_wgs_l.append(tab_int['Long'][i])
-#             y_wgs_l.append(tab_int['Latd'][i])
-#             x_pulc_l.append(x)
-#             y_pulc_l.append(y)
-#             if all(x == 0 for x in tab_int['D02']):
-#                 continue
-#             signal = signals[i]
-#             analytic_signal = hilbert(signal)
-#             At = np.hypot(signal, np.imag(analytic_signal)).tolist()
-#             Vt = np.imag(analytic_signal).tolist()
-#             Pht = np.angle(analytic_signal).tolist()
-#             Wt = np.diff(Pht).tolist()
-#             nt = int(tab_int['T01'][i] / 40)
-#             nb = int(tab_int['D02'][i] / 40)
-#             T_top_l.append(tab_int['T01'][i] / 5)
-#             T_bottom_l.append(tab_int['D02'][i] / 5)
-#             dT_l.append(tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5)
-#             A_top_l.append(signal[nt])
-#             A_bottom_l.append(signal[nb])
-#             dA_l.append(signal[nb] - signal[nt])
-#             A_sum_l.append(float(np.sum(signal[nt:nb])))
-#             A_mean_l.append(float(np.mean(signal[nt:nb])))
-#             dVt_l.append(Vt[nb] - Vt[nt])
-#             Vt_top_l.append(Vt[nt])
-#             Vt_sum_l.append(float(np.sum(Vt[nt:nb])))
-#             Vt_mean_l.append(float(np.mean(Vt[nt:nb])))
-#             dAt_l.append(At[nb] - At[nt])
-#             At_top_l.append(At[nt])
-#             At_sum_l.append(float(np.sum(At[nt:nb])))
-#             At_mean_l.append(float(np.mean(At[nt:nb])))
-#             dPht_l.append(Pht[nb] - Pht[nt])
-#             Pht_top_l.append(Pht[nt])
-#             Pht_sum_l.append(float(np.sum(Pht[nt:nb])))
-#             Pht_mean_l.append(float(np.mean(Pht[nt:nb])))
-#             Wt_top_l.append(Wt[nt])
-#             Wt_mean_l.append(float(np.mean(Wt[nt:nb])))
-#             Wt_sum_l.append(float(np.sum(Wt[nt:nb])))
-#             std_l.append(float(np.std(signal[nt:nb])))
-#             k_var_l.append(float(np.var(signal[nt:nb])))
-#             skew_l.append(skew(signal[nt:nb]))
-#             kurt_l.append(kurtosis(signal[nt:nb]))
-#             if grid_db:
-#                 pd_grid_uf['dist_y'] = abs(pd_grid_uf[1] - y)
-#                 pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x)
-#                 pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y)
-#                 pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x)
-#                 pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y)
-#                 pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x)
-#                 i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
-#                 i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
-#                 i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
-#                 im = i_m if i_m > 0 else 0
-#                 width_l.append(im)
-#                 top_l.append(i_uf)
-#                 land_l.append(i_r)
-#                 speed_l.append(im * 100 / (tab_int['D02'][i] / 5 - tab_int['T01'][i] / 5))
-#                 speed_cover_l.append((i_r - i_uf) * 100 / (tab_int['T01'][i] / 5))
-#             ui.progressBar.setValue(i+1)
-#         if all(x == 0 for x in tab_int['D02']):
-#             dict_signal = {'x_wgs': json.dumps(x_wgs_l),
-#                            'y_wgs': json.dumps(y_wgs_l),
-#                            'x_pulc': json.dumps(x_pulc_l),
-#                            'y_pulc': json.dumps(y_pulc_l)}
-#         else:
-#             dict_signal = {'x_wgs': json.dumps(x_wgs_l),
-#                        'y_wgs': json.dumps(y_wgs_l),
-#                         'x_pulc': json.dumps(x_pulc_l),
-#                         'y_pulc': json.dumps(y_pulc_l),
-#                         'T_top': json.dumps(T_top_l),
-#                         'T_bottom': json.dumps(T_bottom_l),
-#                         'dT': json.dumps(dT_l),
-#                         'A_top': json.dumps(A_top_l),
-#                         'A_bottom': json.dumps(A_bottom_l),
-#                         'dA': json.dumps(dA_l),
-#                         'A_sum': json.dumps(A_sum_l),
-#                         'A_mean': json.dumps(A_mean_l),
-#                         'dVt': json.dumps(dVt_l),
-#                         'Vt_top': json.dumps(Vt_top_l),
-#                         'Vt_sum': json.dumps(Vt_sum_l),
-#                         'Vt_mean': json.dumps(Vt_mean_l),
-#                         'dAt': json.dumps(dAt_l),
-#                         'At_top': json.dumps(At_top_l),
-#                         'At_sum': json.dumps(At_sum_l),
-#                         'At_mean': json.dumps(At_mean_l),
-#                         'dPht': json.dumps(dPht_l),
-#                         'Pht_top': json.dumps(Pht_top_l),
-#                         'Pht_sum': json.dumps(Pht_sum_l),
-#                         'Pht_mean': json.dumps(Pht_mean_l),
-#                         'Wt_top': json.dumps(Wt_top_l),
-#                         'Wt_mean': json.dumps(Wt_mean_l),
-#                         'Wt_sum': json.dumps(Wt_sum_l),
-#                         'std': json.dumps(std_l),
-#                         'k_var': json.dumps(k_var_l),
-#                         'skew': json.dumps(skew_l),
-#                         'kurt': json.dumps(kurt_l)}
-#             if grid_db:
-#                 dict_signal['width'] = json.dumps(width_l)
-#                 dict_signal['top'] = json.dumps(top_l)
-#                 dict_signal['land'] = json.dumps(land_l)
-#                 dict_signal['speed'] = json.dumps(speed_l)
-#                 dict_signal['speed_cover'] = json.dumps(speed_cover_l)
-#         session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
-#         session.commit()
-#         set_info(f'Параметры загружены ({get_object_name()}, {get_profile_name()})', 'green')
-#         update_param_combobox()
 
 def move_profile():
     if ui.lineEdit_string.text() == '':
