@@ -301,6 +301,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="checkBox_norm_l1">
+           <property name="text">
+            <string>norm l1</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBox_standart">
            <property name="text">
             <string>standart</string>

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1266</width>
-    <height>768</height>
+    <width>1275</width>
+    <height>779</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1623,7 +1623,21 @@
            <layout class="QGridLayout" name="gridLayout_36">
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_30">
-              <item row="0" column="0">
+              <item row="2" column="0">
+               <widget class="QCheckBox" name="checkBox_robscaler">
+                <property name="text">
+                 <string>RobustScaler</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QCheckBox" name="checkBox_mxabsscaler">
+                <property name="text">
+                 <string>MaxAbsScaler</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
                <widget class="QCheckBox" name="checkBox_stdscaler">
                 <property name="text">
                  <string>StandardScaler</string>
@@ -1633,24 +1647,17 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="checkBox_robscaler">
-                <property name="text">
-                 <string>RobustScaler</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
+              <item row="3" column="0">
                <widget class="QCheckBox" name="checkBox_mnmxscaler">
                 <property name="text">
                  <string>MinMaxScaler</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QCheckBox" name="checkBox_mxabsscaler">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="checkBox_norm_l1">
                 <property name="text">
-                 <string>MaxAbsScaler</string>
+                 <string>Normalizer(l1)</string>
                 </property>
                </widget>
               </item>

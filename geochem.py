@@ -439,7 +439,9 @@ def tsne_geochem():
 
         try:
             data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
-
+            if ui_tsne.checkBox_norm_l1.isChecked():
+                norm_l1 = Normalizer(norm='l1')
+                data_tsne = norm_l1.fit_transform(data_tsne)
             if ui_tsne.checkBox_standart.isChecked():
                 scaler = StandardScaler()
                 data_tsne = scaler.fit_transform(data_tsne)
