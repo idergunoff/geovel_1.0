@@ -463,6 +463,10 @@ def tsne_geochem():
                 )
                 data_tsne_result = pca.fit_transform(data_tsne)
             data_plot_new = pd.concat([data_plot_new, pd.DataFrame(data_tsne_result, columns=['0', '1'])], axis=1)
+            data_plot_new = pd.concat([
+                data_plot_new.loc[data_plot_new['well'] == 'field'],
+                data_plot_new.loc[data_plot_new['well'] != 'field']
+            ]).reset_index(drop=True)
 
             sns.scatterplot(data=data_plot_new, x='0', y='1', hue='well', s=100, palette=pallet)
 
