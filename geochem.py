@@ -1110,19 +1110,62 @@ def build_geochem_table():
     return data, list_param
 
 
-def build_geochem_table_field():
-    parameters = session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all()
-    list_param = [i.title for i in parameters]
-    data = pd.DataFrame(columns=['title', 'X', 'Y'] + list_param)
+# def build_geochem_table_field():
+#     parameters = session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all()
+#     list_param = [i.title for i in parameters]
+#     data = pd.DataFrame(columns=['title', 'X', 'Y'] + list_param)
+#
+#     for point in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
+#         if point.fake:
+#             continue
+#         dict_point = {'title': point.title, 'X': point.x_coord, 'Y': point.y_coord}
+#         for p in parameters:
+#             dict_point[p.title] = session.query(GeochemPointValue).filter_by(g_point_id=point.id, g_param_id=p.id).first().value
+#         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
+#     return data, list_param
 
-    for point in session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).all():
-        if point.fake:
-            continue
-        dict_point = {'title': point.title, 'X': point.x_coord, 'Y': point.y_coord}
-        for p in parameters:
-            dict_point[p.title] = session.query(GeochemPointValue).filter_by(g_point_id=point.id, g_param_id=p.id).first().value
-        data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
-    return data, list_param
+
+def build_geochem_table_field():
+    geochem_id = get_geochem_id()
+
+    # Получаем параметры
+    parameters = session.query(GeochemParameter).filter_by(geochem_id=geochem_id).all()
+    param_titles = [p.title for p in parameters]
+    param_map = {p.id: p.title for p in parameters}  # id -> title
+
+    # Получаем точки (без фейковых)
+    points = session.query(GeochemPoint).filter_by(geochem_id=geochem_id, fake=False).all()
+    point_map = {p.id: {'title': p.title, 'X': p.x_coord, 'Y': p.y_coord} for p in points}
+
+    # Получаем ВСЕ значения параметров для этих точек
+    point_values = session.query(GeochemPointValue).filter(
+        GeochemPointValue.g_point_id.in_(point_map.keys())
+    ).all()
+
+    # Группируем значения по точкам
+    data_rows = []
+    for point_id, point_info in point_map.items():
+        row = point_info.copy()  # title, X, Y
+        # Инициализируем все параметры как None (на случай отсутствия значения)
+        row.update({title: None for title in param_titles})
+        data_rows.append(row)
+
+    # Быстрое сопоставление: point_id -> row_index
+    point_id_to_index = {row['title']: i for i, row in enumerate(data_rows)}
+
+    # Заполняем значения
+    for pv in point_values:
+        param_title = param_map.get(pv.g_param_id)
+        if param_title not in param_titles:
+            continue  # защита от дубликатов/ошибок
+        point_id = pv.g_point_id
+        point_title = point_map[point_id]['title']
+        row_idx = point_id_to_index[point_title]
+        data_rows[row_idx][param_title] = pv.value
+
+    # Создаём DataFrame
+    data = pd.DataFrame(data_rows, columns=['title', 'X', 'Y'] + param_titles)
+    return data, param_titles
 
 
 def train_model_geochem():
