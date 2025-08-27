@@ -301,6 +301,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="checkBox_power_trans">
+           <property name="text">
+            <string>powerT</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBox_norm_l1">
            <property name="text">
             <string>norm l1</string>

@@ -439,6 +439,9 @@ def tsne_geochem():
 
         try:
             data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
+            if ui_tsne.checkBox_power_trans.isChecked():
+                power_t = PowerTransformer(method='yeo-johnson')
+                data_tsne = power_t.fit_transform(data_tsne)
             if ui_tsne.checkBox_norm_l1.isChecked():
                 norm_l1 = Normalizer(norm='l1')
                 data_tsne = norm_l1.fit_transform(data_tsne)
@@ -463,6 +466,8 @@ def tsne_geochem():
                 )
                 data_tsne_result = pca.fit_transform(data_tsne)
             data_plot_new = pd.concat([data_plot_new, pd.DataFrame(data_tsne_result, columns=['0', '1'])], axis=1)
+
+            # сначала field для отображения на заднем плане графиков
             data_plot_new = pd.concat([
                 data_plot_new.loc[data_plot_new['well'] == 'field'],
                 data_plot_new.loc[data_plot_new['well'] != 'field']

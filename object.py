@@ -97,7 +97,7 @@ from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier
                               VotingRegressor, BaggingClassifier, BaggingRegressor, IsolationForest)
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, RandomizedSearchCV, cross_validate, LeaveOneGroupOut
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler, Normalizer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler, Normalizer, PowerTransformer
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBClassifier, XGBRegressor
