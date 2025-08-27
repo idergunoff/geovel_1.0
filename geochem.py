@@ -1289,10 +1289,42 @@ def draw_point_graph():
     #     pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
     def calc_mean_well(well_name: str, list_param: list, list_point: list):
+
+        # Список столбцов, которые нужно исключить из преобразований
+        exclude_cols = ['well', 'point', 'color']
+
+        data_plot_new = data_plot.copy()
+
+        # Разделяем данные на столбцы для преобразования и исключённые
+        data_numeric = data_plot_new.drop(columns=exclude_cols)
+        data_meta = data_plot_new[exclude_cols].copy()
+
+        # Применяем преобразования только к числовым столбцам
+        if ui_pg.checkBox_power_trans.isChecked():
+            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
+            data_numeric = power_t.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_norm_l1.isChecked():
+            norm_l1 = Normalizer(norm='l1')
+            data_numeric = norm_l1.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_standart.isChecked():
+            scaler = StandardScaler()
+            data_numeric = scaler.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        # Объединяем обратно
+        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+
         if ui_pg.checkBox_only_check.isChecked():
-            data_mean = data_plot.loc[(data_plot['well'] == well_name) & (data_plot['point'].isin(list_point))][list_param]
+            data_mean = data_plot_new.loc[(data_plot_new['well'] == well_name) & (data_plot_new['point'].isin(list_point))][list_param]
         else:
-            data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
+            data_mean =  data_plot_new.loc[data_plot_new['well'] == well_name][list_param]
         list_result = []
         for param in list_param:
             if ui_pg.radioButton_mean.isChecked():
@@ -1302,7 +1334,39 @@ def draw_point_graph():
         return list_result
 
     def calc_conf_interval_well(well_name: str, list_param: list):
-        data_mean =  data_plot.loc[data_plot['well'] == well_name][list_param]
+
+        # Список столбцов, которые нужно исключить из преобразований
+        exclude_cols = ['well', 'point', 'color']
+
+        data_plot_new = data_plot.copy()
+
+        # Разделяем данные на столбцы для преобразования и исключённые
+        data_numeric = data_plot_new.drop(columns=exclude_cols)
+        data_meta = data_plot_new[exclude_cols].copy()
+
+        # Применяем преобразования только к числовым столбцам
+        if ui_pg.checkBox_power_trans.isChecked():
+            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
+            data_numeric = power_t.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_norm_l1.isChecked():
+            norm_l1 = Normalizer(norm='l1')
+            data_numeric = norm_l1.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_standart.isChecked():
+            scaler = StandardScaler()
+            data_numeric = scaler.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        # Объединяем обратно
+        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+
+        data_mean =  data_plot_new.loc[data_plot_new['well'] == well_name][list_param]
         list_conf_top, list_conf_bottom = [], []
         for param in list_param:
             param_mean = data_mean[param].mean()
@@ -1321,6 +1385,7 @@ def draw_point_graph():
 
 
     def draw_graph():
+        nonlocal data_plot
         clear_layout(ui_pg.verticalLayout)
         figure = plt.figure()
         canvas = FigureCanvas(figure)
@@ -1332,12 +1397,43 @@ def draw_point_graph():
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
         list_well_graph = get_list_check_checkbox(ui_pg.listWidget_well_graph)
 
+        # Список столбцов, которые нужно исключить из преобразований
+        exclude_cols = ['well', 'point', 'color']
+
+        data_plot_new = data_plot.copy()
+
+        # Разделяем данные на столбцы для преобразования и исключённые
+        data_numeric = data_plot_new.drop(columns=exclude_cols)
+        data_meta = data_plot_new[exclude_cols].copy()
+
+        # Применяем преобразования только к числовым столбцам
+        if ui_pg.checkBox_power_trans.isChecked():
+            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
+            data_numeric = power_t.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_norm_l1.isChecked():
+            norm_l1 = Normalizer(norm='l1')
+            data_numeric = norm_l1.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        if ui_pg.checkBox_standart.isChecked():
+            scaler = StandardScaler()
+            data_numeric = scaler.fit_transform(data_numeric)
+            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                        index=data_plot_new.index)
+
+        # Объединяем обратно
+        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+
         if not ui_pg.checkBox_only_mean.isChecked():
             for p in list_point:
                 if ui_pg.checkBox_marker.isChecked():
-                    plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
+                    plt.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
                 else:
-                    plt.plot(data_plot.loc[data_plot['point'] == p][list_param].values.tolist()[0], label=p)
+                    plt.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0], label=p)
 
         num_param = range(len(list_param))
 
@@ -1429,6 +1525,9 @@ def draw_point_graph():
     ui_pg.checkBox_conf_int.clicked.connect(draw_graph)
     ui_pg.checkBox_only_mean.clicked.connect(draw_graph)
     ui_pg.checkBox_only_check.clicked.connect(draw_graph)
+    ui_pg.checkBox_standart.clicked.connect(draw_graph)
+    ui_pg.checkBox_power_trans.clicked.connect(draw_graph)
+    ui_pg.checkBox_norm_l1.clicked.connect(draw_graph)
     PointGraph.exec_()
 
 
