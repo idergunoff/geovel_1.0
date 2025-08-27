@@ -1001,7 +1001,7 @@ def update_list_param_mlp(db=False):
         data_train, list_param = build_table_train(db, 'mlp')
     except TypeError:
         return
-    if not data_train:
+    if data_train is None:
         return
     list_marker = get_list_marker_mlp('georadar')
     ui.listWidget_param_mlp.clear()

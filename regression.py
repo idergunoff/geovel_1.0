@@ -789,7 +789,7 @@ def update_list_param_regmod(db=False):
         data_train, list_param = build_table_train(db, 'regmod')
     except TypeError:
         return
-    if not data_train:
+    if data_train is None:
         return
     ui.listWidget_param_reg.clear()
     list_param_reg = data_train.columns.tolist()[2:]
