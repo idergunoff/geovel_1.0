@@ -440,7 +440,7 @@ def tsne_geochem():
         try:
             data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
             if ui_tsne.checkBox_power_trans.isChecked():
-                power_t = PowerTransformer(method='yeo-johnson')
+                power_t = PowerTransformer(method='yeo-johnson', standardize=False)
                 data_tsne = power_t.fit_transform(data_tsne)
             if ui_tsne.checkBox_norm_l1.isChecked():
                 norm_l1 = Normalizer(norm='l1')
@@ -524,6 +524,35 @@ def tsne_geochem():
             data_plot_new = data_plot_new.loc[data_plot_new['point'].isin(list_drop_point)]
 
             data_plot_new.reset_index(inplace=True, drop=True)
+
+            # Список столбцов, которые нужно исключить из преобразований
+            exclude_cols = ['well', 'point', 'color']
+
+            # Разделяем данные на столбцы для преобразования и исключённые
+            data_numeric = data_plot_new.drop(columns=exclude_cols)
+            data_meta = data_plot_new[exclude_cols].copy()
+
+            # Применяем преобразования только к числовым столбцам
+            if ui_tsne.checkBox_power_trans.isChecked():
+                power_t = PowerTransformer(method='yeo-johnson', standardize=False)
+                data_numeric = power_t.fit_transform(data_numeric)
+                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                            index=data_plot_new.index)
+
+            if ui_tsne.checkBox_norm_l1.isChecked():
+                norm_l1 = Normalizer(norm='l1')
+                data_numeric = norm_l1.fit_transform(data_numeric)
+                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                            index=data_plot_new.index)
+
+            if ui_tsne.checkBox_standart.isChecked():
+                scaler = StandardScaler()
+                data_numeric = scaler.fit_transform(data_numeric)
+                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
+                                            index=data_plot_new.index)
+
+            # Объединяем обратно
+            data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
 
             param = ui_tsne.listWidget_param.currentItem().text()
 
