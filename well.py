@@ -115,9 +115,12 @@ def edit_well():
 
 
 def add_wells():
-    """Пакетное добавление новых скважин в БД из файла Excel"""
+    """Пакетное добавление новых скважин в БД из файла Excel/TXT"""
     try:
-        file_name = QFileDialog.getOpenFileName(caption='Выберите файл Excel или TXT (разделитель ";")', filter='*.xls *.xlsx *.txt')[0]
+        file_name = QFileDialog.getOpenFileName(
+            caption='Выберите файл Excel или TXT (разделитель ";")',
+            filter='*.xls *.xlsx *.txt'
+        )[0]
         set_info(file_name, 'blue')
         if file_name.lower().endswith('.txt'):
             try:
@@ -135,10 +138,12 @@ def add_wells():
     ui_wl = Ui_WellLoader()
     ui_wl.setupUi(WellLoader)
     WellLoader.show()
-    WellLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    WellLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    list_combobox = [ui_wl.comboBox_name, ui_wl.comboBox_x, ui_wl.comboBox_y, ui_wl.comboBox_alt,
-                     ui_wl.comboBox_layers, ui_wl.comboBox_opt]
+    list_combobox = [
+        ui_wl.comboBox_name, ui_wl.comboBox_x, ui_wl.comboBox_y,
+        ui_wl.comboBox_alt, ui_wl.comboBox_layers, ui_wl.comboBox_opt
+    ]
     for cmbx in list_combobox:
         for i in pd_wells.columns:
             cmbx.addItem(i)
@@ -146,13 +151,13 @@ def add_wells():
 
     def add_well_layer():
         list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
-        if not ui_wl.comboBox_layers.currentText() in list_layers:
+        if ui_wl.comboBox_layers.currentText() not in list_layers:
             list_layers.append(str(ui_wl.comboBox_layers.currentText()))
             ui_wl.lineEdit_layers.setText('/'.join(list_layers))
 
     def add_well_option():
         list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
-        if not ui_wl.comboBox_opt.currentText() in list_opt:
+        if ui_wl.comboBox_opt.currentText() not in list_opt:
             list_opt.append(str(ui_wl.comboBox_opt.currentText()))
             ui_wl.lineEdit_opt.setText('/'.join(list_opt))
 
@@ -165,20 +170,41 @@ def add_wells():
         empty_value = '' if ui_wl.lineEdit_empty.text() == '' else int(ui_wl.lineEdit_empty.text())
         list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
         list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
+
+        distance_threshold = 5.0   # метры
+        name_ratio = 0.5           # доля совпадения названий
         n_new, n_update = 0, 0
+
         for i in pd_wells.index:
             try:
-                curr_well = session.query(Well).filter(Well.name == str(pd_wells[name_cell][i]),
-                                          Well.x_coord == float(process_string(pd_wells[x_cell][i])),
-                                          Well.y_coord == float(process_string(pd_wells[y_cell][i]))).first()
+                name = str(pd_wells[name_cell][i])
+                x = float(process_string(pd_wells[x_cell][i]))
+                y = float(process_string(pd_wells[y_cell][i]))
             except ValueError:
                 continue
+
+            # поиск кандидатов поблизости
+            candidates = session.query(Well).filter(
+                Well.x_coord.between(x - distance_threshold, x + distance_threshold),
+                Well.y_coord.between(y - distance_threshold, y + distance_threshold)
+            ).all()
+
+            curr_well = None
+            for cand in candidates:
+                dist = math.hypot((cand.x_coord or 0) - x, (cand.y_coord or 0) - y)
+                name_sim = SequenceMatcher(None, cand.name or "", name).ratio()
+                if dist <= distance_threshold and name_sim >= name_ratio:
+                    curr_well = cand
+                    break
+
             if curr_well:
                 n_update += 1
                 set_info(f'Скважина {curr_well.name} уже есть в БД', 'red')
                 alt = 0 if pd_wells[alt_cell][i] == '' else float(process_string(pd_wells[alt_cell][i]))
                 session.query(Well).filter_by(id=curr_well.id).update(
-                    {'alt': alt}, synchronize_session="fetch")
+                    {'alt': alt},
+                    synchronize_session="fetch"
+                )
                 for lr in list_layers:
                     try:
                         if pd_wells[lr][i] != empty_value:
@@ -197,8 +223,6 @@ def add_wells():
                                     title=str(lr)
                                 ))
                                 session.commit()
-                            else:
-                                print(bound.title, bound.depth)
                     except ValueError:
                         continue
                 for opt in list_opt:
@@ -222,24 +246,24 @@ def add_wells():
                 try:
                     n_new += 1
                     new_well = Well(
-                        name=str(pd_wells[name_cell][i]),
-                        x_coord=float(process_string(pd_wells[x_cell][i])),
-                        y_coord=float(process_string(pd_wells[y_cell][i])),
-                        alt=round(float(process_string(pd_wells[alt_cell][i])), 2)
+                        name=name,
+                        x_coord=x,
+                        y_coord=y,
+                        alt=round(float(process_string(pd_wells[alt_cell][i])), 2),
                     )
                     session.add(new_well)
                     session.commit()
                     for lr in list_layers:
-                            if pd_wells[lr][i] != empty_value:
-                                if ui_wl.checkBox_deep.isChecked():
-                                    depth = round(float(process_string(pd_wells[lr][i])), 2)
-                                else:
-                                    depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
-                                session.add(Boundary(
-                                    well_id=new_well.id,
-                                    depth=depth,
-                                    title=str(lr)
-                                ))
+                        if pd_wells[lr][i] != empty_value:
+                            if ui_wl.checkBox_deep.isChecked():
+                                depth = round(float(process_string(pd_wells[lr][i])), 2)
+                            else:
+                                depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
+                            session.add(Boundary(
+                                well_id=new_well.id,
+                                depth=depth,
+                                title=str(lr)
+                            ))
                 except ValueError:
                     continue
                 for opt in list_opt:
@@ -252,12 +276,13 @@ def add_wells():
                             ))
                     except ValueError:
                         continue
+
             session.commit()
             ui.progressBar.setValue(i + 1)
+
         session.commit()
         update_list_well(select_well=True)
         set_info(f'Добавлено {n_new} скважин, обновлено {n_update} скважин', 'green')
-
 
     def cancel_load():
         WellLoader.close()
@@ -267,6 +292,7 @@ def add_wells():
     ui_wl.buttonBox.accepted.connect(load_wells)
     ui_wl.buttonBox.rejected.connect(cancel_load)
     WellLoader.exec_()
+
 
 
 def add_data_well():
