@@ -57,6 +57,7 @@ from qt.form_well_log import *
 from qt.gen_alg_form import *
 from qt.filter_form import *
 from qt.form_map_well_log import *
+from qt.form_upgrade_predict_model import *
 
 import numpy as np
 import pyqtgraph as pg
@@ -97,7 +98,7 @@ from sklearn.ensemble import (GradientBoostingClassifier, RandomForestClassifier
                               VotingRegressor, BaggingClassifier, BaggingRegressor, IsolationForest)
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, RandomizedSearchCV, cross_validate, LeaveOneGroupOut
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler, Normalizer, PowerTransformer
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBClassifier, XGBRegressor
@@ -137,6 +138,7 @@ from boruta import BorutaPy
 from collections import defaultdict
 
 
+from difflib import SequenceMatcher
 
 import torch
 import torch.nn as nn

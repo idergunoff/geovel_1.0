@@ -135,6 +135,9 @@ ui.pushButton_remove_layer.clicked.connect(remove_layer)
 ui.pushButton_edges_layer.clicked.connect(save_layer)
 ui.pushButton_layer_filt.clicked.connect(filter_layer)
 # ui.pushButton_find_oil.clicked.connect(show_globals)
+
+################ WELL #########################
+
 ui.pushButton_add_well.clicked.connect(add_well)
 ui.lineEdit_well_search.textChanged.connect(search_well)
 ui.pushButton_edit_well.clicked.connect(edit_well)
@@ -146,6 +149,9 @@ ui.pushButton_add_bound.clicked.connect(add_boundary)
 ui.pushButton_rem_bound.clicked.connect(remove_boundary)
 ui.pushButton_prof_wells_excel.clicked.connect(profile_wells_to_Excel)
 ui.pushButton_all_prof_wells_excel.clicked.connect(all_profile_wells_to_Excel)
+ui.pushButton_rem_dupl_wells.clicked.connect(remove_duplicate_wells)
+
+
 ui.pushButton_color.clicked.connect(change_color)
 ui.pushButton_set_scale.clicked.connect(set_scale)
 ui.checkBox_grid.clicked.connect(show_grid)
@@ -210,6 +216,7 @@ ui.toolButton_excel_markup_mlp.clicked.connect(markup_to_excel_mlp)
 ui.pushButton_pareto.clicked.connect(pareto_start)
 ui.pushButton_mask_param.clicked.connect(mask_param_form)
 ui.toolButton_rm_well_fake.clicked.connect(remove_fake_current_markup)
+ui.toolButton_cls_upgrade_model.clicked.connect(cls_model_prediction_upgrade)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)

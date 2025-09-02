@@ -35,6 +35,8 @@ def build_table_train(db=False, analisis='lda'):
                     return pd.DataFrame(json.loads(data[0])), list_param
                 except JSONDecodeError:
                     pass
+            except ImportError:
+                 return None, None
 
     data_train, _ = build_table_train_no_db(analisis, analisis_id, list_param)
     return data_train, list_param
@@ -284,16 +286,20 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         analysis_mlp = session.query(AnalysisMLP).filter_by(id=analisis_id).first()
         name = f'{analysis_mlp.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         filepath = f'data_tables{p_sep}cls{p_sep}{name}.parquet'
-
-        data_train.to_parquet(filepath)
+        try:
+            data_train.to_parquet(filepath)
+        except OSError:
+            pass
 
         session.query(AnalysisMLP).filter_by(id=analisis_id).update({'data': str(filepath), 'up_data': True}, synchronize_session='fetch')
     elif analisis == 'regmod':
         analysis_reg = session.query(AnalysisReg).filter_by(id=analisis_id).first()
         name = f'{analysis_reg.title}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         filepath = f'data_tables{p_sep}reg{p_sep}{name}.parquet'
-
-        data_train.to_parquet(filepath)
+        try:
+            data_train.to_parquet(filepath)
+        except OSError:
+            pass
 
         session.query(AnalysisReg).filter_by(id=analisis_id).update({'data': str(filepath), 'up_data': True}, synchronize_session='fetch')
     session.commit()

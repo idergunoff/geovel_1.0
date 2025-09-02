@@ -2921,7 +2921,7 @@ def update_list_model_prediction():
                         f'Количество параметров: '
                         f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
             ui.listWidget_model_pred.addItem(item)
-        except AttributeError:
+        except (AttributeError, FileNotFoundError):
             session.delete(p)
             session.commit()
             set_info('Модель удалена', 'red')

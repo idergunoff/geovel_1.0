@@ -454,6 +454,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         pipe_steps = []
         text_scaler = ''
+        if ui_cls.checkBox_power_trans.isChecked():
+            power_t = PowerTransformer(method='yeo-johnson')
+            pipe_steps.append(('power_t', power_t))
+            text_scaler += '\nPowerTransformer'
+        if ui_cls.checkBox_norm_l1.isChecked():
+            norm_l1 = Normalizer(norm='l1')
+            pipe_steps.append(('norm_l1', norm_l1))
+            text_scaler += '\nNormalizer(l1)'
         if ui_cls.checkBox_stdscaler.isChecked():
             std_scaler = StandardScaler()
             pipe_steps.append(('std_scaler', std_scaler))
@@ -984,6 +992,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         text_scaler = ''
 
         # Нормализация данных
+
+        if ui_cls.checkBox_power_trans.isChecked():
+            power_t = PowerTransformer(method='yeo-johnson')
+            pipe_steps.append(('power_t', power_t))
+            text_scaler += '\nPowerTransformer'
+        if ui_cls.checkBox_norm_l1.isChecked():
+            norm_l1 = Normalizer(norm='l1')
+            pipe_steps.append(('norm_l1', norm_l1))
+            text_scaler += '\nNormalizer(l1)'
         if ui_cls.checkBox_stdscaler.isChecked():
             std_scaler = StandardScaler()
             pipe_steps.append(('std_scaler', std_scaler))
