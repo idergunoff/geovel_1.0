@@ -3507,6 +3507,19 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
+                      <item row="1" column="3">
+                       <widget class="QToolButton" name="toolButton_cls_upgrade_model">
+                        <property name="toolTip">
+                         <string>Переназначить модели для выбранной модели</string>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 190, 111);</string>
+                        </property>
+                        <property name="text">
+                         <string>m</string>
+                        </property>
+                       </widget>
+                      </item>
                      </layout>
                     </item>
                     <item row="0" column="0">
@@ -4714,6 +4727,19 @@ Therm</string>
                           </property>
                           <property name="text">
                            <string>...</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="3">
+                         <widget class="QToolButton" name="toolButton_reg_upgarde_model">
+                          <property name="toolTip">
+                           <string>Переназначить модели для выбранной модели</string>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">background-color: rgb(255, 190, 111);</string>
+                          </property>
+                          <property name="text">
+                           <string>m</string>
                           </property>
                          </widget>
                         </item>

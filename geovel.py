@@ -216,6 +216,7 @@ ui.toolButton_excel_markup_mlp.clicked.connect(markup_to_excel_mlp)
 ui.pushButton_pareto.clicked.connect(pareto_start)
 ui.pushButton_mask_param.clicked.connect(mask_param_form)
 ui.toolButton_rm_well_fake.clicked.connect(remove_fake_current_markup)
+ui.toolButton_cls_upgrade_model.clicked.connect(cls_model_prediction_upgrade)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)

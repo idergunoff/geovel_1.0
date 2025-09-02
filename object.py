@@ -57,6 +57,7 @@ from qt.form_well_log import *
 from qt.gen_alg_form import *
 from qt.filter_form import *
 from qt.form_map_well_log import *
+from qt.form_upgrade_predict_model import *
 
 import numpy as np
 import pyqtgraph as pg

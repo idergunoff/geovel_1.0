@@ -1809,6 +1809,52 @@ def update_trained_model_comment():
     FormComment.exec_()
 
 
+def cls_model_prediction_upgrade():
+    """ Переназначить модели в списке параметров """
+    try:
+        an = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    FormUpgradePredict = QtWidgets.QDialog()
+    ui_up = Ui_FormUpgradeModel()
+    ui_up.setupUi(FormUpgradePredict)
+    FormUpgradePredict.show()
+    FormUpgradePredict.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    model_list_param = json.loads(an.list_params)
+
+    for i in model_list_param:
+        if i.startswith("model"):
+            ui_up.listWidget_predict_model.addItem(i)
+
+    def upgrade_list_param_predict():
+
+        old_model = ui_up.listWidget_predict_model.currentItem().text()
+        try:
+            predict = session.query(ProfileModelPrediction).filter_by(
+                id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+            ).first()
+        except AttributeError:
+            set_info('Выберите модель в Model Prediction', 'red')
+            return
+        new_model = f'model_{predict.type_model}_id{predict.model_id}'
+
+        idx = model_list_param.index(old_model)
+        model_list_param[idx] = new_model
+
+        session.query(TrainedModelClass).filter_by(id=an.id).update({'list_params': json.dumps(model_list_param)}, synchronize_session='fetch')
+        session.commit()
+        update_list_trained_models_class()
+        FormUpgradePredict.close()
+
+    ui_up.pushButton_upgrade_model.clicked.connect(upgrade_list_param_predict)
+
+    FormUpgradePredict.exec_()
+
+
 def export_model_class():
     """ Экспорт модели """
     try:
