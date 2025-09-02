@@ -840,7 +840,7 @@ def open_rem_db_window():
         update_trained_models_class_rdb()
 
     def get_trained_model_class_rdb_id():
-        """ Получение id выбранного объекта """
+        """ Получение id выбранной модели """
         try:
             return int(ui_rdb.comboBox_trained_model_rdb.currentText().split('id')[-1])
         except ValueError:
@@ -951,7 +951,7 @@ def open_rem_db_window():
             with get_session() as remote_session:
                 try:
                     remote_session.query(TrainedModelClassRDB) \
-                        .filter(TrainedModelClassRDB.analysis_id == analysis_id) \
+                        .filter(TrainedModelClassRDB.id == get_trained_model_class_rdb_id()) \
                         .delete(synchronize_session=False)
 
                     remote_session.commit()
@@ -1363,7 +1363,7 @@ def open_rem_db_window():
             with get_session() as remote_session:
                 try:
                     remote_session.query(TrainedModelRegRDB) \
-                        .filter(TrainedModelRegRDB.analysis_id == analysis_id) \
+                        .filter(TrainedModelRegRDB.id == get_trained_model_reg_rdb_id()) \
                         .delete(synchronize_session=False)
 
                     remote_session.commit()
