@@ -512,7 +512,11 @@ def show_well_log():
                     if bound:
                         well = session.query(Well).filter_by(id=bound.well_id).first()
                         if not ui_mwl.checkBox_all_well.isChecked():
-                            if well.x_coord < min_x or well.x_coord > max_x or well.y_coord < min_y or well.y_coord > max_y:
+                            try:
+                                if well.x_coord < min_x or well.x_coord > max_x or well.y_coord < min_y or well.y_coord > max_y:
+                                    continue
+                            except AttributeError:
+                                print(f'AttributeError {wl.well_id}')
                                 continue
                         median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
                         print(well.name, bound.depth, median_value)
