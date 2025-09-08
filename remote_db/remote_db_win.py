@@ -580,7 +580,7 @@ def open_rem_db_window():
                 local_formations[f.up_hash] = f.id
                 local_formations[f.down_hash] = f.id
 
-            for remote_analysis in tqdm(remote_analyzes, desc='Проверка зависимостей MLP'):
+            for remote_analysis in remote_analyzes:
 
                 remote_markers = remote_session.query(MarkerMLPRDB).filter_by(analysis_id=remote_analysis.id).all()
 
@@ -591,7 +591,10 @@ def open_rem_db_window():
                         marker_id=remote_marker.id
                     ).all()
 
-                    for remote_markup in remote_markups:
+                    ui.progressBar.setMaximum(len(remote_markups))
+
+                    for n, remote_markup in tqdm(enumerate(remote_markups), desc='Проверка зависимостей MLP'):
+                        ui.progressBar.setValue(n + 1)
                         related_tables = []
 
                         # Проверяем скважину
@@ -1070,14 +1073,17 @@ def open_rem_db_window():
                 local_formations[f.up_hash] = f.id
                 local_formations[f.down_hash] = f.id
 
-            for remote_analysis in tqdm(remote_analyzes, desc='Проверка зависимостей MLP'):
+            for remote_analysis in remote_analyzes:
 
                 remote_markups = remote_session.query(MarkupRegRDB) \
                     .filter_by(
                     analysis_id=remote_analysis.id
                 ).all()
 
-                for remote_markup in remote_markups:
+                ui.progressBar.setMaximum(len(remote_markups))
+
+                for n, remote_markup in tqdm(enumerate(remote_markups), desc='Проверка зависимостей RegMod'):
+                    ui.progressBar.setValue(n + 1)
                     related_tables = []
 
                     # Проверяем скважину

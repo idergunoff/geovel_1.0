@@ -27,11 +27,14 @@ def check_rdb_reg_dependencies():
             remote_formations[f.up_hash] = f.id
             remote_formations[f.down_hash] = f.id
 
-        for local_analysis in tqdm(local_analyzes, desc='Проверка зависимостей RegMod'):
+        for local_analysis in local_analyzes:
 
             local_markups = session.query(MarkupReg).filter_by(analysis_id=local_analysis.id).all()
 
-            for local_markup in local_markups:
+            ui.progressBar.setMaximum(len(local_markups))
+
+            for n, local_markup in tqdm(enumerate(local_markups), desc='Проверка зависимостей RegMod'):
+                ui.progressBar.setValue(n + 1)
                 related_tables = []
 
                 # Проверяем скважину

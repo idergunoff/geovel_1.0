@@ -27,7 +27,7 @@ def check_rdb_dependencies():
             remote_formations[f.up_hash] = f.id
             remote_formations[f.down_hash] = f.id
 
-        for local_analysis in tqdm(local_analyzes, desc='Проверка зависимостей MLP'):
+        for local_analysis in local_analyzes:
             local_markers = session.query(MarkerMLP).filter_by(analysis_id=local_analysis.id).all()
 
             for local_marker in local_markers:
@@ -37,7 +37,10 @@ def check_rdb_dependencies():
                     marker_id=local_marker.id
                 ).all()
 
-                for local_markup in local_markups:
+                ui.progressBar.setMaximum(len(local_markups))
+
+                for n, local_markup in tqdm(enumerate(local_markups), desc='Проверка зависимостей MLP'):
+                    ui.progressBar.setValue(n + 1)
                     related_tables = []
 
                     # Проверяем скважину
