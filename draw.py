@@ -717,7 +717,10 @@ def draw_profile_model_predict():
 
 def save_excel_profile_model_predict():
     pd_predict = build_table_profile_model_predict()
-    if pd_predict.empty:
+    try:
+        if pd_predict.empty:
+            return
+    except AttributeError:
         return
 
     filename = QtWidgets.QFileDialog.getSaveFileName(

@@ -2993,7 +2993,7 @@ def pluralize(number, word_forms):
 
 
 def get_list_param_by_mask(mask_id):
-    return json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask)
+    return sorted(json.loads(session.query(ParameterMask).filter(ParameterMask.id == mask_id).first().mask))
 
 
 def get_unique_parameters_from_mlp():

@@ -224,10 +224,19 @@ def update_list_well_markup_reg():
             set_info(f'Параметр для профиля {i.profile.title} удален из-за отсутствия одного из параметров', 'red')
             session.delete(i)
             session.commit()
+    if ui.checkBox_sort_reg_markup.isChecked():
+        ui.listWidget_well_regmod.sortItems(Qt.AscendingOrder)
     ui.label_count_markup_reg.setText(f'<i><u>{count_markup}</u></i> обучающих скважин; <i><u>{count_measure}</u></i> '
                                       f'измерений; <i><u>{count_fake}</u></i> выбросов')
     update_list_param_regmod(db=True)
     update_list_param_reg_no_update()
+
+
+def sorting_markup_regmod():
+    if ui.checkBox_sort_reg_markup.isChecked():
+        ui.listWidget_well_regmod.sortItems(Qt.AscendingOrder)
+    else:
+        update_list_well_markup_reg()
 
 
 def remove_well_markup_reg():
@@ -3604,7 +3613,7 @@ def calc_profile_model_regmod():
 
         model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
         try:
             working_sample = working_data[list_param_num].values.tolist()
@@ -3754,7 +3763,7 @@ def calc_object_model_regmod():
 
         model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
@@ -3807,7 +3816,7 @@ def calc_object_model_regmod():
 
         model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
         working_sample = working_data_result_copy[list_param_num].values.tolist()
 

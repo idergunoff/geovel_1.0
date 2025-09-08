@@ -1163,7 +1163,7 @@ def calc_class_profile():
 
         model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
         try:
             working_sample = working_data_class[list_param_num].values.tolist()
@@ -1400,7 +1400,7 @@ def calc_object_class():
 
         model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
     for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
         count_measure = len(json.loads(session.query(Profile.signal).filter(Profile.id == prof.id).first()[0]))
@@ -1463,7 +1463,7 @@ def calc_object_class():
 
         model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
         if model_mask:
-            list_param_num = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)
+            list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
 
         try:
             working_sample = working_data_result_copy[list_param_num].values.tolist()
@@ -1863,7 +1863,7 @@ def export_model_class():
 
         model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
 
-        list_param_mask = json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask) if \
+        list_param_mask = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask)) if \
             model_mask else 0
 
     except FileNotFoundError:

@@ -260,6 +260,7 @@ ui.pushButton_anova_regmod.clicked.connect(anova_regmod)
 ui.pushButton_reg_add_param_list.clicked.connect(add_param_list_reg)
 ui.pushButton_add_all_well_regmod.clicked.connect(add_all_well_markup_reg)
 ui.toolButton_excel_markup_reg.clicked.connect(markup_to_excel_reg)
+ui.checkBox_sort_reg_markup.clicked.connect(sorting_markup_regmod)
 
 
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
