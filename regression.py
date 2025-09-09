@@ -2446,7 +2446,7 @@ def train_regression_model():
             new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
 
             analysis_reg = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
-            filepath = analysis_reg.up_data
+            filepath = analysis_reg.data
             new_data_train.to_parquet(filepath)
 
             # session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
