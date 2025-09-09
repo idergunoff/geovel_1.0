@@ -50,9 +50,8 @@ def calc_deep_predict_current_profile():
     list_layer_line, list_predict = [], []
     for i in session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all():
         try:
-            list_layer_line.append(json.loads(i.layer.layer_line))
-
             list_predict.append(savgol_line(json.loads(i.prediction.prediction), 175))
+            list_layer_line.append(json.loads(i.layer.layer_line))
         except AttributeError:
             session.delete(i)
             session.commit()
