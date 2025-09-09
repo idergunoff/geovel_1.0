@@ -1150,7 +1150,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
 
                 analysis_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
-                filepath = analysis_mlp.up_data
+                filepath = analysis_mlp.data
                 new_data_train.to_parquet(filepath)
                 # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update(
                 #     {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
