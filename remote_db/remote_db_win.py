@@ -545,7 +545,7 @@ def open_rem_db_window():
 
     def unload_mlp():
         """ Запуск выгрузки анализов MLP """
-        unload_mlp_func(RemoteDB)
+        unload_mlp_func(ui_rdb, RemoteDB)
         update_mlp_rdb_combobox(from_local=True)
 
     def get_MLP_rdb_id():
@@ -993,7 +993,7 @@ def open_rem_db_window():
 
     def unload_regmod():
         """ Запуск выгрузки регрессионного анализа """
-        unload_regmod_func(RemoteDB)
+        unload_regmod_func(ui_rdb, RemoteDB)
         update_regmod_rdb_combobox(from_local=True)
 
     def get_regmod_rdb_id():
@@ -1519,6 +1519,8 @@ def open_rem_db_window():
     update_mlp_rdb_combobox()
     update_regmod_rdb_combobox()
     update_list_well_rdb()
+    ui_rdb.checkBox_dont_check_dependencies.setChecked(False)
+    ui_rdb.checkBox_dont_check_reg_dependencies.setChecked(False)
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)
