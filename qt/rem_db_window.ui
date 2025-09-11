@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>608</width>
-    <height>608</height>
+    <height>623</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -325,7 +325,7 @@
           <item row="1" column="1" colspan="4">
            <widget class="QCheckBox" name="checkBox_dont_check_dependencies">
             <property name="text">
-             <string>не проверять наличие связанных данных в удаленной БД</string>
+             <string>не проверять наличие связанных данных</string>
             </property>
            </widget>
           </item>
@@ -466,7 +466,7 @@
           <item row="1" column="1" colspan="4">
            <widget class="QCheckBox" name="checkBox_dont_check_reg_dependencies">
             <property name="text">
-             <string>не проверять наличие связанных данных в удаленной БД</string>
+             <string>не проверять наличие связанных данных</string>
             </property>
            </widget>
           </item>

@@ -637,17 +637,18 @@ def open_rem_db_window():
 
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-        # Сначала выполняем проверку
-        dependency_errors = check_dependencies()
+        if not ui_rdb.checkBox_dont_check_dependencies.isChecked():
+            # Сначала выполняем проверку
+            dependency_errors = check_dependencies()
 
-        if dependency_errors:
-            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
-            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
-            return
-        else:
-            set_info('Проблем с зависимостями нет', 'green')
+            if dependency_errors:
+                error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+                error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+                set_info('Обнаружены проблемы с зависимостями', 'red')
+                QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+                return
+            else:
+                set_info('Проблем с зависимостями нет', 'green')
 
         # Если проверка пройдена, выполняем выгрузку
         with get_session() as remote_session:
@@ -1126,17 +1127,18 @@ def open_rem_db_window():
 
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-        # Сначала выполняем проверку
-        dependency_errors = check_reg_dependencies()
+        if not ui_rdb.checkBox_dont_check_reg_dependencies.isChecked():
+            # Сначала выполняем проверку
+            dependency_errors = check_reg_dependencies()
 
-        if dependency_errors:
-            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
-            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
-            return
-        else:
-            set_info('Проблем с зависимостями нет', 'green')
+            if dependency_errors:
+                error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+                error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+                set_info('Обнаружены проблемы с зависимостями', 'red')
+                QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+                return
+            else:
+                set_info('Проблем с зависимостями нет', 'green')
 
         # Если проверка пройдена, выполняем выгрузку
         with get_session() as remote_session:

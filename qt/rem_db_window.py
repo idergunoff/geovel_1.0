@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_rem_db(object):
     def setupUi(self, rem_db):
         rem_db.setObjectName("rem_db")
-        rem_db.resize(608, 608)
+        rem_db.resize(608, 623)
         self.gridLayout_2 = QtWidgets.QGridLayout(rem_db)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.tabWidget = QtWidgets.QTabWidget(rem_db)
@@ -327,7 +327,7 @@ class Ui_rem_db(object):
         self.pushButton_sync_ga_cls.setText(_translate("rem_db", "Synchronize genetic analysis"))
         self.pushButton_load_model.setText(_translate("rem_db", "REM -> LOC"))
         self.label_3.setText(_translate("rem_db", "Анализ MLP:"))
-        self.checkBox_dont_check_dependencies.setText(_translate("rem_db", "не проверять наличие связанных данных в удаленной БД"))
+        self.checkBox_dont_check_dependencies.setText(_translate("rem_db", "не проверять наличие связанных данных"))
         self.groupBox_2.setTitle(_translate("rem_db", "Regression"))
         self.pushButton_delete_model_reg_rdb.setToolTip(_translate("rem_db", "Удалить модель в удаленной БД"))
         self.pushButton_delete_model_reg_rdb.setText(_translate("rem_db", "Delete"))
@@ -344,7 +344,7 @@ class Ui_rem_db(object):
         self.pushButton_unload_model_reg.setText(_translate("rem_db", "LOC -> REM"))
         self.pushButton_sync_ga_reg.setText(_translate("rem_db", "Synchronize genetic analysis"))
         self.label_10.setText(_translate("rem_db", "Анализ RegMod:"))
-        self.checkBox_dont_check_reg_dependencies.setText(_translate("rem_db", "не проверять наличие связанных данных в удаленной БД"))
+        self.checkBox_dont_check_reg_dependencies.setText(_translate("rem_db", "не проверять наличие связанных данных"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("rem_db", "Main"))
         self.label_wells_count.setText(_translate("rem_db", "Синхронизировать скважины:"))
         self.pushButton_sync_wells.setToolTip(_translate("rem_db", "Синхронизировать скважины в локальной и удаленной БД"))
