@@ -2445,9 +2445,13 @@ def train_regression_model():
 
             new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
 
-            session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
-                {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
-            session.commit()
+            analysis_reg = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+            filepath = analysis_reg.data
+            new_data_train.to_parquet(filepath)
+
+            # session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
+            #     {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
+            # session.commit()
             # build_table_train(False, 'regmod')
             update_list_well_markup_reg()
             # show_regression_form(data_train_clean, list_param)
