@@ -545,7 +545,7 @@ def open_rem_db_window():
 
     def unload_mlp():
         """ Запуск выгрузки анализов MLP """
-        unload_mlp_func(RemoteDB)
+        unload_mlp_func(ui_rdb, RemoteDB)
         update_mlp_rdb_combobox(from_local=True)
 
     def get_MLP_rdb_id():
@@ -637,17 +637,18 @@ def open_rem_db_window():
 
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-        # Сначала выполняем проверку
-        dependency_errors = check_dependencies()
+        if not ui_rdb.checkBox_dont_check_dependencies.isChecked():
+            # Сначала выполняем проверку
+            dependency_errors = check_dependencies()
 
-        if dependency_errors:
-            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
-            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
-            return
-        else:
-            set_info('Проблем с зависимостями нет', 'green')
+            if dependency_errors:
+                error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+                error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+                set_info('Обнаружены проблемы с зависимостями', 'red')
+                QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+                return
+            else:
+                set_info('Проблем с зависимостями нет', 'green')
 
         # Если проверка пройдена, выполняем выгрузку
         with get_session() as remote_session:
@@ -993,7 +994,7 @@ def open_rem_db_window():
 
     def unload_regmod():
         """ Запуск выгрузки регрессионного анализа """
-        unload_regmod_func(RemoteDB)
+        unload_regmod_func(ui_rdb, RemoteDB)
         update_regmod_rdb_combobox(from_local=True)
 
     def get_regmod_rdb_id():
@@ -1126,17 +1127,18 @@ def open_rem_db_window():
 
         set_info('Начало загрузки данных с удаленной БД на локальную', 'blue')
 
-        # Сначала выполняем проверку
-        dependency_errors = check_reg_dependencies()
+        if not ui_rdb.checkBox_dont_check_reg_dependencies.isChecked():
+            # Сначала выполняем проверку
+            dependency_errors = check_reg_dependencies()
 
-        if dependency_errors:
-            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
-            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
-            QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
-            return
-        else:
-            set_info('Проблем с зависимостями нет', 'green')
+            if dependency_errors:
+                error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+                error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
+                set_info('Обнаружены проблемы с зависимостями', 'red')
+                QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
+                return
+            else:
+                set_info('Проблем с зависимостями нет', 'green')
 
         # Если проверка пройдена, выполняем выгрузку
         with get_session() as remote_session:
@@ -1519,6 +1521,8 @@ def open_rem_db_window():
     update_mlp_rdb_combobox()
     update_regmod_rdb_combobox()
     update_list_well_rdb()
+    ui_rdb.checkBox_dont_check_dependencies.setChecked(False)
+    ui_rdb.checkBox_dont_check_reg_dependencies.setChecked(False)
     ui_rdb.pushButton_load_obj_rem.clicked.connect(load_object_rem)
     ui_rdb.pushButton_unload_obj_rem.clicked.connect(unload_object_rem)
     ui_rdb.pushButton_delete_obj_rem.clicked.connect(delete_object_rem)

@@ -71,22 +71,23 @@ def check_rdb_reg_dependencies():
                     pass
     return errors
 
-def unload_regmod_func(Window):
+def unload_regmod_func(ui_rdb, Window):
     """Выгрузка таблиц AnalysisReg, MarkupReg с локальной БД на удаленную"""
 
     set_info('Начало выгрузки данных с локальной БД на удаленную', 'blue')
 
-    # Сначала выполняем проверку
-    dependency_errors = check_rdb_reg_dependencies()
+    if not ui_rdb.checkBox_dont_check_reg_dependencies.isChecked():
+        # Сначала выполняем проверку
+        dependency_errors = check_rdb_reg_dependencies()
 
-    if dependency_errors:
-        error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
-        error_info += "\n\nНеобходимо сначала синхронизировать эти данные с локальной БД."
-        set_info('Обнаружены проблемы с зависимостями', 'red')
-        QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
-        return
-    else:
-        set_info('Проблем с зависимостями нет', 'green')
+        if dependency_errors:
+            error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
+            error_info += "\n\nНеобходимо сначала синхронизировать эти данные с локальной БД."
+            set_info('Обнаружены проблемы с зависимостями', 'red')
+            QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
+            return
+        else:
+            set_info('Проблем с зависимостями нет', 'green')
 
     # Если проверка пройдена, выполняем выгрузку
     with get_session() as remote_session:
