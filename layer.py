@@ -602,3 +602,13 @@ def remove_well():
             set_info(f'Скважина id{w_id} удалена', 'green')
         session.commit()
         update_list_well()
+
+
+def check_land():
+    for f in tqdm(session.query(Formation).all()):
+        if not f.land:
+            print(f.id)
+            prof = session.query(Profile).filter_by(id=f.profile_id).first()
+            print(prof.abs_relief)
+            f.land = prof.abs_relief
+    session.commit()
