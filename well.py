@@ -799,4 +799,48 @@ def remove_duplicate_wells():
     deduplicate_wells(session)
 
 
+def find_nearest_profiles(well_id: int, max_distance: float) -> dict[int, float]:
+    """Возвращает словарь {profile_id: минимальное расстояние}.
+    Если профилей в пределах max_distance нет, возвращает ближайший профиль без учёта порога.
+    """
+    well = session.query(Well).filter(Well.id == well_id).first()
+    if not well:
+        raise ValueError(f"Well with id {well_id} not found")
 
+    candidates = {}
+    profiles = session.query(Profile).all()
+
+    for prof in profiles:
+        if not prof.x_pulc or not prof.y_pulc:
+            continue
+        xs, ys = json.loads(prof.x_pulc), json.loads(prof.y_pulc)
+        _, dist = closest_point(well.x_coord, well.y_coord, xs, ys)
+        if dist <= max_distance:
+            candidates[prof.id] = dist
+
+    if candidates:
+        return candidates
+
+    # профили внутри max_distance не найдены – ищем ближайший по всему набору
+    nearest_id, min_dist = None, float("inf")
+    for prof in profiles:
+        if not prof.x_pulc or not prof.y_pulc:
+            continue
+        xs, ys = json.loads(prof.x_pulc), json.loads(prof.y_pulc)
+        _, dist = closest_point(well.x_coord, well.y_coord, xs, ys)
+        if dist < min_dist:
+            nearest_id, min_dist = prof.id, dist
+
+    return {nearest_id: min_dist} if nearest_id is not None else {}
+
+
+def find_closest_profile():
+    """Поиск ближайшего профиля для выбранной скважины"""
+    well_id = get_well_id()
+    max_distance = ui.spinBox_well_distance.value()
+    dict_profiles = find_nearest_profiles(well_id, max_distance)
+    n = 1
+    for p_id, dist in dict_profiles.items():
+        profile = get_profile_by_id(p_id)
+        set_info(f'{n}. {profile.research.object.title} {profile.research.date_research.year} Профиль: {profile.title}  \nрасстояние: {dist:.2f} м.', 'green')
+        n += 1

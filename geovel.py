@@ -330,6 +330,8 @@ ui.listWidget_well.currentItemChanged.connect(show_data_well)
 ui.listWidget_well.currentItemChanged.connect(update_boundaries)
 ui.listWidget_bound.currentItemChanged.connect(draw_bound_int)
 
+ui.toolButton_find_profile.clicked.connect(find_closest_profile)
+
 ###################################################################
 #########################   Monitoring   ##########################
 ###################################################################

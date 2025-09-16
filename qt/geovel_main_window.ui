@@ -77,6 +77,9 @@
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QTabWidget" name="tabWidget_2">
+            <property name="toolTip">
+             <string>Найти ближайшие к скважине профили</string>
+            </property>
             <property name="styleSheet">
              <string notr="true"/>
             </property>
@@ -1315,8 +1318,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>437</width>
-                       <height>201</height>
+                       <width>435</width>
+                       <height>196</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1366,20 +1369,8 @@
                  </widget>
                 </item>
                 <item row="0" column="2">
-                 <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0">
-                  <item row="0" column="1" colspan="2">
-                   <widget class="QLabel" name="label_15">
-                    <property name="font">
-                     <font>
-                      <pointsize>10</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>max distance, m:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
+                 <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0,0">
+                  <item row="0" column="4">
                    <widget class="QSpinBox" name="spinBox_well_distance">
                     <property name="minimum">
                      <number>1</number>
@@ -1404,6 +1395,28 @@
                     </property>
                     <property name="text">
                      <string>intersection</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2" colspan="2">
+                   <widget class="QLabel" name="label_15">
+                    <property name="font">
+                     <font>
+                      <pointsize>10</pointsize>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>max distance, m:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QToolButton" name="toolButton_find_profile">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(238, 255, 184);</string>
+                    </property>
+                    <property name="text">
+                     <string>PR</string>
                     </property>
                    </widget>
                   </item>
@@ -5725,7 +5738,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>29</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -5746,7 +5759,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
