@@ -48,7 +48,7 @@ def search_well():
     try:
         for i in range(ui.listWidget_well.count()):
             item = ui.listWidget_well.item(i)
-            item_text = item.text().lower()
+            item_text = item.text().split(' id')[0].lower()
             matches = search_text in item_text if search_text else False
 
             # Запоминаем первое совпадение
@@ -837,9 +837,12 @@ def find_nearest_profiles(well_id: int, max_distance: float) -> dict[int, float]
 def find_closest_profile():
     """Поиск ближайшего профиля для выбранной скважины"""
     well_id = get_well_id()
+    well = get_well_by_id(well_id)
+
     max_distance = ui.spinBox_well_distance.value()
     dict_profiles = find_nearest_profiles(well_id, max_distance)
     n = 1
+    set_info(f'Скв. № {well.name}', 'magenta')
     for p_id, dist in dict_profiles.items():
         profile = get_profile_by_id(p_id)
         set_info(f'{n}. {profile.research.object.title} {profile.research.date_research.year} Профиль: {profile.title}  \nрасстояние: {dist:.2f} м.', 'green')

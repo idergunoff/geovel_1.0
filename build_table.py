@@ -566,8 +566,12 @@ def calc_profile_model_predict(param, formation):
     # list_cat = list(profile_model.classes_)
 
     list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
-    working_sample = working_data[list_param_num].values.tolist()
 
+    model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+    if model_mask:
+        list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
+
+    working_sample = working_data[list_param_num].values.tolist()
 
     try:
         if type_predict == 'cls':

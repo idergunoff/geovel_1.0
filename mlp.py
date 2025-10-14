@@ -995,41 +995,45 @@ def update_list_param_mlp(db=False):
         Обновление списка параметров после добавления новых.
         Пересобирает таблицу
     """
-
-    start_time = datetime.datetime.now()
-    try:
-        data_train, list_param = build_table_train(db, 'mlp')
-    except TypeError:
-        return
-    if data_train is None:
-        return
-    list_marker = get_list_marker_mlp('georadar')
-    ui.listWidget_param_mlp.clear()
-    list_param_mlp = data_train.columns.tolist()[2:]
-    for param in list_param_mlp:
-        if ui.checkBox_kf.isChecked():
-            groups = []
-            for mark in list_marker:
-                groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
-            F, p = f_oneway(*groups)
-            if np.isnan(F) or np.isnan(p):
-                # if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
-                #         not param.startswith('Signal')):
-                #     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
-                #     data_train.drop(param, axis=1, inplace=True)
-                #     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
-                #     session.commit()
-                #     set_info(f'Параметр {param} удален', 'red')
+    analisis_id = get_MLP_id()
+    analis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    if not analis.up_data:
+        update_list_param_mlp_no_update()
+        set_color_button_updata()
+    else:
+        try:
+            data_train, list_param = build_table_train(db, 'mlp')
+        except TypeError:
+            return
+        if data_train is None:
+            return
+        list_marker = get_list_marker_mlp('georadar')
+        ui.listWidget_param_mlp.clear()
+        list_param_mlp = data_train.columns.tolist()[2:]
+        for param in list_param_mlp:
+            if ui.checkBox_kf.isChecked():
+                groups = []
+                for mark in list_marker:
+                    groups.append(data_train[data_train['mark'] == mark][param].values.tolist())
+                F, p = f_oneway(*groups)
+                if np.isnan(F) or np.isnan(p):
+                    # if (not param.startswith('distr') and not param.startswith('sep') and not param.startswith('mfcc') and
+                    #         not param.startswith('Signal')):
+                    #     session.query(ParameterMLP).filter_by(analysis_id=get_MLP_id(), parameter=param).delete()
+                    #     data_train.drop(param, axis=1, inplace=True)
+                    #     session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update({'data': json.dumps(data_train.to_dict())}, synchronize_session='fetch')
+                    #     session.commit()
+                    #     set_info(f'Параметр {param} удален', 'red')
+                    ui.listWidget_param_mlp.addItem(param)
+                    continue
+                ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
+                if F < 1 or p > 0.05:
+                    i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
+                    i_item.setBackground(QBrush(QColor('red')))
+            else:
                 ui.listWidget_param_mlp.addItem(param)
-                continue
-            ui.listWidget_param_mlp.addItem(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}')
-            if F < 1 or p > 0.05:
-                i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
-                i_item.setBackground(QBrush(QColor('red')))
-        else:
-            ui.listWidget_param_mlp.addItem(param)
-    ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
-    set_color_button_updata()
+        ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
+        set_color_button_updata()
     update_list_trained_models_class()
     update_line_edit_exception_mlp()
 
@@ -1051,7 +1055,7 @@ def set_updata_false():
         filepath = Path(analysis.data)
         if filepath.exists():
             filepath.unlink()
-    except OSError:
+    except (OSError, TypeError):
         pass
     analysis.up_data = False
     session.commit()

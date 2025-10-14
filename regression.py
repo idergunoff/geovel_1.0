@@ -3930,6 +3930,13 @@ def copy_regmod_by_except():
     set_info(f'Скопирован набор для регрессионного анализа - "{old_regmod.title}"', 'green')
 
 
+def rename_regmod():
+    session.query(AnalysisReg).filter(AnalysisReg.id == get_regmod_id()).update(
+        {"title": ui.lineEdit_string.text()}, synchronize_session='fetch')
+
+    update_list_reg()
+
+
 def calc_corr_regmod():
     """ Расчет корреляции """
 

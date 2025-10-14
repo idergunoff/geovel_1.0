@@ -609,6 +609,5 @@ def check_land():
         if not f.land:
             print(f.id)
             prof = session.query(Profile).filter_by(id=f.profile_id).first()
-            print(prof.abs_relief)
             f.land = prof.abs_relief
     session.commit()

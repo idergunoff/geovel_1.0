@@ -90,10 +90,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     # Добавление параметров с NaN или inf в set
     list_nan_param = set(nan_mask.columns[nan_mask.any() | inf_mask.any()])
 
+    # Замена inf на -1
+    data_train[list_param] = data_train[list_param].replace([np.inf, -np.inf], 0)
 
     if count_nan > 0:
-        # Замена inf на 0
-        data_train[list_param] = data_train[list_param].replace([np.inf, -np.inf], 0)
 
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)

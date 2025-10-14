@@ -78,7 +78,7 @@
           <item>
            <widget class="QTabWidget" name="tabWidget_2">
             <property name="toolTip">
-             <string>Найти ближайшие к скважине профили</string>
+             <string/>
             </property>
             <property name="styleSheet">
              <string notr="true"/>
@@ -1318,8 +1318,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>435</width>
-                       <height>196</height>
+                       <width>461</width>
+                       <height>200</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1412,6 +1412,9 @@
                   </item>
                   <item row="0" column="1">
                    <widget class="QToolButton" name="toolButton_find_profile">
+                    <property name="toolTip">
+                     <string>Найти ближайшие к скважине профили</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(238, 255, 184);</string>
                     </property>
@@ -4780,11 +4783,11 @@ Therm</string>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_69">
                   <item row="0" column="0">
-                   <layout class="QGridLayout" name="gridLayout_70" columnstretch="3,0,0">
+                   <layout class="QGridLayout" name="gridLayout_70" columnstretch="3,0,0,0">
                     <item row="0" column="0">
                      <widget class="QComboBox" name="comboBox_regmod"/>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QPushButton" name="pushButton_rem_regmod">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
@@ -4801,6 +4804,19 @@ Therm</string>
                       </property>
                       <property name="text">
                        <string>add RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QToolButton" name="toolButton_rename_regmod">
+                      <property name="toolTip">
+                       <string>rename RegMod переименовать</string>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 170, 127);</string>
+                      </property>
+                      <property name="text">
+                       <string>RNM</string>
                       </property>
                      </widget>
                     </item>
@@ -5738,7 +5754,7 @@ Therm</string>
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>22</height>
+     <height>29</height>
     </rect>
    </property>
   </widget>
