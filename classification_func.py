@@ -233,7 +233,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 solver=ui_cls.comboBox_solvar_mlp.currentText(),
                 alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
                 learning_rate_init=ui_cls.doubleSpinBox_lr_mlp.value(),
-                max_iter=5000,
+                max_iter=ui_cls.spinBox_max_iter.value(),
                 early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
                 validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
                 random_state=0
@@ -357,7 +357,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 activation=ui_cls.comboBox_activation_mlp.currentText(),
                 solver=ui_cls.comboBox_solvar_mlp.currentText(),
                 alpha=ui_cls.doubleSpinBox_alpha_mlp.value(),
-                max_iter=5000,
+                max_iter=ui_cls.spinBox_max_iter.value(),
                 early_stopping=ui_cls.checkBox_e_stop_mlp.isChecked(),
                 validation_fraction=ui_cls.doubleSpinBox_valid_mlp.value(),
                 random_state=0
