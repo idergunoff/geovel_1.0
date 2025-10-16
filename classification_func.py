@@ -1331,25 +1331,48 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 selected_mask = ui_ga.listWidget_population.currentItem().text().split(' N')
 
                 for x, fobj in zip(data["X"], data["F"]):
-                    if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
-                        print(f'{fobj[0]} N{fobj[1]}')
-                        print(x)
-                        flattened_mask = [m[0] for m in x]
-                        mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
-                        print(mask_param)
+                    try:
+                        if fobj[0] == float(selected_mask[0]) and fobj[1] == int(selected_mask[1]):
+                            print(f'{fobj[0]} N{fobj[1]}')
+                            print(x)
+                            flattened_mask = [m[0] for m in x]
+                            mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                            print(mask_param)
 
-                        info = (f'cls analysis: {ui.comboBox_mlp_analysis.currentText()}\n'
-                                f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
-                        new_mask = ParameterMask(
-                            count_param=len(mask_param),
-                            mask=json.dumps(mask_param),
-                            mask_info=info
-                        )
-                        session.add(new_mask)
-                        session.commit()
-                        QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
-                        update_list_saved_mask()
-                        update_list_mask()
+                            info = (f'cls analysis: {ui.comboBox_mlp_analysis.currentText()}\n'
+                                    f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                            new_mask = ParameterMask(
+                                count_param=len(mask_param),
+                                mask=json.dumps(mask_param),
+                                mask_info=info
+                            )
+                            session.add(new_mask)
+                            session.commit()
+                            QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                            update_list_saved_mask()
+                            update_list_mask()
+                            break
+                    except IndexError:
+                        if fobj == float(selected_mask[0]) and np.sum(x) == int(selected_mask[1]):
+                            print(f'{fobj} N{np.sum(x)}')
+                            print(x)
+                            flattened_mask = [m[0] for m in x]
+                            mask_param = [p for p, m in zip(list_p, flattened_mask) if m]
+                            print(mask_param)
+
+                            info = (f'cls analysis: {ui.comboBox_mlp_analysis.currentText()}\n'
+                                    f'pareto analysis: {ui_ga.comboBox_gen_analysis.currentText()}\n')
+                            new_mask = ParameterMask(
+                                count_param=len(mask_param),
+                                mask=json.dumps(mask_param),
+                                mask_info=info
+                            )
+                            session.add(new_mask)
+                            session.commit()
+                            QMessageBox.information(MainWindow, 'Info', f'Маска сохранена\n{info}')
+                            update_list_saved_mask()
+                            update_list_mask()
+                            break
             else:
                 return
 
