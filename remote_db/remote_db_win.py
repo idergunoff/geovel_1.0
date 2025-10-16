@@ -13,6 +13,7 @@ from regression import update_list_reg, update_list_trained_models_regmod
 from remote_db.unload_reg_models import unload_reg_models_func
 from remote_db.sync_features.sync_entropy_features import *
 from remote_db.sync_features.sync_entropy_features_profile import *
+from remote_db.deduplicate_wells import *
 
 def open_rem_db_window():
     try:
@@ -1507,6 +1508,13 @@ def open_rem_db_window():
             for b in boundaries:
                 ui_rdb.listWidget_boundary.addItem(f'{b.title} - {b.depth}m. id{b.id}')
 
+    def remove_duplicate_wells():
+        with get_session() as remote_session:
+            deduplicate_wells(remote_session)
+        ui_rdb.label_wells.setText(f'Wells: {ui_rdb.listWidget_wells.count()}')
+        update_list_well_rdb()
+
+
 
     def sync_entropy_features():
         load_entropy_feature(RemoteDB)
@@ -1553,5 +1561,6 @@ def open_rem_db_window():
     ui_rdb.lineEdit_well_search.setPlaceholderText("Поиск скважины...")
     ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
     ui_rdb.pushButton_sync_entropy_profile.clicked.connect(sync_entropy_features_profile)
+    ui_rdb.pushButton_remove_dupl_rdb.clicked.connect(remove_duplicate_wells)
 
     RemoteDB.exec_()

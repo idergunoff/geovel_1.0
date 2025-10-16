@@ -786,6 +786,7 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
 
     # Финальный коммит и итоговая статистика
     session.commit()
+    update_list_well()
     summary = (
         f"Обработано {processed} скважин, найдено {duplicates} дублей; "
         f"Boundary: {boundary_moved}, WellOptionally: {optional_moved}, "

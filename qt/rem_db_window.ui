@@ -484,10 +484,17 @@
         <layout class="QGridLayout" name="gridLayout_5">
          <item row="0" column="0" colspan="2">
           <layout class="QGridLayout" name="gridLayout_6">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_wells_count">
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_wells">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
              <property name="text">
-              <string>Синхронизировать скважины:</string>
+              <string>Wells:</string>
              </property>
             </widget>
            </item>
@@ -532,20 +539,36 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="0" colspan="2">
+             <item row="2" column="0">
               <widget class="QPushButton" name="pushButton_ignore_well_rdb">
                <property name="toolTip">
                 <string>Пометить скважину как неактивную/активную</string>
                </property>
                <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 216, 219);</string>
+               </property>
+               <property name="text">
+                <string>ignore/activate</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QPushButton" name="pushButton_remove_dupl_rdb">
+               <property name="toolTip">
+                <string>Удалить дубликаты скважин</string>
+               </property>
+               <property name="styleSheet">
                 <string notr="true">background-color: rgb(255, 181, 182);</string>
                </property>
                <property name="text">
-                <string>ignore/activate well</string>
+                <string>remove dupl</string>
                </property>
               </widget>
              </item>
             </layout>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEdit_well_search"/>
            </item>
            <item row="1" column="0" colspan="2">
             <widget class="QLabel" name="label">
@@ -554,22 +577,12 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_wells">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_wells_count">
              <property name="text">
-              <string>Wells:</string>
+              <string>Синхронизировать скважины:</string>
              </property>
             </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLineEdit" name="lineEdit_well_search"/>
            </item>
           </layout>
          </item>
