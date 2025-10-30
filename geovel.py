@@ -28,6 +28,7 @@ from well_log import *
 from mask_params import *
 from filter_well import *
 from noise import *
+from slice import *
 
 
 MainWindow.show()
@@ -157,6 +158,7 @@ ui.pushButton_set_scale.clicked.connect(set_scale)
 ui.checkBox_grid.clicked.connect(show_grid)
 ui.pushButton_save_img.clicked.connect(save_image)
 ui.pushButton_save_prof_sig.clicked.connect(save_prof_sig)
+ui.toolButton_slice.clicked.connect(push_slice)
 ui.pushButton_slide.clicked.connect(slide_average)
 radarogramma.sigRangeChanged.connect(on_range_changed)
 ui.checkBox_black_white.clicked.connect(change_background)

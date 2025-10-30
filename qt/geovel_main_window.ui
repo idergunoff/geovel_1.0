@@ -642,6 +642,39 @@
               </item>
               <item row="22" column="0">
                <layout class="QGridLayout" name="gridLayout_26">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="text">
+                   <string>Save Image</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин для текущего объекта в таблице Excel</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(204, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="5">
+                 <widget class="QPushButton" name="pushButton_save_prof_sig">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 150, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save slices</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="0" column="1">
                  <widget class="QSpinBox" name="spinBox_save_img">
                   <property name="styleSheet">
@@ -661,32 +694,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="4">
-                 <widget class="QSpinBox" name="spinBox_save_prod_sig">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>512</number>
-                  </property>
-                  <property name="value">
-                   <number>30</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин для текущего объекта в таблице Excel</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(204, 188, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save well</string>
-                  </property>
-                 </widget>
-                </item>
                 <item row="0" column="3">
                  <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
                   <property name="toolTip">
@@ -700,36 +707,16 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="6">
-                 <spacer name="horizontalSpacer_3">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
+                <item row="0" column="4">
+                 <widget class="QSpinBox" name="spinBox_save_prod_sig">
+                  <property name="minimum">
+                   <number>1</number>
                   </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>40</width>
-                    <height>20</height>
-                   </size>
+                  <property name="maximum">
+                   <number>512</number>
                   </property>
-                 </spacer>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_save_img">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(153, 193, 241);</string>
-                  </property>
-                  <property name="text">
-                   <string>Save Image</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="5">
-                 <widget class="QPushButton" name="pushButton_save_prof_sig">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 150, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save prof sig</string>
+                  <property name="value">
+                   <number>30</number>
                   </property>
                  </widget>
                 </item>
@@ -5640,17 +5627,17 @@ Therm</string>
            <widget class="QComboBox" name="comboBox_year_research"/>
           </item>
           <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+           <widget class="QToolButton" name="toolButton_slice">
+            <property name="toolTip">
+             <string>Инструмент Срезы по объекту</string>
             </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(175, 150, 255);</string>
             </property>
-           </spacer>
+            <property name="text">
+             <string>SLC</string>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QPushButton" name="pushButton_mask_param">
