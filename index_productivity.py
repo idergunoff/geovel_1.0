@@ -32,9 +32,18 @@ def index_prod_list_update():
                 item = f'{i.prediction.type_model}-{model.title}_id{i.id}'
                 ui.listWidget_ix_prod.addItem(item)
             except AttributeError:
+                session.delete(i)
+                session.commit()
                 continue
     except ValueError:
         return
+
+def index_prod_clear():
+    for i in session.query(IndexProductivity).filter_by(research_id=get_research_id()).all():
+        session.delete(i)
+    session.commit()
+    set_info('Список индекса продуктивности очищен', 'blue')
+    index_prod_list_update()
 
 
 def index_prod_draw():
@@ -52,7 +61,12 @@ def index_prod_save():
 def build_table_index_productivity():
     list_prediction = []
     for i in session.query(IndexProductivity).filter_by(research_id=get_research_id()).all():
-        list_prediction.append(i.prediction)
+        if i.prediction:
+            list_prediction.append(i.prediction)
+        else:
+            session.delete(i)
+            session.commit()
+    print(list_prediction)
 
     pd_ix_prod = pd.DataFrame(columns=['x_pulc', 'y_pulc'])
     for pr in session.query(Profile).filter_by(research_id=get_research_id()).all():
