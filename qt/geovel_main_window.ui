@@ -642,6 +642,38 @@
               </item>
               <item row="22" column="0">
                <layout class="QGridLayout" name="gridLayout_26">
+                <item row="0" column="1">
+                 <widget class="QSpinBox" name="spinBox_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>1000</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>20</number>
+                  </property>
+                  <property name="value">
+                   <number>450</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QSpinBox" name="spinBox_save_prod_sig">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>512</number>
+                  </property>
+                  <property name="value">
+                   <number>30</number>
+                  </property>
+                 </widget>
+                </item>
                 <item row="0" column="2">
                  <widget class="QPushButton" name="pushButton_prof_wells_excel">
                   <property name="toolTip">
@@ -655,7 +687,20 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="4">
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save all well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="6">
                  <spacer name="horizontalSpacer_3">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
@@ -678,35 +723,13 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
-                  </property>
+                <item row="0" column="5">
+                 <widget class="QPushButton" name="pushButton_save_prof_sig">
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 188, 255);</string>
+                   <string notr="true">background-color: rgb(175, 150, 255);</string>
                   </property>
                   <property name="text">
-                   <string>save all well</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QSpinBox" name="spinBox_save_img">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(153, 193, 241);</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>1000</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>20</number>
-                  </property>
-                  <property name="value">
-                   <number>450</number>
+                   <string>save prof sig</string>
                   </property>
                  </widget>
                 </item>
@@ -973,7 +996,7 @@
                  </layout>
                 </item>
                 <item row="3" column="0">
-                 <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,1,1,0">
+                 <layout class="QGridLayout" name="gridLayout_8" columnstretch="1,1,1,0,0">
                   <item row="1" column="2">
                    <widget class="QPushButton" name="pushButton_r">
                     <property name="text">
@@ -988,13 +1011,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="pushButton_uf">
-                    <property name="text">
-                     <string>P2uf</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="3">
                    <widget class="QSpinBox" name="spinBox_calc_dist_grid">
                     <property name="minimum">
@@ -1005,6 +1021,23 @@
                     </property>
                     <property name="value">
                      <number>100</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_uf">
+                    <property name="text">
+                     <string>P2uf</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="4">
+                   <widget class="QCheckBox" name="checkBox_pulc">
+                    <property name="text">
+                     <string>СК42</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
                     </property>
                    </widget>
                   </item>
@@ -2223,26 +2256,6 @@
                 </item>
                 <item row="0" column="1">
                  <layout class="QGridLayout" name="gridLayout_161">
-                  <item row="0" column="2">
-                   <widget class="QToolButton" name="toolButton_ix_prod_draw">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(255, 204, 121);</string>
-                    </property>
-                    <property name="text">
-                     <string>draw</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="QToolButton" name="toolButton_ix_prod_excel">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(153, 193, 241);</string>
-                    </property>
-                    <property name="text">
-                     <string>excel</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QToolButton" name="toolButton_ix_prod_add">
                     <property name="styleSheet">
@@ -2263,10 +2276,40 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="4">
+                  <item row="0" column="5">
                    <widget class="QCheckBox" name="checkBox_ix_prod_norm">
                     <property name="text">
                      <string>norm</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QToolButton" name="toolButton_ix_prod_draw">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 204, 121);</string>
+                    </property>
+                    <property name="text">
+                     <string>draw</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QToolButton" name="toolButton_ix_prod_excel">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(153, 193, 241);</string>
+                    </property>
+                    <property name="text">
+                     <string>excel</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QToolButton" name="toolButton_ix_prod_clr">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(255, 103, 153);</string>
+                    </property>
+                    <property name="text">
+                     <string>clr</string>
                     </property>
                    </widget>
                   </item>

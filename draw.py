@@ -58,7 +58,10 @@ def draw_radarogram():
     draw_image(radar)
 
     # Расчет рельефа профиля
-    calc_relief_profile(prof)
+    try:
+        calc_relief_profile(prof)
+    except AttributeError:
+        set_info("Внимание!!! Для данного профиля не рассчитан рельеф. Проверьте координаты или наличие рельефной сетки для участка", 'red')
 
     # Установка информации о текущем профиле
     set_info(f'Отрисовка "{ui.comboBox_atrib.currentText()}" профиля ({get_object_name()}, {get_profile_name()})', 'blue')

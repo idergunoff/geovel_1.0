@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import csv
-import json
-from pathlib import Path
 from typing import Any, Iterable, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
-from models_db.model import Profile, Session
+from func import *
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session as SessionType
@@ -117,6 +115,7 @@ def export_profile_signals(
         last_sample_index = min(bottom_limit, min_sample_length - 1)
         created_files: List[Path] = []
 
+        ui.progressBar.setMaximum(last_sample_index)
         for sample_index in range(last_sample_index + 1):
             file_path = output_path / f"{sample_index}.txt"
             with file_path.open("w", newline="", encoding="utf-8") as file_handle:
@@ -133,6 +132,7 @@ def export_profile_signals(
                         ]
                     )
             created_files.append(file_path)
+            ui.progressBar.setValue(sample_index + 1)
 
         return created_files
     finally:

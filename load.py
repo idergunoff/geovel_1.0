@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib.pyplot import title
+from profile_export import export_profile_signals
 
 from func import *
 from wgs_to_pulc import wgs84_to_pulc42
@@ -92,7 +93,11 @@ def load_param():
     else:
         x_wgs_l, y_wgs_l, x_pulc_l, y_pulc_l = [], [], [], []
         for i in pd_int.index:
-            y, x = wgs84_to_pulc42(pd_int['Latd'][i], pd_int['Long'][i])
+            if ui.checkBox_pulc.isChecked():
+                y, x = wgs84_to_pulc42(pd_int['Latd'][i], pd_int['Long'][i])
+            else:
+                x, y = pd_int['X'][i], pd_int['Y'][i]
+            print(x, y)
             x_wgs_l.append(pd_int['Long'][i])
             y_wgs_l.append(pd_int['Latd'][i])
             x_pulc_l.append(x)
@@ -721,3 +726,13 @@ def remove_object():
                 pass
     else:
         set_info('Невозможно удалить объект при наличии профиля', 'red')
+
+
+def save_prof_sig():
+    r_id = get_research_id()
+    bl = ui.spinBox_save_prod_sig.value()
+    dir = QFileDialog.getExistingDirectory()
+
+    set_info("Начало сохранения...", 'blue')
+    export_profile_signals(research_id=r_id, bottom_limit=bl, output_dir=dir)
+    set_info(f'Срезы профилей сохранены в директорию: {dir}', 'green')
