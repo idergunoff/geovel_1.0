@@ -381,6 +381,21 @@ def show_well_log():
             ui.doubleSpinBox_target_val.setValue(median_value)
 
 
+        def median_to_target_value_medratio():
+            try:
+                well_log_id = ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]
+                depth = ui_wl.doubleSpinBox_depth.value()
+                interval = ui_wl.doubleSpinBox_interval.value()
+                median_value = get_median_value_from_interval(well_log_id, depth, interval)
+                median_value_top = get_median_value_from_interval(well_log_id, depth-interval, interval)
+            except AttributeError:
+                set_info('Выберите каротаж', 'red')
+                QMessageBox.critical(WellLogForm, 'Ошибка', 'Необходимо выбрать каротаж!')
+                return
+
+            ui.doubleSpinBox_target_val.setValue(median_value_top/median_value)
+
+
         def get_median_value_from_interval(well_log_id, begin, interval):
             well_log = session.query(WellLog).filter_by(id=well_log_id).first()
             if not well_log:
@@ -435,7 +450,9 @@ def show_well_log():
             except AttributeError:
                 return
             median_value = get_median_value_from_interval(well_log_id, value_dep, value_int)
+            median_value_top = get_median_value_from_interval(well_log_id, value_dep-value_int, value_int)
             ui_wl.label_value.setText(str(median_value))
+            ui_wl.label_mr_value.setText(str(round(median_value_top/median_value, 4)))
 
 
         def add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value):
@@ -635,6 +652,7 @@ def show_well_log():
         ui_wl.pushButton_add_current.clicked.connect(add_current_well_log_to_regression)
         ui_wl.pushButton_add_all.clicked.connect(add_all_well_log_to_regression)
         ui_wl.pushButton_to_tar_val.clicked.connect(median_to_target_value)
+        ui_wl.pushButton_to_tar_val_mr.clicked.connect(median_to_target_value_medratio)
         ui_wl.pushButton_update_all.clicked.connect(update_all_well_log_in_regression)
         ui_wl.pushButton_map_well_log.clicked.connect(map_well_logging)
         ui_wl.pushButton_clean.clicked.connect(clean_double_well_logging)
