@@ -355,6 +355,7 @@ def correct_profile_model_predict():
         if pred.corrected:
             session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': pred.prediction})
         session.commit()
+        ui.checkBox_corr_pred.setChecked(False)
 
 
     ui_cmp.buttonBox.accepted.connect(correct_predict)

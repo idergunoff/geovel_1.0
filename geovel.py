@@ -507,6 +507,7 @@ ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
 ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
 ui.pushButton_correct_predict.clicked.connect(correct_profile_model_predict)
 ui.checkBox_corr_pred.clicked.connect(draw_profile_model_prediction)
+ui.checkBox_corr_pred.stateChanged.connect(draw_profile_model_prediction)
 ui.toolButton_check_uf.clicked.connect(check_uf)
 
 ui.toolButton_ix_prod_add.clicked.connect(index_prod_add)
