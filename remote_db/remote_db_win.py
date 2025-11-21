@@ -14,6 +14,7 @@ from remote_db.unload_reg_models import unload_reg_models_func
 from remote_db.sync_features.sync_entropy_features import *
 from remote_db.sync_features.sync_entropy_features_profile import *
 from remote_db.deduplicate_wells import *
+from mlp import update_list_mlp
 
 def open_rem_db_window():
     try:
@@ -621,15 +622,15 @@ def open_rem_db_window():
                                 remote_formation_down_hash not in local_formations):
                             related_tables.append('Formation')
 
-                    if related_tables:
-                        try:
-                            error_msg = (
-                                f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
-                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                            )
-                            errors.append(error_msg)
-                        except AttributeError:
-                            pass
+                        if related_tables:
+                            try:
+                                error_msg = (
+                                    f'Для маркера "{remote_marker.title}" анализа "{remote_analysis.title}" '
+                                    f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                                )
+                                errors.append(error_msg)
+                            except AttributeError:
+                                pass
 
         return errors
 
@@ -645,7 +646,7 @@ def open_rem_db_window():
             if dependency_errors:
                 error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
                 error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-                set_info('Обнаружены проблемы с зависимостями', 'red')
+                set_info('Обнаружены проблемы с зависимостями. Загрузка данных прекращена', 'red')
                 QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
                 return
             else:
@@ -749,7 +750,7 @@ def open_rem_db_window():
                         f'{pluralize(added_markups_count, ["обучающая скважина", "обучающие скважины", "обучающих скважин"])}',
                         'green')
 
-        update_list_trained_models_class()
+        update_list_mlp(True)
 
         set_info('Загрузка данных с удаленной БД на локальную завершена', 'blue')
 
@@ -1072,8 +1073,10 @@ def open_rem_db_window():
 
             local_formations = {}
             for f in session.query(Formation.up_hash, Formation.down_hash, Formation.id).all():
-                local_formations[f.up_hash] = f.id
-                local_formations[f.down_hash] = f.id
+                if f.up_hash:
+                    local_formations[f.up_hash] = f.id
+                if f.down_hash:
+                    local_formations[f.down_hash] = f.id
 
             for remote_analysis in remote_analyzes:
 
@@ -1105,21 +1108,29 @@ def open_rem_db_window():
                         pass
 
                     # Проверяем пласт
-                    remote_formation_up_hash = remote_markup.formation.up_hash
-                    remote_formation_down_hash = remote_markup.formation.down_hash
-                    if (remote_formation_up_hash not in local_formations and
-                            remote_formation_down_hash not in local_formations):
+                    try:
+                        remote_formation_up_hash = remote_markup.formation.up_hash
+                        remote_formation_down_hash = remote_markup.formation.down_hash
+                        # Если в локальной БД вообще нет пластов
+                        if not local_formations:
+                            related_tables.append('Formation')
+                        else:
+                            # Проверяем наличие хотя бы одного хеша пласта
+                            if (remote_formation_up_hash not in local_formations and
+                                    remote_formation_down_hash not in local_formations):
+                                related_tables.append('Formation')
+                    except AttributeError:
                         related_tables.append('Formation')
 
-                if related_tables:
-                    try:
-                        error_msg = (
-                            f'Для анализа "{remote_analysis.title}" '
-                            f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                        )
-                        errors.append(error_msg)
-                    except AttributeError:
-                        pass
+                    if related_tables:
+                        try:
+                            error_msg = (
+                                f'Для анализа "{remote_analysis.title}" '
+                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                            )
+                            errors.append(error_msg)
+                        except AttributeError:
+                            pass
 
         return errors
 
@@ -1135,7 +1146,7 @@ def open_rem_db_window():
             if dependency_errors:
                 error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
                 error_info += "\n\nНеобходимо сначала синхронизировать эти данные с удаленной БД."
-                set_info('Обнаружены проблемы с зависимостями', 'red')
+                set_info('Обнаружены проблемы с зависимостями. Загрузка данных прекращена', 'red')
                 QMessageBox.critical(RemoteDB, 'Ошибка зависимостей', error_info)
                 return
             else:

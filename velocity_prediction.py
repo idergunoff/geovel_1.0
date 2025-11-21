@@ -1,5 +1,6 @@
 import json
 import random
+import statistics
 
 from torch.cuda import graph
 
@@ -166,7 +167,37 @@ def correct_profile_model_predict():
     CorrModelPred.show()
     CorrModelPred.setAttribute(Qt.WA_DeleteOnClose)
 
-    pred = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+    def update_list_model_prediction_cmp():
+        ui_cmp.listWidget_model_pred.clear()
+        for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id()).all():
+            if p.type_model == 'cls':
+                model = session.query(TrainedModelClass).filter_by(id=p.model_id).first()
+            else:
+                model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
+            try:
+                item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
+                item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
+                                f'{model.comment}\n'
+                                f'Количество параметров: '
+                                f'{len(get_list_param_numerical(json.loads(model.list_params), model))}\n')
+                ui_cmp.listWidget_model_pred.addItem(item)
+            except (AttributeError, FileNotFoundError):
+                session.delete(p)
+                session.commit()
+                set_info('Модель удалена', 'red')
+
+    update_list_model_prediction_cmp()
+
+    def get_current_prediction():
+        if not ui.listWidget_model_pred.currentItem():
+            return None
+        return session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+
+    pred = get_current_prediction()
+    if not pred:
+        set_info('Не выбран прогноз для коррекции', 'red')
+        CorrModelPred.close()
+        return
 
     list_pred = json.loads(pred.prediction)
 
@@ -186,7 +217,22 @@ def correct_profile_model_predict():
     ui_cmp.spinBox_int_max.setMaximum(len(list_pred) - 1)
     ui_cmp.spinBox_int_min.setMaximum(len(list_pred) - 1)
     ui_cmp.spinBox_int_min.setValue(0)
-    ui_cmp.spinBox_int_max.setValue(40)
+    # ui_cmp.doubleSpinBox_value.setValue(0.5)
+
+    def update_spinBox_value():
+        if ui_cmp.checkBox_compare.isChecked():
+            ui_cmp.spinBox_int_max.setValue(len(list_pred) - 1)
+        else:
+            ui_cmp.spinBox_int_max.setValue(40)
+
+    update_spinBox_value()
+
+    def update_median_value():
+        data_slice = list_pred[ui_cmp.spinBox_int_min.value():ui_cmp.spinBox_int_max.value()]
+        median_value = statistics.median(data_slice) if data_slice else 0
+        ui_cmp.doubleSpinBox_value.setValue(median_value)
+
+    update_median_value()
 
     line_up = ui_cmp.spinBox_int_min.value()
     line_down = ui_cmp.spinBox_int_max.value()
@@ -214,21 +260,56 @@ def correct_profile_model_predict():
 
     draw_int_line()
 
-
-
     def correct_predict():
-        for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
-            list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
 
-        session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': json.dumps(list_pred)})
+        current_pred = get_current_prediction()
+        if not current_pred:
+           set_info('Не выбран прогноз для коррекции', 'red')
+           return
+
+        if ui_cmp.checkBox_compare.isChecked():
+            if not ui_cmp.listWidget_model_pred.currentItem():
+                set_info('Не выбран проноз для сравнения', 'red')
+                return
+
+            pred_cmp = session.query(ProfileModelPrediction).filter_by(
+                    id=ui_cmp.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+
+            if not pred_cmp:
+                set_info('Прогноз для сравнения не найден', 'red')
+                return
+
+            list_pred_cmp = json.loads(pred_cmp.prediction)
+            value_cmp = ui_cmp.doubleSpinBox_value.value()
+            for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
+                if ui_cmp.radioButton_less.isChecked() and list_pred_cmp[i] < value_cmp:
+                    list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+                if ui_cmp.radioButton_more.isChecked() and list_pred_cmp[i] > value_cmp:
+                    list_pred[i] = round(
+                        random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+
+        else:
+            for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
+                list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+
+        session.query(PredictionCorrect).filter_by(prediction_id=current_pred.id).update({'correct': json.dumps(list_pred)})
+        session.commit()
+        CorrModelPred.close()
+
+    def delete_pred():
+        if pred.corrected:
+            session.add(PredictionCorrect(prediction_id=pred.id, correct=pred.prediction))
         session.commit()
 
-        CorrModelPred.close()
 
     ui_cmp.buttonBox.accepted.connect(correct_predict)
     ui_cmp.buttonBox.rejected.connect(CorrModelPred.close)
     ui_cmp.spinBox_int_max.valueChanged.connect(draw_int_line)
     ui_cmp.spinBox_int_min.valueChanged.connect(draw_int_line)
+    ui_cmp.checkBox_compare.stateChanged.connect(update_spinBox_value)
+    ui_cmp.spinBox_int_max.valueChanged.connect(update_median_value)
+    ui_cmp.spinBox_int_min.valueChanged.connect(update_median_value)
+    ui_cmp.pushButton_delete_pred.clicked.connect(delete_pred)
 
     CorrModelPred.exec_()
 

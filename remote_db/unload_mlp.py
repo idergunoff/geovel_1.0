@@ -66,15 +66,15 @@ def check_rdb_dependencies():
                             local_formation_down_hash not in remote_formations):
                         related_tables.append('FormationRDB')
 
-                if related_tables:
-                    try:
-                        error_msg = (
-                            f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
-                            f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
-                        )
-                        errors.append(error_msg)
-                    except AttributeError:
-                        pass
+                    if related_tables:
+                        try:
+                            error_msg = (
+                                f'Для маркера "{local_marker.title}" анализа "{local_analysis.title}" '
+                                f'отсутствуют данные в таблицах: {", ".join(related_tables)}. '
+                            )
+                            errors.append(error_msg)
+                        except AttributeError:
+                            pass
 
     return errors
 
@@ -90,7 +90,7 @@ def unload_mlp_func(ui_rdb, Window):
         if dependency_errors:
             error_info = "Обнаружены следующие проблемы:\n\n" + "\n\n".join(dependency_errors)
             error_info += "\n\nНеобходимо сначала синхронизировать эти данные с локальной БД."
-            set_info('Обнаружены проблемы с зависимостями', 'red')
+            set_info('Обнаружены проблемы с зависимостями. Выгрузка данных прекращена', 'red')
             QMessageBox.critical(Window, 'Ошибка зависимостей', error_info)
             return
         else:

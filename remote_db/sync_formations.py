@@ -61,7 +61,7 @@ def load_formations():
                 local_profile_id = local_profiles.get(remote_profile_hash)
 
                 if not local_profile_id:
-                    set_info(f'Пропуск пласта {remote_formation.title}: профиль не найден в локальной БД', 'yellow')
+                    set_info(f'Пропуск пласта {remote_formation.title}: профиль не найден в локальной БД', 'black')
                     skipped_profiles_count += 1
                     continue
 
@@ -227,7 +227,7 @@ def load_formations():
                      'green')
             if skipped_profiles_count:
                 set_info(f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '
-                         f'из-за несоответствия профилей', 'yellow')
+                         f'из-за несоответствия профилей', 'black')
 
         except Exception as e:
             remote_session.rollback()
@@ -276,7 +276,7 @@ def unload_formations():
                 ui.progressBar.setValue(n + 1)
 
                 if not local_formation.layer_up or not local_formation.layer_down:
-                    set_info(f'Пропуск пласта {local_formation.title}: нет слоёв up/down', 'yellow')
+                    set_info(f'Пропуск пласта {local_formation.title}: нет слоёв up/down', 'black')
                     skipped_profiles_count += 1
                     continue
 
@@ -285,7 +285,7 @@ def unload_formations():
                 remote_profile_id = remote_profiles.get(local_profile_hash)
 
                 if not remote_profile_id:
-                    set_info(f'Пропуск пласта {local_formation.title}: профиль не найден в удаленной БД', 'yellow')
+                    set_info(f'Пропуск пласта {local_formation.title}: профиль не найден в удаленной БД', 'black')
                     skipped_profiles_count += 1
                     continue
 
@@ -328,7 +328,7 @@ def unload_formations():
             if skipped_profiles_count:
                 set_info(
                     f'{pluralize(skipped_profiles_count, ["пласт пропущен", "пласта пропущено", "пластов пропущено"])} '
-                    f'из-за несоответствия профилей', 'yellow')
+                    f'из-за несоответствия профилей', 'black')
 
         except Exception as e:
             remote_session.rollback()

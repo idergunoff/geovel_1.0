@@ -765,49 +765,69 @@ def draw_param():
         # Для каждого пласта
 
         for f in session.query(Formation).filter(Formation.profile_id == get_profile_id()).all():
+            graph = None
+
             # Получаем данные для текущего пласта
-            if param in list_wavelet_features:
-                graph = json.loads(session.query(literal_column(f'wavelet_feature.{param}')).filter(
-                    WaveletFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_fractal_features:
-                graph = json.loads(session.query(literal_column(f'fractal_feature.{param}')).filter(
-                    FractalFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_entropy_features:
-                graph = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
-                    EntropyFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_nonlinear_features:
-                graph = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
-                    NonlinearFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_morphology_feature:
-                graph = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
-                    MorphologyFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_frequency_feature:
-                graph = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
-                    FrequencyFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_envelope_feature:
-                graph = json.loads(session.query(literal_column(f'envelope_feature.{param}')).filter(
-                    EnvelopeFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_autocorr_feature:
-                graph = json.loads(session.query(literal_column(f'autocorr_feature.{param}')).filter(
-                    AutocorrFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_emd_feature:
-                graph = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
-                    EMDFeature.formation_id == f.id
-                ).first()[0])
-            elif param in list_hht_feature:
-                graph = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
-                    HHTFeature.formation_id == f.id
-                ).first()[0])
-            else:
-                graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()[0])
+            try:
+                if param in list_wavelet_features:
+                    result = session.query(literal_column(f'wavelet_feature.{param}')).filter(
+                        WaveletFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_fractal_features:
+                    result = session.query(literal_column(f'fractal_feature.{param}')).filter(
+                        FractalFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_entropy_features:
+                    result = session.query(literal_column(f'entropy_feature.{param}')).filter(
+                        EntropyFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_nonlinear_features:
+                    result = session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                        NonlinearFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_morphology_feature:
+                    result = session.query(literal_column(f'morphology_feature.{param}')).filter(
+                        MorphologyFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_frequency_feature:
+                    result = session.query(literal_column(f'frequency_feature.{param}')).filter(
+                        FrequencyFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_envelope_feature:
+                    result = session.query(literal_column(f'envelope_feature.{param}')).filter(
+                        EnvelopeFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_autocorr_feature:
+                    result = session.query(literal_column(f'autocorr_feature.{param}')).filter(
+                        AutocorrFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_emd_feature:
+                    result = session.query(literal_column(f'emd_feature.{param}')).filter(
+                        EMDFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                elif param in list_hht_feature:
+                    result = session.query(literal_column(f'hht_feature.{param}')).filter(
+                        HHTFeature.formation_id == f.id
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+                else:
+                    result = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == f.id).first()
+                    graph = json.loads(result[0]) if result and result[0] else []
+            except Exception as e:
+                print(f"Ошибка при получении данных для пласта {f.id}: {e}")
+                continue
+            if not graph:
+                continue
+
             # Создаем список значений по порядку
             number = list(range(1, len(graph) + 1))
             # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
@@ -828,102 +848,129 @@ def draw_param():
         if ui.comboBox_plast.currentText() == '-----':
             if param in list_param_geovel:
                 return
-            if param in list_wavelet_features:
-                graph = session.query(literal_column(f'wavelet_feature_profile.{param}')).filter(
-                    WaveletFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_fractal_features:
-                graph = session.query(literal_column(f'fractal_feature_profile.{param}')).filter(
-                    FractalFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_entropy_features:
-                graph = session.query(literal_column(f'entropy_feature_profile.{param}')).filter(
-                    EntropyFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_nonlinear_features:
-                graph = session.query(literal_column(f'nonlinear_feature_profile.{param}')).filter(
-                    NonlinearFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_morphology_feature:
-                graph = session.query(literal_column(f'morphology_feature_profile.{param}')).filter(
-                    MorphologyFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_frequency_feature:
-                graph = session.query(literal_column(f'frequency_feature_profile.{param}')).filter(
-                    FrequencyFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_envelope_feature:
-                graph = session.query(literal_column(f'envelope_feature_profile.{param}')).filter(
-                    EnvelopeFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_autocorr_feature:
-                graph = session.query(literal_column(f'autocorr_feature_profile.{param}')).filter(
-                    AutocorrFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_emd_feature:
-                graph = session.query(literal_column(f'emd_feature_profile.{param}')).filter(
-                    EMDFeatureProfile.profile_id == get_profile_id()
-                ).first()
-            if param in list_hht_feature:
-                graph = session.query(literal_column(f'hht_feature_profile.{param}')).filter(
-                    HHTFeatureProfile.profile_id == get_profile_id()
-                ).first()
 
-            if graph:
-                graph = json.loads(graph[0])
+            graph = None
+            try:
+                if param in list_wavelet_features:
+                    result = session.query(literal_column(f'wavelet_feature_profile.{param}')).filter(
+                        WaveletFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_fractal_features:
+                    result = session.query(literal_column(f'fractal_feature_profile.{param}')).filter(
+                        FractalFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_entropy_features:
+                    result = session.query(literal_column(f'entropy_feature_profile.{param}')).filter(
+                        EntropyFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_nonlinear_features:
+                    result = session.query(literal_column(f'nonlinear_feature_profile.{param}')).filter(
+                        NonlinearFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_morphology_feature:
+                    result = session.query(literal_column(f'morphology_feature_profile.{param}')).filter(
+                        MorphologyFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_frequency_feature:
+                    result = session.query(literal_column(f'frequency_feature_profile.{param}')).filter(
+                        FrequencyFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_envelope_feature:
+                    result = session.query(literal_column(f'envelope_feature_profile.{param}')).filter(
+                        EnvelopeFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_autocorr_feature:
+                    result = session.query(literal_column(f'autocorr_feature_profile.{param}')).filter(
+                        AutocorrFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_emd_feature:
+                    result = session.query(literal_column(f'emd_feature_profile.{param}')).filter(
+                        EMDFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                elif param in list_hht_feature:
+                    result = session.query(literal_column(f'hht_feature_profile.{param}')).filter(
+                        HHTFeatureProfile.profile_id == get_profile_id()
+                    ).first()
+                else:
+                    result = None
+
+                if result and result[0]:
+                    graph = json.loads(result[0])
+            except Exception as e:
+                print(f"Ошибка при получении данных профиля: {e}")
+                set_info(f"Ошибка при получении данных для профиля: {e}", 'red')
+                return
+
         else:  # в остальных случаях получаем данные для формации
-            # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
-            if param in list_wavelet_features:
-                graph = json.loads(session.query(literal_column(f'wavelet_feature.{param}')).filter(
-                    WaveletFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_fractal_features:
-                graph = json.loads(session.query(literal_column(f'fractal_feature.{param}')).filter(
-                    FractalFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_entropy_features:
-                graph = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
-                    EntropyFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_nonlinear_features:
-                graph = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
-                    NonlinearFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_morphology_feature:
-                graph = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
-                    MorphologyFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_frequency_feature:
-                graph = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
-                    FrequencyFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_envelope_feature:
-                graph = json.loads(session.query(literal_column(f'envelope_feature.{param}')).filter(
-                    EnvelopeFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_autocorr_feature:
-                graph = json.loads(session.query(literal_column(f'autocorr_feature.{param}')).filter(
-                    AutocorrFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_emd_feature:
-                graph = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
-                    EMDFeature.formation_id == get_formation_id()
-                ).first()[0])
-            elif param in list_hht_feature:
-                graph = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
-                    HHTFeature.formation_id == get_formation_id()
-                ).first()[0])
-            else:
-                try:
-                    graph = json.loads(session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()[0])
-                except Exception as e:
-                    print(e)
-                    set_info(e, 'red')
-                    return
+            graph = None
+            try:
+                # получаем данные для выбранного параметра из таблицы Formation и преобразуем их из строки в список с помощью json.loads()
+                if param in list_wavelet_features:
+                    result = session.query(literal_column(f'wavelet_feature.{param}')).filter(
+                        WaveletFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_fractal_features:
+                    result = session.query(literal_column(f'fractal_feature.{param}')).filter(
+                        FractalFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_entropy_features:
+                    result = session.query(literal_column(f'entropy_feature.{param}')).filter(
+                        EntropyFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_nonlinear_features:
+                    result = session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                        NonlinearFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_morphology_feature:
+                    result = session.query(literal_column(f'morphology_feature.{param}')).filter(
+                        MorphologyFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_frequency_feature:
+                    result = session.query(literal_column(f'frequency_feature.{param}')).filter(
+                        FrequencyFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_envelope_feature:
+                    result = session.query(literal_column(f'envelope_feature.{param}')).filter(
+                        EnvelopeFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_autocorr_feature:
+                    result = session.query(literal_column(f'autocorr_feature.{param}')).filter(
+                        AutocorrFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_emd_feature:
+                    result = session.query(literal_column(f'emd_feature.{param}')).filter(
+                        EMDFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                elif param in list_hht_feature:
+                    result = session.query(literal_column(f'hht_feature.{param}')).filter(
+                        HHTFeature.formation_id == get_formation_id()
+                    ).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+                else:
+                    result = session.query(literal_column(f'Formation.{param}')).filter(Formation.id == get_formation_id()).first()
+                    graph = json.loads(result[0]) if result and result[0] else None
+            except Exception as e:
+                print(f"Ошибка при получении данных: {e}")
+                set_info(f"Ошибка при получении данных: {e}", 'red')
+                return
+
+        if not graph:
+            set_info(f"Нет данных для параметра '{param}'", 'red')
+            return
+
         try:
             number = list(range(1, len(graph) + 1))  # создаем список номеров элементов данных
         except Exception as e:
-            set_info(e, 'red')
+            set_info(f"Ошибка при создании номеров: {e}", 'red')
             return
         # cc = (50, 50, 50, 255) if ui.checkBox_black_white.isChecked() else (255, 255, 255, 255)
         cc = (120, 120, 120, 255)
