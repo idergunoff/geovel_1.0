@@ -280,7 +280,7 @@ def correct_profile_model_predict():
 
         if ui_cmp.checkBox_compare.isChecked():
             if not ui_cmp.listWidget_model_pred.currentItem():
-                set_info('Не выбран проноз для сравнения', 'red')
+                set_info('Не выбран прогноз для сравнения', 'red')
                 return
 
             pred_cmp = session.query(ProfileModelPrediction).filter_by(
@@ -309,7 +309,7 @@ def correct_profile_model_predict():
 
     def delete_pred():
         if pred.corrected:
-            session.add(PredictionCorrect(prediction_id=pred.id, correct=pred.prediction))
+            session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': pred.prediction})
         session.commit()
 
 
