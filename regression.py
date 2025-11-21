@@ -787,6 +787,13 @@ def update_list_param_reg_no_update():
     ui.listWidget_param_reg.clear()
     for param in list_param_reg:
         i_item = QListWidgetItem(f'{param.parameter}')
+        if param.parameter.startswith('model'):
+            model_id = int(param.parameter.split('_id')[-1])
+            if param.parameter.startswith('model_reg'):
+                model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+            else:
+                model = session.query(TrainedModelClass).filter_by(id=model_id).first()
+            i_item.setToolTip(model.title)
         ui.listWidget_param_reg.addItem(i_item)
         i_item.setBackground(QBrush(QColor('#FFFAD5')))
 
@@ -803,7 +810,18 @@ def update_list_param_regmod(db=False):
     ui.listWidget_param_reg.clear()
     list_param_reg = data_train.columns.tolist()[2:]
     for param in list_param_reg:
-        ui.listWidget_param_reg.addItem(f'{param}')
+        i_item = QListWidgetItem(param)
+
+        if param.startswith('model'):
+            model_id = int(param.split('_id')[-1])
+            if param.startswith('model_reg'):
+                model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+            else:
+                model = session.query(TrainedModelClass).filter_by(id=model_id).first()
+            i_item.setToolTip(model.title)
+
+        ui.listWidget_param_reg.addItem(i_item)
+
     ui.label_count_param_regmod.setText(f'<i><u>{ui.listWidget_param_reg.count()}</u></i> параметров')
     update_list_trained_models_regmod()
     set_color_button_updata_regmod()

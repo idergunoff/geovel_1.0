@@ -959,11 +959,14 @@ def draw_profile_model_prediction():
 
             bindings = session.query(BindingLayerPrediction).join(Layers).filter(
                 Layers.profile_id == get_profile_id()).all()
-
-            layer_up = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
-            list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
-            layer_down = savgol_line(json.loads(bindings[1].prediction.prediction), 175)
-            list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
+            try:
+                layer_up = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
+                list_up = [(layer_up[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_up))]
+                layer_down = savgol_line(json.loads(bindings[1].prediction.prediction), 175)
+                list_down = [(layer_down[i] + depth_relief[i]) / (l_max / 512) for i in range(len(layer_down))]
+            except IndexError:
+                set_info('Отрисуйте профиль (draw)', 'red')
+                return
 
             if ui.checkBox_model_nn.isChecked():
                 predict = session.query(ProfileModelPrediction).filter_by(

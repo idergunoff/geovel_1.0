@@ -74,27 +74,33 @@ def calc_deep_predict_current_profile():
     deep_signal = [[] for _ in range(len(signal))]
     
     for i in range(len(list_predict) + 1):
-        if i == 0:
-            list_layer_top = [0 for _ in range(len(signal))]
-        else:
-            list_layer_top = list_layer_line[i - 1]
+        try:
+            if i == 0:
+                list_layer_top = [0 for _ in range(len(signal))]
+            else:
+                list_layer_top = list_layer_line[i - 1]
 
-        if i == len(list_predict):
-            list_layer_bottom = [511 for _ in range(len(signal))]
-        else:
-            list_layer_bottom = list_layer_line[i]
+            if i == len(list_predict):
+                list_layer_bottom = [511 for _ in range(len(signal))]
+            else:
+                list_layer_bottom = list_layer_line[i]
 
-        if i == 0:
-            list_deep_line = list_predict[i]
-        elif i == len(list_predict):
-            list_deep_line = [(5 * 8 * (511 - list_layer_top[nv])) / 100  for nv in range(len(signal))]
-        else:
-            list_deep_line = [list_predict[i][j] - list_predict[i-1][j] for j in range(len(signal))]
+            if i == 0:
+                list_deep_line = list_predict[i]
+            elif i == len(list_predict):
+                list_deep_line = [(5 * 8 * (511 - list_layer_top[nv])) / 100  for nv in range(len(signal))]
+            else:
+                list_deep_line = [list_predict[i][j] - list_predict[i-1][j] for j in range(len(signal))]
+        except IndexError:
+            break
 
         for nm, measure in enumerate(signal):
-            deep_signal[nm] = deep_signal[nm] + interpolate_list(
-                measure[list_layer_top[nm]:list_layer_bottom[nm]],
-                int(list_deep_line[nm]))
+            try:
+                deep_signal[nm] = deep_signal[nm] + interpolate_list(
+                    measure[list_layer_top[nm]:list_layer_bottom[nm]],
+                    int(list_deep_line[nm]))
+            except IndexError:
+                break
     return deep_signal
 
 
@@ -228,8 +234,13 @@ def correct_profile_model_predict():
     update_spinBox_value()
 
     def update_median_value():
-        data_slice = list_pred[ui_cmp.spinBox_int_min.value():ui_cmp.spinBox_int_max.value()]
-        median_value = statistics.median(data_slice) if data_slice else 0
+        try:
+            compare_pred = json.loads(session.query(ProfileModelPrediction).filter_by(
+                id=ui_cmp.listWidget_model_pred.currentItem().text().split(' id')[-1]).first().prediction)
+        except AttributeError:
+            return
+        data_slice = compare_pred[ui_cmp.spinBox_int_min.value():ui_cmp.spinBox_int_max.value()]
+        median_value = (max(data_slice) + min(data_slice)) / 2
         ui_cmp.doubleSpinBox_value.setValue(median_value)
 
     update_median_value()
@@ -309,6 +320,7 @@ def correct_profile_model_predict():
     ui_cmp.checkBox_compare.stateChanged.connect(update_spinBox_value)
     ui_cmp.spinBox_int_max.valueChanged.connect(update_median_value)
     ui_cmp.spinBox_int_min.valueChanged.connect(update_median_value)
+    ui_cmp.listWidget_model_pred.currentItemChanged.connect(update_median_value)
     ui_cmp.pushButton_delete_pred.clicked.connect(delete_pred)
 
     CorrModelPred.exec_()

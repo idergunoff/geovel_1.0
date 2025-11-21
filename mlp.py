@@ -986,6 +986,13 @@ def update_list_param_mlp_no_update():
     ui.listWidget_param_mlp.clear()
     for param in list_param_mlp:
         i_item = QListWidgetItem(f'{param.parameter}')
+        if param.parameter.startswith('model'):
+            model_id = int(param.parameter.split('_id')[-1])
+            if param.parameter.startswith('model_reg'):
+                model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+            else:
+                model = session.query(TrainedModelClass).filter_by(id=model_id).first()
+            i_item.setToolTip(model.title)
         ui.listWidget_param_mlp.addItem(i_item)
         i_item.setBackground(QBrush(QColor('#FFFAD5')))
 
@@ -1031,7 +1038,16 @@ def update_list_param_mlp(db=False):
                     i_item = ui.listWidget_param_mlp.findItems(f'{param} \t\tF={round(F, 2)} p={round(p, 3)}', Qt.MatchContains)[0]
                     i_item.setBackground(QBrush(QColor('red')))
             else:
-                ui.listWidget_param_mlp.addItem(param)
+                i_item = QListWidgetItem(param)
+
+                if param.startswith('model'):
+                    model_id = int(param.split('_id')[-1])
+                    if param.startswith('model_reg'):
+                        model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+                    else:
+                        model = session.query(TrainedModelClass).filter_by(id=model_id).first()
+                    i_item.setToolTip(model.title)
+                ui.listWidget_param_mlp.addItem(i_item)
         ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
         set_color_button_updata()
     update_list_trained_models_class()

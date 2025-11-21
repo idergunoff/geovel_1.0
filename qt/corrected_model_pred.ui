@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Corrected Model Prediction</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>6</x>
@@ -102,7 +102,14 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,1">
+      <item>
+       <widget class="QCheckBox" name="checkBox_for_obj">
+        <property name="text">
+         <string>object</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QCheckBox" name="checkBox_compare">
         <property name="text">
@@ -128,7 +135,17 @@
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_value"/>
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_value">
+        <property name="maximum">
+         <double>10000.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>0.500000000000000</double>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
