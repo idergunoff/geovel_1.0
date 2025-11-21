@@ -205,15 +205,22 @@ def correct_profile_model_predict():
         CorrModelPred.close()
         return
 
-    list_pred = json.loads(pred.prediction)
+    def get_pred_with_correct(prediction_obj):
+        result_pred = json.loads(prediction_obj.prediction)
 
-    if pred.corrected:
-        if ui.checkBox_corr_pred.isChecked():
-            list_pred = json.loads(pred.corrected[0].correct)
+        if prediction_obj.corrected:
+            if ui.checkBox_corr_pred.isChecked():
+                result_pred = json.loads(prediction_obj.corrected[0].correct)
+            else:
+                session.query(PredictionCorrect).filter_by(
+                    prediction_id=prediction_obj.id
+                ).update({'correct': prediction_obj.prediction})
         else:
-            session.query(PredictionCorrect).filter_by(prediction_id=pred.id).update({'correct': pred.prediction})
-    else:
-        session.add(PredictionCorrect(prediction_id=pred.id, correct=pred.prediction))
+            session.add(PredictionCorrect(prediction_id=prediction_obj.id, correct=prediction_obj.prediction))
+            session.commit()
+        return result_pred
+
+    list_pred = get_pred_with_correct(pred)
     session.commit()
 
     if pred.type_model == 'reg':
@@ -290,14 +297,50 @@ def correct_profile_model_predict():
                 set_info('Прогноз для сравнения не найден', 'red')
                 return
 
-            list_pred_cmp = json.loads(pred_cmp.prediction)
             value_cmp = ui_cmp.doubleSpinBox_value.value()
-            for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
-                if ui_cmp.radioButton_less.isChecked() and list_pred_cmp[i] < value_cmp:
-                    list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
-                if ui_cmp.radioButton_more.isChecked() and list_pred_cmp[i] > value_cmp:
-                    list_pred[i] = round(
-                        random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+
+            def apply_correction(list_pred_target, list_pred_cmp):
+                for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
+                    if ui_cmp.radioButton_less.isChecked() and list_pred_cmp[i] < value_cmp:
+                        list_pred_target[i] = round(
+                            random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+                    if ui_cmp.radioButton_more.isChecked() and list_pred_cmp[i] > value_cmp:
+                        list_pred_target[i] = round(
+                            random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+
+            if ui_cmp.checkBox_for_obj.isChecked():
+                profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+
+                for prf in profiles:
+                    obj_pred = session.query(ProfileModelPrediction).filter_by(
+                        profile_id=prf.id,
+                        model_id=current_pred.model_id,
+                        type_model=current_pred.type_model
+                    ).first()
+                    obj_pred_cmp = session.query(ProfileModelPrediction).filter_by(
+                        profile_id=prf.id,
+                        model_id=pred_cmp.model_id,
+                        type_model=pred_cmp.type_model
+                    ).first()
+
+                    if not obj_pred or not obj_pred_cmp:
+                        continue
+
+                    list_pred_obj = get_pred_with_correct(obj_pred)
+                    list_pred_cmp_obj = get_pred_with_correct(obj_pred_cmp)
+
+                    apply_correction(list_pred_obj, list_pred_cmp_obj)
+
+                    session.query(PredictionCorrect).filter_by(prediction_id=obj_pred.id).update({
+                        'correct': json.dumps(list_pred_obj)
+                    })
+
+                session.commit()
+                CorrModelPred.close()
+                return
+
+            list_pred_cmp = get_pred_with_correct(pred_cmp)
+            apply_correction(list_pred, list_pred_cmp)
 
         else:
             for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
