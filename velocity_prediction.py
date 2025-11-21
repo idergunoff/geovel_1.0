@@ -286,6 +286,7 @@ def correct_profile_model_predict():
            return
 
         if ui_cmp.checkBox_compare.isChecked():
+
             if not ui_cmp.listWidget_model_pred.currentItem():
                 set_info('Не выбран прогноз для сравнения', 'red')
                 return
@@ -300,7 +301,7 @@ def correct_profile_model_predict():
             value_cmp = ui_cmp.doubleSpinBox_value.value()
 
             def apply_correction(list_pred_target, list_pred_cmp):
-                for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
+                for i in range(len(list_pred_target)):
                     if ui_cmp.radioButton_less.isChecked() and list_pred_cmp[i] < value_cmp:
                         list_pred_target[i] = round(
                             random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
