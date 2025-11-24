@@ -104,16 +104,16 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,1">
       <item>
-       <widget class="QCheckBox" name="checkBox_for_obj">
+       <widget class="QCheckBox" name="checkBox_compare">
         <property name="text">
-         <string>object</string>
+         <string>compare</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_compare">
+       <widget class="QCheckBox" name="checkBox_for_obj">
         <property name="text">
-         <string>compare</string>
+         <string>object</string>
         </property>
        </widget>
       </item>

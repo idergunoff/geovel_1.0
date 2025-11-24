@@ -211,17 +211,17 @@ def correct_profile_model_predict():
         if prediction_obj.corrected:
             if ui.checkBox_corr_pred.isChecked():
                 result_pred = json.loads(prediction_obj.corrected[0].correct)
-            else:
-                session.query(PredictionCorrect).filter_by(
-                    prediction_id=prediction_obj.id
-                ).update({'correct': prediction_obj.prediction})
+            # else:
+            #     session.query(PredictionCorrect).filter_by(
+            #         prediction_id=prediction_obj.id
+            #     ).update({'correct': prediction_obj.prediction})
         else:
             session.add(PredictionCorrect(prediction_id=prediction_obj.id, correct=prediction_obj.prediction))
             session.commit()
         return result_pred
 
     list_pred = get_pred_with_correct(pred)
-    session.commit()
+    # session.commit()
 
     if pred.type_model == 'reg':
         ui_cmp.doubleSpinBox_pred_min.setMaximum(max(list_pred) * 3)
