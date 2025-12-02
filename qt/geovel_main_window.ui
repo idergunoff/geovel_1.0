@@ -1338,8 +1338,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>461</width>
-                       <height>200</height>
+                       <width>96</width>
+                       <height>26</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5585,15 +5585,15 @@ Therm</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_lineup">
+           <widget class="QPushButton" name="pushButton_calc_obj">
             <property name="toolTip">
-             <string>LINEUP TRAIM MODELS</string>
+             <string/>
             </property>
             <property name="styleSheet">
              <string notr="true">background-color: rgb(252, 204, 165);</string>
             </property>
             <property name="text">
-             <string>LTM</string>
+             <string>Calc Object</string>
             </property>
            </widget>
           </item>
@@ -5805,7 +5805,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

@@ -1046,7 +1046,10 @@ def update_list_param_mlp(db=False):
                         model = session.query(TrainedModelReg).filter_by(id=model_id).first()
                     else:
                         model = session.query(TrainedModelClass).filter_by(id=model_id).first()
-                    i_item.setToolTip(model.title)
+                    try:
+                        i_item.setToolTip(model.title)
+                    except AttributeError:
+                        set_info(f'Необходимо изменить параметр {param}', 'red')
                 ui.listWidget_param_mlp.addItem(i_item)
         ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
         set_color_button_updata()

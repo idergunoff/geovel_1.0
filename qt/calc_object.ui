@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog_calc_object</class>
+ <widget class="QDialog" name="Dialog_calc_object">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>562</width>
+    <height>261</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>541</width>
+     <height>235</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QListWidget" name="listWidget_objects"/>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QPushButton" name="pushButton_calc_cls">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(214, 206, 255);</string>
+        </property>
+        <property name="text">
+         <string>ADD CLS</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_calc_reg">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(205, 205, 103);</string>
+        </property>
+        <property name="text">
+         <string>ADD REG</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_start_co">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 248, 165);</string>
+        </property>
+        <property name="text">
+         <string>START</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_delete_co">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 165, 165);</string>
+        </property>
+        <property name="text">
+         <string>REMOVE</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_clear_co">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(194, 194, 194);</string>
+        </property>
+        <property name="text">
+         <string>CLEAR</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

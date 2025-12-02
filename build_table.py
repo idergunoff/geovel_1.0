@@ -521,6 +521,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
             elif param.startswith('model_'):
                 dict_value[param] = locals()[str(curr_form.profile.id) + '_' + param][i]
             else:
+                # print(param)
                 dict_value[param] = locals()[f'list_{param}'][i]
         dict_value['prof_index'] = f'{curr_form.profile_id}_{i}'
         test_data = pd.concat([test_data, pd.DataFrame([dict_value])], ignore_index=True)

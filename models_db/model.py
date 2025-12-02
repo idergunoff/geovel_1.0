@@ -1024,6 +1024,14 @@ class LineupTrain(Base):
     random_seed = Column(Integer, default=0)
     cvw = Column(Boolean, default=False)
 
+class CalcObject(Base):
+    __tablename__ = 'calc_object'
+
+    id = Column(Integer, primary_key=True)
+    research_id = Column(Integer, ForeignKey('research.id'))
+    type_ml = Column(String)
+    model_id = Column(Integer)
+    list_formation = Column(Text)
 
 class GeneticAlgorithmReg(Base):
     __tablename__ = 'genetic_algorithm_reg'

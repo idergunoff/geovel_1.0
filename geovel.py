@@ -29,6 +29,7 @@ from mask_params import *
 from filter_well import *
 from noise import *
 from slice import *
+from calc_object_models import *
 
 
 MainWindow.show()
@@ -490,7 +491,7 @@ ui.listWidget_vel_model.itemClicked.connect(draw_vel_model_point)
 ui.checkBox_vel_color.clicked.connect(draw_vel_model_point)
 ui.pushButton_draw_deep_prof.clicked.connect(draw_deep_profile)
 ui.listWidget_vel_model.itemDoubleClicked.connect(remove_fill_form)
-ui.pushButton_lineup.clicked.connect(model_lineup)
+ui.pushButton_calc_obj.clicked.connect(calc_object)
 ui.checkBox_relief.clicked.connect(draw_relief)
 ui.checkBox_vel.clicked.connect(draw_relief)
 ui.checkBox_velmod.clicked.connect(draw_velocity_model_color)
