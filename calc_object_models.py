@@ -15,11 +15,24 @@ def calc_object():
         ui_co.listWidget_objects.clear()
         for i in session.query(CalcObject).all():
             try:
+                research = session.query(Research).filter_by(id=i.research_id).first()
+                object = session.query(GeoradarObject).filter_by(id=research.object_id).first()
                 formations = list(json.loads(i.list_formation))
-                item_text = f'research: id{i.research_id}, model: {i.type_ml} id{i.model_id}, formations: {len(formations)}'
-                item = QListWidgetItem(item_text)
-                item.setData(Qt.UserRole, i.id)
-                ui_co.listWidget_objects.addItem(item)
+
+                if i.type_ml == 'cls':
+                    model = session.query(TrainedModelClass).filter_by(id=i.model_id).first()
+                    item_text = f'{object.title} {research.date_research} {i.type_ml} {model.title} formations: {len(formations)}'
+                    item = QListWidgetItem(item_text)
+                    item.setData(Qt.UserRole, i.id)
+                    ui_co.listWidget_objects.addItem(item)
+
+                if i.type_ml == 'reg':
+                    model = session.query(TrainedModelReg).filter_by(id=i.model_id).first()
+                    item_text = f'{object.title} {research.date_research} {i.type_ml} {model.title} formations: {len(formations)}'
+                    item = QListWidgetItem(item_text)
+                    item.setData(Qt.UserRole, i.id)
+                    ui_co.listWidget_objects.addItem(item)
+
                 ui_co.listWidget_objects.setCurrentRow(0)
             except AttributeError:
                 pass
@@ -168,8 +181,6 @@ def calc_object():
     def start_co_class():
         """ Расчет объекта по модели """
 
-        working_data_result = pd.DataFrame()
-
         co_cls = session.query(CalcObject).filter_by(
             id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
 
@@ -223,8 +234,6 @@ def calc_object():
     def start_co_reg():
         """ Расчет объекта обученной моделью """
 
-        working_data_result = pd.DataFrame()
-
         co_reg = session.query(CalcObject).filter_by(
             id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
 
@@ -274,7 +283,7 @@ def calc_object():
 
     def start_co():
         set_info('Начало расчета объектов по моделям', 'blue')
-        # co = session.query(CalcObject).filter_by(id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
+
         while ui_co.listWidget_objects.count() > 0:
             item = ui_co.listWidget_objects.item(0)
             if item is None:
