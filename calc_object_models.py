@@ -167,7 +167,7 @@ def calc_object():
 
     def start_co_class():
         """ Расчет объекта по модели """
-        global flag_break
+
         working_data_result = pd.DataFrame()
 
         co_cls = session.query(CalcObject).filter_by(
@@ -225,7 +225,6 @@ def calc_object():
     def start_co_reg():
         """ Расчет объекта обученной моделью """
 
-        global flag_break
         working_data_result = pd.DataFrame()
 
         co_reg = session.query(CalcObject).filter_by(
