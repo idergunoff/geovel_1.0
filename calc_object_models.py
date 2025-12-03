@@ -39,6 +39,7 @@ def calc_object():
         set_info('Список очищен', 'green')
 
     def add_cls_model():
+        global flag_break
         try:
             model = session.query(TrainedModelClass).filter_by(
                 id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
@@ -102,6 +103,7 @@ def calc_object():
         update_co_models_list()
 
     def add_reg_model():
+        global flag_break
         list_formation = []
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
         flag_break = []
