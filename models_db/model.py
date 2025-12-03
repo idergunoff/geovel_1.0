@@ -1007,23 +1007,6 @@ class TrainedModelRegMask(Base):
     mask = relationship('ParameterMask', back_populates='model_mask_reg')
 
 
-class LineupTrain(Base):
-    __tablename__ = 'lineup_train'
-
-    id = Column(Integer, primary_key=True)
-    type_ml = Column(String)
-    analysis_id = Column(Integer, ForeignKey('analysis_mlp.id'))
-    list_param = Column(Text)
-    list_param_short = Column(Text)
-    except_signal = Column(String)
-    except_crl = Column(String)
-    text_model = Column(Text)
-    model_name = Column(String)
-    pipe = Column(LargeBinary)
-    over_sampling = Column(String)
-    random_seed = Column(Integer, default=0)
-    cvw = Column(Boolean, default=False)
-
 class CalcObject(Base):
     __tablename__ = 'calc_object'
 
@@ -1032,6 +1015,7 @@ class CalcObject(Base):
     type_ml = Column(String)
     model_id = Column(Integer)
     list_formation = Column(Text)
+
 
 class GeneticAlgorithmReg(Base):
     __tablename__ = 'genetic_algorithm_reg'

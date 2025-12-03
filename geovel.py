@@ -17,7 +17,6 @@ from geochem import *
 from velocity_model import *
 from velocity_prediction import *
 from test_model import *
-from lineup_train_models import *
 from nn_torch_classifier import *
 from nn_torch_regression import *
 from feature_selection import *

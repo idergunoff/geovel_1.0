@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1289</width>
-    <height>905</height>
+    <width>1290</width>
+    <height>958</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -2103,16 +2103,6 @@
          </widget>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="pushButton_add_to_lineup">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(252, 204, 165);</string>
-         </property>
-         <property name="text">
-          <string>ADD TO LINEUP</string>
-         </property>
-        </widget>
-       </item>
        <item row="5" column="0">
         <widget class="QPushButton" name="pushButton_calc">
          <property name="minimumSize">
@@ -2361,7 +2351,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_stack_vote"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_stack_vote"/>
  </buttongroups>
 </ui>

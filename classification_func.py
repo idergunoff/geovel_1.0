@@ -449,105 +449,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         return model_class, text_model, model_name
 
 
-    def add_model_class_to_lineup():
-        """ Добавление модели в лайнап """
-
-        pipe_steps = []
-        text_scaler = ''
-        if ui_cls.checkBox_power_trans.isChecked():
-            power_t = PowerTransformer(method='yeo-johnson')
-            pipe_steps.append(('power_t', power_t))
-            text_scaler += '\nPowerTransformer'
-        if ui_cls.checkBox_norm_l1.isChecked():
-            norm_l1 = Normalizer(norm='l1')
-            pipe_steps.append(('norm_l1', norm_l1))
-            text_scaler += '\nNormalizer(l1)'
-        if ui_cls.checkBox_stdscaler.isChecked():
-            std_scaler = StandardScaler()
-            pipe_steps.append(('std_scaler', std_scaler))
-            text_scaler += '\nStandardScaler'
-        if ui_cls.checkBox_robscaler.isChecked():
-            robust_scaler = RobustScaler()
-            pipe_steps.append(('robust_scaler', robust_scaler))
-            text_scaler += '\nRobustScaler'
-        if ui_cls.checkBox_mnmxscaler.isChecked():
-            minmax_scaler = MinMaxScaler()
-            pipe_steps.append(('minmax_scaler', minmax_scaler))
-            text_scaler += '\nMinMaxScaler'
-        if ui_cls.checkBox_mxabsscaler.isChecked():
-            maxabs_scaler = MaxAbsScaler()
-            pipe_steps.append(('maxabs_scaler', maxabs_scaler))
-            text_scaler += '\nMaxAbsScaler'
-
-        over_sampling, text_over_sample = 'none', ''
-        if ui_cls.checkBox_smote.isChecked():
-            over_sampling, text_over_sample = 'smote', '\nSMOTE'
-        if ui_cls.checkBox_adasyn.isChecked():
-            over_sampling, text_over_sample = 'adasyn', '\nADASYN'
-
-        if ui_cls.checkBox_pca.isChecked():
-            n_comp = 'mle' if ui_cls.checkBox_pca_mle.isChecked() else ui_cls.spinBox_pca.value()
-            pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
-            pipe_steps.append(('pca', pca))
-        text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
-
-        if ui_cls.checkBox_stack_vote.isChecked():
-            model_class, text_model, model_name = build_stacking_voting_model()
-        else:
-            model_name = ui_cls.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_classifier(model_name)
-
-        if ui_cls.checkBox_baggig.isChecked():
-            model_class = BaggingClassifier(base_estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
-                                            random_state=0, n_jobs=-1)
-        bagging_text = f'\nBagging: n_estimators={ui_cls.spinBox_bagging.value()}' if ui_cls.checkBox_baggig.isChecked() else ''
-
-        text_model += text_scaler
-        text_model += text_pca
-        text_model += text_over_sample
-        text_model += bagging_text
-        text_model += f'\nrandom_seed={ui.spinBox_seed.value()}'
-        if ui_cls.checkBox_cvw.isChecked():
-            text_model += '\nCVW (separate by well)'
-
-        pipe_steps.append(('model', model_class))
-        pipe = Pipeline(pipe_steps)
-
-        if ui_cls.checkBox_calibr.isChecked():
-            kf = StratifiedKFold(n_splits=ui_cls.spinBox_n_cross_val.value(), shuffle=True, random_state=0)
-
-            pipe = CalibratedClassifierCV(
-                estimator=pipe,
-                cv=kf,
-                method=ui_cls.comboBox_calibr_method.currentText(),
-                n_jobs=-1
-            )
-            text_model += f'\ncalibration: method={ui_cls.comboBox_calibr_method.currentText()}'
-
-        except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
-
-        ### todo if parameter mask
-
-        new_lineup = LineupTrain(
-            type_ml = 'cls',
-            analysis_id = get_MLP_id(),
-            list_param = json.dumps(list_param),
-            list_param_short = json.dumps(list_param_save),
-            except_signal = except_mlp.except_signal,
-            except_crl = except_mlp.except_crl,
-            text_model=text_model,
-            model_name = model_name,
-            over_sampling = over_sampling,
-            pipe = pickle.dumps(pipe),
-            random_seed = ui.spinBox_seed.value(),
-            cvw = ui_cls.checkBox_cvw.isChecked()
-        )
-        session.add(new_lineup)
-        session.commit()
-
-        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
-
-
     def draw_yellow_brick():
         """ Отрисовка графиков YellowBrick (не используем) """
 
@@ -2018,7 +1919,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_calc.clicked.connect(calc_model_class)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
-    ui_cls.pushButton_add_to_lineup.clicked.connect(add_model_class_to_lineup)
     ui_cls.pushButton_cvw.clicked.connect(calc_model_class_by_cvw)
     ui_cls.pushButton_yellow_brick.clicked.connect(draw_yellow_brick)
     ui_cls.pushButton_feature_selection.clicked.connect(call_feature_selection)

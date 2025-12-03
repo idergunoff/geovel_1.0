@@ -188,12 +188,12 @@ def calc_object():
 
         for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_cls.research_id).all()):
 
-            list_formation_loaded = json.loads(co_cls.list_formation)
-            curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-            working_data, curr_form = build_table_test('mlp', model=model, curr_form=curr_form)
-
             if session.query(ProfileModelPrediction).filter_by(
                     profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
+
+                list_formation_loaded = json.loads(co_cls.list_formation)
+                curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
+                working_data, curr_form = build_table_test('mlp', model=model, curr_form=curr_form)
 
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()
@@ -245,14 +245,13 @@ def calc_object():
 
         for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_reg.research_id).all()):
 
-            list_formation_loaded = json.loads(co_reg.list_formation)
-            curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-            # list_param, analisis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
-            #                                                          model.except_signal, model.except_crl)
-            working_data, curr_form = build_table_test('regmod', model=model, curr_form=curr_form)
-
             if session.query(ProfileModelPrediction).filter_by(
-                    profile_id=get_profile_id(), model_id=model.id, type_model='reg').count() == 0:
+                    profile_id=prof.id, model_id=model.id, type_model='reg').count() == 0:
+
+                list_formation_loaded = json.loads(co_reg.list_formation)
+                curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
+                working_data, curr_form = build_table_test('regmod', model=model, curr_form=curr_form)
+
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()
 

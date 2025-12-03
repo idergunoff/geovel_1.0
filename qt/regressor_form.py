@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_RegressorForm(object):
     def setupUi(self, RegressorForm):
         RegressorForm.setObjectName("RegressorForm")
-        RegressorForm.resize(1289, 905)
+        RegressorForm.resize(1290, 958)
         self.gridLayout_73 = QtWidgets.QGridLayout(RegressorForm)
         self.gridLayout_73.setObjectName("gridLayout_73")
         self.gridLayout_72 = QtWidgets.QGridLayout()
@@ -929,10 +929,6 @@ class Ui_RegressorForm(object):
         self.checkBox_save_model.setChecked(True)
         self.checkBox_save_model.setObjectName("checkBox_save_model")
         self.gridLayout.addWidget(self.splitter, 4, 2, 1, 1)
-        self.pushButton_add_to_lineup = QtWidgets.QPushButton(RegressorForm)
-        self.pushButton_add_to_lineup.setStyleSheet("background-color: rgb(252, 204, 165);")
-        self.pushButton_add_to_lineup.setObjectName("pushButton_add_to_lineup")
-        self.gridLayout.addWidget(self.pushButton_add_to_lineup, 4, 0, 1, 1)
         self.pushButton_calc = QtWidgets.QPushButton(RegressorForm)
         self.pushButton_calc.setMinimumSize(QtCore.QSize(0, 0))
         self.pushButton_calc.setStyleSheet("background-color: rgb(255, 204, 121);")
@@ -1220,7 +1216,6 @@ class Ui_RegressorForm(object):
         self.checkBox_mnmxscaler_reg.setText(_translate("RegressorForm", "MinMaxScaler"))
         self.checkBox_mxabsscaler_reg.setText(_translate("RegressorForm", "MaxAbsScaler"))
         self.checkBox_save_model.setText(_translate("RegressorForm", "save"))
-        self.pushButton_add_to_lineup.setText(_translate("RegressorForm", "ADD TO LINEUP"))
         self.pushButton_calc.setText(_translate("RegressorForm", "CALC"))
         self.groupBox_5.setTitle(_translate("RegressorForm", "Stacking/Voting Regressor"))
         self.checkBox_stv_knnr.setToolTip(_translate("RegressorForm", "K-Nearest Neighbors Regressor"))

@@ -1327,56 +1327,6 @@ def train_regression_model():
             model_name = 'STACK'
         return model_class, text_model, model_name
 
-    def add_model_reg_to_lineup():
-        """ Добавить модель в LineUp """
-
-        scaler = StandardScaler()
-
-        pipe_steps = []
-        pipe_steps.append(('scaler', scaler))
-
-        if ui_r.checkBox_pca.isChecked():
-            n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
-            pca = PCA(n_components=n_comp, random_state=0)
-            pipe_steps.append(('pca', pca))
-        text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
-
-        if ui_r.checkBox_stack_vote.isChecked():
-            model_class, text_model, model_name = build_stacking_voting_model()
-        else:
-            model_name = ui_r.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_regressor(model_name)
-
-        if ui_r.checkBox_baggig.isChecked():
-            model_class = BaggingRegressor(base_estimator=model_class, n_estimators=ui_r.spinBox_bagging.value(),
-                                           random_state=0, n_jobs=-1)
-        bagging_text = f'\nBagging: n_estimators={ui_r.spinBox_bagging.value()}' if ui_r.checkBox_baggig.isChecked() else ''
-
-        text_model += text_pca
-        text_model += bagging_text
-
-        pipe_steps.append(('model', model_class))
-        pipe = Pipeline(pipe_steps)
-
-        except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
-
-        new_lineup = LineupTrain(
-            type_ml = 'reg',
-            analysis_id = get_regmod_id(),
-            list_param = json.dumps(list_param_reg),
-            list_param_short = json.dumps(list_param_name),
-            except_signal = except_reg.except_signal,
-            except_crl = except_reg.except_crl,
-            text_model=text_model,
-            model_name=model_name,
-            over_sampling = 'none',
-            pipe = pickle.dumps(pipe)
-        )
-        session.add(new_lineup)
-        session.commit()
-
-        set_info(f'Модель {model_name} добавлена в очередь\n{text_model}', 'green')
-
 
     def calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test):
         pipe_steps = []
@@ -3352,7 +3302,6 @@ def train_regression_model():
 
         GenAlg.exec_()
 
-    ui_r.pushButton_add_to_lineup.clicked.connect(add_model_reg_to_lineup)
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
     ui_r.pushButton_search_param.clicked.connect(random_search_reg)

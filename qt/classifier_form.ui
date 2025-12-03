@@ -465,19 +465,6 @@
        </item>
        <item row="5" column="0">
         <layout class="QGridLayout" name="gridLayout_35">
-         <item row="0" column="0">
-          <widget class="QPushButton" name="pushButton_add_to_lineup">
-           <property name="toolTip">
-            <string>Добавить модель в лайнап</string>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(252, 204, 165);</string>
-           </property>
-           <property name="text">
-            <string>LINEUP</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1">
           <widget class="QPushButton" name="pushButton_cvw">
            <property name="toolTip">
