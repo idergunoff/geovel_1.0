@@ -166,7 +166,7 @@ def update_list_model_nn():
 
 
 def correct_profile_model_predict():
-    global l_int_up, l_int_down
+    global l_int_up, l_int_down, l_int_up_r, l_int_down_r
     CorrModelPred = QtWidgets.QDialog()
     ui_cmp = Ui_FormCorrectedModel()
     ui_cmp.setupUi(CorrModelPred)
@@ -259,16 +259,28 @@ def correct_profile_model_predict():
     ui.graph.addItem(l_int_up)
     ui.graph.addItem(l_int_down)
 
+    l_int_up_r = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
+    l_int_down_r = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=4, dash=[8, 2]))
+    radarogramma.addItem(l_int_up_r)
+    radarogramma.addItem(l_int_down_r)
+
     def draw_int_line():
-        global l_int_up, l_int_down
+        global l_int_up, l_int_down, l_int_up_r, l_int_down_r
         ui.graph.removeItem(l_int_up)
         ui.graph.removeItem(l_int_down)
+        radarogramma.removeItem(l_int_up_r)
+        radarogramma.removeItem(l_int_down_r)
         line_up = ui_cmp.spinBox_int_min.value()
         line_down = ui_cmp.spinBox_int_max.value()
         l_int_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
         l_int_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=4, dash=[8, 2]))
         ui.graph.addItem(l_int_up)
         ui.graph.addItem(l_int_down)
+
+        l_int_up_r = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
+        l_int_down_r = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=4, dash=[8, 2]))
+        radarogramma.addItem(l_int_up_r)
+        radarogramma.addItem(l_int_down_r)
 
         ui_cmp.spinBox_int_min.setMaximum(ui_cmp.spinBox_int_max.value() - 1)
         ui_cmp.spinBox_int_max.setMinimum(ui_cmp.spinBox_int_min.value() + 1)
@@ -367,6 +379,26 @@ def correct_profile_model_predict():
     ui_cmp.spinBox_int_min.valueChanged.connect(update_median_value)
     ui_cmp.listWidget_model_pred.currentItemChanged.connect(update_median_value)
     ui_cmp.pushButton_delete_pred.clicked.connect(delete_pred)
+
+    def cleanup_correction_lines():
+        global l_int_up, l_int_down, l_int_up_r, l_int_down_r
+        try:
+            # Удаляем линии из основного графика
+            if hasattr(l_int_up, 'scene') and l_int_up.scene():
+                ui.graph.removeItem(l_int_up)
+            if hasattr(l_int_down, 'scene') and l_int_down.scene():
+                ui.graph.removeItem(l_int_down)
+
+            # Удаляем линии из радарограммы
+            if hasattr(l_int_up_r, 'scene') and l_int_up_r.scene():
+                radarogramma.removeItem(l_int_up_r)
+            if hasattr(l_int_down_r, 'scene') and l_int_down_r.scene():
+                radarogramma.removeItem(l_int_down_r)
+        except Exception as e:
+            print(f"Ошибка при удалении линий: {str(e)}")
+
+    # Подключаем очистку к сигналу закрытия диалога
+    CorrModelPred.finished.connect(cleanup_correction_lines)
 
     CorrModelPred.exec_()
 
