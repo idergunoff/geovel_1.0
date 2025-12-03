@@ -48,14 +48,14 @@
       <item>
        <widget class="QSpinBox" name="spinBox_int_min">
         <property name="singleStep">
-         <number>10</number>
+         <number>5</number>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QSpinBox" name="spinBox_int_max">
         <property name="singleStep">
-         <number>10</number>
+         <number>5</number>
         </property>
        </widget>
       </item>

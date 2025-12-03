@@ -218,8 +218,6 @@ def calc_object():
                 session.commit()
                 set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
 
-            working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
-
         update_list_model_prediction()
 
     def start_co_reg():
@@ -271,8 +269,6 @@ def calc_object():
                 session.add(new_prof_model_pred)
                 session.commit()
                 set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
-
-            working_data_result = pd.concat([working_data_result, working_data], axis=0, ignore_index=True)
 
         update_list_model_prediction()
 
