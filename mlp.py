@@ -1049,7 +1049,7 @@ def update_list_param_mlp(db=False):
                     try:
                         i_item.setToolTip(model.title)
                     except AttributeError:
-                        set_info(f'Необходимо изменить параметр {param}', 'red')
+                        set_info(f'Необходимо переназначить модель для параметра {param}', 'red')
                 ui.listWidget_param_mlp.addItem(i_item)
         ui.label_count_param_mlp.setText(f'<i><u>{ui.listWidget_param_mlp.count()}</u></i> параметров')
         set_color_button_updata()
@@ -1120,12 +1120,28 @@ def remove_trained_model_class():
     """ Удаление модели """
     model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
     model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
+
     if model_mask:
         session.delete(model_mask)
+
+    curr_model_pred = session.query(ProfileModelPrediction).filter_by(type_model='cls', model_id=model.id).all()
+    calc_obj = session.query(CalcObject).filter_by(type_ml='cls', model_id=model.id).all()
+
+    if curr_model_pred:
+        for pred in curr_model_pred:
+            session.delete(pred)
+        session.commit()
+
+    if calc_obj:
+        for co in calc_obj:
+            session.delete(co)
+        session.commit()
+
     os.remove(model.path_model)
     session.delete(model)
     session.commit()
     update_list_trained_models_class()
+    update_list_model_prediction()
     set_info(f'Модель {model.title} удалена', 'blue')
 
 

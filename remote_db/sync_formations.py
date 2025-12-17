@@ -10,6 +10,7 @@ from remote_db.sync_features.sync_envelope_features import *
 from remote_db.sync_features.sync_autocorr_features import *
 from remote_db.sync_features.sync_emd_features import *
 from remote_db.sync_features.sync_hht_features import *
+from func import update_formation_combobox
 
 def load_formations():
     """Загрузка пластов с удаленной БД на локальную"""
@@ -234,6 +235,7 @@ def load_formations():
             set_info(f'Ошибка при выгрузке пластов: {str(e)}', 'red')
             raise
 
+    update_formation_combobox()
     set_info(f'Загрузка пластов с удаленной БД на локальную завершена', 'blue')
 
 

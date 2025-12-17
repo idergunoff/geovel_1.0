@@ -818,7 +818,10 @@ def update_list_param_regmod(db=False):
                 model = session.query(TrainedModelReg).filter_by(id=model_id).first()
             else:
                 model = session.query(TrainedModelClass).filter_by(id=model_id).first()
-            i_item.setToolTip(model.title)
+            try:
+                i_item.setToolTip(model.title)
+            except AttributeError:
+                set_info(f'Необходимо переназначить модель для параметра {param}', 'red')
 
         ui.listWidget_param_reg.addItem(i_item)
 
@@ -3553,12 +3556,28 @@ def remove_trained_model_regmod():
     """ Удаление модели """
     model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
     model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
+
     if model_mask:
         session.delete(model_mask)
+
+    curr_model_pred = session.query(ProfileModelPrediction).filter_by(type_model='reg', model_id=model.id).all()
+    calc_obj = session.query(CalcObject).filter_by(type_ml='reg', model_id=model.id).all()
+
+    if curr_model_pred:
+        for pred in curr_model_pred:
+            session.delete(pred)
+        session.commit()
+
+    if calc_obj:
+        for co in calc_obj:
+            session.delete(co)
+        session.commit()
+
     os.remove(model.path_model)
     session.delete(model)
     session.commit()
     update_list_trained_models_regmod()
+    update_list_model_prediction()
     set_info(f'Модель {model.title} удалена', 'blue')
 
 

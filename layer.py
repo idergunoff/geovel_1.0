@@ -567,8 +567,24 @@ def add_param_in_new_formation(new_formation_id, new_formation_profile_id):
 
 
 def remove_formation():
+    calc_objects = session.query(CalcObject).all()
+    formation_id = get_formation_id()
+
+    ids_to_delete = []
+    for calc_obj in calc_objects:
+        try:
+            formation_list = json.loads(calc_obj.list_formation)
+            if formation_id in formation_list:
+                ids_to_delete.append(calc_obj.id)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    if ids_to_delete:
+        session.query(CalcObject).filter(CalcObject.id.in_(ids_to_delete)).delete(synchronize_session=False)
+
     session.query(FormationAI).filter_by(formation_id=get_formation_id()).delete()
     session.query(Formation).filter(Formation.id == get_formation_id()).delete()
+
     session.commit()
     set_info(f'Пласт {ui.comboBox_plast.currentText()} удалён из БД', 'green')
     update_formation_combobox()

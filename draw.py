@@ -1038,6 +1038,7 @@ def draw_profile_model_prediction():
     # m для отображения графика данных
     # создаем объект класса PlotCurveItem для отображения фильтрованных данных с помощью savgol_filter()
     curve_filter = pg.PlotCurveItem(x=number, y=savgol_line(graph, 31), pen=pg.mkPen(color='red', width=2.4))
+    ui.graph.setYRange(0, 1)
     ui.graph.addItem(curve)  # добавляем график данных на график
     ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике

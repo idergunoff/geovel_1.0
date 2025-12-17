@@ -539,6 +539,7 @@ def delete_profile():
     """Удаление профиля"""
     title_prof = ui.comboBox_profile.currentText().split(' id')[0]
     profile_id = get_profile_id()
+    res_profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
 
     related_tables = []
 
@@ -559,6 +560,10 @@ def delete_profile():
         related_tables.append("Intersection")
     if session.query(ProfileModelPrediction).filter(ProfileModelPrediction.profile_id == profile_id).first():
         related_tables.append("ProfileModelPrediction")
+
+    if len(res_profiles) == 1:
+        if session.query(CalcObject).filter(CalcObject.research_id == get_research_id()).first():
+            related_tables.append("CalcObject")
 
     if related_tables:
 
@@ -589,6 +594,8 @@ def delete_profile():
             session.query(MarkupReg).filter(MarkupReg.profile_id == profile_id).delete()
             session.query(Intersection).filter(Intersection.profile_id == profile_id).delete()
             session.query(ProfileModelPrediction).filter(ProfileModelPrediction.profile_id == profile_id).delete()
+            if len(res_profiles) == 1:
+                session.query(CalcObject).filter(CalcObject.research_id == get_research_id()).delete()
 
             # Удаляем параметры
             session.query(WaveletFeatureProfile).filter(WaveletFeatureProfile.profile_id == profile_id).delete()

@@ -2971,15 +2971,20 @@ def update_list_model_prediction():
         except (AttributeError, FileNotFoundError):
             session.delete(p)
             session.commit()
-            set_info('Модель удалена', 'red')
 
 
 
 
 def remove_model_prediction():
     model = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+    if model.type_model == 'cls':
+        trained_model = session.query(TrainedModelClass).filter_by(id=model.model_id).first()
+    if model.type_model == 'reg':
+        trained_model = session.query(TrainedModelReg).filter_by(id=model.model_id).first()
+    pred = f'{model.type_model} {trained_model.title} id{model.id}'
     session.delete(model)
     session.commit()
+    set_info(f'Прогноз {pred} удален', 'green')
     update_list_model_prediction()
 
 

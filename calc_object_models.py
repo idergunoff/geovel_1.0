@@ -1,3 +1,5 @@
+import json
+
 from func import *
 from build_table import *
 from qt.calc_object import Ui_Dialog_calc_object
@@ -52,130 +54,171 @@ def calc_object():
         set_info('Список очищен', 'green')
 
     def add_cls_model():
-        global flag_break
-        try:
-            model = session.query(TrainedModelClass).filter_by(
-                id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
-        except AttributeError:
-            set_info('Не выбрана модель', 'red')
-        list_formation = []
+
+        current_item = ui.listWidget_trained_model_class.currentItem()
+        if not current_item:
+            set_info('Модель не выбрана!', 'red')
+            return
+
+        model = session.query(TrainedModelClass).filter_by(
+            id=current_item.data(Qt.UserRole)).first()
+
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
-        flag_break = []
-        for n, prof in enumerate(profiles):
-            if flag_break:
-                if flag_break[0] == 'stop':
-                    break
-                else:
-                    set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
-                                                               f'{flag_break[0]}, выберите пласты для каждого профиля.')
-                    return
-            if len(prof.formations) == 1:
-                list_formation.append(prof.formations[0].id)
-            elif len(prof.formations) > 1:
-                Choose_Formation = QtWidgets.QDialog()
-                ui_cf = Ui_FormationLDA()
-                ui_cf.setupUi(Choose_Formation)
-                Choose_Formation.show()
-                Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-                for f in prof.formations:
-                    ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
-                ui_cf.listWidget_form_lda.setCurrentRow(0)
-
-                def form_mlp_ok():
-                    global flag_break
-                    if ui_cf.checkBox_to_all.isChecked():
-                        title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
-                        for prof in profiles:
-                            prof_form = session.query(Formation).filter_by(
-                                profile_id=prof.id,
-                                title=title_form
-                            ).first()
-                            if prof_form:
-                                list_formation.append(prof_form.id)
-                            else:
-                                flag_break = [prof.title, title_form]
-                                Choose_Formation.close()
-                                return
-                        flag_break = ['stop', 'stop']
-                        Choose_Formation.close()
+        if len(profiles) == 0:
+            set_info(f'У текущего исследования нет профилей', 'red')
+        else:
+            global flag_break
+            list_formation = []
+            flag_break = []
+            no_formation = 0
+            for n, prof in enumerate(profiles):
+                if flag_break:
+                    if flag_break[0] == 'stop':
+                        break
                     else:
-                        list_formation.append(int(ui_cf.listWidget_form_lda.currentItem().text().split('id')[-1]))
-                        Choose_Formation.close()
+                        set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
+                        QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
+                                                                   f'{flag_break[0]}, выберите пласты для каждого профиля.')
+                        return
+                if len(prof.formations) == 0:
+                    no_formation += 1
+                if len(prof.formations) == 1:
+                    list_formation.append(prof.formations[0].id)
+                elif len(prof.formations) > 1:
+                    Choose_Formation = QtWidgets.QDialog()
+                    ui_cf = Ui_FormationLDA()
+                    ui_cf.setupUi(Choose_Formation)
+                    Choose_Formation.show()
+                    Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                    for f in prof.formations:
+                        ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+                    ui_cf.listWidget_form_lda.setCurrentRow(0)
 
-                ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-                Choose_Formation.exec_()
-        new_co_cls = CalcObject(
-            research_id=get_research_id(),
-            type_ml = 'cls',
-            model_id = model.id,
-            list_formation = json.dumps(list_formation)
-        )
-        session.add(new_co_cls)
-        session.commit()
-        update_co_models_list()
+                    def form_mlp_ok():
+                        global flag_break
+                        if ui_cf.checkBox_to_all.isChecked():
+                            title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                            for prof in profiles:
+                                prof_form = session.query(Formation).filter_by(
+                                    profile_id=prof.id,
+                                    title=title_form
+                                ).first()
+                                if prof_form:
+                                    list_formation.append(prof_form.id)
+                                else:
+                                    flag_break = [prof.title, title_form]
+                                    Choose_Formation.close()
+                                    return
+                            flag_break = ['stop', 'stop']
+                            Choose_Formation.close()
+                        else:
+                            list_formation.append(int(ui_cf.listWidget_form_lda.currentItem().text().split('id')[-1]))
+                            Choose_Formation.close()
+
+                    ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
+                    Choose_Formation.exec_()
+
+            if no_formation > 0:
+                if no_formation == 1:
+                    prof = 'профиля'
+                else:
+                    prof = 'профилей'
+                set_info(f'У {no_formation} {prof} текущего исследования отсутствуют пласты. '
+                         f'Исследование не добавлено в список CalcObject', 'red')
+            else:
+                new_co_cls = CalcObject(
+                    research_id=get_research_id(),
+                    type_ml='cls',
+                    model_id=model.id,
+                    list_formation=json.dumps(list_formation)
+                )
+                session.add(new_co_cls)
+                session.commit()
+                update_co_models_list()
+
 
     def add_reg_model():
-        global flag_break
-        list_formation = []
-        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
-        flag_break = []
-        for n, prof in enumerate(profiles):
-            if flag_break:
-                if flag_break[0] == 'stop':
-                    break
-                else:
-                    set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
-                    QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
-                                                               f'{flag_break[0]}, выберите пласты для каждого профиля.')
-                    return
-            if len(prof.formations) == 1:
-                list_formation.append(prof.formations[0].id)
-            elif len(prof.formations) > 1:
-                Choose_Formation = QtWidgets.QDialog()
-                ui_cf = Ui_FormationLDA()
-                ui_cf.setupUi(Choose_Formation)
-                Choose_Formation.show()
-                Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
-                for f in prof.formations:
-                    ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
-                ui_cf.listWidget_form_lda.setCurrentRow(0)
 
-                def form_mlp_ok():
-                    global flag_break
-                    if ui_cf.checkBox_to_all.isChecked():
-                        title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
-                        for prof in profiles:
-                            prof_form = session.query(Formation).filter_by(
-                                profile_id=prof.id,
-                                title=title_form
-                            ).first()
-                            if prof_form:
-                                list_formation.append(prof_form.id)
-                            else:
-                                flag_break = [prof.title, title_form]
-                                Choose_Formation.close()
-                                return
-                        flag_break = ['stop', 'stop']
-                        Choose_Formation.close()
-                    else:
-                        list_formation.append(int(ui_cf.listWidget_form_lda.currentItem().text().split('id')[-1]))
-                        Choose_Formation.close()
+        current_item = ui.listWidget_trained_model_reg.currentItem()
+        if not current_item:
+            set_info('Модель не выбрана!', 'red')
+            return
 
-                ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-                Choose_Formation.exec_()
         model = session.query(TrainedModelReg).filter_by(
-            id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
-        new_co_reg = CalcObject(
-            research_id=get_research_id(),
-            type_ml = 'reg',
-            model_id = model.id,
-            list_formation = json.dumps(list_formation)
-        )
-        session.add(new_co_reg)
-        session.commit()
-        update_co_models_list()
+            id=current_item.data(Qt.UserRole)).first()
 
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        if len(profiles) == 0:
+            set_info(f'У текущего исследования нет профилей', 'red')
+        else:
+            global flag_break
+            list_formation = []
+            flag_break = []
+            no_formation = 0
+            for n, prof in enumerate(profiles):
+                if flag_break:
+                    if flag_break[0] == 'stop':
+                        break
+                    else:
+                        set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
+                        QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
+                                                                   f'{flag_break[0]}, выберите пласты для каждого профиля.')
+                        return
+                if len(prof.formations) == 0:
+                    no_formation += 1
+                elif len(prof.formations) == 1:
+                    list_formation.append(prof.formations[0].id)
+                elif len(prof.formations) > 1:
+                    Choose_Formation = QtWidgets.QDialog()
+                    ui_cf = Ui_FormationLDA()
+                    ui_cf.setupUi(Choose_Formation)
+                    Choose_Formation.show()
+                    Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+                    for f in prof.formations:
+                        ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+                    ui_cf.listWidget_form_lda.setCurrentRow(0)
+
+                    def form_mlp_ok():
+                        global flag_break
+                        if ui_cf.checkBox_to_all.isChecked():
+                            title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                            for prof in profiles:
+                                prof_form = session.query(Formation).filter_by(
+                                    profile_id=prof.id,
+                                    title=title_form
+                                ).first()
+                                if prof_form:
+                                    list_formation.append(prof_form.id)
+                                else:
+                                    flag_break = [prof.title, title_form]
+                                    Choose_Formation.close()
+                                    return
+                            flag_break = ['stop', 'stop']
+                            Choose_Formation.close()
+                        else:
+                            list_formation.append(int(ui_cf.listWidget_form_lda.currentItem().text().split('id')[-1]))
+                            Choose_Formation.close()
+
+                    ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
+                    Choose_Formation.exec_()
+
+            if no_formation > 0:
+                if no_formation == 1:
+                    prof = 'профиля'
+                else:
+                    prof = 'профилей'
+                set_info(f'У {no_formation} {prof} текущего исследования отсутствуют пласты. '
+                         f'Исследование не добавлено в список CalcObject', 'red')
+            else:
+                new_co_reg = CalcObject(
+                    research_id=get_research_id(),
+                    type_ml = 'reg',
+                    model_id = model.id,
+                    list_formation = json.dumps(list_formation)
+                )
+                session.add(new_co_reg)
+                session.commit()
+                update_co_models_list()
 
 
     def start_co_class():
@@ -229,6 +272,12 @@ def calc_object():
                 session.commit()
                 set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
 
+            else:
+                research = session.query(Research).filter(Research.id == prof.research_id).first()
+                object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
+                set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
+                break
+
         update_list_model_prediction()
 
     def start_co_reg():
@@ -278,6 +327,11 @@ def calc_object():
                 session.add(new_prof_model_pred)
                 session.commit()
                 set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
+            else:
+                research = session.query(Research).filter(Research.id == prof.research_id).first()
+                object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
+                set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
+                break
 
         update_list_model_prediction()
 
