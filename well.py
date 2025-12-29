@@ -6,6 +6,7 @@ from monitoring import update_list_h_well
 from qt.add_well_dialog import *
 from qt.add_boundary_dialog import *
 from qt.well_loader import *
+from velocity_model import update_list_binding
 
 
 def add_well():
@@ -453,9 +454,12 @@ def add_boundary():
 
 def remove_boundary():
     try:
+        session.query(Binding).filter(Binding.boundary_id == get_boundary_id()).delete(synchronize_session=False)
         session.query(Boundary).filter(Boundary.id == get_boundary_id()).delete()
         session.commit()
+        set_info('Выбранная граница удалена', 'green')
         update_boundaries()
+        update_list_binding()
         update_list_well(select_well=True, selected_well_id=get_well_id())
     except AttributeError:
         set_info('Необходимо выбрать границу для удаления', 'red')

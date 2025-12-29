@@ -87,7 +87,7 @@ def add_regression_model():
 
 
 def remove_reg():
-    """Удалить анализ MLP"""
+    """Удалить регрессионный анализ"""
     mlp_title = get_regmod_title()
     result = QtWidgets.QMessageBox.question(ui.listWidget_well_mlp, 'Remove Regression Model',
                                             f'Вы уверены, что хотите удалить модель "{mlp_title}"?',
@@ -95,11 +95,12 @@ def remove_reg():
     if result == QtWidgets.QMessageBox.Yes:
         session.query(ParameterReg).filter_by(analysis_id=get_regmod_id()).delete()
         session.query(MarkupReg).filter_by(analysis_id=get_regmod_id()).delete()
-        session.query(AnalysisReg).filter_by(id=get_regmod_id()).delete()
         session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).delete()
         for model in session.query(TrainedModelReg).filter_by(analysis_id=get_regmod_id()).all():
             os.remove(model.path_model)
             session.delete(model)
+        session.query(GeneticAlgorithmReg).filter_by(analysis_id=get_regmod_id()).delete()
+        session.query(AnalysisReg).filter_by(id=get_regmod_id()).delete()
         session.commit()
         set_info(f'Удалена модель - "{mlp_title}"', 'green')
         update_list_reg()

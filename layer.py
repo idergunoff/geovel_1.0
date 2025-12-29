@@ -4,6 +4,7 @@ from calc_additional_features import calc_all_params_by_f_id
 from func import *
 from qt.add_layer_dialog import *
 from qt.add_formation_dialog import *
+from velocity_model import update_list_binding
 
 
 def add_layer():
@@ -37,12 +38,15 @@ def remove_layer():
         if i.isChecked():
             i_id = i.text().split(' id')[-1]
             if session.query(Formation).filter(or_(Formation.up == i_id, Formation.down == i_id)).count() == 0:
-                session.query(PointsOfLayer).filter(PointsOfLayer.layer_id == i.text().split(' id')[-1]).delete()
+                session.query(PointsOfLayer).filter(PointsOfLayer.layer_id == i.text().split(' id')[-1]).delete(synchronize_session=False)
+                session.query(Binding).filter(Binding.layer_id == i.text().split(' id')[-1]).delete(synchronize_session=False)
                 session.query(Layers).filter(Layers.id == i.text().split(' id')[-1]).delete()
             else:
                 set_info(f'Невозможно удалить слой "{i.text()}", сначала удалите все пласты в которых используется данный слой', 'red')
     session.commit()
+    set_info('Выбранный слой и связанные с ним данные удалены', 'green')
     update_layers()
+    update_list_binding()
 
 
 def mouseClicked(evt):
@@ -612,12 +616,19 @@ def remove_well():
             session.query(Intersection).filter_by(id=w_id).delete()
             set_info('Пересечение удалено', 'green')
         else:
-            session.query(Boundary).filter_by(well_id=w_id).delete()
-            session.query(MarkupMLP).filter_by(well_id=w_id).delete()
-            session.query(Well).filter_by(id=w_id).delete()
-            set_info(f'Скважина id{w_id} удалена', 'green')
+            session.query(WellOptionally).filter(WellOptionally.well_id == w_id).delete(synchronize_session=False)
+            session.query(WellLog).filter(WellLog.well_id == w_id).delete(synchronize_session=False)
+            session.query(MarkupMLP).filter(MarkupMLP.well_id == w_id).delete(synchronize_session=False)
+            session.query(MarkupReg).filter(MarkupReg.well_id == w_id).delete(synchronize_session=False)
+            w_boundaries = session.query(Boundary).filter_by(well_id=w_id).all()
+            for b in w_boundaries:
+                session.query(Binding).filter(Binding.boundary_id == b.id).delete(synchronize_session=False)
+            session.query(Boundary).filter(Boundary.well_id == w_id).delete(synchronize_session=False)
+            session.query(Well).filter(Well.id == w_id).delete()
+            set_info(f'Скважина id{w_id} и связанные с ней данные удалены', 'green')
         session.commit()
         update_list_well()
+        update_list_binding()
 
 
 def check_land():

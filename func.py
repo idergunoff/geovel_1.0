@@ -1619,8 +1619,10 @@ def update_boundaries():
 
 
 def get_boundary_id():
-    return ui.listWidget_bound.currentItem().text().split(' id')[-1]
-
+    try:
+        return ui.listWidget_bound.currentItem().text().split(' id')[-1]
+    except AttributeError:
+        set_info('Не выбрана граница!', 'red')
 
 def draw_wells():
     # for key, value in globals().items():

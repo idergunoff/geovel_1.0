@@ -644,6 +644,9 @@
                <layout class="QGridLayout" name="gridLayout_26">
                 <item row="0" column="0">
                  <widget class="QPushButton" name="pushButton_save_img">
+                  <property name="toolTip">
+                   <string>Сохранить изображение</string>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(153, 193, 241);</string>
                   </property>
@@ -667,6 +670,9 @@
                 </item>
                 <item row="0" column="5">
                  <widget class="QPushButton" name="pushButton_save_prof_sig">
+                  <property name="toolTip">
+                   <string>Сохранить срезы профилей</string>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(175, 150, 255);</string>
                   </property>
@@ -895,6 +901,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_load_plast">
+                    <property name="toolTip">
+                     <string>Загрузить новый пласт</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
@@ -905,6 +914,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_del_plast">
+                    <property name="toolTip">
+                     <string>Удалить текущий пласт</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
@@ -962,6 +974,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_add_obj">
+                    <property name="toolTip">
+                     <string>Добавить новое исследование</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
@@ -972,6 +987,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_del_obj">
+                    <property name="toolTip">
+                     <string>Удалить текущее исследование</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
@@ -1064,6 +1082,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_load_prof">
+                    <property name="toolTip">
+                     <string>Загрузить новый профиль</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(191, 255, 191);</string>
                     </property>
@@ -1074,6 +1095,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_move_prof">
+                    <property name="toolTip">
+                     <string>Прикрепить текущий профиль к другому исследованию</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(235, 234, 129);</string>
                     </property>
@@ -1084,6 +1108,9 @@
                   </item>
                   <item>
                    <widget class="QToolButton" name="toolButton_del_prof">
+                    <property name="toolTip">
+                     <string>Удалить текущий профиль</string>
+                    </property>
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(255, 185, 185);</string>
                     </property>
@@ -1338,8 +1365,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>96</width>
-                       <height>26</height>
+                       <width>461</width>
+                       <height>200</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1510,6 +1537,9 @@
                 </item>
                 <item row="0" column="2">
                  <widget class="QToolButton" name="toolButton_add_data_well">
+                  <property name="toolTip">
+                   <string>Добавить данные для выбранной скважины</string>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
@@ -1520,6 +1550,9 @@
                 </item>
                 <item row="0" column="3">
                  <widget class="QToolButton" name="toolButton_del_data_well">
+                  <property name="toolTip">
+                   <string>Удалить даные выбранной скважины</string>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(255, 185, 185);</string>
                   </property>
@@ -1693,6 +1726,9 @@
                     </item>
                     <item>
                      <widget class="QPushButton" name="pushButton_del_bind">
+                      <property name="toolTip">
+                       <string>Удалить выбранную отбивку скважины</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
@@ -1731,6 +1767,9 @@
                     </item>
                     <item>
                      <widget class="QPushButton" name="pushButton_del_vel_model">
+                      <property name="toolTip">
+                       <string>Удалить выбранную скоростную модель</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 185, 185);</string>
                       </property>
@@ -1853,6 +1892,9 @@
                 </item>
                 <item row="2" column="3">
                  <widget class="QPushButton" name="pushButton_rem_dupl_wells">
+                  <property name="toolTip">
+                   <string>Удалить дубликаты скважин</string>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(255, 113, 153);</string>
                   </property>
@@ -2029,6 +2071,9 @@
                    <layout class="QGridLayout" name="gridLayout_160">
                     <item row="0" column="0">
                      <widget class="QPushButton" name="pushButton_model_pred_rmv">
+                      <property name="toolTip">
+                       <string>Удалить выбранный прогноз</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 153, 153);</string>
                       </property>
@@ -2039,6 +2084,9 @@
                     </item>
                     <item row="1" column="0">
                      <widget class="QPushButton" name="pushButton_draw_predict">
+                      <property name="toolTip">
+                       <string>Отрисовать выбранный прогноз</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 204, 121);</string>
                       </property>
@@ -2049,6 +2097,9 @@
                     </item>
                     <item row="2" column="0">
                      <widget class="QPushButton" name="pushButton_save_excel_predict">
+                      <property name="toolTip">
+                       <string>Сохранить выбранный прогноз в файл Excel</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(153, 193, 241);</string>
                       </property>
@@ -2059,6 +2110,9 @@
                     </item>
                     <item row="3" column="0">
                      <widget class="QPushButton" name="pushButton_correct_predict">
+                      <property name="toolTip">
+                       <string>Коррекция прогноза</string>
+                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 255, 191);</string>
                       </property>
@@ -5587,7 +5641,7 @@ Therm</string>
           <item>
            <widget class="QPushButton" name="pushButton_calc_obj">
             <property name="toolTip">
-             <string/>
+             <string>Рассчет объектов обученными моделями</string>
             </property>
             <property name="styleSheet">
              <string notr="true">background-color: rgb(252, 204, 165);</string>
@@ -5641,6 +5695,9 @@ Therm</string>
           </item>
           <item>
            <widget class="QPushButton" name="pushButton_mask_param">
+            <property name="toolTip">
+             <string>Форма для работы с масками</string>
+            </property>
             <property name="styleSheet">
              <string notr="true">background-color: rgb(123, 213, 255);</string>
             </property>
@@ -5805,7 +5862,7 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
