@@ -3,9 +3,12 @@ from __future__ import annotations
 """QC metric calculations for per-profile signal quality assessment."""
 
 from dataclasses import dataclass
+import json
 from typing import Iterable, Mapping, Sequence
 
 import numpy as np
+
+from models_db.model import Profile, session
 
 
 @dataclass(frozen=True)
@@ -207,4 +210,98 @@ def calculate_profile_qc_metrics(
             "correlations": consistency.correlations,
         },
         "point_density": density_metrics,
+    }
+
+
+def _find_intersection_points(
+    x1: Sequence[float],
+    y1: Sequence[float],
+    x2: Sequence[float],
+    y2: Sequence[float],
+) -> list[tuple[int, int]]:
+    """Return index pairs (i, j) for intersecting segments in two polylines."""
+    intersection_pairs: list[tuple[int, int]] = []
+    len_x1 = len(x1)
+    len_x2 = len(x2)
+
+    for i in range(len_x1 - 1):
+        xa1, ya1 = x1[i], y1[i]
+        xa2, ya2 = x1[i + 1], y1[i + 1]
+
+        for j in range(len_x2 - 1):
+            xb1, yb1 = x2[j], y2[j]
+            xb2, yb2 = x2[j + 1], y2[j + 1]
+
+            if (
+                max(xa1, xa2) < min(xb1, xb2)
+                or max(xb1, xb2) < min(xa1, xa2)
+                or max(ya1, ya2) < min(yb1, yb2)
+                or max(yb1, yb2) < min(ya1, ya2)
+            ):
+                continue
+
+            den = (yb2 - yb1) * (xa2 - xa1) - (xb2 - xb1) * (ya2 - ya1)
+            if den == 0:
+                continue
+
+            ua = ((xb2 - xb1) * (ya1 - yb1) - (yb2 - yb1) * (xa1 - xb1)) / den
+            ub = ((xa2 - xa1) * (ya1 - yb1) - (ya2 - ya1) * (xa1 - xb1)) / den
+
+            if 0 <= ua <= 1 and 0 <= ub <= 1:
+                intersection_pairs.append((i, j))
+
+    return intersection_pairs
+
+
+def collect_profile_qc_inputs(profile_id: int) -> dict[str, object]:
+    """
+    Gather signals, coordinates, and intersection signal pairs for a profile.
+
+    Intersections are searched only among profiles that belong to the same
+    research as the provided profile_id.
+    """
+    profile = session.query(Profile).filter(Profile.id == profile_id).first()
+    if not profile:
+        raise ValueError(f"Profile id={profile_id} not found.")
+
+    signals = json.loads(profile.signal) if profile.signal else []
+    x_coords = json.loads(profile.x_pulc) if profile.x_pulc else []
+    y_coords = json.loads(profile.y_pulc) if profile.y_pulc else []
+
+    intersections: list[dict[str, Sequence[float]]] = []
+    if x_coords and y_coords and profile.research_id:
+        profiles = (
+            session.query(Profile)
+            .filter(Profile.research_id == profile.research_id)
+            .filter(Profile.id != profile_id)
+            .all()
+        )
+        for other in profiles:
+            if not other.x_pulc or not other.y_pulc or not other.signal:
+                continue
+            other_x = json.loads(other.x_pulc)
+            other_y = json.loads(other.y_pulc)
+            other_signals = json.loads(other.signal)
+            if len(other_x) < 2 or len(other_y) < 2:
+                continue
+
+            for i_idx, j_idx in _find_intersection_points(
+                x_coords,
+                y_coords,
+                other_x,
+                other_y,
+            ):
+                if i_idx < len(signals) and j_idx < len(other_signals):
+                    intersections.append(
+                        {
+                            "signal_a": signals[i_idx],
+                            "signal_b": other_signals[j_idx],
+                        }
+                    )
+
+    return {
+        "signals": signals,
+        "x_coords": x_coords,
+        "y_coords": y_coords,
+        "intersections": intersections,
     }
