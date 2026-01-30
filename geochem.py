@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.special
+from PyQt5.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 from scipy import stats
 
 from func import *
 from classification_func import train_classifier
 from krige import draw_map
+from qt.mask_info_form import Ui_Form_Mask_Info
 
 
 def update_combobox_geochem():
@@ -394,6 +396,39 @@ def tsne_geochem():
 
     ui_tsne.spinBox_lof.setValue(int(len(data_plot) * 0.1))
 
+    def update_all_states_tsne(list_widget_name, check_box_all_name):
+        """ Функция для обновления состояния checkBox_all на основе состояния чекбоксов в listWidget """
+        # Получаем объекты по именам
+        list_widget = getattr(ui_tsne, list_widget_name, None)
+        check_box_all = getattr(ui_tsne, check_box_all_name, None)
+
+        # Проверяем состояние всех чекбоксов в listWidget
+        all_checked = True
+        has_items = False
+
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            widget = list_widget.itemWidget(item)
+            if isinstance(widget, QCheckBox):
+                has_items = True
+                if not widget.isChecked():
+                    all_checked = False
+                    break
+
+        # Обновляем checkBox_all только если есть элементы
+        if has_items:
+            check_box_all.blockSignals(True)
+
+            if all_checked:
+                check_box_all.setChecked(True)
+            else:
+                check_box_all.setChecked(False)
+
+            check_box_all.blockSignals(False)
+
+        # Снимаем выделение в listWidget_masks
+        ui_tsne.listWidget_masks_tsne.clearSelection()
+
     for i in data_plot.columns.tolist()[3:]:
         ui_tsne.listWidget_param.addItem(i)
         ui_tsne.listWidget_param.setCurrentRow(0)
@@ -401,9 +436,30 @@ def tsne_geochem():
     for i_param in data_plot.columns.tolist()[3:]:
         check_box_widget = QCheckBox(i_param)
         check_box_widget.setChecked(True)
+
+        check_box_widget.clicked.connect(
+            lambda: update_all_states_tsne('listWidget_check_param', 'checkBox_param_all')
+        )
+
         list_item = QListWidgetItem()
         ui_tsne.listWidget_check_param.addItem(list_item)
         ui_tsne.listWidget_check_param.setItemWidget(list_item, check_box_widget)
+
+    update_all_states_tsne('listWidget_check_param', 'checkBox_param_all')
+
+    # Создаем фигуру и canvas для t-SNE графика
+    figure_tsne, ax_tsne = plt.subplots()
+    canvas_tsne = FigureCanvas(figure_tsne)
+    mpl_toolbar_tsne = NavigationToolbar(canvas_tsne)
+    ui_tsne.verticalLayout_graph.addWidget(mpl_toolbar_tsne)
+    ui_tsne.verticalLayout_graph.addWidget(canvas_tsne)
+
+    # Создаем фигуру и canvas для ANOVA графика
+    figure_anova, ax_anova = plt.subplots()
+    canvas_anova = FigureCanvas(figure_anova)
+    mpl_toolbar_anova = NavigationToolbar(canvas_anova)
+    ui_tsne.verticalLayout_anova.addWidget(mpl_toolbar_anova)
+    ui_tsne.verticalLayout_anova.addWidget(canvas_anova)
 
     def set_list_point():
         ui_tsne.listWidget_point.clear()
@@ -417,12 +473,8 @@ def tsne_geochem():
         ui_tsne.listWidget_point.setCurrentRow(0)
 
     def draw_graph_tsne():
-        clear_layout(ui_tsne.verticalLayout_graph)
-        figure_tsne = plt.figure()
-        canvas_tsne = FigureCanvas(figure_tsne)
-        mpl_toolbar = NavigationToolbar(canvas_tsne)
-        ui_tsne.verticalLayout_graph.addWidget(mpl_toolbar)
-        ui_tsne.verticalLayout_graph.addWidget(canvas_tsne)
+        # Очищаем оси
+        ax_tsne.clear()
 
         list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
         data_plot_new = data_plot.loc[data_plot['well'].isin(list_well)]
@@ -448,8 +500,9 @@ def tsne_geochem():
             if ui_tsne.checkBox_standart.isChecked():
                 scaler = StandardScaler()
                 data_tsne = scaler.fit_transform(data_tsne)
+
+            name_graph = ''
             if ui_tsne.radioButton_tsne.isChecked():
-                print(ui_tsne.spinBox_random_stat.value())
                 name_graph = 't-SNE'
                 tsne = TSNE(
                     n_components=2,
@@ -458,13 +511,14 @@ def tsne_geochem():
                     random_state=ui_tsne.spinBox_random_stat.value()
                 )
                 data_tsne_result = tsne.fit_transform(data_tsne)
-            if ui_tsne.radioButton_pca.isChecked():
+            elif ui_tsne.radioButton_pca.isChecked():
                 name_graph = 'PCA'
                 pca = PCA(
                     n_components=2,
                     random_state=ui_tsne.spinBox_random_stat.value()
                 )
                 data_tsne_result = pca.fit_transform(data_tsne)
+
             data_plot_new = pd.concat([data_plot_new, pd.DataFrame(data_tsne_result, columns=['0', '1'])], axis=1)
 
             # сначала field для отображения на заднем плане графиков
@@ -473,46 +527,52 @@ def tsne_geochem():
                 data_plot_new.loc[data_plot_new['well'] != 'field']
             ]).reset_index(drop=True)
 
-            sns.scatterplot(data=data_plot_new, x='0', y='1', hue='well', s=100, palette=pallet)
+            # Используем ax_tsne вместо plt
+            sns.scatterplot(data=data_plot_new, x='0', y='1', hue='well', s=100, palette=pallet, ax=ax_tsne)
 
             if ui_tsne.checkBox_name_point.isChecked():
                 # Добавление подписей к точкам
                 for i_data in data_plot_new.index:
-                    plt.text(data_plot_new['0'][i_data], data_plot_new['1'][i_data],
-                            data_plot_new['point'][i_data], horizontalalignment='left',
-                            size='medium', color='black', weight='semibold')
+                    ax_tsne.text(data_plot_new['0'][i_data], data_plot_new['1'][i_data],
+                                 data_plot_new['point'][i_data], horizontalalignment='left',
+                                 size='medium', color='black', weight='semibold')
+
             try:
-                plt.vlines(
-                    x=data_plot_new['0'].loc[data_plot_new['point'] == ui_tsne.listWidget_point.currentItem().text()],
-                    ymin=data_plot_new['1'].min(),
-                    ymax=data_plot_new['1'].max(),
-                    color='black',
-                    linestyle='--'
-                )
-                plt.hlines(
-                    y=data_plot_new['1'].loc[data_plot_new['point'] == ui_tsne.listWidget_point.currentItem().text()],
-                    xmin=data_plot_new['0'].min(),
-                    xmax=data_plot_new['0'].max(),
-                    color='black',
-                    linestyle='--'
-                )
+                if ui_tsne.listWidget_point.currentItem():
+                    current_point = ui_tsne.listWidget_point.currentItem().text()
+                    point_data = data_plot_new.loc[data_plot_new['point'] == current_point]
+                    if not point_data.empty:
+                        ax_tsne.axvline(
+                            x=point_data['0'].values[0],
+                            ymin=data_plot_new['1'].min(),
+                            ymax=data_plot_new['1'].max(),
+                            color='black',
+                            linestyle='--'
+                        )
+                        ax_tsne.axhline(
+                            y=point_data['1'].values[0],
+                            xmin=data_plot_new['0'].min(),
+                            xmax=data_plot_new['0'].max(),
+                            color='black',
+                            linestyle='--'
+                        )
             except AttributeError:
-                print('AttributeError')
+                print('AttributeError - нет выбранной точки')
                 pass
-            plt.grid()
-            figure_tsne.suptitle(f'{name_graph}\n{len(data_plot_new.index)} точек')
+
+            ax_tsne.grid()
+            ax_tsne.set_title(f'{name_graph}\n{len(data_plot_new.index)} точек')
             figure_tsne.tight_layout()
             canvas_tsne.draw()
-        except ValueError:
-            pass
+
+        except ValueError as e:
+            print(f'ValueError in t-SNE: {e}')
+        except Exception as e:
+            print(f'Error in t-SNE: {e}')
 
     def draw_graph_anova():
-        clear_layout(ui_tsne.verticalLayout_anova)
-        figure_anova = plt.figure()
-        canvas_anova = FigureCanvas(figure_anova)
-        mpl_toolbar = NavigationToolbar(canvas_anova)
-        ui_tsne.verticalLayout_anova.addWidget(mpl_toolbar)
-        ui_tsne.verticalLayout_anova.addWidget(canvas_anova)
+
+        ax_anova.clear()
 
         try:
             list_well = get_list_check_checkbox(ui_tsne.listWidget_checkbox_well)
@@ -554,27 +614,31 @@ def tsne_geochem():
             # Объединяем обратно
             data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
 
-            param = ui_tsne.listWidget_param.currentItem().text()
+            if ui_tsne.listWidget_param.currentItem():
+                param = ui_tsne.listWidget_param.currentItem().text()
+            else:
+                print('Нет выбранного параметра')
+                return
+
+            if ui_tsne.radioButton_box.isChecked():
+                sns.boxplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet, ax=ax_anova)
+            elif ui_tsne.radioButton_violin.isChecked():
+                sns.violinplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet, inner='stick', ax=ax_anova)
+            elif ui_tsne.radioButton_strip.isChecked():
+                sns.stripplot(data=data_plot_new, y=param, x='well', hue='well', orient='v', palette=pallet, ax=ax_anova)
+            elif ui_tsne.radioButton_boxen.isChecked():
+                sns.boxenplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet, ax=ax_anova)
 
             if ui_tsne.checkBox_name_point.isChecked():
                 # Добавление подписей к точкам
                 for i_data in data_plot_new.index:
                     well_index = list_well.index(data_plot_new['well'][i_data])
-                    plt.text(well_index, data_plot_new[param][i_data],
+                    ax_anova.text(well_index, data_plot_new[param][i_data],
                             data_plot_new['point'][i_data], horizontalalignment='left',
                             size='medium', color='black', weight='semibold')
 
-            if ui_tsne.radioButton_box.isChecked():
-                sns.boxplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet)
-            if ui_tsne.radioButton_violin.isChecked():
-                sns.violinplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet, inner='stick')
-            if ui_tsne.radioButton_strip.isChecked():
-                sns.stripplot(data=data_plot_new, y=param, x='well', hue='well', orient='v', palette=pallet)
-            if ui_tsne.radioButton_boxen.isChecked():
-                sns.boxenplot(data=data_plot_new, y=param, x='well', orient='v', palette=pallet)
-
-            figure_anova.suptitle(f'ANOVA\n{len(data_plot_new.index)} точек')
-            plt.grid()
+            ax_anova.set_title(f'ANOVA\n{len(data_plot_new.index)} точек')
+            ax_anova.grid()
             figure_anova.tight_layout()
             canvas_anova.draw()
         except ValueError:
@@ -593,15 +657,26 @@ def tsne_geochem():
                 check_box_widget.setChecked(dict_check_point[point_name])
             except KeyError:
                 check_box_widget.setChecked(True)
+
+            check_box_widget.clicked.connect(
+                lambda: update_all_states_tsne('listWidget_check_point', 'checkBox_point_all')
+            )
+
             list_item = QListWidgetItem()
             ui_tsne.listWidget_check_point.addItem(list_item)
             ui_tsne.listWidget_check_point.setItemWidget(list_item, check_box_widget)
         ui_tsne.spinBox_lof.setValue(int(len(data_plot_point) * 0.1))
 
+    update_all_states_tsne('listWidget_check_point', 'checkBox_point_all')
+
     for w in data_plot['well'].unique():
         check_box_widget = QCheckBox(w)
         check_box_widget.setChecked(True)
         # check_box_widget.stateChanged.connect(draw_graph_tsne)
+
+        # Функция для снятия выбора в listWidget_masks
+        check_box_widget.clicked.connect(lambda: ui_tsne.listWidget_masks_tsne.clearSelection())
+
         list_item = QListWidgetItem()
         ui_tsne.listWidget_checkbox_well.addItem(list_item)
         ui_tsne.listWidget_checkbox_well.setItemWidget(list_item, check_box_widget)
@@ -640,6 +715,235 @@ def tsne_geochem():
                 checkbox.setChecked(False)
         # draw_graph_tsne()
         # draw_graph_anova()
+
+    def save_geochem_mask_tsne():
+        """ Создание новой маски """
+
+        # Используем функцию для получения отмеченных параметров и точек
+        checked_parameters = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+        checked_points = get_list_check_checkbox(ui_tsne.listWidget_check_point)
+
+        if not checked_parameters:
+            QMessageBox.warning(TSNE_form, 'Создание маски', 'Не выбрано ни одного параметра!')
+            return
+
+        if not checked_points:
+            QMessageBox.warning(TSNE_form, 'Создание маски', 'Не выбрано ни одной точки!')
+            return
+
+        # Проверяем существующие маски
+        current_geochem_id = get_geochem_id()
+        existing_masks = session.query(GeochemMask).filter_by(
+            geochem_id=current_geochem_id
+        ).all()
+
+        for i, mask in enumerate(existing_masks):
+            # Пробуем сравнить
+            try:
+                # очищаем строки
+                param_str = mask.mask_param.strip()
+                point_str = mask.mask_point.strip()
+
+                # Убираем лишние кавычки
+                if param_str.startswith("'") and param_str.endswith("'"):
+                    param_str = param_str[1:-1]
+                if point_str.startswith("'") and point_str.endswith("'"):
+                    point_str = point_str[1:-1]
+
+                # Парсим
+                saved_params = json.loads(f'[{param_str}]' if not param_str.startswith('[') else param_str)
+                saved_points = json.loads(f'[{point_str}]' if not point_str.startswith('[') else point_str)
+
+                # Преобразуем в множества для сравнения (игнорируем порядок)
+                current_params_set = set(checked_parameters)
+                current_points_set = set(checked_points)
+                saved_params_set = set(saved_params)
+                saved_points_set = set(saved_points)
+
+                if current_params_set == saved_params_set and current_points_set == saved_points_set:
+                    QMessageBox.information(TSNE_form, 'Дубликат',
+                                            f'Маска уже существует (ID: {mask.id})')
+                    return
+
+            except Exception as e:
+                QMessageBox.critical(TSNE_form, 'Ошибка', f'Ошибка: {str(e)}')
+
+        new_mask = GeochemMask(
+            geochem_id=get_geochem_id(),
+            count_param=len(checked_parameters),
+            count_points=len(checked_points),
+            mask_param=json.dumps(checked_parameters),
+            mask_point=json.dumps(checked_points)
+        )
+
+        try:
+            session.add(new_mask)
+            session.commit()
+
+            item = QListWidgetItem(f'{new_mask.count_param} parameters | {new_mask.count_points} points id{new_mask.id}')
+            item.setToolTip(new_mask.mask_info)
+            item.setData(Qt.UserRole, new_mask)
+            ui_tsne.listWidget_masks_tsne.addItem(item)
+
+            # Делаем новую маску текущей выбранной
+            ui_tsne.listWidget_masks_tsne.setCurrentItem(item)
+            ui_tsne.listWidget_masks_tsne.scrollToItem(item) # Прокручиваем список к новой маске
+
+        except Exception as e:
+            session.rollback()
+            info = f'Ошибка при создании новой маски: {str(e)}'
+            QMessageBox.critical(TSNE_form, 'Создание новой маски', info)
+
+    def on_mask_selected_tsne():
+        """ Отметка чекбоксов параметров и точек, относящихся к текущей маске """
+
+        selected_items = ui_tsne.listWidget_masks_tsne.selectedItems()
+        ui_tsne.listWidget_masks_tsne.setProperty("user_selected", bool(selected_items))
+        if not selected_items:
+            return
+
+        selected_mask = selected_items[0].data(Qt.UserRole)
+        mask_param_str = selected_mask.mask_param.replace("'", '"').strip()
+        mask_point_str = selected_mask.mask_point.replace("'", '"').strip()
+
+        try:
+            mask_parameters = json.loads(mask_param_str)
+            mask_points = json.loads(mask_point_str)
+        except json.JSONDecodeError:
+            info = f"Ошибка в данных маски id{selected_mask.id}"
+            QMessageBox.critical(TSNE_form, 'Ошибка', info)
+            return
+
+        # Создаем множества для быстрого поиска
+        mask_params_set = set(mask_parameters)
+        mask_points_set = set(mask_points)
+
+        # Проходим по всем существующим чекбоксам
+        for i in range(ui_tsne.listWidget_check_param.count()):
+            item = ui_tsne.listWidget_check_param.item(i)
+            widget = ui_tsne.listWidget_check_param.itemWidget(item)
+
+            if widget and isinstance(widget, QCheckBox):
+                widget.setChecked(widget.text() in mask_params_set)
+
+        for i in range(ui_tsne.listWidget_check_point.count()):
+            item = ui_tsne.listWidget_check_point.item(i)
+            widget = ui_tsne.listWidget_check_point.itemWidget(item)
+
+            if widget and isinstance(widget, QCheckBox):
+                point_name = widget.text()
+                widget.setChecked(point_name in mask_points_set)
+
+    def update_mask_info_tsne():
+        """ Форма для обновления информации о текущей маске """
+
+        user_selected = ui_tsne.listWidget_masks_tsne.property("user_selected")
+        if not user_selected:
+            QMessageBox.critical(TSNE_form, 'Ошибка', 'Не выбрана маска')
+            return
+
+        current_item = ui_tsne.listWidget_masks_tsne.currentItem()
+        if not current_item:
+            QMessageBox.critical(TSNE_form, 'Ошибка', 'Не выбрана маска')
+            return
+
+        try:
+            current_mask = current_item.data(Qt.UserRole)
+            mask = session.query(GeochemMask).filter_by(id=current_mask.id).first()
+        except Exception as e:
+            QMessageBox.critical(TSNE_form, 'Ошибка', f'Ошибка при загрузке маски: {e} ')
+
+        FormMaskInfo = QtWidgets.QDialog()
+        ui_mi = Ui_Form_Mask_Info()
+        ui_mi.setupUi(FormMaskInfo)
+        FormMaskInfo.show()
+        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
+
+        ui_mi.textEdit.setText(mask.mask_info)
+
+        def update_info():
+            """ Обновление mask_info """
+            new_info = ui_mi.textEdit.toPlainText()
+            # Обновляем в базе данных
+            session.query(GeochemMask).filter_by(id=current_mask.id).update(
+                {'mask_info': new_info},
+                synchronize_session='fetch'
+            )
+            session.commit()
+
+            current_item.setToolTip(new_info)
+            FormMaskInfo.close()
+
+        def cancel_update():
+            FormMaskInfo.close()
+
+        ui_mi.buttonBox.accepted.connect(update_info)
+        ui_mi.buttonBox.rejected.connect(cancel_update)
+
+        FormMaskInfo.exec_()
+
+    def delete_mask_tsne():
+        """ Удаление текущей маски """
+        selected_items = ui_tsne.listWidget_masks_tsne.selectedItems()
+        if not selected_items:
+            info = 'Маска не выбрана'
+            QMessageBox.critical(TSNE_form, 'Удаление маски', info)
+            return
+
+        selected_mask = selected_items[0].data(Qt.UserRole)
+
+        result = QtWidgets.QMessageBox.question(
+            TSNE_form,
+            'Удаление маски',
+            f'Вы уверены, что хотите удалить маску id{selected_mask.id}?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+        if result == QtWidgets.QMessageBox.No:
+            return
+
+        if result == QtWidgets.QMessageBox.Yes:
+            try:
+                session.query(GeochemMask).filter(GeochemMask.id == selected_mask.id).delete()
+                session.commit()
+
+                # Удаляем из списка
+                row = ui_tsne.listWidget_masks_tsne.row(selected_items[0])
+                ui_tsne.listWidget_masks_tsne.takeItem(row)
+
+                # Сброс текущего элемента
+                ui_tsne.listWidget_masks_tsne.setCurrentItem(None)
+                ui_tsne.checkBox_point_all.setChecked(True)
+                set_check_point_all()
+                ui_tsne.checkBox_param_all.setChecked(True)
+                all_check_param()
+
+                info = 'Маска успешно удалена'
+                QMessageBox.information(TSNE_form, 'Удаление маски', info)
+            except Exception as e:
+                session.rollback()
+                info = f'Ошибка при удалении маски: {str(e)}'
+                QMessageBox.critical(TSNE_form, 'Удаление маски', info)
+
+    def update_mask_list_tsne():
+        ui_tsne.listWidget_masks_tsne.clear()
+        mask_list = session.query(GeochemMask).filter_by(geochem_id=get_geochem_id()).all()
+        for mask in mask_list:
+            item = QListWidgetItem(f'{mask.count_param} parameters | {mask.count_points} points id{mask.id}')
+            item.setToolTip(mask.mask_info)
+            item.setData(Qt.UserRole, mask)
+            ui_tsne.listWidget_masks_tsne.addItem(item)
+
+        ui_tsne.checkBox_point_all.setChecked(True)
+        set_check_point_all()
+        ui_tsne.checkBox_param_all.setChecked(True)
+        all_check_param()
+
+    def update_mask_list_tsne_w_msg():
+        update_mask_list_tsne()
+        info = 'Список масок успешно обновлен'
+        QMessageBox.information(TSNE_form, 'Обновление списка масок', info)
+
 
     def distance_between_centers(data, well1, well2, params):
         data_param = data[params]
@@ -842,10 +1146,12 @@ def tsne_geochem():
 
     def check_param_all():
         all_check(ui_tsne.listWidget_check_param, ui_tsne.checkBox_param_all)
+        ui_tsne.listWidget_masks_tsne.setCurrentItem(None)
 
 
     def check_point_all():
         all_check(ui_tsne.listWidget_check_point, ui_tsne.checkBox_point_all)
+        ui_tsne.listWidget_masks_tsne.setCurrentItem(None)
 
 
 
@@ -875,6 +1181,11 @@ def tsne_geochem():
     ui_tsne.pushButton_to_maket.clicked.connect(set_param_maket)
     ui_tsne.pushButton_point_to_fake.clicked.connect(set_point_fake)
     ui_tsne.pushButton_point_to_field.clicked.connect(set_point_field_fake)
+    ui_tsne.pushButton_save_mask_tsne.clicked.connect(save_geochem_mask_tsne)
+    ui_tsne.listWidget_masks_tsne.itemSelectionChanged.connect(on_mask_selected_tsne)
+    ui_tsne.pushButton_mask_info_tsne.clicked.connect(update_mask_info_tsne)
+    ui_tsne.pushButton_delete_mask_tsne.clicked.connect(delete_mask_tsne)
+    ui_tsne.pushButton_update_mask_list_tsne.clicked.connect(update_mask_list_tsne_w_msg)
 
     for i in range(ui_tsne.listWidget_checkbox_well.count()):
         ui_tsne.listWidget_checkbox_well.itemWidget(ui_tsne.listWidget_checkbox_well.item(i)).stateChanged.connect(set_list_check_point)
@@ -889,6 +1200,7 @@ def tsne_geochem():
 
     set_list_point()
     set_list_check_point()
+    update_mask_list_tsne()
     draw_graph_tsne()
     draw_graph_anova()
 
@@ -1288,6 +1600,12 @@ def draw_point_graph():
     #         continue
     #     pallet[m] = session.query(GeochemWell).filter(GeochemWell.title == m, GeochemWell.geochem_id == get_geochem_id()).first().color
 
+    figure, ax = plt.subplots()
+    canvas = FigureCanvas(figure)
+    mpl_toolbar = NavigationToolbar(canvas)
+    ui_pg.verticalLayout.addWidget(mpl_toolbar)
+    ui_pg.verticalLayout.addWidget(canvas)
+
     def calc_mean_well(well_name: str, list_param: list, list_point: list):
 
         # Список столбцов, которые нужно исключить из преобразований
@@ -1382,16 +1700,88 @@ def draw_point_graph():
                 list_conf_bottom.append(param_conf_interval[1])
         return list_conf_top, list_conf_bottom
 
+    def save_geochem_mask():
+        """ Создание новой маски """
+
+        checked_parameters = get_list_check_checkbox(ui_pg.listWidget_param)
+        checked_points = get_list_check_checkbox(ui_pg.listWidget_point)
+
+        if not checked_parameters:
+            QMessageBox.warning(PointGraph, 'Создание маски', 'Не выбрано ни одного параметра!')
+            return
+
+        if not checked_points:
+            QMessageBox.warning(PointGraph, 'Создание маски', 'Не выбрано ни одной точки!')
+            return
+
+        # Проверяем существующие маски
+        current_geochem_id = get_geochem_id()
+        existing_masks = session.query(GeochemMask).filter_by(
+            geochem_id=current_geochem_id
+        ).all()
+
+        for i, mask in enumerate(existing_masks):
+            # Пробуем сравнить
+            try:
+                # Очищаем строки
+                param_str = mask.mask_param.strip()
+                point_str = mask.mask_point.strip()
+
+                # Убираем лишние кавычки
+                if param_str.startswith("'") and param_str.endswith("'"):
+                    param_str = param_str[1:-1]
+                if point_str.startswith("'") and point_str.endswith("'"):
+                    point_str = point_str[1:-1]
+
+                # Парсим
+                saved_params = json.loads(f'[{param_str}]' if not param_str.startswith('[') else param_str)
+                saved_points = json.loads(f'[{point_str}]' if not point_str.startswith('[') else point_str)
+
+                # Преобразуем в множества для сравнения (игнорируем порядок)
+                current_params_set = set(checked_parameters)
+                current_points_set = set(checked_points)
+                saved_params_set = set(saved_params)
+                saved_points_set = set(saved_points)
+
+                if current_params_set == saved_params_set and current_points_set == saved_points_set:
+                    QMessageBox.information(PointGraph, 'Дубликат',
+                                            f'Маска уже существует (ID: {mask.id})')
+                    return
+
+            except Exception as e:
+                QMessageBox.critical(PointGraph, 'Ошибка', f'Ошибка: {str(e)}')
+
+        # Создаем новую маску
+        new_mask = GeochemMask(
+            geochem_id=get_geochem_id(),
+            count_param=len(checked_parameters),
+            count_points=len(checked_points),
+            mask_param=json.dumps(checked_parameters),
+            mask_point=json.dumps(checked_points)
+        )
+
+        try:
+            session.add(new_mask)
+            session.commit()
+
+            item = QListWidgetItem(f'{new_mask.count_param} parameters | {new_mask.count_points} points id{new_mask.id}')
+            item.setToolTip(new_mask.mask_info)
+            item.setData(Qt.UserRole, new_mask)
+            ui_pg.listWidget_masks.addItem(item)
+
+            # Делаем новую маску текущей выбранной
+            ui_pg.listWidget_masks.setCurrentItem(item)
+            ui_pg.listWidget_masks.scrollToItem(item)  # Прокручиваем список к новой маске
+
+        except Exception as e:
+            session.rollback()
+            info = f'Ошибка при создании новой маски: {str(e)}'
+            QMessageBox.critical(PointGraph, 'Ошибка', info)
 
 
     def draw_graph():
-        nonlocal data_plot
-        clear_layout(ui_pg.verticalLayout)
-        figure = plt.figure()
-        canvas = FigureCanvas(figure)
-        mpl_toolbar = NavigationToolbar(canvas)
-        ui_pg.verticalLayout.addWidget(mpl_toolbar)
-        ui_pg.verticalLayout.addWidget(canvas)
+        # Очищаем оси
+        ax.clear()
 
         list_point = get_list_check_checkbox(ui_pg.listWidget_point)
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
@@ -1428,70 +1818,290 @@ def draw_point_graph():
         # Объединяем обратно
         data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
 
+        # Рисуем на существующих осях
         if not ui_pg.checkBox_only_mean.isChecked():
             for p in list_point:
                 if ui_pg.checkBox_marker.isChecked():
-                    plt.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0], label=p, marker='o')
+                    ax.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0],
+                            label=p, marker='o')
                 else:
-                    plt.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0], label=p)
+                    ax.plot(data_plot_new.loc[data_plot_new['point'] == p][list_param].values.tolist()[0],
+                            label=p)
 
         num_param = range(len(list_param))
 
         for wg in list_well_graph:
             if ui_pg.checkBox_marker.isChecked():
-                plt.plot(calc_mean_well(wg, list_param, list_point), label=f'mean_{wg}', marker='o', linestyle='--', linewidth=3)
+                ax.plot(calc_mean_well(wg, list_param, list_point),
+                        label=f'mean_{wg}', marker='o', linestyle='--', linewidth=3)
             else:
-                plt.plot(calc_mean_well(wg, list_param, list_point), label=f'mean_{wg}', linestyle='--', linewidth=3)
+                ax.plot(calc_mean_well(wg, list_param, list_point),
+                        label=f'mean_{wg}', linestyle='--', linewidth=3)
 
         if ui_pg.checkBox_conf_int.isChecked():
             for wg in list_well_graph:
                 list_conf_top, list_conf_bottom = calc_conf_interval_well(wg, list_param)
-                plt.fill_between(num_param, list_conf_top, list_conf_bottom, alpha=0.2, label=f'conf_int_{wg}')
-
+                ax.fill_between(num_param, list_conf_top, list_conf_bottom,
+                                alpha=0.2, label=f'conf_int_{wg}')
 
         if ui_pg.checkBox_log.isChecked():
-            plt.yscale('log')
-        plt.xticks(num_param, list_param, rotation=90)
-        plt.grid()
-        plt.legend()
-        figure.tight_layout()
-        figure.subplots_adjust(bottom=0.25)
+            ax.set_yscale('log')
+        else:
+            ax.set_yscale('linear')
+
+        ax.set_xticks(num_param)
+        ax.set_xticklabels(list_param, rotation=45, ha='right', fontsize=8)
+        ax.grid()
+        ax.legend()
+
+        # Настройки layout (выполняем один раз при создании)
+        figure.subplots_adjust(top=0.95, bottom=0.35, left=0.055, right=0.95)
+
+        # Обновляем канвас
         canvas.draw()
+
+    def update_all_states(list_widget_name, check_box_all_name):
+        """ Функция для обновления состояния checkBox_all на основе состояния чекбоксов в listWidget """
+        # Получаем объекты по именам
+        list_widget = getattr(ui_pg, list_widget_name, None)
+        check_box_all = getattr(ui_pg, check_box_all_name, None)
+
+        # Проверяем состояние всех чекбоксов в listWidget
+        all_checked = True
+        has_items = False
+
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            widget = list_widget.itemWidget(item)
+            if isinstance(widget, QCheckBox):
+                has_items = True
+                if not widget.isChecked():
+                    all_checked = False
+                    break
+
+        # Обновляем checkBox_all только если есть элементы
+        if has_items:
+            check_box_all.blockSignals(True)
+
+            if all_checked:
+                check_box_all.setChecked(True)
+            else:
+                check_box_all.setChecked(False)
+
+            check_box_all.blockSignals(False)
+
+        # Снимаем выделение в listWidget_masks
+        ui_pg.listWidget_masks.clearSelection()
 
     for i_param in data_plot.columns.tolist()[3:]:
         check_box_widget = QCheckBox(i_param)
         check_box_widget.setChecked(True)
         check_box_widget.clicked.connect(draw_graph)
+
+        check_box_widget.clicked.connect(
+            lambda: update_all_states('listWidget_param', 'checkBox_param_all')
+        )
+
         list_item = QListWidgetItem()
         ui_pg.listWidget_param.addItem(list_item)
         ui_pg.listWidget_param.setItemWidget(list_item, check_box_widget)
+
+    update_all_states('listWidget_param', 'checkBox_param_all')
 
     def set_list_point():
         ui_pg.listWidget_point.clear()
         list_well = get_list_check_checkbox(ui_pg.listWidget_well)
         data_plot_point = data_plot.loc[data_plot['well'].isin(list_well)]
-        for n, point_name in enumerate(data_plot_point['point']):
+        all_points = data_plot_point['point'].unique()
+
+        for point_name in all_points:
             check_box_widget = QCheckBox(point_name)
-            if n < 2:
-                check_box_widget.setChecked(True)
+            check_box_widget.setChecked(True)
             check_box_widget.clicked.connect(draw_graph)
+
+            check_box_widget.clicked.connect(
+                lambda: update_all_states('listWidget_point', 'checkBox_point_all')
+            )
+
             list_item = QListWidgetItem()
             ui_pg.listWidget_point.addItem(list_item)
             ui_pg.listWidget_point.setItemWidget(list_item, check_box_widget)
 
+        update_all_states('listWidget_point', 'checkBox_point_all')
 
-    for w in data_plot['well'].unique():
+
+    def on_mask_selected():
+        """ Отметка чекбоксов параметров и точек, относящихся к текущей маске """
+
+        selected_items = ui_pg.listWidget_masks.selectedItems()
+        ui_pg.listWidget_masks.setProperty("user_selected", bool(selected_items))
+        if not selected_items:
+            return
+
+        selected_mask = selected_items[0].data(Qt.UserRole)
+        mask_param_str = selected_mask.mask_param.replace("'", '"').strip()
+        mask_point_str = selected_mask.mask_point.replace("'", '"').strip()
+
+        try:
+            mask_parameters = json.loads(mask_param_str)
+            mask_points = json.loads(mask_point_str)
+        except json.JSONDecodeError:
+            info = f"Ошибка в данных маски id{selected_mask.id}"
+            QMessageBox.critical(PointGraph, 'Ошибка', info)
+            return
+
+        # Создаем множества для быстрого поиска
+        mask_params_set = set(mask_parameters)
+        mask_points_set = set(mask_points)
+
+        # Проходим по всем существующим чекбоксам
+        for i in range(ui_pg.listWidget_param.count()):
+            item = ui_pg.listWidget_param.item(i)
+            widget = ui_pg.listWidget_param.itemWidget(item)
+
+            if widget and isinstance(widget, QCheckBox):
+                widget.setChecked(widget.text() in mask_params_set)
+
+        for i in range(ui_pg.listWidget_point.count()):
+            item = ui_pg.listWidget_point.item(i)
+            widget = ui_pg.listWidget_point.itemWidget(item)
+
+            if widget and isinstance(widget, QCheckBox):
+                point_name = widget.text()
+                widget.setChecked(point_name in mask_points_set)
+
+        draw_graph()
+
+    def update_mask_info():
+        """ Форма для обновления информации о текущей маске """
+
+        user_selected = ui_pg.listWidget_masks.property("user_selected")
+        if not user_selected:
+            QMessageBox.critical(PointGraph, 'Ошибка', 'Не выбрана маска')
+            return
+
+        current_item = ui_pg.listWidget_masks.currentItem()
+        if not current_item:
+            QMessageBox.critical(PointGraph, 'Ошибка', 'Не выбрана маска')
+            return
+
+        try:
+            current_mask = current_item.data(Qt.UserRole)
+            mask = session.query(GeochemMask).filter_by(id=current_mask.id).first()
+        except Exception as e:
+            QMessageBox.critical(PointGraph, 'Ошибка', f'Ошибка при загрузке маски: {e}')
+            return
+
+        FormMaskInfo = QtWidgets.QDialog()
+        ui_mi = Ui_Form_Mask_Info()
+        ui_mi.setupUi(FormMaskInfo)
+        FormMaskInfo.show()
+        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
+
+        ui_mi.textEdit.setText(mask.mask_info)
+
+        def update_info():
+            """ Обновление mask_info """
+            new_info = ui_mi.textEdit.toPlainText()
+            # Обновляем в базе данных
+            session.query(GeochemMask).filter_by(id=current_mask.id).update(
+                {'mask_info': new_info},
+                synchronize_session='fetch'
+            )
+            session.commit()
+
+            current_item.setToolTip(new_info)
+            FormMaskInfo.close()
+
+        def cancel_update():
+            FormMaskInfo.close()
+
+        ui_mi.buttonBox.accepted.connect(update_info)
+        ui_mi.buttonBox.rejected.connect(cancel_update)
+
+        FormMaskInfo.exec_()
+
+    def delete_mask():
+        """ Удаление текущей маски """
+        selected_items = ui_pg.listWidget_masks.selectedItems()
+        if not selected_items:
+            info = 'Маска не выбрана'
+            QMessageBox.critical(PointGraph, 'Удаление маски', info)
+            return
+
+        selected_mask = selected_items[0].data(Qt.UserRole)
+
+        result = QtWidgets.QMessageBox.question(
+            PointGraph,
+            'Удаление маски',
+            f'Вы уверены, что хотите удалить маску id{selected_mask.id}?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+        if result == QtWidgets.QMessageBox.No:
+            return
+
+        if result == QtWidgets.QMessageBox.Yes:
+            try:
+                session.query(GeochemMask).filter(GeochemMask.id == selected_mask.id).delete()
+                session.commit()
+
+                # Удаляем из списка
+                row = ui_pg.listWidget_masks.row(selected_items[0])
+                ui_pg.listWidget_masks.takeItem(row)
+
+                # Сброс текущего элемента
+                ui_pg.listWidget_masks.setCurrentItem(None)
+                ui_pg.checkBox_point_all.setChecked(True)
+                all_check_point()
+                ui_pg.checkBox_param_all.setChecked(True)
+                all_check_param()
+
+                info = 'Маска успешно удалена'
+                QMessageBox.information(PointGraph, 'Удаление маски', info)
+            except Exception as e:
+                session.rollback()
+                info = f'Ошибка при удалении маски: {str(e)}'
+                QMessageBox.critical(PointGraph, 'Удаление маски', info)
+
+    def update_mask_list():
+        ui_pg.listWidget_masks.clear()
+        mask_list = session.query(GeochemMask).filter_by(geochem_id=get_geochem_id()).all()
+        for mask in mask_list:
+            item = QListWidgetItem(f'{mask.count_param} parameters | {mask.count_points} points id{mask.id}')
+            item.setToolTip(mask.mask_info)
+            item.setData(Qt.UserRole, mask)
+            ui_pg.listWidget_masks.addItem(item)
+
+        ui_pg.checkBox_point_all.setChecked(True)
+        all_check_point()
+        ui_pg.checkBox_param_all.setChecked(True)
+        all_check_param()
+
+    def update_mask_list_w_msg():
+        update_mask_list()
+        info = 'Список масок успешно обновлен'
+        QMessageBox.information(PointGraph, 'Обновление списка масок', info)
+
+    for n_w, w in enumerate(data_plot['well'].unique()):
         check_box_widget = QCheckBox(w)
-        check_box_widget.setChecked(True)
+        if n_w < 2:
+            check_box_widget.setChecked(True)
         check_box_widget.clicked.connect(set_list_point)
         check_box_widget.clicked.connect(draw_graph)
+        check_box_widget.clicked.connect(
+            lambda: update_all_states('listWidget_well', 'checkBox_well_all')
+        )
         list_item = QListWidgetItem()
         ui_pg.listWidget_well.addItem(list_item)
         ui_pg.listWidget_well.setItemWidget(list_item, check_box_widget)
 
+
+    update_all_states('listWidget_well', 'checkBox_well_all')
+
     for n_w, w in enumerate(data_plot['well'].unique()):
         check_box_widget = QCheckBox(w)
-        if n_w < 1:
+        if n_w < 2:
             check_box_widget.setChecked(True)
         check_box_widget.clicked.connect(draw_graph)
         list_item = QListWidgetItem()
@@ -1500,10 +2110,12 @@ def draw_point_graph():
 
     def all_check_param():
         all_check(ui_pg.listWidget_param, ui_pg.checkBox_param_all)
+        ui_pg.listWidget_masks.setCurrentItem(None)
         draw_graph()
 
     def all_check_point():
         all_check(ui_pg.listWidget_point, ui_pg.checkBox_point_all)
+        ui_pg.listWidget_masks.setCurrentItem(None)
         draw_graph()
 
     def all_check_well():
@@ -1513,7 +2125,7 @@ def draw_point_graph():
 
 
     set_list_point()
-    draw_graph()
+    update_mask_list()
 
     ui_pg.checkBox_param_all.stateChanged.connect(all_check_param)
     ui_pg.checkBox_point_all.stateChanged.connect(all_check_point)
@@ -1528,6 +2140,11 @@ def draw_point_graph():
     ui_pg.checkBox_standart.clicked.connect(draw_graph)
     ui_pg.checkBox_power_trans.clicked.connect(draw_graph)
     ui_pg.checkBox_norm_l1.clicked.connect(draw_graph)
+    ui_pg.pushButton_save_mask.clicked.connect(save_geochem_mask)
+    ui_pg.listWidget_masks.itemSelectionChanged.connect(on_mask_selected)
+    ui_pg.pushButton_mask_info.clicked.connect(update_mask_info)
+    ui_pg.pushButton_update_mask_list.clicked.connect(update_mask_list_w_msg)
+    ui_pg.pushButton_delete_mask.clicked.connect(delete_mask)
     PointGraph.exec_()
 
 
@@ -1580,15 +2197,12 @@ def try_func():
     ui.label_31.setText("Enter Pressed")
 
 
-
-
 def update_trained_model_geochem_comment():
     """ Изменить комментарий обученной модели """
     try:
         g_model = session.query(GeochemTrainedModel).filter_by(id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
     except AttributeError:
         QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
-        set_info('Не выбрана модель', 'red')
         return
 
     FormComment = QtWidgets.QDialog()

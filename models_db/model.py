@@ -1298,6 +1298,7 @@ class Geochem(Base):
     g_points = relationship("GeochemPoint", back_populates="geochem")
     g_wells = relationship("GeochemWell", back_populates="geochem")
     makets = relationship("GeochemMaket", back_populates="geochem")
+    g_masks = relationship("GeochemMask", back_populates="geochem")
 
 
 class GeochemParameter(Base):
@@ -1327,6 +1328,18 @@ class GeochemPoint(Base):
     g_point_values = relationship("GeochemPointValue", back_populates="g_point")
     train_points = relationship("GeochemTrainPoint", back_populates="point")
 
+class GeochemMask(Base):
+    __tablename__ = 'geochem_mask'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem.id'))
+    count_param = Column(Integer)
+    count_points = Column(Integer)
+    mask_param = Column(Text)
+    mask_point = Column(Text)
+    mask_info = Column(Text)
+
+    geochem = relationship("Geochem", back_populates="g_masks")
 
 
 class GeochemWell(Base):
