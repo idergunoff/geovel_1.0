@@ -14,6 +14,41 @@ from krige import draw_map
 from random_param_reg import push_random_param_reg
 from feature_selection import *
 
+def _get_training_wells_regmod():
+    wells = {}
+    markups = session.query(MarkupReg).filter(
+        MarkupReg.analysis_id == get_regmod_id(),
+        MarkupReg.well_id.isnot(None)
+    ).all()
+    for markup in markups:
+        well = markup.well
+        if not well:
+            continue
+        if well.x_coord is None or well.y_coord is None:
+            continue
+        wells[well.id] = (well.x_coord, well.y_coord)
+    return list(wells.values())
+
+
+def _min_distance_to_training_wells(points):
+    wells = _get_training_wells_regmod()
+    if not wells or not points:
+        return None
+    min_dist = None
+    for x_point, y_point in points:
+        for x_well, y_well in wells:
+            dist = calc_distance(x_point, y_point, x_well, y_well)
+            if min_dist is None or dist < min_dist:
+                min_dist = dist
+    return min_dist
+
+
+def _format_min_reg_distance(points, scope):
+    min_dist = _min_distance_to_training_wells(points)
+    if min_dist is None:
+        return f'Минимальное расстояние до обучающей скважины для {scope}: нет данных'
+    return f'Минимальное расстояние до обучающей скважины для {scope}: {min_dist:.2f}'
+
 
 """ Структура модели PyTorch """
 class RegressionModel(nn.Module):
@@ -3630,6 +3665,9 @@ def calc_profile_model_regmod():
                 if len(p_nan) > 0:
                     set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                              f' этого измерения может быть не корректен', 'red')
+        if {'x_pulc', 'y_pulc'}.issubset(working_data.columns):
+            points = list(zip(working_data['x_pulc'], working_data['y_pulc']))
+            set_info(_format_min_reg_distance(points, f'профиля {get_profile_name()}'), 'blue')
         ui.graph.clear()
         number = list(range(1, len(y_pred) + 1))
         # Создаем кривую и кривую, отфильтрованную с помощью savgol_filter
@@ -3825,6 +3863,9 @@ def calc_object_model_regmod():
                     set_info(f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                              f' этого измерения может быть не корректен', 'red')
 
+        if {'x_pulc', 'y_pulc'}.issubset(working_data_result_copy.columns):
+            points = list(zip(working_data_result_copy['x_pulc'], working_data_result_copy['y_pulc']))
+            set_info(_format_min_reg_distance(points, f'объекта {get_object_name()}'), 'blue')
 
         working_data_result_copy['value'] = y_pred
         x = list(working_data_result_copy['x_pulc'])
@@ -4477,5 +4518,3 @@ def markup_to_excel_reg():
                 width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
                 cell_format=cell_format
             )
-
-

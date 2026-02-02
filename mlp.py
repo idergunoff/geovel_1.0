@@ -1251,6 +1251,9 @@ def calc_class_profile():
                 [f'{cls}: {count / total * 100:.2f}%' for cls, count in class_counts.items()]
             )
             set_info(f'Соотношение классов для профиля {get_profile_name()}: {class_percentages}', 'blue')
+            if {'x_pulc', 'y_pulc'}.issubset(working_data_class.columns):
+                points = list(zip(working_data_class['x_pulc'], working_data_class['y_pulc']))
+                set_info(_format_min_class_distances(points), 'blue')
 
         pd.set_option('display.max_columns', None)
         print('working_data_result ', working_data_result)
@@ -1380,6 +1383,47 @@ def get_color_rainbow(probability):
         return rainbow_colors[int(probability * 10)]
     except (IndexError, ValueError):
         return '#FF0000'
+
+
+def _get_training_wells_by_class():
+    class_wells = {}
+    markups = session.query(MarkupMLP).filter(
+        MarkupMLP.analysis_id == get_MLP_id(),
+        MarkupMLP.well_id.isnot(None)
+    ).all()
+    for markup in markups:
+        well = markup.well
+        marker = markup.marker
+        if not well or not marker:
+            continue
+        if well.x_coord is None or well.y_coord is None:
+            continue
+        class_wells.setdefault(marker.title, {})[well.id] = (well.x_coord, well.y_coord)
+    return {cls: list(wells.values()) for cls, wells in class_wells.items()}
+
+
+def _min_distance_to_wells(points, wells):
+    min_dist = None
+    for x_point, y_point in points:
+        for x_well, y_well in wells:
+            dist = calc_distance(x_point, y_point, x_well, y_well)
+            if min_dist is None or dist < min_dist:
+                min_dist = dist
+    return min_dist
+
+
+def _format_min_class_distances(points):
+    class_wells = _get_training_wells_by_class()
+    if not class_wells or not points:
+        return 'Минимальное расстояние до обучающих скважин по классам: нет данных'
+    parts = []
+    for class_title, wells in class_wells.items():
+        min_dist = _min_distance_to_wells(points, wells)
+        if min_dist is None:
+            parts.append(f'{class_title}: нет данных')
+        else:
+            parts.append(f'{class_title}: {min_dist:.2f}')
+    return 'Минимальное расстояние до обучающих скважин по классам: ' + ', '.join(parts)
 
 
 def calc_object_class():
@@ -1571,6 +1615,9 @@ def calc_object_class():
                 [f'{cls}: {count / total * 100:.2f}%' for cls, count in class_counts.items()]
             )
             set_info(f'Соотношение классов для объекта {get_object_name()}: {class_percentages}', 'blue')
+            if {'x_pulc', 'y_pulc'}.issubset(working_data_result.columns):
+                points = list(zip(working_data_result['x_pulc'], working_data_result['y_pulc']))
+                set_info(_format_min_class_distances(points), 'blue')
         print('working_data_result ', working_data_result)
 
         x = list(working_data_result['x_pulc'])
@@ -2261,5 +2308,3 @@ def markup_to_excel_mlp():
                 width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
                 cell_format=cell_format
             )
-
-
