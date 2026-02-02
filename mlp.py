@@ -1,4 +1,6 @@
 
+from collections import Counter
+
 import pandas as pd
 from PyQt5.QtWidgets import QDialog
 
@@ -1241,6 +1243,14 @@ def calc_class_profile():
         working_data_result['mark'] = mark
         if 'TORCH' in model.title:
             working_data_result['mark'] = working_data_result['mark'].map(labels_dict)
+        mark_list = working_data_result['mark'].tolist()
+        if mark_list:
+            class_counts = Counter(mark_list)
+            total = len(mark_list)
+            class_percentages = ', '.join(
+                [f'{cls}: {count / total * 100:.2f}%' for cls, count in class_counts.items()]
+            )
+            set_info(f'Соотношение классов для профиля {get_profile_name()}: {class_percentages}', 'blue')
 
         pd.set_option('display.max_columns', None)
         print('working_data_result ', working_data_result)
@@ -1553,6 +1563,14 @@ def calc_object_class():
         working_data_result['mark'] = mark
         if 'TORCH' in model.title:
             working_data_result['mark'] = working_data_result['mark'].map(labels_dict)
+        mark_list = working_data_result['mark'].tolist()
+        if mark_list:
+            class_counts = Counter(mark_list)
+            total = len(mark_list)
+            class_percentages = ', '.join(
+                [f'{cls}: {count / total * 100:.2f}%' for cls, count in class_counts.items()]
+            )
+            set_info(f'Соотношение классов для объекта {get_object_name()}: {class_percentages}', 'blue')
         print('working_data_result ', working_data_result)
 
         x = list(working_data_result['x_pulc'])
@@ -2243,7 +2261,5 @@ def markup_to_excel_mlp():
                 width=column_widths.get(col_name, 15),  # 15 - ширина по умолчанию
                 cell_format=cell_format
             )
-
-
 
 
