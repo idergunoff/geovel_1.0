@@ -692,6 +692,65 @@ def all_profile_wells_to_Excel():
             )
 
 
+def wells_to_excel():
+    """Выгрузка данных скважин и связанных таблиц в Excel."""
+    base_columns = ['Номер скважины', 'X', 'Y', 'Альтитуда', 'Кол-во каротажей', 'Кривые каротажа']
+    records = []
+    dynamic_columns = set()
+
+    set_info('Начало выгрузки данных скважин в Excel...', 'blue')
+    wells = session.query(Well).all()
+    for well in wells:
+        row = {
+            'Номер скважины': well.name,
+            'X': well.x_coord,
+            'Y': well.y_coord,
+            'Альтитуда': well.alt,
+            'Кол-во каротажей': len(well.well_logs),
+            'Кривые каротажа': ', '.join(
+                [log.curve_name for log in well.well_logs if log.curve_name]
+            )
+        }
+
+        for boundary in well.boundaries:
+            column_name = boundary.title or 'depth'
+            if column_name in base_columns:
+                column_name = f'Граница: {column_name}'
+            dynamic_columns.add(column_name)
+            if column_name in row and row[column_name]:
+                row[column_name] = f"{row[column_name]}; {boundary.depth}"
+            else:
+                row[column_name] = boundary.depth
+
+        for option in well.well_optionally:
+            column_name = option.option or 'option'
+            if column_name in base_columns:
+                column_name = f'Опция: {column_name}'
+            dynamic_columns.add(column_name)
+            if column_name in row and row[column_name]:
+                row[column_name] = f"{row[column_name]}; {option.value}"
+            else:
+                row[column_name] = option.value
+
+        records.append(row)
+
+    df_wells = pd.DataFrame(records, columns=base_columns + sorted(dynamic_columns))
+    set_info('Выгрузка данных скважин завершена', 'blue')
+
+    file_name = QFileDialog.getSaveFileName(
+        None,
+        'Сохранить данные скважин',
+        '',
+        'Excel Files (*.xlsx)'
+    )[0]
+    if not file_name:
+        return
+    if not file_name.lower().endswith('.xlsx'):
+        file_name += '.xlsx'
+
+    df_wells.to_excel(file_name, index=False)
+
+
 
 def deduplicate_wells(session, distance_threshold: float = 5.0,
                       name_ratio: float = 0.5) -> None:
