@@ -700,7 +700,9 @@ def wells_to_excel():
 
     set_info('Начало выгрузки данных скважин в Excel...', 'blue')
     wells = session.query(Well).all()
-    for well in wells:
+    ui.progressBar.setMaximum(len(wells))
+    for n, well in enumerate(wells):
+        ui.progressBar.setValue(n + 1)
         row = {
             'Номер скважины': well.name,
             'X': well.x_coord,

@@ -1426,6 +1426,20 @@ def _format_min_class_distances(points):
     return 'Минимальное расстояние до обучающих скважин по классам: ' + ', '.join(parts)
 
 
+def calc_object_training_well_distances_mlp():
+    """Показать минимальные расстояния до обучающих скважин по классам для текущего объекта."""
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    points = []
+    for profile in profiles:
+        if not profile.x_pulc or not profile.y_pulc:
+            continue
+        points.extend(zip(json.loads(profile.x_pulc), json.loads(profile.y_pulc)))
+    if not points:
+        set_info('Нет координат x_pulc/y_pulc для расчета расстояний до обучающих скважин', 'red')
+        return
+    set_info(_format_min_class_distances(points), 'blue')
+
+
 def calc_object_class():
     """ Расчет объекта по модели """
     global flag_break

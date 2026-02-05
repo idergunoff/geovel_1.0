@@ -50,6 +50,20 @@ def _format_min_reg_distance(points, scope):
     return f'Минимальное расстояние до обучающей скважины для {scope}: {min_dist:.2f}'
 
 
+def calc_object_training_well_distance_regmod():
+    """Показать минимальное расстояние до обучающей скважины для текущего объекта."""
+    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    points = []
+    for profile in profiles:
+        if not profile.x_pulc or not profile.y_pulc:
+            continue
+        points.extend(zip(json.loads(profile.x_pulc), json.loads(profile.y_pulc)))
+    if not points:
+        set_info('Нет координат x_pulc/y_pulc для расчета расстояния до обучающей скважины', 'red')
+        return
+    set_info(_format_min_reg_distance(points, f'объекта {get_object_name()}'), 'blue')
+
+
 """ Структура модели PyTorch """
 class RegressionModel(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):

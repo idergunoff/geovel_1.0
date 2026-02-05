@@ -30,11 +30,12 @@ from noise import *
 from slice import *
 from calc_object_models import *
 
-
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()
 MainWindow.resize(m_width - 100, m_height - 200)
+
+
 
 
 def mouse_moved_to_signal(evt):
@@ -151,6 +152,7 @@ ui.pushButton_rem_bound.clicked.connect(remove_boundary)
 ui.pushButton_prof_wells_excel.clicked.connect(profile_wells_to_Excel)
 ui.pushButton_all_prof_wells_excel.clicked.connect(all_profile_wells_to_Excel)
 ui.pushButton_rem_dupl_wells.clicked.connect(remove_duplicate_wells)
+ui.pushButton_wells_to_excel.clicked.connect(wells_to_excel)
 
 
 ui.pushButton_color.clicked.connect(change_color)
@@ -220,6 +222,7 @@ ui.pushButton_pareto.clicked.connect(pareto_start)
 ui.pushButton_mask_param.clicked.connect(mask_param_form)
 ui.toolButton_rm_well_fake.clicked.connect(remove_fake_current_markup)
 ui.toolButton_cls_upgrade_model.clicked.connect(cls_model_prediction_upgrade)
+ui.toolButton_dist_well.clicked.connect(calc_object_training_well_distances_mlp)
 
 # torch
 ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
@@ -265,6 +268,7 @@ ui.pushButton_reg_add_param_list.clicked.connect(add_param_list_reg)
 ui.pushButton_add_all_well_regmod.clicked.connect(add_all_well_markup_reg)
 ui.toolButton_excel_markup_reg.clicked.connect(markup_to_excel_reg)
 ui.checkBox_sort_reg_markup.clicked.connect(sorting_markup_regmod)
+ui.toolButton_dist_well_reg.clicked.connect(calc_object_training_well_distance_regmod)
 
 
 ui.comboBox_regmod.activated.connect(update_list_well_markup_reg)
@@ -532,6 +536,8 @@ ui.pushButton_noise_profile.clicked.connect(check_noise_profile)
 ui.pushButton_noise_object.clicked.connect(check_noise_object)
 
 ui.pushButton_check_land.clicked.connect(check_land)
+
+############## QC ################
 
 
 time = datetime.datetime.now()
