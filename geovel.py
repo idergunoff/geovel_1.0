@@ -29,6 +29,7 @@ from filter_well import *
 from noise import *
 from slice import *
 from calc_object_models import *
+from cluster import *
 
 MainWindow.show()
 
@@ -539,6 +540,10 @@ ui.pushButton_check_land.clicked.connect(check_land)
 
 ############## QC ################
 
+############# CLUSTER ############
+ui.pushButton_clust_add_cls.clicked.connect(add_clust_analys_from_cls)
+ui.pushButton_clust_add_reg.clicked.connect(add_clust_analys_from_reg)
+ui.comboBox_clust_set.activated.connect(update_list_clust_param)
 
 time = datetime.datetime.now()
 
@@ -579,7 +584,7 @@ update_list_velocity_model()
 update_list_model_prediction()
 update_list_bind_vel_prediction()
 index_prod_list_update()
-
+update_list_clust_analys()
 
 
 time2 = datetime.datetime.now() - time

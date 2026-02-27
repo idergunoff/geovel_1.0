@@ -40,6 +40,7 @@ class Research(Base):
     object = relationship('GeoradarObject', back_populates='researches')
     profiles = relationship('Profile', back_populates='research')
     index_productivity = relationship('IndexProductivity', back_populates='research')
+    cluster_set = relationship('ObjectSet', back_populates='research')
 
 
 class Profile(Base):

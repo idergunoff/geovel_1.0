@@ -348,7 +348,11 @@ def save_image():
             final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
                                       len(combined_images), bottom_break, bottom_comb)
 
-        save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
+        save_path, _ = QFileDialog.getSaveFileName(
+            MainWindow,
+            caption='Сохранить изображение',
+            directory=get_profile_name(),
+            filter='PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
@@ -452,7 +456,11 @@ def save_image():
             # количество частей изображения, индексы по высоте изображения для проставления меток.
             final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
                                       len(images), bottom_break)
-        save_path, _ = QFileDialog.getSaveFileName(None, 'Сохранить изображение', '', 'PNG (*.png)')
+        save_path, _ = QFileDialog.getSaveFileName(
+            MainWindow,
+            caption='Сохранить изображение',
+            directory=get_profile_name(),
+            filter='PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
@@ -837,7 +845,9 @@ def draw_relief():
                         predict = savgol_line(json.loads(predict.corrected[0].correct), filter_nn)
                     else:
                         predict = savgol_line(json.loads(predict.prediction), filter_nn)
+
                     line_nn = [(layer[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer))]
+                    line_nn = [line_nn[i] if line_nn[i] > line[i] else line[i] for i in range(len(line))]
                     curve_nn = pg.PlotCurveItem(x=x, y=line_nn, pen=pg.mkPen(width=2))
                     radarogramma.addItem(curve_nn)
                     globals()[f'curve_fake_{n}_nn'] = curve_nn
@@ -977,6 +987,7 @@ def draw_profile_model_prediction():
                 else:
                     predict = savgol_line(json.loads(predict.prediction), filter_nn)
                 list_down = [(layer_up[i] + depth_relief[i] + predict[i]) / (l_max / 512) for i in range(len(layer_up))]
+                list_down = [list_down[i] if list_down[i] > list_up[i] else list_up[i] for i in range(len(list_down))]
         else:
             deep_signal = calc_deep_predict_current_profile()
             l_max = 0
@@ -1003,6 +1014,7 @@ def draw_profile_model_prediction():
 
                 predict_layer = savgol_line(json.loads(bindings[0].prediction.prediction), 175)
                 list_down = [(predict_layer[i] + predict[i]) / (l_max / 512) for i in range(len(predict))]
+                list_down = [list_down[i] if list_down[i] > list_up[i] else list_up[i] for i in range(len(list_down))]
 
         previous_element = None
         list_dupl = []
