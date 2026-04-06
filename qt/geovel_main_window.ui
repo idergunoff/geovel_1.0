@@ -5208,6 +5208,45 @@ Therm</string>
                     </widget>
                    </item>
                    <item row="2" column="0">
+                    <widget class="QRadioButton" name="radioButton_clust_clean_nan_row">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>drop_rows</string>
+                     </property>
+                     <attribute name="buttonGroup">
+                      <string notr="true">buttonGroup_3</string>
+                     </attribute>
+                    </widget>
+                   </item>
+                   <item row="3" column="0">
+                    <widget class="QRadioButton" name="radioButton_clust_clean_nan_col">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>drop_features</string>
+                     </property>
+                     <attribute name="buttonGroup">
+                      <string notr="true">buttonGroup_3</string>
+                     </attribute>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QRadioButton" name="radioButton_clust_clean_nan_impute">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>impute</string>
+                     </property>
+                     <attribute name="buttonGroup">
+                      <string notr="true">buttonGroup_3</string>
+                     </attribute>
+                    </widget>
+                   </item>
+                   <item row="5" column="0">
                     <widget class="QCheckBox" name="checkBox_clust_clear_vartresh">
                      <property name="toolTip">
                       <string>удаление почти константных признаков</string>
@@ -5217,20 +5256,20 @@ Therm</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="2" column="1">
-                    <widget class="QRadioButton" name="radioButton_clust_scaler_stnd">
-                     <property name="text">
-                      <string>Standart</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="3" column="0">
+                   <item row="6" column="0">
                     <widget class="QCheckBox" name="checkBox_clust_clear_corr">
                      <property name="toolTip">
                       <string>Удаление сильно коррелированных признаков</string>
                      </property>
                      <property name="text">
                       <string>Corr</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QRadioButton" name="radioButton_clust_scaler_stnd">
+                     <property name="text">
+                      <string>Standart</string>
                      </property>
                     </widget>
                    </item>
@@ -5243,19 +5282,6 @@ Therm</string>
                       <bool>true</bool>
                      </property>
                     </widget>
-                   </item>
-                   <item row="4" column="0" rowspan="2">
-                    <spacer name="verticalSpacer_2">
-                     <property name="orientation">
-                      <enum>Qt::Vertical</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>20</width>
-                       <height>50</height>
-                      </size>
-                     </property>
-                    </spacer>
                    </item>
                    <item row="4" column="1">
                     <widget class="QRadioButton" name="radioButton_clust_scaler_l2">
@@ -6472,7 +6498,8 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>

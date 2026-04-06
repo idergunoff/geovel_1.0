@@ -115,7 +115,13 @@ rainbow_colors15 = [
 
 # Функция добавления информации в окно информации с указанием времени и цвета текста
 def set_info(text, color):
-    ui.info.append(f'{datetime.datetime.now().strftime("%H:%M:%S")}:\t<span style ="color:{color};" >{text}</span>')
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    # Вариант 1: &nbsp; для отступа
+    html = f'<br>{timestamp}:&nbsp;&nbsp;<span style="color:{color};">{text}</span>'
+    ui.info.insertHtml(html)
+    # 🔽 Прокрутка вниз
+    scrollbar = ui.info.verticalScrollBar()
+    scrollbar.setValue(scrollbar.maximum())
 
 
 # Функция получения id выбранного объекта

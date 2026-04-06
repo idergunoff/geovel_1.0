@@ -311,7 +311,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
     if analisis == 'mlp':
         if not model:
             model = session.query(TrainedModelClass).filter_by(id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
-        list_param, analisis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
+        list_param, analysis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
                                                                  model.except_signal, model.except_crl)
         list_except_signal, list_except_crl = parse_range_exception(except_signal), parse_range_exception(except_crl)
         list_except_signal = [] if list_except_signal == -1 else list_except_signal
@@ -319,11 +319,16 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
     elif analisis == 'regmod':
         if not model:
             model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
-        list_param, analisis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
+        list_param, analysis_title, except_signal, except_crl = (json.loads(model.list_params), model.title,
                                                                  model.except_signal, model.except_crl)
         list_except_signal, list_except_crl = parse_range_exception(except_signal), parse_range_exception(except_crl)
         list_except_signal = [] if list_except_signal == -1 else list_except_signal
         list_except_crl = [] if list_except_crl == -1 else list_except_crl
+    elif analisis == 'cluster':
+
+        cluster_analysis = session.query(AnalysisCluster).filter_by(id=ui.comboBox_clust_set.currentText().split(' id')[-1]).first()
+        list_param = json.loads(cluster_analysis.parameter)
+        analysis_title = f'Cluster {cluster_analysis.title}'
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     if not curr_form:
         curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
@@ -469,7 +474,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
                 locals()[f'list_{param}'] = json.loads(getattr(curr_form, param))
 
     ui.progressBar.setMaximum(len(list_up))
-    set_info(f'Процесс сбора параметров {analisis_title} по профилю {curr_form.profile.title}',
+    set_info(f'Процесс сбора параметров {analysis_title} по профилю {curr_form.profile.title}',
              'blue')
     for i in tqdm(range(len(list_up))):
         dict_value = {}
