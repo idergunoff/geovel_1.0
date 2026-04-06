@@ -121,7 +121,7 @@ def remove_mlp():
         for model in session.query(TrainedModelClass).filter_by(analysis_id=get_MLP_id()).all():
             os.remove(model.path_model)
             session.delete(model)
-        session.query(ParetoAnalysis).filter_by(analysis_id=get_MLP_id()).delete()
+        session.query(ParetoAnalysis).filter_by(analysis_mlp_id=get_MLP_id()).delete()
         session.query(GeneticAlgorithmCLS).filter_by(analysis_id=get_MLP_id()).delete()
         session.query(AnalysisMLP).filter_by(id=get_MLP_id()).delete()
         session.commit()

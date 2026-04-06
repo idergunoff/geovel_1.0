@@ -29,6 +29,7 @@ from filter_well import *
 from noise import *
 from slice import *
 from calc_object_models import *
+from cluster import *
 
 MainWindow.show()
 
@@ -165,7 +166,7 @@ ui.pushButton_slide.clicked.connect(slide_average)
 radarogramma.sigRangeChanged.connect(on_range_changed)
 ui.checkBox_black_white.clicked.connect(change_background)
 
-ui.pushButton_test.clicked.connect(draw_max_min)
+ui.pushButton_test.clicked.connect(calc_object_cluster)
 
 #   mlp
 ui.pushButton_add_mlp.clicked.connect(add_mlp)
