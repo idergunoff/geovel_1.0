@@ -268,6 +268,10 @@ def add_profile_mlp():
     AddProfClass.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
+    if form is None:
+        set_info('Ошибка!!! Выберите пласт!', 'red')
+        AddProfClass.close()
+        return
     ui_apc.spinBox_from.setMaximum(len(json.loads(form.T_top)))
     ui_apc.spinBox_to.setMaximum(len(json.loads(form.T_top)))
     ui_apc.spinBox_from.setValue(0)

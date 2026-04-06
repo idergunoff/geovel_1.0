@@ -10,6 +10,7 @@ import chardet
 
 from models_db.model import *
 from models_db.model_profile_features import *
+from models_db.model_cluster import *
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
