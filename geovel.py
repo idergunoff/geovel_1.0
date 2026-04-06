@@ -541,9 +541,17 @@ ui.pushButton_check_land.clicked.connect(check_land)
 ############## QC ################
 
 ############# CLUSTER ############
+ui.pushButton_clust_calc.clicked.connect(calculate_cluster)
 ui.pushButton_clust_add_cls.clicked.connect(add_clust_analys_from_cls)
 ui.pushButton_clust_add_reg.clicked.connect(add_clust_analys_from_reg)
+ui.pushButton_clust_del_set.clicked.connect(remove_clust_analys)
+ui.pushButton_clust_collect_obj.clicked.connect(collect_clust_object)
+ui.pushButton_clust_rm_obj.clicked.connect(remove_clust_object)
 ui.comboBox_clust_set.activated.connect(update_list_clust_param)
+ui.comboBox_clust_set.activated.connect(update_list_clust_object)
+ui.comboBox_clust_obj.activated.connect(show_finite_report)
+ui.checkBox_clust_clean_nan.clicked.connect(update_clust_clear_nan)
+
 
 time = datetime.datetime.now()
 
@@ -585,6 +593,7 @@ update_list_model_prediction()
 update_list_bind_vel_prediction()
 index_prod_list_update()
 update_list_clust_analys()
+update_list_clust_object()
 
 
 time2 = datetime.datetime.now() - time

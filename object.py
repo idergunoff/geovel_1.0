@@ -127,13 +127,14 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.feature_selection import SelectKBest, f_regression, chi2, mutual_info_classif
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.cluster import KMeans
+import hdbscan
 
 from boruta import BorutaPy
 from collections import defaultdict
