@@ -988,6 +988,7 @@ def calculate_cluster():
     clust_analys_id = get_curr_clust_analys_id()
     clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
     data = json.loads(clust_object.data)
+    raw_meta = np.array(data, dtype=object)[:, 0] if data else np.array([])
     selected_button = ui.buttonGroup_3.checkedButton()
 
     text_method_nan = selected_button.text() if selected_button else 'impute'
@@ -1066,6 +1067,59 @@ def calculate_cluster():
         gmm_covariance_type=gmm_type
     )
 
+    profile_labels = {}
+    invalid_prof_index_count = 0
+    duplicate_prof_index_count = 0
+
+    if len(label_list) != len(kept_row_indices):
+        set_info(
+            f'Внимание: размер labels ({len(label_list)}) не совпадает с числом сохраненных строк '
+            f'({len(kept_row_indices)}). Построение профилей выполнено частично.',
+            'brown'
+        )
+
+    for clean_row_idx, label in enumerate(label_list):
+        if clean_row_idx >= len(kept_row_indices):
+            break
+
+        source_row_idx = kept_row_indices[clean_row_idx]
+        if source_row_idx >= len(raw_meta):
+            invalid_prof_index_count += 1
+            continue
+
+        prof_index_value = str(raw_meta[source_row_idx])
+        if "_" not in prof_index_value:
+            invalid_prof_index_count += 1
+            continue
+
+        profile_part, trace_part = prof_index_value.rsplit("_", 1)
+        try:
+            profile_id = int(profile_part)
+            trace_index = int(trace_part)
+        except ValueError:
+            invalid_prof_index_count += 1
+            continue
+
+        if profile_id not in profile_labels:
+            profile_labels[profile_id] = {}
+
+        if trace_index in profile_labels[profile_id]:
+            duplicate_prof_index_count += 1
+
+        profile_labels[profile_id][trace_index] = int(label)
+
+    if invalid_prof_index_count:
+        set_info(
+            f'Внимание: пропущено строк с некорректным prof_index: {invalid_prof_index_count}.',
+            'brown'
+        )
+    if duplicate_prof_index_count:
+        set_info(
+            f'Внимание: обнаружены дубликаты (profile_id, trace_index): {duplicate_prof_index_count}. '
+            f'Использованы последние метки.',
+            'brown'
+        )
+
     plot_cluster_map(label_list, data)
 
     print(label_list)
@@ -1121,7 +1175,7 @@ def calculate_cluster():
     )
     save_cluster_profile_cache(
         analysis_key=analysis_key,
-        profile_labels={},  # Заполняется на этапе 3, сейчас создаем структуру и мета-информацию.
+        profile_labels=profile_labels,
         meta={
             "method": clust_method_analys,
             "n_points": len(label_list),
@@ -1130,6 +1184,5 @@ def calculate_cluster():
             "clust_analys_id": int(clust_analys_id),
         }
     )
-
 
 
