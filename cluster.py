@@ -339,6 +339,7 @@ def clean_features(
 ):
     # список -> numpy
     X = np.array(data, dtype=float)
+    kept_row_indices = list(range(X.shape[0]))
 
     # --------------------------------------------------
     # 1 удалить первые 3 столбца
@@ -361,6 +362,7 @@ def clean_features(
 
             mask = ~np.isnan(X).any(axis=1)
             X = X[mask]
+            kept_row_indices = np.array(kept_row_indices)[mask].tolist()
 
         elif non_finite_mode == "drop_features":
 
@@ -385,7 +387,7 @@ def clean_features(
             X = selector.fit_transform(X)
         except ValueError:
             set_info('Внимание!!! Недопустимые значения! Включите обработку "Nan / Inf".', 'red')
-            return
+            return None, []
 
     # --------------------------------------------------
     # 4 удаление коррелированных признаков
@@ -408,7 +410,7 @@ def clean_features(
 
         X = X[:, keep]
 
-    return X.tolist()
+    return X.tolist(), kept_row_indices
 
 
 def preprocess_features(data, mode="none"):
@@ -989,7 +991,7 @@ def calculate_cluster():
     selected_button = ui.buttonGroup_3.checkedButton()
 
     text_method_nan = selected_button.text() if selected_button else 'impute'
-    clear_data = clean_features(
+    clear_data, kept_row_indices = clean_features(
         data=data,
         use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
         non_finite_mode=text_method_nan,
@@ -999,6 +1001,9 @@ def calculate_cluster():
     if clear_data:
         print('Before: ', len(data), len(data[0]))
         print('After: ', len(clear_data), len(clear_data[0]))
+        print('Rows kept after cleaning: ', len(kept_row_indices))
+    else:
+        return
 
     if ui.radioButton_clust_scaler_none.isChecked():
         preprocess_mode = 'none'
@@ -1125,8 +1130,6 @@ def calculate_cluster():
             "clust_analys_id": int(clust_analys_id),
         }
     )
-
-
 
 
 
