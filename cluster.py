@@ -1,7 +1,59 @@
 import pandas as pd
+from datetime import datetime, timezone
 
 import build_table
 from func import *
+
+# Runtime-cache результатов кластеризации для быстрой перерисовки по профилям без пересчета.
+# Этап 1 (MVP): ключ анализа = id ObjectSet (clust_object_id).
+cluster_profile_cache = {}
+
+
+def build_cluster_analysis_key(
+        clust_object_id=None,
+        clust_analys_id=None,
+        *,
+        method=None,
+        preprocess_mode=None,
+        pca_enabled=None,
+        pca_mode=None,
+        pca_value=None,
+        extra_params=None
+):
+    """
+    Формирует ключ cache-записи.
+    MVP-режим: используем только clust_object_id (перезапись по повторному CALC допустима).
+    """
+    if clust_object_id is None:
+        raise ValueError("clust_object_id is required for cluster cache key")
+    return str(clust_object_id)
+
+
+def save_cluster_profile_cache(analysis_key, profile_labels, meta=None):
+    """
+    Сохраняет результаты кластеризации в runtime-cache.
+    """
+    cluster_profile_cache[analysis_key] = {
+        "profile_labels": profile_labels or {},
+        "meta": meta or {}
+    }
+
+
+def get_cluster_profile_cache(analysis_key):
+    """
+    Возвращает cache-запись по ключу анализа.
+    """
+    return cluster_profile_cache.get(analysis_key)
+
+
+def get_last_cluster_profile_cache():
+    """
+    Возвращает последнюю добавленную cache-запись (если есть).
+    """
+    if not cluster_profile_cache:
+        return None
+    last_key = next(reversed(cluster_profile_cache))
+    return cluster_profile_cache[last_key]
 
 
 def update_clust_clear_nan():
@@ -930,7 +982,9 @@ def build_clustering_report(
 
 
 def calculate_cluster():
-    clust_object = session.query(ObjectSet).filter_by(id=get_curr_clust_object_id()).first()
+    clust_object_id = get_curr_clust_object_id()
+    clust_analys_id = get_curr_clust_analys_id()
+    clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
     data = json.loads(clust_object.data)
     selected_button = ui.buttonGroup_3.checkedButton()
 
@@ -1042,6 +1096,35 @@ def calculate_cluster():
 
     set_info(text, 'blue')
 
+    analysis_key = build_cluster_analysis_key(
+        clust_object_id=clust_object_id,
+        clust_analys_id=clust_analys_id,
+        method=clust_method_analys,
+        preprocess_mode=preprocess_mode,
+        pca_enabled=ui.checkBox_cluster_pca.isChecked(),
+        pca_mode=mode_pca,
+        pca_value=(n_comp_pca if mode_pca == "fixed_components" else disp_pca if mode_pca else None),
+        extra_params={
+            "kmeans_n": kmeans_n,
+            "kmeans_n_init": kmeans_n_init,
+            "hdbscan_min_cluster_size": hdbsc_min_size,
+            "hdbscan_min_samples": hdbsc_min_sample,
+            "hdbscan_metric": hdbsc_type,
+            "gmm_n_components": gmm_n,
+            "gmm_covariance_type": gmm_type,
+        }
+    )
+    save_cluster_profile_cache(
+        analysis_key=analysis_key,
+        profile_labels={},  # Заполняется на этапе 3, сейчас создаем структуру и мета-информацию.
+        meta={
+            "method": clust_method_analys,
+            "n_points": len(label_list),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "clust_object_id": int(clust_object_id),
+            "clust_analys_id": int(clust_analys_id),
+        }
+    )
 
 
 
