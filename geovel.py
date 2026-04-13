@@ -166,7 +166,7 @@ ui.pushButton_slide.clicked.connect(slide_average)
 radarogramma.sigRangeChanged.connect(on_range_changed)
 ui.checkBox_black_white.clicked.connect(change_background)
 
-ui.pushButton_test.clicked.connect(calc_object_cluster)
+ui.pushButton_test.clicked.connect(calculate_cluster)
 
 #   mlp
 ui.pushButton_add_mlp.clicked.connect(add_mlp)

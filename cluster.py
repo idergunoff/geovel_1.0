@@ -1376,7 +1376,7 @@ def calculate_cluster():
         meta={
             "method": clust_method_analys,
             "n_points": len(label_list),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.datetime.now(timezone.utc).isoformat(),
             "clust_object_id": int(clust_object_id),
             "clust_analys_id": int(clust_analys_id),
         }
