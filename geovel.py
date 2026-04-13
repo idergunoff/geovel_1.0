@@ -308,6 +308,7 @@ ui.comboBox_profile.currentTextChanged.connect(update_list_binding)
 ui.comboBox_profile.currentTextChanged.connect(update_list_velocity_model)
 ui.comboBox_profile.activated.connect(calc_add_features_profile)
 ui.comboBox_profile.activated.connect(calc_profile_features)
+ui.comboBox_profile.activated.connect(redraw_cluster_for_current_profile_from_cache)
 ui.comboBox_profile.currentTextChanged.connect(update_list_bind_vel_prediction)
 ui.comboBox_profile.currentTextChanged.connect(index_prod_list_update)
 

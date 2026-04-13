@@ -7,6 +7,7 @@ from func import *
 # Runtime-cache результатов кластеризации для быстрой перерисовки по профилям без пересчета.
 # Этап 1 (MVP): ключ анализа = id ObjectSet (clust_object_id).
 cluster_profile_cache = {}
+is_cluster_redraw_in_progress = False
 
 
 def build_cluster_analysis_key(
@@ -54,6 +55,47 @@ def get_last_cluster_profile_cache():
         return None
     last_key = next(reversed(cluster_profile_cache))
     return cluster_profile_cache[last_key]
+
+
+def redraw_cluster_for_current_profile_from_cache():
+    """
+    Перерисовывает кластерную заливку для текущего профиля из runtime-cache без пересчета cluster_data.
+    """
+    global is_cluster_redraw_in_progress
+    if is_cluster_redraw_in_progress:
+        return
+
+    is_cluster_redraw_in_progress = True
+    try:
+        current_profile_id = get_profile_id()
+        if not current_profile_id:
+            return
+
+        cache_entry = None
+        clust_object_id = get_curr_clust_object_id()
+        if clust_object_id:
+            analysis_key = build_cluster_analysis_key(clust_object_id=clust_object_id)
+            cache_entry = get_cluster_profile_cache(analysis_key)
+
+        if cache_entry is None:
+            cache_entry = get_last_cluster_profile_cache()
+
+        if cache_entry is None:
+            set_info("Нет кэша кластеризации. Сначала выполните CALC в модуле Cluster.", "brown")
+            return
+
+        profile_labels = cache_entry.get("profile_labels", {})
+        if current_profile_id not in profile_labels:
+            set_info("Для текущего профиля нет кластерных меток в кэше.", "brown")
+            return
+
+        draw_cluster_profile_result(
+            profile_id=current_profile_id,
+            profile_labels=profile_labels,
+            use_relief=True
+        )
+    finally:
+        is_cluster_redraw_in_progress = False
 
 
 def get_cluster_color(label):
