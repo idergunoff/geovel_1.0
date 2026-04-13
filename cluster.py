@@ -56,6 +56,116 @@ def get_last_cluster_profile_cache():
     return cluster_profile_cache[last_key]
 
 
+def get_cluster_color(label):
+    """
+    Возвращает цвет кластера:
+    -1 -> серый (шум), остальные -> циклическая палитра.
+    """
+    if int(label) == -1:
+        return "#808080"
+
+    palette = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        "#393b79", "#637939", "#8c6d31", "#843c39", "#7b4173"
+    ]
+    return palette[int(label) % len(palette)]
+
+
+def draw_cluster_profile_result(profile_id: int, profile_labels: dict, *, use_relief=True):
+    """
+    Отрисовывает кластерные сегменты на радарограмме выбранного профиля.
+    profile_labels: {profile_id: {trace_index: label}}
+    """
+    from draw import draw_fill_result, remove_poly_item
+
+    profile = session.query(Profile).filter_by(id=profile_id).first()
+    if not profile:
+        set_info(f"Профиль id{profile_id} не найден. Отрисовка кластеров отменена.", "brown")
+        return
+
+    formation_id = get_formation_id()
+    current_formation = None
+    if formation_id:
+        current_formation = session.query(Formation).filter_by(id=formation_id, profile_id=profile_id).first()
+    if not current_formation and profile.formations:
+        current_formation = profile.formations[0]
+
+    if not current_formation:
+        set_info("Не выбрана формация для отрисовки кластеров.", "brown")
+        return
+    if not current_formation.layer_up or not current_formation.layer_down:
+        set_info("Для формации отсутствуют границы (layer_up/layer_down).", "brown")
+        return
+    if not current_formation.layer_up.layer_line or not current_formation.layer_down.layer_line:
+        set_info("Для формации отсутствуют линии границ. Отрисовка кластеров пропущена.", "brown")
+        return
+
+    list_up = json.loads(current_formation.layer_up.layer_line)
+    list_down = json.loads(current_formation.layer_down.layer_line)
+
+    if use_relief and ui.checkBox_relief.isChecked() and profile.depth_relief:
+        depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+        coeff = 512 / (512 + np.max(depth))
+        list_up = [int((x + y) * coeff) for x, y in zip(list_up, depth)]
+        list_down = [int((x + y) * coeff) for x, y in zip(list_down, depth)]
+
+    trace_to_label = profile_labels.get(profile_id, {})
+    if not trace_to_label:
+        set_info("Для текущего профиля нет кластерных меток в кэше.", "brown")
+        return
+
+    count_measure = len(json.loads(profile.signal)) if profile.signal else 0
+    max_len = min(count_measure, len(list_up), len(list_down))
+    if max_len <= 0:
+        set_info("Недостаточно данных для отрисовки кластеров по профилю.", "brown")
+        return
+
+    labels_sequence = [trace_to_label.get(i) for i in range(max_len)]
+
+    remove_poly_item()
+
+    segment_indices = []
+    segment_label = None
+
+    def flush_segment(indices, label):
+        if not indices or label is None:
+            return
+        x_seg = list(indices)
+        if x_seg[-1] + 1 < max_len:
+            x_seg.append(x_seg[-1] + 1)
+        y_up = [list_up[i] for i in x_seg]
+        y_down = [list_down[i] for i in x_seg]
+        draw_fill_result(x_seg, y_up, y_down, get_cluster_color(label))
+
+    for idx, label in enumerate(labels_sequence):
+        if label is None:
+            flush_segment(segment_indices, segment_label)
+            segment_indices = []
+            segment_label = None
+            continue
+
+        if segment_label is None:
+            segment_indices = [idx]
+            segment_label = label
+            continue
+
+        if label == segment_label:
+            segment_indices.append(idx)
+        else:
+            flush_segment(segment_indices, segment_label)
+            segment_indices = [idx]
+            segment_label = label
+
+    flush_segment(segment_indices, segment_label)
+
+    set_info(
+        f"Кластеры отрисованы на профиле {profile.title}: "
+        f"{len([i for i in labels_sequence if i is not None])} трасс с метками.",
+        "blue"
+    )
+
+
 def update_clust_clear_nan():
     is_checked = ui.checkBox_clust_clean_nan.isChecked()
 
@@ -1185,4 +1295,10 @@ def calculate_cluster():
         }
     )
 
-
+    current_profile_id = get_profile_id()
+    if current_profile_id:
+        draw_cluster_profile_result(
+            profile_id=current_profile_id,
+            profile_labels=profile_labels,
+            use_relief=True
+        )
