@@ -76,12 +76,27 @@ def redraw_cluster_for_current_profile_from_cache():
         if clust_object_id:
             analysis_key = build_cluster_analysis_key(clust_object_id=clust_object_id)
             cache_entry = get_cluster_profile_cache(analysis_key)
+            if cache_entry is None and cluster_profile_cache:
+                set_info(
+                    "Кэш кластеризации устарел для текущего ObjectSet. "
+                    "Выберите актуальный набор и нажмите CALC.",
+                    "brown"
+                )
+                return
 
-        if cache_entry is None:
+        if cache_entry is None and not clust_object_id:
             cache_entry = get_last_cluster_profile_cache()
 
         if cache_entry is None:
             set_info("Нет кэша кластеризации. Сначала выполните CALC в модуле Cluster.", "brown")
+            return
+
+        meta = cache_entry.get("meta", {})
+        if clust_object_id and meta.get("clust_object_id") not in (None, int(clust_object_id)):
+            set_info(
+                "Кэш кластеризации относится к другому ObjectSet. Нажмите CALC для пересчета.",
+                "brown"
+            )
             return
 
         profile_labels = cache_entry.get("profile_labels", {})
@@ -112,6 +127,29 @@ def get_cluster_color(label):
         "#393b79", "#637939", "#8c6d31", "#843c39", "#7b4173"
     ]
     return palette[int(label) % len(palette)]
+
+
+def build_cluster_legend(profile_labels, max_items=10):
+    """
+    Возвращает короткую легенду по цветам кластеров для set_info.
+    """
+    labels = set()
+    for trace_to_label in (profile_labels or {}).values():
+        labels.update(trace_to_label.values())
+
+    labels_sorted = sorted(labels, key=lambda x: (int(x) == -1, int(x)))
+    if not labels_sorted:
+        return "Легенда кластеров недоступна: метки отсутствуют."
+
+    legend_items = []
+    for label in labels_sorted[:max_items]:
+        label_int = int(label)
+        title = "noise" if label_int == -1 else f"cluster {label_int}"
+        legend_items.append(f"{title} = {get_cluster_color(label_int)}")
+
+    if len(labels_sorted) > max_items:
+        legend_items.append(f"... +{len(labels_sorted) - max_items} кластер(ов)")
+    return "Легенда: " + ", ".join(legend_items)
 
 
 def draw_cluster_profile_result(profile_id: int, profile_labels: dict, *, use_relief=True):
@@ -161,6 +199,13 @@ def draw_cluster_profile_result(profile_id: int, profile_labels: dict, *, use_re
     max_len = min(count_measure, len(list_up), len(list_down))
     if max_len <= 0:
         set_info("Недостаточно данных для отрисовки кластеров по профилю.", "brown")
+        return
+    if len(trace_to_label) > max_len:
+        set_info(
+            f"Размер меток ({len(trace_to_label)}) превышает ожидаемое число трасс ({max_len}) "
+            f"для профиля {profile.title}. Перерисовка отменена.",
+            "brown"
+        )
         return
 
     labels_sequence = [trace_to_label.get(i) for i in range(max_len)]
@@ -1336,6 +1381,11 @@ def calculate_cluster():
             "clust_analys_id": int(clust_analys_id),
         }
     )
+    set_info(
+        "Кластеризация рассчитана. Теперь доступна мгновенная перерисовка по профилям без повторного CALC.",
+        "green"
+    )
+    set_info(build_cluster_legend(profile_labels), "blue")
 
     current_profile_id = get_profile_id()
     if current_profile_id:
