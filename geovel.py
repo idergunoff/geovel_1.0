@@ -555,6 +555,7 @@ ui.checkBox_clust_clean_nan.clicked.connect(update_clust_clear_nan)
 ui.pushButton_clust_prev_prof.clicked.connect(draw_prev_cluster_profile)
 ui.pushButton_clust_next_prof.clicked.connect(draw_next_cluster_profile)
 ui.pushButton_clust_auto.clicked.connect(calculate_cluster_auto)
+ui.tableWidget_cluster_auto_result.cellDoubleClicked.connect(apply_selected_auto_result_from_table)
 
 
 time = datetime.datetime.now()
