@@ -51,6 +51,9 @@ class CandidateResult(TypedDict):
     error_text: str
 
 
+cluster_auto_results_cache: list[CandidateResult] = []
+
+
 def make_candidate_config(
         *,
         scaler_mode: str,
@@ -976,6 +979,9 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
     """
     Заполняет таблицу результатов AUTO-подбора.
     """
+    global cluster_auto_results_cache
+    cluster_auto_results_cache = list(results or [])
+
     table = ui.tableWidget_cluster_auto_result
     headers = [
         "Rank", "Score", "Method", "Scaler", "PCA",
@@ -1038,6 +1044,27 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             table.setItem(row_idx, col_idx, item)
 
     table.resizeColumnsToContents()
+
+
+def apply_selected_auto_result_from_table(row_idx: int, _column_idx: int) -> None:
+    """
+    По двойному клику в таблице AUTO применяет выбранный вариант к настройкам UI.
+    """
+    if row_idx < 0 or row_idx >= len(cluster_auto_results_cache):
+        set_info("AUTO: выбранная строка вне диапазона результатов.", "brown")
+        return
+
+    selected_result = cluster_auto_results_cache[row_idx]
+    if selected_result.get("status") != "ok":
+        set_info("AUTO: выбранный вариант невалиден и не может быть применен.", "brown")
+        return
+
+    apply_auto_result_to_ui(selected_result)
+    set_info(
+        f"AUTO: применен вариант #{row_idx + 1} "
+        f"(score={_safe_num(selected_result.get('score'), precision=4)}).",
+        "green"
+    )
 
 
 def apply_auto_result_to_ui(best_result: CandidateResult) -> None:
