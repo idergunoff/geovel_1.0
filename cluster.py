@@ -199,6 +199,172 @@ def build_auto_search_space(auto_mode: str, max_candidates: int = 200) -> list[C
     return candidates
 
 
+def run_cluster_candidate(
+        base_data,
+        candidate: CandidateConfig,
+        *,
+        candidate_id: str = "",
+        clean_kwargs: Optional[Dict[str, Any]] = None
+) -> CandidateResult:
+    """
+    Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
+
+    Этапы:
+    1) clean_features
+    2) preprocess_features
+    3) apply_pca (опционально)
+    4) cluster_data
+    5) evaluate_clustering
+    """
+    clean_params = {
+        "use_non_finite": True,
+        "non_finite_mode": "impute",
+        "use_variance_threshold": False,
+        "use_correlation_filter": False
+    }
+    if clean_kwargs:
+        clean_params.update(clean_kwargs)
+
+    try:
+        clear_data, _ = clean_features(data=base_data, **clean_params)
+    except Exception as exc:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="error",
+            error_text=f"clean_features failed: {exc}"
+        )
+
+    if not clear_data or len(clear_data) == 0:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="invalid",
+            error_text="empty sample after cleaning"
+        )
+
+    try:
+        preprocess_data = preprocess_features(clear_data, mode=candidate["scaler_mode"])
+    except Exception as exc:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="error",
+            error_text=f"preprocess_features failed: {exc}"
+        )
+
+    try:
+        if candidate["pca_enabled"]:
+            data_for_cluster, _ = apply_pca(
+                preprocess_data,
+                mode=candidate["pca_mode"] or "variance_ratio",
+                variance_ratio=float(candidate["pca_value"])
+            )
+        else:
+            data_for_cluster = preprocess_data
+    except Exception as exc:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="error",
+            error_text=f"apply_pca failed: {exc}"
+        )
+
+    try:
+        labels, cluster_info = cluster_data(
+            data=data_for_cluster,
+            method=candidate["method"],
+            **candidate["method_params"]
+        )
+    except Exception as exc:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="error",
+            error_text=f"cluster_data failed: {exc}"
+        )
+
+    labels_np = np.array(labels, dtype=int)
+    mask_eval = labels_np != -1
+    labels_eval = labels_np[mask_eval]
+    x_eval = np.array(data_for_cluster, dtype=float)[mask_eval]
+    unique_clusters_eval = np.unique(labels_eval)
+    n_samples_eval = int(len(x_eval))
+
+    if n_samples_eval == 0:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            stats=CandidateStats(
+                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                n_samples_eval=0
+            ),
+            status="invalid",
+            error_text="empty sample after noise filtering"
+        )
+
+    if len(unique_clusters_eval) < 2:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            stats=CandidateStats(
+                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                n_samples_eval=n_samples_eval
+            ),
+            status="invalid",
+            error_text="less than 2 clusters after noise filtering"
+        )
+
+    try:
+        eval_info = evaluate_clustering(
+            data_for_cluster,
+            labels,
+            use_silhouette=True,
+            use_db=True,
+            use_ch=True
+        )
+    except Exception as exc:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            status="error",
+            error_text=f"evaluate_clustering failed: {exc}"
+        )
+
+    metrics = eval_info.get("metrics", {})
+    if not metrics:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            stats=CandidateStats(
+                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                n_samples_eval=n_samples_eval
+            ),
+            status="invalid",
+            error_text="metrics unavailable for candidate"
+        )
+
+    return make_candidate_result(
+        candidate_id=candidate_id,
+        candidate_config=candidate,
+        metrics=CandidateMetrics(
+            silhouette=float(metrics.get("silhouette")),
+            davies_bouldin=float(metrics.get("davies_bouldin")),
+            calinski_harabasz=float(metrics.get("calinski_harabasz"))
+        ),
+        stats=CandidateStats(
+            n_clusters=int(cluster_info.get("n_clusters", 0)),
+            noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+            n_samples_eval=n_samples_eval
+        ),
+        status="ok",
+        error_text=""
+    )
+
+
 def build_cluster_analysis_key(
         clust_object_id=None,
         clust_analys_id=None,
