@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime, timezone
+from typing import Any, Dict, Literal, Optional, TypedDict
 
 import build_table
 from draw import draw_radarogram
@@ -9,6 +10,97 @@ from func import *
 # Этап 1 (MVP): ключ анализа = id ObjectSet (clust_object_id).
 cluster_profile_cache = {}
 is_cluster_redraw_in_progress = False
+
+
+class CandidateConfig(TypedDict):
+    """
+    Единый контракт кандидата для AUTO-подбора параметров кластеризации.
+    """
+    scaler_mode: str
+    pca_enabled: bool
+    pca_mode: Optional[str]
+    pca_value: Optional[float]
+    method: Literal["kmeans", "hdbscan", "gmm"]
+    method_params: Dict[str, Any]
+
+
+class CandidateMetrics(TypedDict, total=False):
+    silhouette: float
+    davies_bouldin: float
+    calinski_harabasz: float
+
+
+class CandidateStats(TypedDict, total=False):
+    n_clusters: int
+    noise_fraction: float
+    n_samples_eval: int
+
+
+class CandidateResult(TypedDict):
+    """
+    Единый контракт результата прогона кандидата для AUTO-подбора.
+    """
+    candidate_id: str
+    candidate_config: CandidateConfig
+    metrics: CandidateMetrics
+    stats: CandidateStats
+    score: Optional[float]
+    status: Literal["ok", "invalid", "error"]
+    error_text: str
+
+
+def make_candidate_config(
+        *,
+        scaler_mode: str,
+        pca_enabled: bool,
+        pca_mode: Optional[str],
+        pca_value: Optional[float],
+        method: Literal["kmeans", "hdbscan", "gmm"],
+        method_params: Optional[Dict[str, Any]] = None
+) -> CandidateConfig:
+    """
+    Собирает и валидирует словарь candidate_config.
+    """
+    if pca_enabled and pca_mode not in ("fixed_components", "variance_ratio"):
+        raise ValueError("pca_mode must be 'fixed_components' or 'variance_ratio' when pca_enabled=True")
+    if pca_enabled and pca_value is None:
+        raise ValueError("pca_value is required when pca_enabled=True")
+    if not pca_enabled:
+        pca_mode = None
+        pca_value = None
+
+    return CandidateConfig(
+        scaler_mode=scaler_mode,
+        pca_enabled=bool(pca_enabled),
+        pca_mode=pca_mode,
+        pca_value=pca_value,
+        method=method,
+        method_params=dict(method_params or {})
+    )
+
+
+def make_candidate_result(
+        *,
+        candidate_id: str,
+        candidate_config: CandidateConfig,
+        metrics: Optional[CandidateMetrics] = None,
+        stats: Optional[CandidateStats] = None,
+        score: Optional[float] = None,
+        status: Literal["ok", "invalid", "error"] = "ok",
+        error_text: str = ""
+) -> CandidateResult:
+    """
+    Собирает унифицированный словарь candidate_result.
+    """
+    return CandidateResult(
+        candidate_id=str(candidate_id),
+        candidate_config=candidate_config,
+        metrics=metrics or CandidateMetrics(),
+        stats=stats or CandidateStats(),
+        score=score,
+        status=status,
+        error_text=error_text
+    )
 
 
 def build_cluster_analysis_key(
