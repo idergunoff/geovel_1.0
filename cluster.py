@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime, timezone
+from itertools import product
 from typing import Any, Dict, Literal, Optional, TypedDict
 
 import build_table
@@ -101,6 +102,101 @@ def make_candidate_result(
         status=status,
         error_text=error_text
     )
+
+
+def _set_auto_info(message: str, color: str = "blue") -> None:
+    """
+    Безопасный логгер для этапов AUTO-подбора.
+    """
+    try:
+        set_info(message, color)
+    except Exception:
+        print(message)
+
+
+def build_auto_search_space(auto_mode: str, max_candidates: int = 200) -> list[CandidateConfig]:
+    """
+    Формирует coarse/fine пространство кандидатов для AUTO-подбора.
+
+    На текущем этапе реализована coarse-сетка из плана.
+    Для режима FINE возвращается эта же coarse-сетка (точная локальная
+    окрестность будет добавлена на следующем этапе).
+    """
+    mode = (auto_mode or "").strip().upper()
+    if mode not in {"COARSE", "FINE"}:
+        raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
+
+    scaler_modes = ("none", "standard", "robust")
+    pca_variance_values = (0.85, 0.90, 0.95)
+    pca_variants = [{"pca_enabled": False, "pca_mode": None, "pca_value": None}]
+    pca_variants.extend(
+        {"pca_enabled": True, "pca_mode": "variance_ratio", "pca_value": pca_value}
+        for pca_value in pca_variance_values
+    )
+
+    candidates: list[CandidateConfig] = []
+
+    # KMeans: k=2..8.
+    for scaler_mode, pca_variant, k in product(scaler_modes, pca_variants, range(2, 9)):
+        candidates.append(
+            make_candidate_config(
+                scaler_mode=scaler_mode,
+                pca_enabled=pca_variant["pca_enabled"],
+                pca_mode=pca_variant["pca_mode"],
+                pca_value=pca_variant["pca_value"],
+                method="kmeans",
+                method_params={"kmeans_n_clusters": k}
+            )
+        )
+
+    # HDBSCAN: min_cluster_size={10,20,40}, min_samples={3,5,10}.
+    for scaler_mode, pca_variant, min_cluster_size, min_samples in product(
+            scaler_modes, pca_variants, (10, 20, 40), (3, 5, 10)
+    ):
+        candidates.append(
+            make_candidate_config(
+                scaler_mode=scaler_mode,
+                pca_enabled=pca_variant["pca_enabled"],
+                pca_mode=pca_variant["pca_mode"],
+                pca_value=pca_variant["pca_value"],
+                method="hdbscan",
+                method_params={
+                    "hdbscan_min_cluster_size": min_cluster_size,
+                    "hdbscan_min_samples": min_samples
+                }
+            )
+        )
+
+    # GMM: n_components=2..8, covariance_type={full,diag}.
+    for scaler_mode, pca_variant, n_components, covariance_type in product(
+            scaler_modes, pca_variants, range(2, 9), ("full", "diag")
+    ):
+        candidates.append(
+            make_candidate_config(
+                scaler_mode=scaler_mode,
+                pca_enabled=pca_variant["pca_enabled"],
+                pca_mode=pca_variant["pca_mode"],
+                pca_value=pca_variant["pca_value"],
+                method="gmm",
+                method_params={
+                    "gmm_n_components": n_components,
+                    "gmm_covariance_type": covariance_type
+                }
+            )
+        )
+
+    total_candidates = len(candidates)
+    if total_candidates > max_candidates:
+        _set_auto_info(
+            f"AUTO {mode}: сгенерировано {total_candidates} кандидатов, "
+            f"применен лимит {max_candidates}.",
+            "brown"
+        )
+        candidates = candidates[:max_candidates]
+    else:
+        _set_auto_info(f"AUTO {mode}: размер search space = {total_candidates}.", "blue")
+
+    return candidates
 
 
 def build_cluster_analysis_key(
