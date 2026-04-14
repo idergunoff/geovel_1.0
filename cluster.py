@@ -387,6 +387,40 @@ def get_curr_clust_object_id():
     return ui.comboBox_clust_obj.currentText().split(' id')[-1]
 
 
+def sync_ui_to_cluster_object_research(clust_object):
+    """
+    Переключает UI на год/объект/исследование, к которому привязан ObjectSet.
+    Возвращает True, если удалось синхронизировать исследование в UI.
+    """
+    if not clust_object:
+        return False
+
+    research = session.query(Research).filter_by(id=clust_object.research_id).first()
+    if not research:
+        return False
+
+    target_year = research.date_research.strftime('%Y')
+    target_object_text = f'{research.object.title} id{research.object_id}'
+    target_research_text = f'{research.date_research.strftime("%m.%Y")} id{research.id}'
+
+    year_idx = ui.comboBox_year_research.findText(target_year)
+    if year_idx >= 0:
+        ui.comboBox_year_research.setCurrentIndex(year_idx)
+        update_object()
+
+    object_idx = ui.comboBox_object.findText(target_object_text)
+    if object_idx >= 0:
+        ui.comboBox_object.setCurrentIndex(object_idx)
+        update_research_combobox()
+
+    research_idx = ui.comboBox_research.findText(target_research_text)
+    if research_idx >= 0:
+        ui.comboBox_research.setCurrentIndex(research_idx)
+        update_profile_combobox()
+
+    return True
+
+
 def update_list_clust_analys():
     ui.comboBox_clust_set.clear()
     for i in session.query(AnalysisCluster).all():
@@ -1387,10 +1421,15 @@ def calculate_cluster():
     )
     set_info(build_cluster_legend(profile_labels), "blue")
 
-    current_profile_id = get_profile_id()
-    if current_profile_id:
-        draw_cluster_profile_result(
-            profile_id=current_profile_id,
-            profile_labels=profile_labels,
-            use_relief=True
-        )
+    if sync_ui_to_cluster_object_research(clust_object) and ui.comboBox_profile.count() > 0:
+        ui.comboBox_profile.setCurrentIndex(0)
+        first_profile_id = get_profile_id()
+        if first_profile_id:
+            update_formation_combobox()
+            draw_cluster_profile_result(
+                profile_id=first_profile_id,
+                profile_labels=profile_labels,
+                use_relief=True
+            )
+    else:
+        set_info("Не удалось автоматически выбрать исследование/профиль для отрисовки кластеров.", "brown")
