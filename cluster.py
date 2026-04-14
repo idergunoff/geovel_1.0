@@ -791,6 +791,147 @@ def run_auto_cluster_tuning(
     }
 
 
+def _collect_top_signatures(results: list[CandidateResult], top_n: int = 5) -> list[tuple]:
+    """
+    Возвращает подписи top-N валидных результатов для проверки стабильности ранжирования.
+    """
+    signatures: list[tuple] = []
+    for row in results:
+        if row.get("status") != "ok":
+            continue
+        cfg = row.get("candidate_config")
+        if not cfg:
+            continue
+        signatures.append(_candidate_signature(cfg))
+        if len(signatures) >= max(1, int(top_n)):
+            break
+    return signatures
+
+
+def validate_auto_tuning_run(
+        tuning_result: Dict[str, Any],
+        *,
+        expected_mode: Optional[str] = None,
+        require_non_empty_leaderboard: bool = True,
+        require_fine_stage: Optional[bool] = None
+) -> Dict[str, Any]:
+    """
+    Валидирует один запуск AUTO-подбора и формирует структурированный отчёт.
+
+    Проверки:
+    - режим запуска совпадает с ожидаемым;
+    - leaderboard не пустой (если требуется);
+    - в FINE-режиме есть coarse + fine результаты.
+    """
+    issues: list[str] = []
+    summary: Dict[str, Any] = {
+        "mode": tuning_result.get("mode"),
+        "passed": True,
+        "issues": issues,
+        "stats": {}
+    }
+
+    mode = str(tuning_result.get("mode", "")).upper()
+    if expected_mode is not None and mode != str(expected_mode).upper():
+        issues.append(f"mode mismatch: expected={expected_mode}, got={mode}")
+
+    top_results = tuning_result.get("top_results") or []
+    if require_non_empty_leaderboard and len(top_results) == 0:
+        issues.append("top_results is empty")
+
+    coarse_results = tuning_result.get("coarse_results") or []
+    fine_results = tuning_result.get("fine_results") or []
+    inferred_require_fine = (mode == "FINE") if require_fine_stage is None else bool(require_fine_stage)
+    if inferred_require_fine:
+        if len(coarse_results) == 0:
+            issues.append("coarse_results is empty in FINE run")
+        if len(fine_results) == 0:
+            issues.append("fine_results is empty in FINE run")
+
+    best_result = tuning_result.get("best_result")
+    best_is_ok = bool(best_result and best_result.get("status") == "ok")
+    summary["stats"] = {
+        "n_top": len(top_results),
+        "n_coarse": len(coarse_results),
+        "n_fine": len(fine_results),
+        "best_ok": best_is_ok
+    }
+    summary["passed"] = len(issues) == 0
+    return summary
+
+
+def validate_auto_tuning_quality(
+        *,
+        coarse_result: Dict[str, Any],
+        fine_result: Dict[str, Any],
+        repeated_results: Optional[list[Dict[str, Any]]] = None,
+        stability_top_n: int = 5
+) -> Dict[str, Any]:
+    """
+    Комплексная валидация качества AUTO (этап 8):
+    1) COARSE возвращает непустой leaderboard.
+    2) FINE содержит coarse + fine этапы.
+    3) Повторные запуски дают близкий топ ранга (по пересечению сигнатур).
+
+    Возвращает отчёт с флагом passed и списком issues.
+    """
+    report: Dict[str, Any] = {
+        "passed": True,
+        "issues": [],
+        "checks": {}
+    }
+    issues: list[str] = report["issues"]
+
+    coarse_check = validate_auto_tuning_run(
+        coarse_result,
+        expected_mode="COARSE",
+        require_non_empty_leaderboard=True,
+        require_fine_stage=False
+    )
+    fine_check = validate_auto_tuning_run(
+        fine_result,
+        expected_mode="FINE",
+        require_non_empty_leaderboard=True,
+        require_fine_stage=True
+    )
+    report["checks"]["coarse"] = coarse_check
+    report["checks"]["fine"] = fine_check
+    if not coarse_check["passed"]:
+        issues.extend(f"coarse: {msg}" for msg in coarse_check["issues"])
+    if not fine_check["passed"]:
+        issues.extend(f"fine: {msg}" for msg in fine_check["issues"])
+
+    if repeated_results:
+        base_top = _collect_top_signatures(repeated_results[0].get("top_results", []), top_n=stability_top_n)
+        overlaps: list[float] = []
+        for run in repeated_results[1:]:
+            curr_top = _collect_top_signatures(run.get("top_results", []), top_n=stability_top_n)
+            if not base_top:
+                overlap = 0.0
+            else:
+                overlap = len(set(base_top) & set(curr_top)) / float(len(set(base_top)))
+            overlaps.append(overlap)
+
+        min_overlap = min(overlaps) if overlaps else 1.0
+        report["checks"]["stability"] = {
+            "top_n": stability_top_n,
+            "overlaps": overlaps,
+            "min_overlap": min_overlap
+        }
+        if min_overlap < 0.6:
+            issues.append(
+                f"stability overlap is too low: min_overlap={min_overlap:.2f}, required>=0.60"
+            )
+    else:
+        report["checks"]["stability"] = {
+            "skipped": True,
+            "reason": "repeated_results not provided"
+        }
+
+    report["passed"] = len(issues) == 0
+    return report
+
+
 def _safe_num(value: Any, precision: int = 4, fallback: str = "—") -> str:
     val = _to_finite_float(value)
     if val is None:
