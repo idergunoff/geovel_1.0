@@ -972,25 +972,30 @@ def plot_cluster_map(
             continue
 
         mask = labels == label
+        cluster_color = get_cluster_color(label)
 
         plt.scatter(
             x[mask],
             y[mask],
             s=point_size,
             label=f"cluster {int(label)}",
+            c=cluster_color,
+            edgecolors=cluster_color,
             alpha=0.85
         )
 
     # шум
     if -1 in unique_labels:
         mask = labels == -1
+        noise_cluster_color = get_cluster_color(-1)
         plt.scatter(
             x[mask],
             y[mask],
             s=point_size,
-            c=noise_color,
+            c=noise_cluster_color if noise_color == "gray" else noise_color,
             marker=noise_marker,
             label=noise_label,
+            edgecolors=noise_cluster_color if noise_color == "gray" else noise_color,
             alpha=0.8
         )
 
