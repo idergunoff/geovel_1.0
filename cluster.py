@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime, timezone
 from itertools import product
+from time import monotonic
 from typing import Any, Dict, Literal, Optional, TypedDict
 
 import build_table
@@ -204,7 +205,8 @@ def run_cluster_candidate(
         candidate: CandidateConfig,
         *,
         candidate_id: str = "",
-        clean_kwargs: Optional[Dict[str, Any]] = None
+        clean_kwargs: Optional[Dict[str, Any]] = None,
+        transform_cache: Optional[Dict[tuple, Any]] = None
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -243,32 +245,48 @@ def run_cluster_candidate(
             error_text="empty sample after cleaning"
         )
 
-    try:
-        preprocess_data = preprocess_features(clear_data, mode=candidate["scaler_mode"])
-    except Exception as exc:
-        return make_candidate_result(
-            candidate_id=candidate_id,
-            candidate_config=candidate,
-            status="error",
-            error_text=f"preprocess_features failed: {exc}"
-        )
+    clean_key = tuple(sorted(clean_params.items()))
+    transform_key = (
+        clean_key,
+        candidate["scaler_mode"],
+        bool(candidate["pca_enabled"]),
+        candidate.get("pca_mode"),
+        candidate.get("pca_value")
+    )
+    data_for_cluster = None
+    if transform_cache is not None:
+        data_for_cluster = transform_cache.get(transform_key)
 
-    try:
-        if candidate["pca_enabled"]:
-            data_for_cluster, _ = apply_pca(
-                preprocess_data,
-                mode=candidate["pca_mode"] or "variance_ratio",
-                variance_ratio=float(candidate["pca_value"])
+    if data_for_cluster is None:
+        try:
+            preprocess_data = preprocess_features(clear_data, mode=candidate["scaler_mode"])
+        except Exception as exc:
+            return make_candidate_result(
+                candidate_id=candidate_id,
+                candidate_config=candidate,
+                status="error",
+                error_text=f"preprocess_features failed: {exc}"
             )
-        else:
-            data_for_cluster = preprocess_data
-    except Exception as exc:
-        return make_candidate_result(
-            candidate_id=candidate_id,
-            candidate_config=candidate,
-            status="error",
-            error_text=f"apply_pca failed: {exc}"
-        )
+
+        try:
+            if candidate["pca_enabled"]:
+                data_for_cluster, _ = apply_pca(
+                    preprocess_data,
+                    mode=candidate["pca_mode"] or "variance_ratio",
+                    variance_ratio=float(candidate["pca_value"])
+                )
+            else:
+                data_for_cluster = preprocess_data
+        except Exception as exc:
+            return make_candidate_result(
+                candidate_id=candidate_id,
+                candidate_config=candidate,
+                status="error",
+                error_text=f"apply_pca failed: {exc}"
+            )
+
+        if transform_cache is not None:
+            transform_cache[transform_key] = data_for_cluster
 
     try:
         labels, cluster_info = cluster_data(
@@ -635,6 +653,8 @@ def run_auto_cluster_tuning(
         auto_mode: str = "COARSE",
         top_k: int = 5,
         max_candidates: int = 200,
+        soft_timeout_sec: Optional[float] = None,
+        candidate_soft_timeout_sec: Optional[float] = None,
         weights: Optional[Dict[str, float]] = None,
         clean_kwargs: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
@@ -648,17 +668,51 @@ def run_auto_cluster_tuning(
 
     coarse_candidates = build_auto_search_space("COARSE", max_candidates=max_candidates)
     coarse_results: list[CandidateResult] = []
+    transform_cache: Dict[tuple, Any] = {}
+    run_start_ts = monotonic()
     for idx, candidate in enumerate(coarse_candidates, start=1):
+        if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
+            _set_auto_info(
+                f"AUTO {mode}: достигнут soft-timeout {soft_timeout_sec:.1f}s, "
+                f"coarse остановлен на кандидате {idx}.",
+                "brown"
+            )
+            break
         _set_auto_info(f"Coarse: {idx}/{len(coarse_candidates)}", "blue")
         QApplication.processEvents()
-        coarse_results.append(
-            run_cluster_candidate(
+        candidate_start_ts = monotonic()
+        try:
+            result = run_cluster_candidate(
                 base_data=base_data,
                 candidate=candidate,
                 candidate_id=f"C{idx:03d}",
-                clean_kwargs=clean_kwargs
+                clean_kwargs=clean_kwargs,
+                transform_cache=transform_cache
             )
-        )
+        except Exception as exc:
+            _set_auto_info(f"AUTO Coarse C{idx:03d}: исключение {exc}", "red")
+            result = make_candidate_result(
+                candidate_id=f"C{idx:03d}",
+                candidate_config=candidate,
+                status="error",
+                error_text=f"unexpected candidate exception: {exc}"
+            )
+
+        elapsed_candidate = monotonic() - candidate_start_ts
+        if candidate_soft_timeout_sec is not None and elapsed_candidate > float(candidate_soft_timeout_sec):
+            _set_auto_info(
+                f"AUTO Coarse C{idx:03d}: превышен soft-timeout {candidate_soft_timeout_sec:.1f}s "
+                f"({elapsed_candidate:.2f}s).",
+                "brown"
+            )
+            result["status"] = "invalid"
+            result["score"] = None
+            result["error_text"] = (
+                (result.get("error_text", "") + "; ").strip("; ")
+                + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
+            ).strip()
+
+        coarse_results.append(result)
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
@@ -680,16 +734,48 @@ def run_auto_cluster_tuning(
     )
     fine_results: list[CandidateResult] = []
     for idx, candidate in enumerate(fine_candidates, start=1):
+        if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
+            _set_auto_info(
+                f"AUTO {mode}: достигнут soft-timeout {soft_timeout_sec:.1f}s, "
+                f"fine остановлен на кандидате {idx}.",
+                "brown"
+            )
+            break
         _set_auto_info(f"Fine: {idx}/{len(fine_candidates)}", "blue")
         QApplication.processEvents()
-        fine_results.append(
-            run_cluster_candidate(
+        candidate_start_ts = monotonic()
+        try:
+            result = run_cluster_candidate(
                 base_data=base_data,
                 candidate=candidate,
                 candidate_id=f"F{idx:03d}",
-                clean_kwargs=clean_kwargs
+                clean_kwargs=clean_kwargs,
+                transform_cache=transform_cache
             )
-        )
+        except Exception as exc:
+            _set_auto_info(f"AUTO Fine F{idx:03d}: исключение {exc}", "red")
+            result = make_candidate_result(
+                candidate_id=f"F{idx:03d}",
+                candidate_config=candidate,
+                status="error",
+                error_text=f"unexpected candidate exception: {exc}"
+            )
+
+        elapsed_candidate = monotonic() - candidate_start_ts
+        if candidate_soft_timeout_sec is not None and elapsed_candidate > float(candidate_soft_timeout_sec):
+            _set_auto_info(
+                f"AUTO Fine F{idx:03d}: превышен soft-timeout {candidate_soft_timeout_sec:.1f}s "
+                f"({elapsed_candidate:.2f}s).",
+                "brown"
+            )
+            result["status"] = "invalid"
+            result["score"] = None
+            result["error_text"] = (
+                (result.get("error_text", "") + "; ").strip("; ")
+                + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
+            ).strip()
+
+        fine_results.append(result)
 
     combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
@@ -893,13 +979,37 @@ def calculate_cluster_auto():
     selected_button = ui.buttonGroup_3.checkedButton()
     text_method_nan = selected_button.text() if selected_button else "impute"
 
+    # Таймауты можно отключить, чтобы не терять потенциально хороший,
+    # но долгий кандидат. Если в UI нет явного контролла, по умолчанию
+    # таймауты считаются отключенными.
+    timeout_toggle = getattr(ui, "checkBox_cluster_auto_use_timeout", None)
+    use_timeouts = bool(timeout_toggle.isChecked()) if timeout_toggle is not None else False
+
+    total_timeout_ctrl = getattr(ui, "doubleSpinBox_cluster_auto_timeout_total", None)
+    per_candidate_timeout_ctrl = getattr(ui, "doubleSpinBox_cluster_auto_timeout_candidate", None)
+
+    total_timeout_sec = (
+        float(total_timeout_ctrl.value())
+        if (use_timeouts and total_timeout_ctrl is not None)
+        else (180.0 if use_timeouts else None)
+    )
+    candidate_timeout_sec = (
+        float(per_candidate_timeout_ctrl.value())
+        if (use_timeouts and per_candidate_timeout_ctrl is not None)
+        else (20.0 if use_timeouts else None)
+    )
+
     render_auto_results_table([])
     set_info(f"AUTO: запуск подбора ({auto_mode})...", "blue")
+    if not use_timeouts:
+        set_info("AUTO: таймауты отключены (будут рассчитаны все кандидаты).", "blue")
     QApplication.processEvents()
 
     tuning_result = run_auto_cluster_tuning(
         base_data=base_data,
         auto_mode=auto_mode,
+        soft_timeout_sec=total_timeout_sec,
+        candidate_soft_timeout_sec=candidate_timeout_sec,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
