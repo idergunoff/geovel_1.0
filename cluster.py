@@ -52,6 +52,9 @@ class CandidateResult(TypedDict):
     error_text: str
 
 
+cluster_auto_results_cache: list[CandidateResult] = []
+
+
 def make_candidate_config(
         *,
         scaler_mode: str,
