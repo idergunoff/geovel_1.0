@@ -5666,27 +5666,7 @@ Therm</string>
                 </item>
                 <item row="4" column="0" colspan="3">
                  <layout class="QGridLayout" name="gridLayout_39">
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="pushButton_clust_auto">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(220, 138, 221);</string>
-                    </property>
-                    <property name="text">
-                     <string>AUTO</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="pushButton_clust_calc">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(249, 240, 107);</string>
-                    </property>
-                    <property name="text">
-                     <string>CALC</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
+                  <item row="1" column="2">
                    <widget class="QPushButton" name="pushButton_clust_save_conf">
                     <property name="styleSheet">
                      <string notr="true">background-color: rgb(153, 193, 241);</string>
@@ -5696,7 +5676,7 @@ Therm</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="0">
+                  <item row="2" column="0">
                    <layout class="QHBoxLayout" name="horizontalLayout_11">
                     <item>
                      <widget class="QPushButton" name="pushButton_clust_prev_prof">
@@ -5720,7 +5700,17 @@ Therm</string>
                     </item>
                    </layout>
                   </item>
-                  <item row="1" column="1" colspan="2">
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_clust_calc">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(249, 240, 107);</string>
+                    </property>
+                    <property name="text">
+                     <string>CALC</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1" colspan="2">
                    <layout class="QHBoxLayout" name="horizontalLayout_12">
                     <item>
                      <widget class="QRadioButton" name="radioButton_cluster_coarse_auto">
@@ -5775,6 +5765,30 @@ Therm</string>
                       </property>
                       <property name="value">
                        <number>180</number>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="1">
+                   <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,0">
+                    <item>
+                     <widget class="QPushButton" name="pushButton_clust_auto">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(220, 138, 221);</string>
+                      </property>
+                      <property name="text">
+                       <string>AUTO</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QCheckBox" name="checkBox_cluster_auto_recalc">
+                      <property name="toolTip">
+                       <string>Перерасчёт</string>
+                      </property>
+                      <property name="text">
+                       <string>&gt;&lt;</string>
                       </property>
                      </widget>
                     </item>
