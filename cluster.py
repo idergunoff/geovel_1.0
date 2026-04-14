@@ -12,7 +12,6 @@ from func import *
 # Этап 1 (MVP): ключ анализа = id ObjectSet (clust_object_id).
 cluster_profile_cache = {}
 is_cluster_redraw_in_progress = False
-cluster_auto_results_cache: list[CandidateResult] = []
 
 
 class CandidateConfig(TypedDict):
