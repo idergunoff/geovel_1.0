@@ -1393,18 +1393,47 @@ def save_cluster_auto_tuning_cache(
         _ensure_cluster_auto_tuning_cache_table()
         compact_top_results: list[dict] = []
         for idx, result in enumerate((top_results or [])[:5], start=1):
-            cfg = (result or {}).get("candidate_config")
+            result_row = result or {}
+            cfg = result_row.get("candidate_config")
             if not cfg:
                 continue
+            metrics = result_row.get("metrics") or {}
+            stats = result_row.get("stats") or {}
+            score = result_row.get("score")
+
+            def _safe_float(value):
+                if value is None:
+                    return None
+                try:
+                    return float(value)
+                except Exception:
+                    return None
+
+            def _safe_int(value):
+                if value is None:
+                    return None
+                try:
+                    return int(value)
+                except Exception:
+                    return None
+
             compact_top_results.append(
                 {
-                    "candidate_id": f"T{idx:02d}",
+                    "candidate_id": str(result_row.get("candidate_id") or f"T{idx:02d}"),
                     "candidate_config": cfg,
-                    "metrics": {},
-                    "stats": {},
-                    "score": None,
-                    "status": "ok",
-                    "error_text": ""
+                    "metrics": {
+                        "silhouette": _safe_float(metrics.get("silhouette")),
+                        "davies_bouldin": _safe_float(metrics.get("davies_bouldin")),
+                        "calinski_harabasz": _safe_float(metrics.get("calinski_harabasz"))
+                    },
+                    "stats": {
+                        "n_clusters": _safe_int(stats.get("n_clusters")),
+                        "noise_fraction": _safe_float(stats.get("noise_fraction")),
+                        "n_samples_eval": _safe_int(stats.get("n_samples_eval"))
+                    },
+                    "score": _safe_float(score),
+                    "status": str(result_row.get("status") or "ok"),
+                    "error_text": str(result_row.get("error_text") or "")
                 }
             )
         if not compact_top_results:
