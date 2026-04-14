@@ -650,6 +650,7 @@ def run_auto_cluster_tuning(
     coarse_results: list[CandidateResult] = []
     for idx, candidate in enumerate(coarse_candidates, start=1):
         _set_auto_info(f"Coarse: {idx}/{len(coarse_candidates)}", "blue")
+        QApplication.processEvents()
         coarse_results.append(
             run_cluster_candidate(
                 base_data=base_data,
@@ -680,6 +681,7 @@ def run_auto_cluster_tuning(
     fine_results: list[CandidateResult] = []
     for idx, candidate in enumerate(fine_candidates, start=1):
         _set_auto_info(f"Fine: {idx}/{len(fine_candidates)}", "blue")
+        QApplication.processEvents()
         fine_results.append(
             run_cluster_candidate(
                 base_data=base_data,
@@ -701,6 +703,228 @@ def run_auto_cluster_tuning(
         "fine_results": rank_candidates(fine_results, weights=weights),
         "coarse_best_result": coarse_best_result
     }
+
+
+def _safe_num(value: Any, precision: int = 4, fallback: str = "—") -> str:
+    val = _to_finite_float(value)
+    if val is None:
+        return fallback
+    return f"{val:.{precision}f}"
+
+
+def _candidate_method_short(candidate: CandidateConfig) -> str:
+    method = candidate.get("method", "")
+    params = candidate.get("method_params", {}) or {}
+    if method == "kmeans":
+        return f"kmeans(k={params.get('kmeans_n_clusters', '?')})"
+    if method == "hdbscan":
+        return (
+            f"hdbscan(mcs={params.get('hdbscan_min_cluster_size', '?')},"
+            f" ms={params.get('hdbscan_min_samples', '?')})"
+        )
+    if method == "gmm":
+        return (
+            f"gmm(n={params.get('gmm_n_components', '?')},"
+            f" cov={params.get('gmm_covariance_type', '?')})"
+        )
+    return str(method)
+
+
+def _candidate_pca_short(candidate: CandidateConfig) -> str:
+    if not candidate.get("pca_enabled"):
+        return "off"
+    pca_mode = candidate.get("pca_mode")
+    pca_value = candidate.get("pca_value")
+    if pca_mode == "variance_ratio":
+        return f"var={_safe_num(pca_value, precision=2)}"
+    if pca_mode == "fixed_components":
+        try:
+            return f"fix={int(float(pca_value))}"
+        except (TypeError, ValueError):
+            return "fix=?"
+    return "on"
+
+
+def render_auto_results_table(results: list[CandidateResult]) -> None:
+    """
+    Заполняет таблицу результатов AUTO-подбора.
+    """
+    table = ui.tableWidget_cluster_auto_result
+    headers = [
+        "Rank", "Score", "Method", "Scaler", "PCA",
+        "Silhouette", "DB", "CH", "Clusters", "Noise %", "Status"
+    ]
+    table.clear()
+    table.setColumnCount(len(headers))
+    table.setHorizontalHeaderLabels(headers)
+    table.setRowCount(len(results))
+
+    for row_idx, result in enumerate(results):
+        cfg = result.get("candidate_config", {})
+        metrics = result.get("metrics", {})
+        stats = result.get("stats", {})
+        score_val = result.get("score")
+        noise = _to_finite_float(stats.get("noise_fraction"))
+
+        row_values = [
+            str(row_idx + 1),
+            _safe_num(score_val, precision=4),
+            _candidate_method_short(cfg),
+            str(cfg.get("scaler_mode", "—")),
+            _candidate_pca_short(cfg),
+            _safe_num(metrics.get("silhouette"), precision=4),
+            _safe_num(metrics.get("davies_bouldin"), precision=4),
+            _safe_num(metrics.get("calinski_harabasz"), precision=2),
+            str(stats.get("n_clusters", "—")),
+            (f"{(noise * 100.0):.1f}" if noise is not None else "—"),
+            str(result.get("status", "—"))
+        ]
+
+        for col_idx, value in enumerate(row_values):
+            item = QTableWidgetItem(str(value))
+            if col_idx in (0, 1, 5, 6, 7, 8, 9):
+                item.setTextAlignment(Qt.AlignCenter)
+            if col_idx == 10:
+                status = str(result.get("status", ""))
+                if status == "ok":
+                    item.setForeground(QBrush(QColor("darkgreen")))
+                elif status == "invalid":
+                    item.setForeground(QBrush(QColor("darkorange")))
+                else:
+                    item.setForeground(QBrush(QColor("darkred")))
+            item.setToolTip(
+                json.dumps(
+                    {
+                        "candidate_id": result.get("candidate_id"),
+                        "candidate_config": cfg,
+                        "error_text": result.get("error_text", "")
+                    },
+                    ensure_ascii=False
+                )
+            )
+            table.setItem(row_idx, col_idx, item)
+
+    table.resizeColumnsToContents()
+
+
+def apply_auto_result_to_ui(best_result: CandidateResult) -> None:
+    """
+    Применяет лучший найденный конфиг к контролам UI.
+    """
+    if not best_result or best_result.get("status") != "ok":
+        return
+
+    cfg = best_result.get("candidate_config", {})
+    method_params = cfg.get("method_params", {}) or {}
+
+    scaler_mode = cfg.get("scaler_mode")
+    ui.radioButton_clust_scaler_none.setChecked(scaler_mode == "none")
+    ui.radioButton_clust_scaler_stnd.setChecked(scaler_mode == "standard")
+    ui.radioButton_clust_scaler_rob.setChecked(scaler_mode == "robust")
+
+    pca_enabled = bool(cfg.get("pca_enabled"))
+    pca_mode = cfg.get("pca_mode")
+    pca_value = cfg.get("pca_value")
+    ui.checkBox_cluster_pca.setChecked(pca_enabled)
+    if pca_enabled:
+        ui.radioButton_clust_pca_fix.setChecked(pca_mode == "fixed_components")
+        ui.radioButton_clust_pca_disp.setChecked(pca_mode != "fixed_components")
+        if pca_mode == "fixed_components" and pca_value is not None:
+            ui.spinBox_clust_pca_fix.setValue(max(2, int(float(pca_value))))
+        elif pca_mode == "variance_ratio" and pca_value is not None:
+            ui.doubleSpinBox_clust_pca_disp.setValue(float(pca_value))
+
+    method = cfg.get("method")
+    ui.radioButton_clust_kmean.setChecked(method == "kmeans")
+    ui.radioButton_clust_hdbscan.setChecked(method == "hdbscan")
+    ui.radioButton_clust_gaussmix.setChecked(method == "gmm")
+
+    if method == "kmeans":
+        if "kmeans_n_clusters" in method_params:
+            ui.spinBox_clust_kmeans_n.setValue(int(method_params["kmeans_n_clusters"]))
+        if "kmeans_n_init" in method_params:
+            ui.spinBox_clust_kmean_ninint.setValue(int(method_params["kmeans_n_init"]))
+    elif method == "hdbscan":
+        if "hdbscan_min_cluster_size" in method_params:
+            ui.spinBox_clust_hdbsc_minsize.setValue(int(method_params["hdbscan_min_cluster_size"]))
+        if "hdbscan_min_samples" in method_params:
+            ui.spinBox_clust_hdbsc_minsamp.setValue(int(method_params["hdbscan_min_samples"]))
+    elif method == "gmm":
+        if "gmm_n_components" in method_params:
+            ui.spinBox_clust_gmm_n.setValue(int(method_params["gmm_n_components"]))
+        gmm_cov_type = method_params.get("gmm_covariance_type")
+        if gmm_cov_type is not None:
+            idx = ui.comboBox_clust_gmm_type.findText(str(gmm_cov_type))
+            if idx >= 0:
+                ui.comboBox_clust_gmm_type.setCurrentIndex(idx)
+
+
+def calculate_cluster_auto():
+    """
+    Запускает AUTO-подбор параметров кластеризации из UI.
+    """
+    clust_object_id = get_curr_clust_object_id()
+    if clust_object_id is None:
+        set_info("AUTO: не выбран объект для кластеризации.", "brown")
+        return
+
+    clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
+    if clust_object is None:
+        set_info(f"AUTO: объект id={clust_object_id} не найден.", "brown")
+        return
+
+    try:
+        base_data = json.loads(clust_object.data)
+    except Exception as exc:
+        set_info(f"AUTO: ошибка чтения данных объекта: {exc}", "red")
+        return
+
+    if not base_data:
+        set_info("AUTO: пустой набор данных для подбора.", "brown")
+        return
+
+    auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
+    selected_button = ui.buttonGroup_3.checkedButton()
+    text_method_nan = selected_button.text() if selected_button else "impute"
+
+    render_auto_results_table([])
+    set_info(f"AUTO: запуск подбора ({auto_mode})...", "blue")
+    QApplication.processEvents()
+
+    tuning_result = run_auto_cluster_tuning(
+        base_data=base_data,
+        auto_mode=auto_mode,
+        clean_kwargs={
+            "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
+            "non_finite_mode": text_method_nan,
+            "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
+            "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
+        }
+    )
+
+    top_results = tuning_result.get("top_results", [])
+    render_auto_results_table(top_results)
+    best_result = tuning_result.get("best_result")
+
+    if not best_result or best_result.get("status") != "ok":
+        set_info("AUTO: не найдено валидных конфигураций.", "brown")
+        return
+
+    apply_auto_result_to_ui(best_result)
+
+    best_cfg = best_result.get("candidate_config", {})
+    best_metrics = best_result.get("metrics", {})
+    set_info(
+        (
+            f"AUTO {auto_mode}: лучший score={_safe_num(best_result.get('score'), 4)} | "
+            f"method={_candidate_method_short(best_cfg)} | "
+            f"sil={_safe_num(best_metrics.get('silhouette'), 3)} | "
+            f"db={_safe_num(best_metrics.get('davies_bouldin'), 3)} | "
+            f"ch={_safe_num(best_metrics.get('calinski_harabasz'), 1)}. "
+            f"Параметры применены в UI, нажмите CALC для расчета."
+        ),
+        "green"
+    )
 
 
 def build_cluster_analysis_key(
