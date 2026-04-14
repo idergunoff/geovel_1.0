@@ -1176,11 +1176,20 @@ def calculate_cluster_auto():
     # Таймауты можно отключить, чтобы не терять потенциально хороший,
     # но долгий кандидат. Если в UI нет явного контролла, по умолчанию
     # таймауты считаются отключенными.
-    timeout_toggle = getattr(ui, "checkBox_cluster_auto_use_timeout", None)
+    timeout_toggle = (
+        getattr(ui, "checkBox_cluster_auto_timeout", None)
+        or getattr(ui, "checkBox_cluster_auto_use_timeout", None)
+    )
     use_timeouts = bool(timeout_toggle.isChecked()) if timeout_toggle is not None else False
 
-    total_timeout_ctrl = getattr(ui, "doubleSpinBox_cluster_auto_timeout_total", None)
-    per_candidate_timeout_ctrl = getattr(ui, "doubleSpinBox_cluster_auto_timeout_candidate", None)
+    total_timeout_ctrl = (
+        getattr(ui, "spinBox_cluster_auto_timeout_all", None)
+        or getattr(ui, "doubleSpinBox_cluster_auto_timeout_total", None)
+    )
+    per_candidate_timeout_ctrl = (
+        getattr(ui, "spinBox_cluster_auto_timeout_candidate", None)
+        or getattr(ui, "doubleSpinBox_cluster_auto_timeout_candidate", None)
+    )
 
     total_timeout_sec = (
         float(total_timeout_ctrl.value())
