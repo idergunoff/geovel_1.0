@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime, timezone
 
 import build_table
+from draw import draw_radarogram
 from func import *
 
 # Runtime-cache результатов кластеризации для быстрой перерисовки по профилям без пересчета.
@@ -1423,6 +1424,7 @@ def calculate_cluster():
 
     if sync_ui_to_cluster_object_research(clust_object) and ui.comboBox_profile.count() > 0:
         ui.comboBox_profile.setCurrentIndex(0)
+        draw_radarogram()
         first_profile_id = get_profile_id()
         if first_profile_id:
             update_formation_combobox()

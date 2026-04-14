@@ -5666,16 +5666,6 @@ Therm</string>
                 </item>
                 <item row="4" column="0" colspan="3">
                  <layout class="QGridLayout" name="gridLayout_39">
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="pushButton_clust_calc">
-                    <property name="styleSheet">
-                     <string notr="true">background-color: rgb(249, 240, 107);</string>
-                    </property>
-                    <property name="text">
-                     <string>CALC</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="1">
                    <widget class="QPushButton" name="pushButton_clust_auto">
                     <property name="styleSheet">
@@ -5683,6 +5673,16 @@ Therm</string>
                     </property>
                     <property name="text">
                      <string>AUTO</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="pushButton_clust_calc">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(249, 240, 107);</string>
+                    </property>
+                    <property name="text">
+                     <string>CALC</string>
                     </property>
                    </widget>
                   </item>
@@ -5695,6 +5695,30 @@ Therm</string>
                      <string>SAVE CONF</string>
                     </property>
                    </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QHBoxLayout" name="horizontalLayout_11">
+                    <item>
+                     <widget class="QPushButton" name="pushButton_clust_prev_prof">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 170, 127);</string>
+                      </property>
+                      <property name="text">
+                       <string>&lt; PROF</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_clust_next_prof">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 135, 127);</string>
+                      </property>
+                      <property name="text">
+                       <string>PROF &gt;</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </item>
                  </layout>
                 </item>
@@ -6498,8 +6522,8 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
+  <buttongroup name="buttonGroup_3"/>
   <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>
