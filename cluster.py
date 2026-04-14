@@ -1,4 +1,6 @@
 import pandas as pd
+import hashlib
+import json
 from datetime import datetime, timezone
 from itertools import product
 from time import monotonic
@@ -724,7 +726,7 @@ def run_auto_cluster_tuning(
         return {
             "mode": mode,
             "best_result": coarse_best_result,
-            "top_results": ranked_coarse[:10],
+            "top_results": ranked_coarse[:max(1, int(top_k))],
             "raw_results": coarse_results,
             "coarse_results": ranked_coarse,
             "fine_results": []
@@ -786,7 +788,7 @@ def run_auto_cluster_tuning(
     return {
         "mode": mode,
         "best_result": best_result,
-        "top_results": combined_ranked[:10],
+        "top_results": combined_ranked[:max(1, int(top_k))],
         "raw_results": coarse_results + fine_results,
         "coarse_results": ranked_coarse,
         "fine_results": rank_candidates(fine_results, weights=weights),
@@ -1204,14 +1206,29 @@ def calculate_cluster_auto():
 
     auto_apply_toggle = getattr(ui, "checkBox_cluster_auto_apply_best", None)
     auto_apply_best = bool(auto_apply_toggle.isChecked()) if auto_apply_toggle is not None else True
+    force_recompute_toggle = getattr(ui, "checkBox_cluster_auto_recalc", None)
+    force_recompute = bool(force_recompute_toggle.isChecked()) if force_recompute_toggle is not None else False
 
     max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
-    top_k = _read_auto_int_setting("spinBox_cluster_auto_top_k", fallback=5, minimum=1)
+    top_k = min(5, _read_auto_int_setting("spinBox_cluster_auto_top_k", fallback=5, minimum=1))
     metric_weights = {
         "silhouette": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_sil", fallback=0.4),
         "davies_bouldin": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_db", fallback=0.3),
         "calinski_harabasz": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_ch", fallback=0.3)
     }
+    cache_key = build_cluster_auto_tuning_cache_key(
+        clust_object_id=int(clust_object_id),
+        auto_mode=auto_mode,
+        max_candidates=max_candidates,
+        top_k=top_k,
+        weights=metric_weights,
+        clean_kwargs={
+            "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
+            "non_finite_mode": text_method_nan,
+            "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
+            "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
+        }
+    )
 
     render_auto_results_table([])
     set_info(f"AUTO: запуск подбора ({auto_mode})...", "blue")
@@ -1226,6 +1243,22 @@ def calculate_cluster_auto():
         "blue"
     )
     QApplication.processEvents()
+
+    if not force_recompute:
+        cached_top_results = load_cluster_auto_tuning_cache(
+            cache_key=cache_key,
+            clust_object_id=int(clust_object_id)
+        )
+        if cached_top_results:
+            render_auto_results_table(cached_top_results)
+            best_result = cached_top_results[0]
+            if auto_apply_best:
+                apply_auto_result_to_ui(best_result)
+            set_info(
+                f"AUTO {auto_mode}: использованы сохраненные top-{len(cached_top_results)} настройки.",
+                "green"
+            )
+            return
 
     tuning_result = run_auto_cluster_tuning(
         base_data=base_data,
@@ -1244,6 +1277,11 @@ def calculate_cluster_auto():
     )
 
     top_results = tuning_result.get("top_results", [])
+    save_cluster_auto_tuning_cache(
+        cache_key=cache_key,
+        clust_object_id=int(clust_object_id),
+        top_results=top_results
+    )
     render_auto_results_table(top_results)
     best_result = tuning_result.get("best_result")
 
@@ -1272,6 +1310,151 @@ def calculate_cluster_auto():
         ),
         "green"
     )
+
+
+def _normalize_cache_payload(data: Any) -> Any:
+    """
+    Нормализует структуру данных для стабильного JSON/hash.
+    """
+    if isinstance(data, dict):
+        return {str(k): _normalize_cache_payload(v) for k, v in sorted(data.items(), key=lambda item: str(item[0]))}
+    if isinstance(data, (list, tuple)):
+        return [_normalize_cache_payload(v) for v in data]
+    return data
+
+
+def build_cluster_auto_tuning_cache_key(
+        *,
+        clust_object_id: int,
+        auto_mode: str,
+        max_candidates: int,
+        top_k: int,
+        weights: Dict[str, float],
+        clean_kwargs: Dict[str, Any]
+) -> str:
+    """
+    Формирует hash-ключ для сохранения/поиска результата AUTO-подбора.
+    """
+    payload = {
+        "clust_object_id": int(clust_object_id),
+        "auto_mode": str(auto_mode).upper(),
+        "max_candidates": int(max_candidates),
+        "top_k": int(top_k),
+        "weights": {
+            "silhouette": float(weights.get("silhouette", 0.4)),
+            "davies_bouldin": float(weights.get("davies_bouldin", 0.3)),
+            "calinski_harabasz": float(weights.get("calinski_harabasz", 0.3))
+        },
+        "clean_kwargs": _normalize_cache_payload(clean_kwargs or {})
+    }
+    payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+
+
+def _ensure_cluster_auto_tuning_cache_table() -> None:
+    """
+    Создает таблицу cache автоподбора (если ее еще нет).
+    """
+    ClusterAutoTuningCache.__table__.create(bind=engine, checkfirst=True)
+
+
+def load_cluster_auto_tuning_cache(*, cache_key: str, clust_object_id: int) -> list[CandidateResult]:
+    """
+    Загружает top-5 настроек AUTO-подбора из persistent-cache.
+    """
+    try:
+        _ensure_cluster_auto_tuning_cache_table()
+        row = (
+            session.query(ClusterAutoTuningCache)
+            .filter_by(cache_key=str(cache_key), object_set_id=int(clust_object_id))
+            .first()
+        )
+        if row is None or not row.top_results:
+            return []
+        payload = json.loads(row.top_results)
+        if not isinstance(payload, list):
+            return []
+        return payload[:5]
+    except Exception as exc:
+        set_info(f"AUTO: ошибка чтения cache top-5: {exc}", "brown")
+        return []
+
+
+def save_cluster_auto_tuning_cache(
+        *,
+        cache_key: str,
+        clust_object_id: int,
+        top_results: list[CandidateResult]
+) -> None:
+    """
+    Сохраняет top-5 настроек AUTO-подбора (только конфигурации кандидатов).
+    """
+    try:
+        _ensure_cluster_auto_tuning_cache_table()
+        compact_top_results: list[dict] = []
+        for idx, result in enumerate((top_results or [])[:5], start=1):
+            result_row = result or {}
+            cfg = result_row.get("candidate_config")
+            if not cfg:
+                continue
+            metrics = result_row.get("metrics") or {}
+            stats = result_row.get("stats") or {}
+            score = result_row.get("score")
+
+            def _safe_float(value):
+                if value is None:
+                    return None
+                try:
+                    return float(value)
+                except Exception:
+                    return None
+
+            def _safe_int(value):
+                if value is None:
+                    return None
+                try:
+                    return int(value)
+                except Exception:
+                    return None
+
+            compact_top_results.append(
+                {
+                    "candidate_id": str(result_row.get("candidate_id") or f"T{idx:02d}"),
+                    "candidate_config": cfg,
+                    "metrics": {
+                        "silhouette": _safe_float(metrics.get("silhouette")),
+                        "davies_bouldin": _safe_float(metrics.get("davies_bouldin")),
+                        "calinski_harabasz": _safe_float(metrics.get("calinski_harabasz"))
+                    },
+                    "stats": {
+                        "n_clusters": _safe_int(stats.get("n_clusters")),
+                        "noise_fraction": _safe_float(stats.get("noise_fraction")),
+                        "n_samples_eval": _safe_int(stats.get("n_samples_eval"))
+                    },
+                    "score": _safe_float(score),
+                    "status": str(result_row.get("status") or "ok"),
+                    "error_text": str(result_row.get("error_text") or "")
+                }
+            )
+        if not compact_top_results:
+            return
+        existing_row = (
+            session.query(ClusterAutoTuningCache)
+            .filter_by(cache_key=str(cache_key), object_set_id=int(clust_object_id))
+            .first()
+        )
+        if existing_row is None:
+            existing_row = ClusterAutoTuningCache(
+                object_set_id=int(clust_object_id),
+                cache_key=str(cache_key)
+            )
+            session.add(existing_row)
+
+        existing_row.created_at = datetime.utcnow()
+        existing_row.top_results = json.dumps(compact_top_results, ensure_ascii=False)
+        session.commit()
+    except Exception as exc:
+        set_info(f"AUTO: ошибка сохранения cache top-5: {exc}", "brown")
 
 
 def build_cluster_analysis_key(
