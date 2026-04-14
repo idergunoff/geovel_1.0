@@ -499,6 +499,210 @@ def rank_candidates(
     return ranked
 
 
+def _candidate_signature(candidate: CandidateConfig) -> tuple:
+    """
+    Возвращает hashable-подпись кандидата для дедупликации.
+    """
+    method_params_tuple = tuple(sorted((candidate.get("method_params") or {}).items()))
+    return (
+        candidate.get("scaler_mode"),
+        bool(candidate.get("pca_enabled")),
+        candidate.get("pca_mode"),
+        candidate.get("pca_value"),
+        candidate.get("method"),
+        method_params_tuple
+    )
+
+
+def build_fine_search_space(
+        top_results: list[CandidateResult],
+        *,
+        top_k: int = 5,
+        max_candidates: int = 200
+) -> list[CandidateConfig]:
+    """
+    Строит локальное fine-пространство вокруг top-K coarse-кандидатов.
+    """
+    fine_candidates: list[CandidateConfig] = []
+    seen_signatures = set()
+
+    for result in top_results[:max(1, int(top_k))]:
+        if result.get("status") != "ok":
+            continue
+        cfg = result.get("candidate_config")
+        if not cfg:
+            continue
+
+        base_scaler = cfg["scaler_mode"]
+        base_method = cfg["method"]
+        base_method_params = dict(cfg.get("method_params", {}))
+
+        # Локальные варианты PCA.
+        pca_variants = [{
+            "pca_enabled": bool(cfg.get("pca_enabled")),
+            "pca_mode": cfg.get("pca_mode"),
+            "pca_value": cfg.get("pca_value")
+        }]
+        if cfg.get("pca_enabled") and cfg.get("pca_mode") == "variance_ratio":
+            try:
+                base_vr = float(cfg.get("pca_value"))
+                for delta in (-0.02, 0.02):
+                    vr = round(base_vr + delta, 3)
+                    if 0.50 <= vr <= 0.99:
+                        pca_variants.append({
+                            "pca_enabled": True,
+                            "pca_mode": "variance_ratio",
+                            "pca_value": vr
+                        })
+            except (TypeError, ValueError):
+                pass
+        elif cfg.get("pca_enabled") and cfg.get("pca_mode") == "fixed_components":
+            try:
+                base_n_comp = int(float(cfg.get("pca_value")))
+                for delta in (-2, -1, 1, 2):
+                    n_comp = max(2, base_n_comp + delta)
+                    pca_variants.append({
+                        "pca_enabled": True,
+                        "pca_mode": "fixed_components",
+                        "pca_value": float(n_comp)
+                    })
+            except (TypeError, ValueError):
+                pass
+
+        method_variants: list[Dict[str, Any]] = []
+        if base_method == "kmeans":
+            base_k = int(base_method_params.get("kmeans_n_clusters", 4))
+            base_n_init = int(base_method_params.get("kmeans_n_init", 10))
+            for k in range(max(2, base_k - 2), base_k + 3):
+                for n_init in sorted({base_n_init, 20, base_n_init + 10}):
+                    method_variants.append({
+                        "kmeans_n_clusters": int(k),
+                        "kmeans_n_init": int(max(10, n_init))
+                    })
+        elif base_method == "hdbscan":
+            base_mcs = int(base_method_params.get("hdbscan_min_cluster_size", 20))
+            base_ms = int(base_method_params.get("hdbscan_min_samples", 5))
+            for delta_mcs in (-10, -5, 0, 5, 10):
+                for delta_ms in (-2, -1, 0, 1, 2):
+                    method_variants.append({
+                        "hdbscan_min_cluster_size": int(max(5, base_mcs + delta_mcs)),
+                        "hdbscan_min_samples": int(max(1, base_ms + delta_ms))
+                    })
+        elif base_method == "gmm":
+            base_n = int(base_method_params.get("gmm_n_components", 4))
+            base_cov = str(base_method_params.get("gmm_covariance_type", "full"))
+            alt_cov = "diag" if base_cov == "full" else "full"
+            for n_components in range(max(2, base_n - 2), base_n + 3):
+                for cov in {base_cov, alt_cov}:
+                    method_variants.append({
+                        "gmm_n_components": int(n_components),
+                        "gmm_covariance_type": str(cov)
+                    })
+        else:
+            continue
+
+        for pca_variant in pca_variants:
+            for method_params in method_variants:
+                candidate = make_candidate_config(
+                    scaler_mode=base_scaler,
+                    pca_enabled=pca_variant["pca_enabled"],
+                    pca_mode=pca_variant["pca_mode"],
+                    pca_value=pca_variant["pca_value"],
+                    method=base_method,
+                    method_params=method_params
+                )
+                sig = _candidate_signature(candidate)
+                if sig in seen_signatures:
+                    continue
+                seen_signatures.add(sig)
+                fine_candidates.append(candidate)
+
+    total = len(fine_candidates)
+    if total > max_candidates:
+        _set_auto_info(
+            f"AUTO FINE: сгенерировано {total} fine-кандидатов, применен лимит {max_candidates}.",
+            "brown"
+        )
+        return fine_candidates[:max_candidates]
+
+    _set_auto_info(f"AUTO FINE: размер fine search space = {total}.", "blue")
+    return fine_candidates
+
+
+def run_auto_cluster_tuning(
+        base_data,
+        *,
+        auto_mode: str = "COARSE",
+        top_k: int = 5,
+        max_candidates: int = 200,
+        weights: Optional[Dict[str, float]] = None,
+        clean_kwargs: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Orchestrator AUTO-подбора.
+    В режиме FINE выполняет coarse + fine и объединяет leaderboard.
+    """
+    mode = (auto_mode or "COARSE").strip().upper()
+    if mode not in {"COARSE", "FINE"}:
+        raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
+
+    coarse_candidates = build_auto_search_space("COARSE", max_candidates=max_candidates)
+    coarse_results: list[CandidateResult] = []
+    for idx, candidate in enumerate(coarse_candidates, start=1):
+        _set_auto_info(f"Coarse: {idx}/{len(coarse_candidates)}", "blue")
+        coarse_results.append(
+            run_cluster_candidate(
+                base_data=base_data,
+                candidate=candidate,
+                candidate_id=f"C{idx:03d}",
+                clean_kwargs=clean_kwargs
+            )
+        )
+
+    ranked_coarse = rank_candidates(coarse_results, weights=weights)
+    coarse_best_result = ranked_coarse[0] if ranked_coarse else None
+
+    if mode == "COARSE":
+        return {
+            "mode": mode,
+            "best_result": coarse_best_result,
+            "top_results": ranked_coarse[:10],
+            "raw_results": coarse_results,
+            "coarse_results": ranked_coarse,
+            "fine_results": []
+        }
+
+    fine_candidates = build_fine_search_space(
+        ranked_coarse,
+        top_k=top_k,
+        max_candidates=max_candidates
+    )
+    fine_results: list[CandidateResult] = []
+    for idx, candidate in enumerate(fine_candidates, start=1):
+        _set_auto_info(f"Fine: {idx}/{len(fine_candidates)}", "blue")
+        fine_results.append(
+            run_cluster_candidate(
+                base_data=base_data,
+                candidate=candidate,
+                candidate_id=f"F{idx:03d}",
+                clean_kwargs=clean_kwargs
+            )
+        )
+
+    combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
+    best_result = combined_ranked[0] if combined_ranked else coarse_best_result
+
+    return {
+        "mode": mode,
+        "best_result": best_result,
+        "top_results": combined_ranked[:10],
+        "raw_results": coarse_results + fine_results,
+        "coarse_results": ranked_coarse,
+        "fine_results": rank_candidates(fine_results, weights=weights),
+        "coarse_best_result": coarse_best_result
+    }
+
+
 def build_cluster_analysis_key(
         clust_object_id=None,
         clust_analys_id=None,
