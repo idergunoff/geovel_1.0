@@ -1092,6 +1092,32 @@ def apply_auto_result_to_ui(best_result: CandidateResult) -> None:
                 ui.comboBox_clust_gmm_type.setCurrentIndex(idx)
 
 
+def _read_auto_float_setting(control_name: str, fallback: float) -> float:
+    """
+    Безопасно читает float-настройку из UI-контрола (если он существует).
+    """
+    control = getattr(ui, control_name, None)
+    if control is None:
+        return float(fallback)
+    try:
+        return float(control.value())
+    except Exception:
+        return float(fallback)
+
+
+def _read_auto_int_setting(control_name: str, fallback: int, minimum: int = 1) -> int:
+    """
+    Безопасно читает int-настройку из UI-контрола (если он существует).
+    """
+    control = getattr(ui, control_name, None)
+    if control is None:
+        return max(minimum, int(fallback))
+    try:
+        return max(minimum, int(control.value()))
+    except Exception:
+        return max(minimum, int(fallback))
+
+
 def calculate_cluster_auto():
     """
     Запускает AUTO-подбор параметров кластеризации из UI.
@@ -1140,15 +1166,37 @@ def calculate_cluster_auto():
         else (20.0 if use_timeouts else None)
     )
 
+    auto_apply_toggle = getattr(ui, "checkBox_cluster_auto_apply_best", None)
+    auto_apply_best = bool(auto_apply_toggle.isChecked()) if auto_apply_toggle is not None else True
+
+    max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
+    top_k = _read_auto_int_setting("spinBox_cluster_auto_top_k", fallback=5, minimum=1)
+    metric_weights = {
+        "silhouette": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_sil", fallback=0.4),
+        "davies_bouldin": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_db", fallback=0.3),
+        "calinski_harabasz": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_ch", fallback=0.3)
+    }
+
     render_auto_results_table([])
     set_info(f"AUTO: запуск подбора ({auto_mode})...", "blue")
     if not use_timeouts:
         set_info("AUTO: таймауты отключены (будут рассчитаны все кандидаты).", "blue")
+    set_info(
+        (
+            f"AUTO: настройки подбора max_candidates={max_candidates}, top_k={top_k}, "
+            f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
+            f"{metric_weights['davies_bouldin']:.2f}/{metric_weights['calinski_harabasz']:.2f})."
+        ),
+        "blue"
+    )
     QApplication.processEvents()
 
     tuning_result = run_auto_cluster_tuning(
         base_data=base_data,
         auto_mode=auto_mode,
+        max_candidates=max_candidates,
+        top_k=top_k,
+        weights=metric_weights,
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
         clean_kwargs={
@@ -1167,10 +1215,16 @@ def calculate_cluster_auto():
         set_info("AUTO: не найдено валидных конфигураций.", "brown")
         return
 
-    apply_auto_result_to_ui(best_result)
+    if auto_apply_best:
+        apply_auto_result_to_ui(best_result)
 
     best_cfg = best_result.get("candidate_config", {})
     best_metrics = best_result.get("metrics", {})
+    apply_message = (
+        "Параметры применены в UI, нажмите CALC для расчета."
+        if auto_apply_best
+        else "Авто-применение отключено: проверьте top в таблице и примените вручную."
+    )
     set_info(
         (
             f"AUTO {auto_mode}: лучший score={_safe_num(best_result.get('score'), 4)} | "
@@ -1178,7 +1232,7 @@ def calculate_cluster_auto():
             f"sil={_safe_num(best_metrics.get('silhouette'), 3)} | "
             f"db={_safe_num(best_metrics.get('davies_bouldin'), 3)} | "
             f"ch={_safe_num(best_metrics.get('calinski_harabasz'), 1)}. "
-            f"Параметры применены в UI, нажмите CALC для расчета."
+            f"{apply_message}"
         ),
         "green"
     )
