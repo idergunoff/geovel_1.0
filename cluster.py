@@ -365,6 +365,140 @@ def run_cluster_candidate(
     )
 
 
+def _to_finite_float(value: Any) -> Optional[float]:
+    """
+    Приводит значение к float, если оно конечно. Иначе возвращает None.
+    """
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(out):
+        return None
+    return out
+
+
+def _clip01(value: float) -> float:
+    return float(max(0.0, min(1.0, value)))
+
+
+def score_candidate(
+        metrics: CandidateMetrics,
+        stats: CandidateStats,
+        weights: Optional[Dict[str, float]] = None
+) -> Optional[float]:
+    """
+    Рассчитывает суммарный score кандидата.
+
+    Нормализация:
+    - silhouette: линейно из [-1, 1] в [0, 1]
+    - davies_bouldin: инверсия 1 / (1 + db)
+    - calinski_harabasz: rank-like насыщение ch / (ch + 1000)
+
+    Штрафы:
+    - высокий noise_fraction
+    - слишком мало/слишком много кластеров
+    """
+    w = {"silhouette": 0.4, "davies_bouldin": 0.3, "calinski_harabasz": 0.3}
+    if weights:
+        w.update(weights)
+
+    sil = _to_finite_float(metrics.get("silhouette"))
+    db = _to_finite_float(metrics.get("davies_bouldin"))
+    ch = _to_finite_float(metrics.get("calinski_harabasz"))
+    if sil is None or db is None or ch is None:
+        return None
+
+    sil_norm = _clip01((sil + 1.0) / 2.0)
+    db_norm = _clip01(1.0 / (1.0 + max(db, 0.0)))
+    ch_norm = _clip01(ch / (ch + 1000.0)) if ch > 0 else 0.0
+    score = (
+        float(w["silhouette"]) * sil_norm
+        + float(w["davies_bouldin"]) * db_norm
+        + float(w["calinski_harabasz"]) * ch_norm
+    )
+
+    noise_fraction = _to_finite_float(stats.get("noise_fraction")) or 0.0
+    noise_fraction = _clip01(noise_fraction)
+    n_clusters = int(stats.get("n_clusters", 0) or 0)
+
+    penalty = 0.0
+    if noise_fraction > 0.30:
+        penalty += min(0.20, (noise_fraction - 0.30) * 0.40)
+    if n_clusters < 2:
+        penalty += 0.30
+    elif n_clusters == 2:
+        penalty += 0.05
+    elif n_clusters > 12:
+        penalty += min(0.20, (n_clusters - 12) * 0.02)
+
+    return max(0.0, float(score - penalty))
+
+
+def rank_candidates(
+        results: list[CandidateResult],
+        weights: Optional[Dict[str, float]] = None
+) -> list[CandidateResult]:
+    """
+    Выставляет score и возвращает отсортированный список кандидатов.
+
+    Правила tie-break:
+    1) выше score
+    2) выше silhouette
+    3) ниже davies_bouldin
+    4) ниже noise_fraction
+    """
+    ranked: list[CandidateResult] = []
+    for result in results:
+        result_copy = CandidateResult(
+            candidate_id=result["candidate_id"],
+            candidate_config=result["candidate_config"],
+            metrics=result.get("metrics", CandidateMetrics()),
+            stats=result.get("stats", CandidateStats()),
+            score=result.get("score"),
+            status=result.get("status", "error"),
+            error_text=result.get("error_text", "")
+        )
+
+        if result_copy["status"] == "ok":
+            result_copy["score"] = score_candidate(
+                result_copy.get("metrics", CandidateMetrics()),
+                result_copy.get("stats", CandidateStats()),
+                weights=weights
+            )
+            if result_copy["score"] is None:
+                result_copy["status"] = "invalid"
+                result_copy["error_text"] = (
+                    (result_copy.get("error_text", "") + "; ").strip("; ")
+                    + "score is unavailable"
+                ).strip()
+        else:
+            result_copy["score"] = None
+
+        ranked.append(result_copy)
+
+    def _sort_key(row: CandidateResult):
+        is_ok = row.get("status") == "ok" and row.get("score") is not None
+        metrics = row.get("metrics", {})
+        stats = row.get("stats", {})
+
+        score_val = float(row["score"]) if row.get("score") is not None else float("-inf")
+        sil = _to_finite_float(metrics.get("silhouette"))
+        db = _to_finite_float(metrics.get("davies_bouldin"))
+        noise = _to_finite_float(stats.get("noise_fraction"))
+
+        return (
+            1 if is_ok else 0,
+            score_val,
+            sil if sil is not None else float("-inf"),
+            -(db if db is not None else float("inf")),
+            -(noise if noise is not None else float("inf"))
+        )
+
+    ranked.sort(key=_sort_key, reverse=True)
+    return ranked
+
+
 def build_cluster_analysis_key(
         clust_object_id=None,
         clust_analys_id=None,
