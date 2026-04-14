@@ -766,6 +766,13 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
         score_val = result.get("score")
         noise = _to_finite_float(stats.get("noise_fraction"))
 
+        status_raw = str(result.get("status", "—"))
+        status_view = {
+            "ok": "OK",
+            "invalid": "INVALID",
+            "error": "ERROR"
+        }.get(status_raw, status_raw.upper() if status_raw else "—")
+
         row_values = [
             str(row_idx + 1),
             _safe_num(score_val, precision=4),
@@ -776,19 +783,18 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             _safe_num(metrics.get("davies_bouldin"), precision=4),
             _safe_num(metrics.get("calinski_harabasz"), precision=2),
             str(stats.get("n_clusters", "—")),
-            (f"{(noise * 100.0):.1f}" if noise is not None else "—"),
-            str(result.get("status", "—"))
+            (f"{(noise * 100.0):.1f}%" if noise is not None else "—"),
+            status_view
         ]
 
         for col_idx, value in enumerate(row_values):
             item = QTableWidgetItem(str(value))
-            if col_idx in (0, 1, 5, 6, 7, 8, 9):
+            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10):
                 item.setTextAlignment(Qt.AlignCenter)
             if col_idx == 10:
-                status = str(result.get("status", ""))
-                if status == "ok":
+                if status_raw == "ok":
                     item.setForeground(QBrush(QColor("darkgreen")))
-                elif status == "invalid":
+                elif status_raw == "invalid":
                     item.setForeground(QBrush(QColor("darkorange")))
                 else:
                     item.setForeground(QBrush(QColor("darkred")))
