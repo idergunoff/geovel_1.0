@@ -552,6 +552,8 @@ ui.comboBox_clust_set.activated.connect(update_list_clust_param)
 ui.comboBox_clust_set.activated.connect(update_list_clust_object)
 ui.comboBox_clust_obj.activated.connect(show_finite_report)
 ui.checkBox_clust_clean_nan.clicked.connect(update_clust_clear_nan)
+ui.pushButton_clust_prev_prof.clicked.connect(draw_prev_cluster_profile)
+ui.pushButton_clust_next_prof.clicked.connect(draw_next_cluster_profile)
 
 
 time = datetime.datetime.now()

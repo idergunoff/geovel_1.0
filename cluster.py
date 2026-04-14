@@ -114,6 +114,42 @@ def redraw_cluster_for_current_profile_from_cache():
         is_cluster_redraw_in_progress = False
 
 
+def switch_cluster_profile(step: int):
+    """
+    Переключает профиль в comboBox_profile по кругу и перерисовывает:
+    - радарограмму (draw_radarogram)
+    - кластерную заливку из runtime-cache
+    """
+    profile_count = ui.comboBox_profile.count()
+    if profile_count <= 0:
+        set_info("Список профилей пуст. Переключение недоступно.", "brown")
+        return
+
+    current_index = ui.comboBox_profile.currentIndex()
+    if current_index < 0:
+        current_index = 0
+
+    next_index = (current_index + step) % profile_count
+    ui.comboBox_profile.setCurrentIndex(next_index)
+
+    draw_radarogram()
+    redraw_cluster_for_current_profile_from_cache()
+
+
+def draw_prev_cluster_profile():
+    """
+    Отрисовывает предыдущий профиль (по кругу) с результатом кластеризации.
+    """
+    switch_cluster_profile(-1)
+
+
+def draw_next_cluster_profile():
+    """
+    Отрисовывает следующий профиль (по кругу) с результатом кластеризации.
+    """
+    switch_cluster_profile(1)
+
+
 def get_cluster_color(label):
     """
     Возвращает цвет кластера:
