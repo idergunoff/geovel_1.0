@@ -1,4 +1,6 @@
 import pandas as pd
+import base64
+import gzip
 import hashlib
 import json
 from collections import Counter
@@ -57,6 +59,41 @@ class CandidateResult(TypedDict):
 
 
 cluster_auto_results_cache: list[CandidateResult] = []
+
+
+CLUSTER_DATA_GZIP_PREFIX = "gzjson:"
+
+
+def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
+    """
+    Сериализует набор данных кластера в компактный JSON,
+    а для крупных наборов — в gzip+base64 строку.
+    """
+    json_payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    encoded_size = len(json_payload.encode("utf-8"))
+
+    # Сжимаем только крупные payload, чтобы снизить размер записи в БД.
+    if encoded_size < 10 * 1024 * 1024:
+        return json_payload
+
+    compressed = gzip.compress(json_payload.encode("utf-8"), compresslevel=6)
+    b64_payload = base64.b64encode(compressed).decode("ascii")
+    return f"{CLUSTER_DATA_GZIP_PREFIX}{b64_payload}"
+
+
+def _deserialize_cluster_dataset(raw_data: str) -> list[list[Any]]:
+    """
+    Десериализует набор данных кластера из JSON или gzip+base64 формата.
+    """
+    if not raw_data:
+        return []
+
+    if raw_data.startswith(CLUSTER_DATA_GZIP_PREFIX):
+        compressed_b64 = raw_data[len(CLUSTER_DATA_GZIP_PREFIX):]
+        decompressed = gzip.decompress(base64.b64decode(compressed_b64.encode("ascii")))
+        return json.loads(decompressed.decode("utf-8"))
+
+    return json.loads(raw_data)
 
 
 CLUSTER_MAP_INTERP_RESOLUTION_MIN = 50
@@ -1349,7 +1386,7 @@ def calculate_cluster_auto():
         return
 
     try:
-        base_data = json.loads(clust_object.data)
+        base_data = _deserialize_cluster_dataset(clust_object.data)
     except Exception as exc:
         set_info(f"AUTO: ошибка чтения данных объекта: {exc}", "red")
         return
@@ -2055,7 +2092,8 @@ def collect_clust_object():
     print(high_corr_table)
 
     data = working_data_result.values.tolist()
-    new_cluster_obj = ObjectSet(research_id=get_research_id(), analysis_id=get_curr_clust_analys_id(), data=json.dumps(data), report=report)
+    serialized_data = _serialize_cluster_dataset(data)
+    new_cluster_obj = ObjectSet(research_id=get_research_id(), analysis_id=get_curr_clust_analys_id(), data=serialized_data, report=report)
     session.add(new_cluster_obj)
     session.commit()
     update_list_clust_object()
@@ -3011,7 +3049,7 @@ def calculate_cluster():
     clust_object_id = get_curr_clust_object_id()
     clust_analys_id = get_curr_clust_analys_id()
     clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
-    data = json.loads(clust_object.data)
+    data = _deserialize_cluster_dataset(clust_object.data)
     raw_meta = np.array(data, dtype=object)[:, 0] if data else np.array([])
     selected_button = ui.buttonGroup_3.checkedButton()
 
