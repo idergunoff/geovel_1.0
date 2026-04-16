@@ -1,6 +1,7 @@
 import pandas as pd
 import hashlib
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from itertools import product
 from time import monotonic
@@ -54,6 +55,122 @@ class CandidateResult(TypedDict):
 
 
 cluster_auto_results_cache: list[CandidateResult] = []
+
+
+def _normalize_smoothing_window(window: int) -> int:
+    """
+    Приводит окно сглаживания к валидному нечетному значению.
+    """
+    try:
+        normalized = int(window)
+    except (TypeError, ValueError):
+        return 0
+    if normalized <= 0:
+        return 0
+    if normalized < 3:
+        normalized = 3
+    if normalized % 2 == 0:
+        normalized += 1
+    return normalized
+
+
+def _smooth_label_sequence(
+        labels: list[int],
+        *,
+        method: str = "maj",
+        window: int = 5,
+        preserve_noise: bool = True
+) -> list[int]:
+    """
+    Сглаживает последовательность меток кластера в 1D окне.
+
+    method:
+      - maj: мажоритарное голосование (mode)
+      - med: медиана по окну
+    """
+    norm_window = _normalize_smoothing_window(window)
+    if norm_window <= 0 or len(labels) <= 1:
+        return list(labels)
+
+    radius = norm_window // 2
+    method_norm = (method or "maj").strip().lower()
+    smoothed = list(labels)
+
+    for idx, center_label in enumerate(labels):
+        if preserve_noise and int(center_label) == -1:
+            continue
+
+        left = max(0, idx - radius)
+        right = min(len(labels), idx + radius + 1)
+        neighborhood = [int(v) for v in labels[left:right]]
+        if not neighborhood:
+            continue
+
+        if preserve_noise:
+            neighborhood_wo_noise = [v for v in neighborhood if v != -1]
+            if neighborhood_wo_noise:
+                neighborhood = neighborhood_wo_noise
+
+        if method_norm == "med":
+            target_label = int(np.median(np.array(neighborhood, dtype=float)))
+        else:
+            target_label = int(Counter(neighborhood).most_common(1)[0][0])
+        smoothed[idx] = target_label
+
+    return smoothed
+
+
+def _smooth_labels_by_profile_trace(
+        labels: list[int],
+        profile_trace_rows: dict[int, dict[int, int]],
+        *,
+        method: str = "maj",
+        window: int = 5,
+        preserve_noise: bool = True
+) -> tuple[list[int], int]:
+    """
+    Сглаживает метки отдельно по каждому профилю и только внутри непрерывных
+    сегментов trace_index (без «перетекания» через разрывы).
+    """
+    smoothed_labels = list(labels)
+    changes = 0
+
+    for trace_rows in profile_trace_rows.values():
+        if not trace_rows:
+            continue
+        sorted_trace_row = sorted((int(trace), int(row_idx)) for trace, row_idx in trace_rows.items())
+        segment: list[tuple[int, int]] = []
+
+        def flush_segment(items: list[tuple[int, int]]) -> None:
+            nonlocal changes
+            if not items:
+                return
+            rows = [row_idx for _, row_idx in items]
+            original = [int(labels[row_idx]) for row_idx in rows]
+            smoothed_segment = _smooth_label_sequence(
+                original,
+                method=method,
+                window=window,
+                preserve_noise=preserve_noise
+            )
+            for row_idx, old_label, new_label in zip(rows, original, smoothed_segment):
+                smoothed_labels[row_idx] = int(new_label)
+                if int(old_label) != int(new_label):
+                    changes += 1
+
+        for trace_idx, row_idx in sorted_trace_row:
+            if not segment:
+                segment = [(trace_idx, row_idx)]
+                continue
+            prev_trace_idx = segment[-1][0]
+            if trace_idx == prev_trace_idx + 1:
+                segment.append((trace_idx, row_idx))
+            else:
+                flush_segment(segment)
+                segment = [(trace_idx, row_idx)]
+        flush_segment(segment)
+
+    return smoothed_labels, changes
 
 
 def make_candidate_config(
@@ -2701,6 +2818,9 @@ def build_clustering_report(
 
     # clustering
 
+    smoothing_desc = str(cluster_info.get("smoothing", "off"))
+    settings.append(f"Smoothing: {smoothing_desc}")
+
     if cluster_info["method"] == "kmeans":
         settings.append(
             f"KMeans (k={cluster_info['kmeans_n']}, init={cluster_info['kmeans_n_init']})"
@@ -2841,7 +2961,8 @@ def calculate_cluster():
         gmm_covariance_type=gmm_type
     )
 
-    profile_labels = {}
+    labels_for_output = list(label_list)
+    profile_trace_rows: dict[int, dict[int, int]] = {}
     invalid_prof_index_count = 0
     duplicate_prof_index_count = 0
 
@@ -2852,7 +2973,7 @@ def calculate_cluster():
             'brown'
         )
 
-    for clean_row_idx, label in enumerate(label_list):
+    for clean_row_idx, _ in enumerate(label_list):
         if clean_row_idx >= len(kept_row_indices):
             break
 
@@ -2874,13 +2995,47 @@ def calculate_cluster():
             invalid_prof_index_count += 1
             continue
 
-        if profile_id not in profile_labels:
-            profile_labels[profile_id] = {}
-
-        if trace_index in profile_labels[profile_id]:
+        if profile_id not in profile_trace_rows:
+            profile_trace_rows[profile_id] = {}
+        if trace_index in profile_trace_rows[profile_id]:
             duplicate_prof_index_count += 1
 
-        profile_labels[profile_id][trace_index] = int(label)
+        profile_trace_rows[profile_id][trace_index] = int(clean_row_idx)
+
+    smooth_enabled = ui.checkBox_cluster_smooth.isChecked()
+    smooth_method = "maj" if ui.radioButton_cluster_smooth_maj.isChecked() else "med"
+    smooth_window_raw = ui.spinBox_cluster_smooth_window.value()
+    smooth_window = _normalize_smoothing_window(smooth_window_raw)
+    smoothing_applied = bool(smooth_enabled and smooth_window >= 3)
+    smoothing_changes = 0
+
+    if smooth_enabled and smooth_window_raw != smooth_window and smooth_window >= 3:
+        set_info(
+            f"Smoothing: окно {smooth_window_raw} скорректировано до нечетного {smooth_window}.",
+            "brown"
+        )
+
+    if smoothing_applied:
+        labels_for_output, smoothing_changes = _smooth_labels_by_profile_trace(
+            labels_for_output,
+            profile_trace_rows,
+            method=smooth_method,
+            window=smooth_window,
+            preserve_noise=True
+        )
+        set_info(
+            f"Smoothing применен ({smooth_method}, window={smooth_window}), изменено меток: {smoothing_changes}.",
+            "blue"
+        )
+    elif smooth_enabled:
+        set_info("Smoothing включен, но окно слишком маленькое. Постобработка пропущена.", "brown")
+
+    profile_labels = {}
+    for profile_id, trace_rows in profile_trace_rows.items():
+        profile_labels[profile_id] = {
+            int(trace_idx): int(labels_for_output[row_idx])
+            for trace_idx, row_idx in trace_rows.items()
+        }
 
     if invalid_prof_index_count:
         set_info(
@@ -2894,14 +3049,14 @@ def calculate_cluster():
             'brown'
         )
 
-    plot_cluster_map(label_list, data)
+    plot_cluster_map(labels_for_output, data)
 
-    print(label_list)
+    print(labels_for_output)
     print(clust_info)
 
     result_eval = evaluate_clustering(
         data_pca,
-        label_list,
+        labels_for_output,
         use_silhouette=ui.checkBox_cluster_silhoutte.isChecked(),
         use_db=ui.checkBox_cluster_dav_boul.isChecked(),
         use_ch=ui.checkBox_cluster_calin_har.isChecked()
@@ -2921,7 +3076,11 @@ def calculate_cluster():
             "min_sample": hdbsc_min_sample,
             "hdbscan_type": hdbsc_type,
             "n": gmm_n,
-            "gmm_type": gmm_type
+            "gmm_type": gmm_type,
+            "smoothing": (
+                f"{smooth_method}(window={smooth_window})"
+                if smoothing_applied else "off"
+            )
         },
         result_info=clust_info,
         evaluation=result_eval
@@ -2952,7 +3111,11 @@ def calculate_cluster():
         profile_labels=profile_labels,
         meta={
             "method": clust_method_analys,
-            "n_points": len(label_list),
+            "n_points": len(labels_for_output),
+            "smoothing_enabled": bool(smoothing_applied),
+            "smoothing_method": (smooth_method if smoothing_applied else None),
+            "smoothing_window": (int(smooth_window) if smoothing_applied else None),
+            "smoothing_changes": int(smoothing_changes),
             "timestamp": datetime.datetime.now(timezone.utc).isoformat(),
             "clust_object_id": int(clust_object_id),
             "clust_analys_id": int(clust_analys_id),
