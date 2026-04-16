@@ -1450,7 +1450,7 @@ def save_cluster_auto_tuning_cache(
             )
             session.add(existing_row)
 
-        existing_row.created_at = datetime.utcnow()
+        existing_row.created_at = datetime.datetime.utcnow()
         existing_row.top_results = json.dumps(compact_top_results, ensure_ascii=False)
         session.commit()
     except Exception as exc:
