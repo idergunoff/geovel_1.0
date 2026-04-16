@@ -120,7 +120,14 @@ def _set_auto_info(message: str, color: str = "blue") -> None:
         print(message)
 
 
-def build_auto_search_space(auto_mode: str, max_candidates: int = 200) -> list[CandidateConfig]:
+def build_auto_search_space(
+        auto_mode: str,
+        max_candidates: int = 200,
+        *,
+        max_clusters: int = 8,
+        scaler_only: bool = False,
+        pca_only: bool = False
+) -> list[CandidateConfig]:
     """
     Формирует coarse/fine пространство кандидатов для AUTO-подбора.
 
@@ -132,18 +139,21 @@ def build_auto_search_space(auto_mode: str, max_candidates: int = 200) -> list[C
     if mode not in {"COARSE", "FINE"}:
         raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
 
-    scaler_modes = ("none", "standard", "robust")
+    scaler_modes = ("standard", "robust") if scaler_only else ("none", "standard", "robust")
     pca_variance_values = (0.85, 0.90, 0.95)
-    pca_variants = [{"pca_enabled": False, "pca_mode": None, "pca_value": None}]
+    pca_variants = []
+    if not pca_only:
+        pca_variants.append({"pca_enabled": False, "pca_mode": None, "pca_value": None})
     pca_variants.extend(
         {"pca_enabled": True, "pca_mode": "variance_ratio", "pca_value": pca_value}
         for pca_value in pca_variance_values
     )
+    max_clusters = max(2, int(max_clusters))
 
     candidates: list[CandidateConfig] = []
 
-    # KMeans: k=2..8.
-    for scaler_mode, pca_variant, k in product(scaler_modes, pca_variants, range(2, 9)):
+    # KMeans: k=2..max_clusters.
+    for scaler_mode, pca_variant, k in product(scaler_modes, pca_variants, range(2, max_clusters + 1)):
         candidates.append(
             make_candidate_config(
                 scaler_mode=scaler_mode,
@@ -173,9 +183,9 @@ def build_auto_search_space(auto_mode: str, max_candidates: int = 200) -> list[C
             )
         )
 
-    # GMM: n_components=2..8, covariance_type={full,diag}.
+    # GMM: n_components=2..max_clusters, covariance_type={full,diag}.
     for scaler_mode, pca_variant, n_components, covariance_type in product(
-            scaler_modes, pca_variants, range(2, 9), ("full", "diag")
+            scaler_modes, pca_variants, range(2, max_clusters + 1), ("full", "diag")
     ):
         candidates.append(
             make_candidate_config(
@@ -658,6 +668,9 @@ def run_auto_cluster_tuning(
         auto_mode: str = "COARSE",
         top_k: int = 5,
         max_candidates: int = 200,
+        max_clusters: int = 8,
+        scaler_only: bool = False,
+        pca_only: bool = False,
         soft_timeout_sec: Optional[float] = None,
         candidate_soft_timeout_sec: Optional[float] = None,
         weights: Optional[Dict[str, float]] = None,
@@ -671,7 +684,13 @@ def run_auto_cluster_tuning(
     if mode not in {"COARSE", "FINE"}:
         raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
 
-    coarse_candidates = build_auto_search_space("COARSE", max_candidates=max_candidates)
+    coarse_candidates = build_auto_search_space(
+        "COARSE",
+        max_candidates=max_candidates,
+        max_clusters=max_clusters,
+        scaler_only=scaler_only,
+        pca_only=pca_only
+    )
     coarse_results: list[CandidateResult] = []
     transform_cache: Dict[tuple, Any] = {}
     run_start_ts = monotonic()
@@ -716,6 +735,15 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
+        if result.get("status") == "ok":
+            n_clusters = int((result.get("stats") or {}).get("n_clusters", 0) or 0)
+            if n_clusters > int(max_clusters):
+                result["status"] = "invalid"
+                result["score"] = None
+                result["error_text"] = (
+                    (result.get("error_text", "") + "; ").strip("; ")
+                    + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
+                ).strip()
 
         coarse_results.append(result)
 
@@ -779,6 +807,15 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
+        if result.get("status") == "ok":
+            n_clusters = int((result.get("stats") or {}).get("n_clusters", 0) or 0)
+            if n_clusters > int(max_clusters):
+                result["status"] = "invalid"
+                result["score"] = None
+                result["error_text"] = (
+                    (result.get("error_text", "") + "; ").strip("; ")
+                    + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
+                ).strip()
 
         fine_results.append(result)
 
@@ -1175,33 +1212,23 @@ def calculate_cluster_auto():
     selected_button = ui.buttonGroup_3.checkedButton()
     text_method_nan = selected_button.text() if selected_button else "impute"
 
-    # Таймауты можно отключить, чтобы не терять потенциально хороший,
-    # но долгий кандидат. Если в UI нет явного контролла, по умолчанию
-    # таймауты считаются отключенными.
-    timeout_toggle = (
-        getattr(ui, "checkBox_cluster_auto_timeout", None)
-        or getattr(ui, "checkBox_cluster_auto_use_timeout", None)
-    )
-    use_timeouts = bool(timeout_toggle.isChecked()) if timeout_toggle is not None else False
+    total_timeout_toggle = getattr(ui, "checkBox_cluster_auto_total_time", None)
+    candidate_timeout_toggle = getattr(ui, "checkBox_cluster_auto_candidate_time", None)
+    use_total_timeout = bool(total_timeout_toggle.isChecked()) if total_timeout_toggle is not None else False
+    use_candidate_timeout = bool(candidate_timeout_toggle.isChecked()) if candidate_timeout_toggle is not None else False
 
-    total_timeout_ctrl = (
-        getattr(ui, "spinBox_cluster_auto_timeout_all", None)
-        or getattr(ui, "doubleSpinBox_cluster_auto_timeout_total", None)
-    )
-    per_candidate_timeout_ctrl = (
-        getattr(ui, "spinBox_cluster_auto_timeout_candidate", None)
-        or getattr(ui, "doubleSpinBox_cluster_auto_timeout_candidate", None)
-    )
+    total_timeout_ctrl = getattr(ui, "spinBox_cluster_auto_timeout_all", None)
+    per_candidate_timeout_ctrl = getattr(ui, "spinBox_cluster_auto_timeout_candidate", None)
 
     total_timeout_sec = (
         float(total_timeout_ctrl.value())
-        if (use_timeouts and total_timeout_ctrl is not None)
-        else (180.0 if use_timeouts else None)
+        if (use_total_timeout and total_timeout_ctrl is not None)
+        else None
     )
     candidate_timeout_sec = (
         float(per_candidate_timeout_ctrl.value())
-        if (use_timeouts and per_candidate_timeout_ctrl is not None)
-        else (20.0 if use_timeouts else None)
+        if (use_candidate_timeout and per_candidate_timeout_ctrl is not None)
+        else None
     )
 
     auto_apply_toggle = getattr(ui, "checkBox_cluster_auto_apply_best", None)
@@ -1210,7 +1237,12 @@ def calculate_cluster_auto():
     force_recompute = bool(force_recompute_toggle.isChecked()) if force_recompute_toggle is not None else False
 
     max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
-    top_k = min(5, _read_auto_int_setting("spinBox_cluster_auto_top_k", fallback=5, minimum=1))
+    top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
+    max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
+    scaler_only_toggle = getattr(ui, "checkBox_cluster_auto_scaler_only", None)
+    pca_only_toggle = getattr(ui, "checkBox_cluster_auto_pca_only", None)
+    scaler_only = bool(scaler_only_toggle.isChecked()) if scaler_only_toggle is not None else False
+    pca_only = bool(pca_only_toggle.isChecked()) if pca_only_toggle is not None else False
     metric_weights = {
         "silhouette": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_sil", fallback=0.4),
         "davies_bouldin": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_db", fallback=0.3),
@@ -1221,6 +1253,15 @@ def calculate_cluster_auto():
         auto_mode=auto_mode,
         max_candidates=max_candidates,
         top_k=top_k,
+        constraints={
+            "max_clusters": max_clusters,
+            "scaler_only": scaler_only,
+            "pca_only": pca_only,
+            "use_total_timeout": bool(use_total_timeout),
+            "use_candidate_timeout": bool(use_candidate_timeout),
+            "total_timeout_sec": total_timeout_sec,
+            "candidate_timeout_sec": candidate_timeout_sec
+        },
         weights=metric_weights,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
@@ -1232,11 +1273,12 @@ def calculate_cluster_auto():
 
     render_auto_results_table([])
     set_info(f"AUTO: запуск подбора ({auto_mode})...", "blue")
-    if not use_timeouts:
-        set_info("AUTO: таймауты отключены (будут рассчитаны все кандидаты).", "blue")
+    if not use_total_timeout and not use_candidate_timeout:
+        set_info("AUTO: лимиты времени отключены (будут рассчитаны все кандидаты).", "blue")
     set_info(
         (
             f"AUTO: настройки подбора max_candidates={max_candidates}, top_k={top_k}, "
+            f"max_clusters={max_clusters}, scaler_only={scaler_only}, pca_only={pca_only}, "
             f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
             f"{metric_weights['davies_bouldin']:.2f}/{metric_weights['calinski_harabasz']:.2f})."
         ),
@@ -1247,7 +1289,8 @@ def calculate_cluster_auto():
     if not force_recompute:
         cached_top_results = load_cluster_auto_tuning_cache(
             cache_key=cache_key,
-            clust_object_id=int(clust_object_id)
+            clust_object_id=int(clust_object_id),
+            top_k=top_k
         )
         if cached_top_results:
             render_auto_results_table(cached_top_results)
@@ -1265,6 +1308,9 @@ def calculate_cluster_auto():
         auto_mode=auto_mode,
         max_candidates=max_candidates,
         top_k=top_k,
+        max_clusters=max_clusters,
+        scaler_only=scaler_only,
+        pca_only=pca_only,
         weights=metric_weights,
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
@@ -1280,7 +1326,8 @@ def calculate_cluster_auto():
     save_cluster_auto_tuning_cache(
         cache_key=cache_key,
         clust_object_id=int(clust_object_id),
-        top_results=top_results
+        top_results=top_results,
+        top_k=top_k
     )
     render_auto_results_table(top_results)
     best_result = tuning_result.get("best_result")
@@ -1329,6 +1376,7 @@ def build_cluster_auto_tuning_cache_key(
         auto_mode: str,
         max_candidates: int,
         top_k: int,
+        constraints: Optional[Dict[str, Any]],
         weights: Dict[str, float],
         clean_kwargs: Dict[str, Any]
 ) -> str:
@@ -1345,6 +1393,7 @@ def build_cluster_auto_tuning_cache_key(
             "davies_bouldin": float(weights.get("davies_bouldin", 0.3)),
             "calinski_harabasz": float(weights.get("calinski_harabasz", 0.3))
         },
+        "constraints": _normalize_cache_payload(constraints or {}),
         "clean_kwargs": _normalize_cache_payload(clean_kwargs or {})
     }
     payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -1358,9 +1407,14 @@ def _ensure_cluster_auto_tuning_cache_table() -> None:
     ClusterAutoTuningCache.__table__.create(bind=engine, checkfirst=True)
 
 
-def load_cluster_auto_tuning_cache(*, cache_key: str, clust_object_id: int) -> list[CandidateResult]:
+def load_cluster_auto_tuning_cache(
+        *,
+        cache_key: str,
+        clust_object_id: int,
+        top_k: int = 5
+) -> list[CandidateResult]:
     """
-    Загружает top-5 настроек AUTO-подбора из persistent-cache.
+    Загружает top-K настроек AUTO-подбора из persistent-cache.
     """
     try:
         _ensure_cluster_auto_tuning_cache_table()
@@ -1374,9 +1428,9 @@ def load_cluster_auto_tuning_cache(*, cache_key: str, clust_object_id: int) -> l
         payload = json.loads(row.top_results)
         if not isinstance(payload, list):
             return []
-        return payload[:5]
+        return payload[:max(1, int(top_k))]
     except Exception as exc:
-        set_info(f"AUTO: ошибка чтения cache top-5: {exc}", "brown")
+        set_info(f"AUTO: ошибка чтения cache top-K: {exc}", "brown")
         return []
 
 
@@ -1384,15 +1438,16 @@ def save_cluster_auto_tuning_cache(
         *,
         cache_key: str,
         clust_object_id: int,
-        top_results: list[CandidateResult]
+        top_results: list[CandidateResult],
+        top_k: int = 5
 ) -> None:
     """
-    Сохраняет top-5 настроек AUTO-подбора (только конфигурации кандидатов).
+    Сохраняет top-K настроек AUTO-подбора (только конфигурации кандидатов).
     """
     try:
         _ensure_cluster_auto_tuning_cache_table()
         compact_top_results: list[dict] = []
-        for idx, result in enumerate((top_results or [])[:5], start=1):
+        for idx, result in enumerate((top_results or [])[:max(1, int(top_k))], start=1):
             result_row = result or {}
             cfg = result_row.get("candidate_config")
             if not cfg:
