@@ -16,8 +16,8 @@ class ObjectSet(Base):
     id = Column(Integer, primary_key=True)
     research_id = Column(Integer, ForeignKey('research.id'))
     analysis_id = Column(Integer, ForeignKey('analysis_cluster.id'))
-    data = Column(String)
-    report = Column(String)
+    data = Column(Text)
+    report = Column(Text)
 
     research = relationship('Research', back_populates='cluster_set')
     analysis = relationship('AnalysisCluster', back_populates='object_set')
