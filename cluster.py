@@ -2099,11 +2099,55 @@ def update_list_clust_object():
     for clust_obj in session.query(ObjectSet.id, ObjectSet.research_id).filter_by(analysis_id=get_curr_clust_analys_id()).all():
         research = session.query(Research).filter_by(id=clust_obj.research_id).first()
         ui.comboBox_clust_obj.addItem(f'{research.object.title} id{clust_obj.id}')
+    load_saved_auto_results_for_selected_object()
 
 
 def show_finite_report():
     obj_set = session.query(ObjectSet.report).filter_by(id=get_curr_clust_object_id()).first()
     set_info(obj_set.report, 'brown')
+
+
+def load_saved_auto_results_for_selected_object() -> None:
+    """
+    При выборе ObjectSet подгружает последнюю сохраненную таблицу AUTO-кластеризации (если есть).
+    """
+    clust_object_id = get_curr_clust_object_id()
+    if not clust_object_id:
+        render_auto_results_table([])
+        return
+
+    try:
+        cache_row = (
+            session.query(ClusterAutoTuningCache)
+            .filter_by(object_set_id=int(clust_object_id))
+            .order_by(ClusterAutoTuningCache.created_at.desc())
+            .first()
+        )
+    except Exception as exc:
+        render_auto_results_table([])
+        set_info(f"AUTO: ошибка чтения сохраненного результата: {exc}", "brown")
+        return
+
+    if cache_row is None or not cache_row.top_results:
+        render_auto_results_table([])
+        return
+
+    try:
+        cached_results = json.loads(cache_row.top_results)
+    except Exception as exc:
+        render_auto_results_table([])
+        set_info(f"AUTO: ошибка распаковки сохраненного результата: {exc}", "brown")
+        return
+
+    if not isinstance(cached_results, list):
+        render_auto_results_table([])
+        return
+
+    render_auto_results_table(cached_results)
+    set_info(
+        f"AUTO: загружены сохраненные top-{len(cached_results)} настройки для выбранного набора.",
+        "green"
+    )
 
 
 def inf_nan_data_report(df: pd.DataFrame) -> str:
