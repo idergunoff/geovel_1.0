@@ -8,6 +8,8 @@ from time import monotonic
 from typing import Any, Dict, Literal, Optional, TypedDict
 
 import build_table
+from matplotlib.colors import BoundaryNorm, ListedColormap
+from scipy.interpolate import griddata
 from draw import draw_radarogram
 from func import *
 
@@ -55,6 +57,37 @@ class CandidateResult(TypedDict):
 
 
 cluster_auto_results_cache: list[CandidateResult] = []
+
+
+CLUSTER_MAP_INTERP_RESOLUTION_MIN = 50
+CLUSTER_MAP_INTERP_RESOLUTION_MAX = 500
+CLUSTER_MAP_INTERP_RESOLUTION_DEFAULT = 200
+
+
+def _normalize_interpolation_resolution(value: Any) -> int:
+    """
+    Нормализует разрешение сетки для интерполяции карты кластеров.
+    """
+    try:
+        resolution = int(value)
+    except (TypeError, ValueError):
+        return CLUSTER_MAP_INTERP_RESOLUTION_DEFAULT
+    if resolution < CLUSTER_MAP_INTERP_RESOLUTION_MIN:
+        return CLUSTER_MAP_INTERP_RESOLUTION_MIN
+    if resolution > CLUSTER_MAP_INTERP_RESOLUTION_MAX:
+        return CLUSTER_MAP_INTERP_RESOLUTION_MAX
+    return resolution
+
+
+def _get_ui_control_by_names(*control_names: str) -> Any:
+    """
+    Возвращает первый найденный UI-контрол по списку имен.
+    """
+    for name in control_names:
+        control = getattr(ui, name, None)
+        if control is not None:
+            return control
+    return None
 
 
 def _normalize_smoothing_window(window: int) -> int:
@@ -2577,11 +2610,13 @@ def plot_cluster_map(
         data,
         figsize=(12, 8),
         point_size=20,
+        interpolation_resolution=200,
         title="Cluster map",
         noise_color="gray",
         noise_marker=".",
         noise_label="noise",
-        legend=True
+        legend=True,
+        show_interpolation=True
 ):
     """
     Визуализация кластеров на карте (без подписей профилей).
@@ -2602,6 +2637,11 @@ def plot_cluster_map(
     point_size : int
         Размер точек.
 
+    interpolation_resolution : int
+        Разрешение регулярной сетки для фоновой интерполяции.
+        Чем больше значение, тем более детальная (и более тяжелая по времени)
+        отрисовка. Рабочий диапазон: 50..500.
+
     noise_color : str
         Цвет шума (label = -1).
 
@@ -2610,6 +2650,10 @@ def plot_cluster_map(
 
     legend : bool
         Показывать легенду.
+
+    show_interpolation : bool
+        Если True — строится фоновая интерполяция по всей области участка.
+        Если False — рисуются только исходные точки.
     """
 
     labels = np.asarray(label_list)
@@ -2627,6 +2671,46 @@ def plot_cluster_map(
     plt.figure(figsize=figsize)
 
     unique_labels = np.unique(labels)
+    unique_labels_sorted = sorted([int(v) for v in unique_labels])
+
+    if show_interpolation and len(unique_labels_sorted) > 1 and len(x) >= 3:
+        min_x, max_x = float(np.min(x)), float(np.max(x))
+        min_y, max_y = float(np.min(y)), float(np.max(y))
+        span_x = max(max_x - min_x, 1e-9)
+        span_y = max(max_y - min_y, 1e-9)
+        pad_x = span_x * 0.03
+        pad_y = span_y * 0.03
+        min_x -= pad_x
+        max_x += pad_x
+        min_y -= pad_y
+        max_y += pad_y
+
+        grid_n = _normalize_interpolation_resolution(interpolation_resolution)
+        grid_x, grid_y = np.meshgrid(
+            np.linspace(min_x, max_x, grid_n),
+            np.linspace(min_y, max_y, grid_n)
+        )
+
+        points = np.column_stack((x, y))
+        grid_z = griddata(points, labels.astype(float), (grid_x, grid_y), method="nearest")
+
+        if grid_z is not None and np.any(~np.isnan(grid_z)):
+            color_list = [get_cluster_color(label) for label in unique_labels_sorted]
+            cmap = ListedColormap(color_list)
+            boundaries = [unique_labels_sorted[0] - 0.5]
+            boundaries.extend([label + 0.5 for label in unique_labels_sorted])
+            norm = BoundaryNorm(boundaries, cmap.N, clip=True)
+
+            plt.pcolormesh(
+                grid_x,
+                grid_y,
+                grid_z,
+                shading="auto",
+                cmap=cmap,
+                norm=norm,
+                alpha=0.35,
+                zorder=1
+            )
 
     # кластеры
     for label in unique_labels:
@@ -2643,7 +2727,8 @@ def plot_cluster_map(
             label=f"cluster {int(label)}",
             c=cluster_color,
             edgecolors=cluster_color,
-            alpha=0.85
+            alpha=0.95,
+            zorder=3
         )
 
     # шум
@@ -2658,7 +2743,8 @@ def plot_cluster_map(
             marker=noise_marker,
             label=noise_label,
             edgecolors=noise_cluster_color if noise_color == "gray" else noise_color,
-            alpha=0.8
+            alpha=0.9,
+            zorder=4
         )
 
     plt.xlabel("X")
@@ -3093,7 +3179,46 @@ def calculate_cluster():
             'brown'
         )
 
-    plot_cluster_map(labels_for_output, data)
+    show_interpolation = True
+    interpolation_resolution = CLUSTER_MAP_INTERP_RESOLUTION_DEFAULT
+
+    interpolation_checkbox = _get_ui_control_by_names(
+        "checkBox_cluster_map_interpolation",
+        "checkBox_cluster_interpolation",
+        "checkBox_cluster_interp",
+        "checkBox_clust_map_interpolation",
+        "checkBox_clust_interp"
+    )
+    interpolation_spinbox = _get_ui_control_by_names(
+        "spinBox_cluster_map_interp_resolution",
+        "spinBox_cluster_interp_resolution",
+        "spinBox_clust_map_interp_resolution",
+        "spinBox_clust_interp_resolution",
+        "spinBox_cluster_map_resolution"
+    )
+
+    if interpolation_checkbox is not None:
+        show_interpolation = interpolation_checkbox.isChecked()
+    if interpolation_spinbox is not None:
+        interpolation_spinbox.setMinimum(CLUSTER_MAP_INTERP_RESOLUTION_MIN)
+        interpolation_spinbox.setMaximum(CLUSTER_MAP_INTERP_RESOLUTION_MAX)
+        interpolation_spinbox.setSingleStep(25)
+        interpolation_resolution = interpolation_spinbox.value()
+
+    interpolation_resolution = _normalize_interpolation_resolution(interpolation_resolution)
+
+    set_info(
+        f"Карта кластеров: interpolation={'on' if show_interpolation else 'off'}, "
+        f"resolution={interpolation_resolution}.",
+        "blue"
+    )
+
+    plot_cluster_map(
+        labels_for_output,
+        data,
+        show_interpolation=show_interpolation,
+        interpolation_resolution=interpolation_resolution
+    )
 
     print(labels_for_output)
     print(clust_info)
