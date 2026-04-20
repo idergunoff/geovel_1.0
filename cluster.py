@@ -410,7 +410,7 @@ def run_cluster_candidate(
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
-        min_pca_components: int = 1
+        min_pca_components: int = 2
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -450,14 +450,17 @@ def run_cluster_candidate(
         )
 
     clean_key = tuple(sorted(clean_params.items()))
-    min_pca_components = max(1, int(min_pca_components))
+    try:
+        min_pca_components_value = max(2, int(min_pca_components))
+    except (TypeError, ValueError):
+        min_pca_components_value = 2
     transform_key = (
         clean_key,
         candidate["scaler_mode"],
         bool(candidate["pca_enabled"]),
         candidate.get("pca_mode"),
         candidate.get("pca_value"),
-        min_pca_components
+        min_pca_components_value
     )
     data_for_cluster = None
     pca_components_after: Optional[int] = None
@@ -485,7 +488,7 @@ def run_cluster_candidate(
                     variance_ratio=float(candidate["pca_value"])
                 )
                 pca_components_after = int(pca_info.get("components_after_pca", 0) or 0)
-                if pca_components_after < min_pca_components:
+                if pca_components_after < min_pca_components_value:
                     return make_candidate_result(
                         candidate_id=candidate_id,
                         candidate_config=candidate,
@@ -495,7 +498,7 @@ def run_cluster_candidate(
                         status="invalid",
                         error_text=(
                             f"pca components {pca_components_after} "
-                            f"< min_pca_components {min_pca_components}"
+                            f"< min_pca_components {min_pca_components_value}"
                         )
                     )
             else:
@@ -888,7 +891,7 @@ def run_auto_cluster_tuning(
         pca_only: bool = False,
         soft_timeout_sec: Optional[float] = None,
         candidate_soft_timeout_sec: Optional[float] = None,
-        min_pca_components: int = 1,
+        min_pca_components: int = 2,
         weights: Optional[Dict[str, float]] = None,
         clean_kwargs: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
@@ -1403,6 +1406,20 @@ def _read_auto_int_setting(control_name: str, fallback: int, minimum: int = 1) -
         return max(minimum, int(fallback))
 
 
+def _read_auto_min_pca_components_setting(fallback: int = 2) -> int:
+    """
+    Читает минимальное число PCA-компонент для AUTO-подбора.
+    """
+    control = _get_ui_control_by_names("spinBox_cluster_pca_min_comp")
+    if control is not None:
+        try:
+            value = int(control.value())
+            return max(2, value)
+        except Exception:
+            return max(2, int(fallback))
+    return max(2, int(fallback))
+
+
 def calculate_cluster_auto():
     """
     Запускает AUTO-подбор параметров кластеризации из UI.
@@ -1458,18 +1475,7 @@ def calculate_cluster_auto():
     max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
     top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
     max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
-    min_pca_components_ctrl = _get_ui_control_by_names(
-        "spinBox_cluster_auto_min_pca_components",
-        "spinBox_cluster_auto_min_pca_comp",
-        "spinBox_cluster_auto_min_components_pca"
-    )
-    if min_pca_components_ctrl is not None:
-        try:
-            min_pca_components = max(1, int(min_pca_components_ctrl.value()))
-        except Exception:
-            min_pca_components = 1
-    else:
-        min_pca_components = 1
+    min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
     scaler_only_toggle = getattr(ui, "checkBox_cluster_auto_scaler_only", None)
     pca_only_toggle = getattr(ui, "checkBox_cluster_auto_pca_only", None)
     scaler_only = bool(scaler_only_toggle.isChecked()) if scaler_only_toggle is not None else False
