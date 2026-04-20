@@ -43,6 +43,7 @@ class CandidateStats(TypedDict, total=False):
     n_clusters: int
     noise_fraction: float
     n_samples_eval: int
+    pca_components_after: int
 
 
 class CandidateResult(TypedDict):
@@ -328,6 +329,12 @@ def build_auto_search_space(
 
     scaler_modes = ("standard", "robust") if scaler_only else ("none", "standard", "robust")
     pca_variance_values = (0.85, 0.90, 0.95)
+    max_clusters = max(2, int(max_clusters))
+    # Для coarse-режима используем более широкий перебор fixed_components,
+    # но ограничиваем размер сетки, чтобы не раздувать search space.
+    fixed_upper = max(6, min(24, max_clusters * 2))
+    fixed_step = 2 if fixed_upper <= 12 else 3
+    pca_fixed_values = tuple(range(2, fixed_upper + 1, fixed_step))
     pca_variants = []
     if not pca_only:
         pca_variants.append({"pca_enabled": False, "pca_mode": None, "pca_value": None})
@@ -335,8 +342,10 @@ def build_auto_search_space(
         {"pca_enabled": True, "pca_mode": "variance_ratio", "pca_value": pca_value}
         for pca_value in pca_variance_values
     )
-    max_clusters = max(2, int(max_clusters))
-
+    pca_variants.extend(
+        {"pca_enabled": True, "pca_mode": "fixed_components", "pca_value": float(n_comp)}
+        for n_comp in pca_fixed_values
+    )
     candidates: list[CandidateConfig] = []
 
     # KMeans: k=2..max_clusters.
@@ -408,7 +417,8 @@ def run_cluster_candidate(
         *,
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
-        transform_cache: Optional[Dict[tuple, Any]] = None
+        transform_cache: Optional[Dict[tuple, Any]] = None,
+        min_pca_components: int = 2
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -448,16 +458,24 @@ def run_cluster_candidate(
         )
 
     clean_key = tuple(sorted(clean_params.items()))
+    try:
+        min_pca_components_value = max(2, int(min_pca_components))
+    except (TypeError, ValueError):
+        min_pca_components_value = 2
     transform_key = (
         clean_key,
         candidate["scaler_mode"],
         bool(candidate["pca_enabled"]),
         candidate.get("pca_mode"),
-        candidate.get("pca_value")
+        candidate.get("pca_value"),
+        min_pca_components_value
     )
     data_for_cluster = None
+    pca_components_after: Optional[int] = None
     if transform_cache is not None:
-        data_for_cluster = transform_cache.get(transform_key)
+        cached_value = transform_cache.get(transform_key)
+        if cached_value is not None:
+            data_for_cluster, pca_components_after = cached_value
 
     if data_for_cluster is None:
         try:
@@ -472,11 +490,25 @@ def run_cluster_candidate(
 
         try:
             if candidate["pca_enabled"]:
-                data_for_cluster, _ = apply_pca(
+                data_for_cluster, pca_info = apply_pca(
                     preprocess_data,
                     mode=candidate["pca_mode"] or "variance_ratio",
                     variance_ratio=float(candidate["pca_value"])
                 )
+                pca_components_after = int(pca_info.get("components_after_pca", 0) or 0)
+                if pca_components_after < min_pca_components_value:
+                    return make_candidate_result(
+                        candidate_id=candidate_id,
+                        candidate_config=candidate,
+                        stats=CandidateStats(
+                            pca_components_after=pca_components_after
+                        ),
+                        status="invalid",
+                        error_text=(
+                            f"pca components {pca_components_after} "
+                            f"< min_pca_components {min_pca_components_value}"
+                        )
+                    )
             else:
                 data_for_cluster = preprocess_data
         except Exception as exc:
@@ -488,7 +520,10 @@ def run_cluster_candidate(
             )
 
         if transform_cache is not None:
-            transform_cache[transform_key] = data_for_cluster
+            transform_cache[transform_key] = (data_for_cluster, pca_components_after)
+    pca_stats: Dict[str, int] = {}
+    if pca_components_after is not None:
+        pca_stats["pca_components_after"] = int(pca_components_after)
 
     try:
         labels, cluster_info = cluster_data(
@@ -518,7 +553,8 @@ def run_cluster_candidate(
             stats=CandidateStats(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
-                n_samples_eval=0
+                n_samples_eval=0,
+                **pca_stats
             ),
             status="invalid",
             error_text="empty sample after noise filtering"
@@ -531,7 +567,8 @@ def run_cluster_candidate(
             stats=CandidateStats(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
-                n_samples_eval=n_samples_eval
+                n_samples_eval=n_samples_eval,
+                **pca_stats
             ),
             status="invalid",
             error_text="less than 2 clusters after noise filtering"
@@ -561,7 +598,8 @@ def run_cluster_candidate(
             stats=CandidateStats(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
-                n_samples_eval=n_samples_eval
+                n_samples_eval=n_samples_eval,
+                **pca_stats
             ),
             status="invalid",
             error_text="metrics unavailable for candidate"
@@ -578,7 +616,8 @@ def run_cluster_candidate(
         stats=CandidateStats(
             n_clusters=int(cluster_info.get("n_clusters", 0)),
             noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
-            n_samples_eval=n_samples_eval
+            n_samples_eval=n_samples_eval,
+            **pca_stats
         ),
         status="ok",
         error_text=""
@@ -860,6 +899,7 @@ def run_auto_cluster_tuning(
         pca_only: bool = False,
         soft_timeout_sec: Optional[float] = None,
         candidate_soft_timeout_sec: Optional[float] = None,
+        min_pca_components: int = 2,
         weights: Optional[Dict[str, float]] = None,
         clean_kwargs: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
@@ -898,7 +938,8 @@ def run_auto_cluster_tuning(
                 candidate=candidate,
                 candidate_id=f"C{idx:03d}",
                 clean_kwargs=clean_kwargs,
-                transform_cache=transform_cache
+                transform_cache=transform_cache,
+                min_pca_components=min_pca_components
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Coarse C{idx:03d}: исключение {exc}", "red")
@@ -970,7 +1011,8 @@ def run_auto_cluster_tuning(
                 candidate=candidate,
                 candidate_id=f"F{idx:03d}",
                 clean_kwargs=clean_kwargs,
-                transform_cache=transform_cache
+                transform_cache=transform_cache,
+                min_pca_components=min_pca_components
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Fine F{idx:03d}: исключение {exc}", "red")
@@ -1211,7 +1253,7 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
     table = ui.tableWidget_cluster_auto_result
     headers = [
         "Rank", "Score", "Method", "Scaler", "PCA",
-        "Silhouette", "DB", "CH", "Clusters", "Noise %", "Status"
+        "PCA comps", "Silhouette", "DB", "CH", "Clusters", "Noise %", "Status"
     ]
     table.clear()
     table.setColumnCount(len(headers))
@@ -1238,6 +1280,7 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             _candidate_method_short(cfg),
             str(cfg.get("scaler_mode", "—")),
             _candidate_pca_short(cfg),
+            str(stats.get("pca_components_after", "—")),
             _safe_num(metrics.get("silhouette"), precision=4),
             _safe_num(metrics.get("davies_bouldin"), precision=4),
             _safe_num(metrics.get("calinski_harabasz"), precision=2),
@@ -1248,9 +1291,9 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
 
         for col_idx, value in enumerate(row_values):
             item = QTableWidgetItem(str(value))
-            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10):
+            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10, 11):
                 item.setTextAlignment(Qt.AlignCenter)
-            if col_idx == 10:
+            if col_idx == 11:
                 if status_raw == "ok":
                     item.setForeground(QBrush(QColor("darkgreen")))
                 elif status_raw == "invalid":
@@ -1371,6 +1414,20 @@ def _read_auto_int_setting(control_name: str, fallback: int, minimum: int = 1) -
         return max(minimum, int(fallback))
 
 
+def _read_auto_min_pca_components_setting(fallback: int = 2) -> int:
+    """
+    Читает минимальное число PCA-компонент для AUTO-подбора.
+    """
+    control = _get_ui_control_by_names("spinBox_cluster_pca_min_comp")
+    if control is not None:
+        try:
+            value = int(control.value())
+            return max(2, value)
+        except Exception:
+            return max(2, int(fallback))
+    return max(2, int(fallback))
+
+
 def calculate_cluster_auto():
     """
     Запускает AUTO-подбор параметров кластеризации из UI.
@@ -1426,6 +1483,7 @@ def calculate_cluster_auto():
     max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
     top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
     max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
+    min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
     scaler_only_toggle = getattr(ui, "checkBox_cluster_auto_scaler_only", None)
     pca_only_toggle = getattr(ui, "checkBox_cluster_auto_pca_only", None)
     scaler_only = bool(scaler_only_toggle.isChecked()) if scaler_only_toggle is not None else False
@@ -1442,6 +1500,7 @@ def calculate_cluster_auto():
         top_k=top_k,
         constraints={
             "max_clusters": max_clusters,
+            "min_pca_components": min_pca_components,
             "scaler_only": scaler_only,
             "pca_only": pca_only,
             "use_total_timeout": bool(use_total_timeout),
@@ -1465,7 +1524,8 @@ def calculate_cluster_auto():
     set_info(
         (
             f"AUTO: настройки подбора max_candidates={max_candidates}, top_k={top_k}, "
-            f"max_clusters={max_clusters}, scaler_only={scaler_only}, pca_only={pca_only}, "
+            f"max_clusters={max_clusters}, min_pca_components={min_pca_components}, "
+            f"scaler_only={scaler_only}, pca_only={pca_only}, "
             f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
             f"{metric_weights['davies_bouldin']:.2f}/{metric_weights['calinski_harabasz']:.2f})."
         ),
@@ -1498,6 +1558,7 @@ def calculate_cluster_auto():
         max_clusters=max_clusters,
         scaler_only=scaler_only,
         pca_only=pca_only,
+        min_pca_components=min_pca_components,
         weights=metric_weights,
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
