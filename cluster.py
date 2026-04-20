@@ -329,6 +329,12 @@ def build_auto_search_space(
 
     scaler_modes = ("standard", "robust") if scaler_only else ("none", "standard", "robust")
     pca_variance_values = (0.85, 0.90, 0.95)
+    max_clusters = max(2, int(max_clusters))
+    # Для coarse-режима используем более широкий перебор fixed_components,
+    # но ограничиваем размер сетки, чтобы не раздувать search space.
+    fixed_upper = max(6, min(24, max_clusters * 2))
+    fixed_step = 2 if fixed_upper <= 12 else 3
+    pca_fixed_values = tuple(range(2, fixed_upper + 1, fixed_step))
     pca_variants = []
     if not pca_only:
         pca_variants.append({"pca_enabled": False, "pca_mode": None, "pca_value": None})
@@ -336,8 +342,10 @@ def build_auto_search_space(
         {"pca_enabled": True, "pca_mode": "variance_ratio", "pca_value": pca_value}
         for pca_value in pca_variance_values
     )
-    max_clusters = max(2, int(max_clusters))
-
+    pca_variants.extend(
+        {"pca_enabled": True, "pca_mode": "fixed_components", "pca_value": float(n_comp)}
+        for n_comp in pca_fixed_values
+    )
     candidates: list[CandidateConfig] = []
 
     # KMeans: k=2..max_clusters.
