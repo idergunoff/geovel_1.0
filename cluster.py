@@ -343,6 +343,7 @@ def build_auto_search_space(
         max_candidates: Optional[int] = 200,
         *,
         max_clusters: int = 8,
+        hdbscan_metric: str = "euclidean",
         scaler_only: bool = False,
         pca_only: bool = False
 ) -> list[CandidateConfig]:
@@ -404,7 +405,8 @@ def build_auto_search_space(
                 method="hdbscan",
                 method_params={
                     "hdbscan_min_cluster_size": min_cluster_size,
-                    "hdbscan_min_samples": min_samples
+                    "hdbscan_min_samples": min_samples,
+                    "hdbscan_metric": str(hdbscan_metric or "euclidean")
                 }
             )
         )
@@ -864,11 +866,13 @@ def build_fine_search_space(
         elif base_method == "hdbscan":
             base_mcs = int(base_method_params.get("hdbscan_min_cluster_size", 20))
             base_ms = int(base_method_params.get("hdbscan_min_samples", 5))
+            base_metric = str(base_method_params.get("hdbscan_metric", "euclidean"))
             for delta_mcs in (-10, -5, 0, 5, 10):
                 for delta_ms in (-2, -1, 0, 1, 2):
                     method_variants.append({
                         "hdbscan_min_cluster_size": int(max(5, base_mcs + delta_mcs)),
-                        "hdbscan_min_samples": int(max(1, base_ms + delta_ms))
+                        "hdbscan_min_samples": int(max(1, base_ms + delta_ms)),
+                        "hdbscan_metric": base_metric
                     })
         elif base_method == "gmm":
             base_n = int(base_method_params.get("gmm_n_components", 4))
@@ -913,6 +917,7 @@ def run_auto_cluster_tuning(
         top_k: int = 5,
         max_candidates: Optional[int] = 200,
         max_clusters: int = 8,
+        hdbscan_metric: str = "euclidean",
         scaler_only: bool = False,
         pca_only: bool = False,
         soft_timeout_sec: Optional[float] = None,
@@ -933,6 +938,7 @@ def run_auto_cluster_tuning(
         "COARSE",
         max_candidates=max_candidates,
         max_clusters=max_clusters,
+        hdbscan_metric=hdbscan_metric,
         scaler_only=scaler_only,
         pca_only=pca_only
     )
@@ -1396,6 +1402,11 @@ def apply_auto_result_to_ui(best_result: CandidateResult) -> None:
             ui.spinBox_clust_hdbsc_minsize.setValue(int(method_params["hdbscan_min_cluster_size"]))
         if "hdbscan_min_samples" in method_params:
             ui.spinBox_clust_hdbsc_minsamp.setValue(int(method_params["hdbscan_min_samples"]))
+        hdbscan_metric = method_params.get("hdbscan_metric")
+        if hdbscan_metric is not None:
+            idx = ui.comboBox_clust_hdbsc_type.findText(str(hdbscan_metric))
+            if idx >= 0:
+                ui.comboBox_clust_hdbsc_type.setCurrentIndex(idx)
     elif method == "gmm":
         if "gmm_n_components" in method_params:
             ui.spinBox_clust_gmm_n.setValue(int(method_params["gmm_n_components"]))
@@ -1508,6 +1519,7 @@ def calculate_cluster_auto():
     top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
     max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
     min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
+    hdbscan_metric = str(ui.comboBox_clust_hdbsc_type.currentText() or "euclidean")
     scaler_only_toggle = getattr(ui, "checkBox_cluster_auto_scaler_only", None)
     pca_only_toggle = getattr(ui, "checkBox_cluster_auto_pca_only", None)
     scaler_only = bool(scaler_only_toggle.isChecked()) if scaler_only_toggle is not None else False
@@ -1526,6 +1538,7 @@ def calculate_cluster_auto():
             "use_candidates_limit": bool(use_candidates_limit),
             "max_candidates_value": max_candidates_value,
             "max_clusters": max_clusters,
+            "hdbscan_metric": hdbscan_metric,
             "min_pca_components": min_pca_components,
             "scaler_only": scaler_only,
             "pca_only": pca_only,
@@ -1552,6 +1565,7 @@ def calculate_cluster_auto():
             f"AUTO: настройки подбора max_candidates={max_candidates if max_candidates is not None else 'OFF'}, "
             f"top_k={top_k}, "
             f"max_clusters={max_clusters}, min_pca_components={min_pca_components}, "
+            f"hdbscan_metric={hdbscan_metric}, "
             f"scaler_only={scaler_only}, pca_only={pca_only}, "
             f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
             f"{metric_weights['davies_bouldin']:.2f}/{metric_weights['calinski_harabasz']:.2f})."
@@ -1583,6 +1597,7 @@ def calculate_cluster_auto():
         max_candidates=max_candidates,
         top_k=top_k,
         max_clusters=max_clusters,
+        hdbscan_metric=hdbscan_metric,
         scaler_only=scaler_only,
         pca_only=pca_only,
         min_pca_components=min_pca_components,
