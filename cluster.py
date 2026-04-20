@@ -3,6 +3,7 @@ import base64
 import gzip
 import hashlib
 import json
+import random
 from collections import Counter
 from datetime import datetime, timezone
 from itertools import product
@@ -308,9 +309,38 @@ def _set_auto_info(message: str, color: str = "blue") -> None:
         print(message)
 
 
+def _apply_candidate_limit(
+        candidates: list[CandidateConfig],
+        *,
+        max_candidates: Optional[int],
+        scope_label: str
+) -> list[CandidateConfig]:
+    """
+    Применяет лимит кандидатов.
+    Если лимит активен — выбирает случайную подвыборку без повторений.
+    """
+    if max_candidates is None:
+        _set_auto_info(f"{scope_label}: лимит кандидатов отключен ({len(candidates)}).", "blue")
+        return candidates
+
+    max_candidates = max(1, int(max_candidates))
+    total_candidates = len(candidates)
+    if total_candidates <= max_candidates:
+        _set_auto_info(f"{scope_label}: размер search space = {total_candidates}.", "blue")
+        return candidates
+
+    sampled_candidates = random.sample(candidates, max_candidates)
+    _set_auto_info(
+        f"{scope_label}: сгенерировано {total_candidates} кандидатов, "
+        f"случайно выбрано {max_candidates}.",
+        "brown"
+    )
+    return sampled_candidates
+
+
 def build_auto_search_space(
         auto_mode: str,
-        max_candidates: int = 200,
+        max_candidates: Optional[int] = 200,
         *,
         max_clusters: int = 8,
         scaler_only: bool = False,
@@ -397,18 +427,11 @@ def build_auto_search_space(
             )
         )
 
-    total_candidates = len(candidates)
-    if total_candidates > max_candidates:
-        _set_auto_info(
-            f"AUTO {mode}: сгенерировано {total_candidates} кандидатов, "
-            f"применен лимит {max_candidates}.",
-            "brown"
-        )
-        candidates = candidates[:max_candidates]
-    else:
-        _set_auto_info(f"AUTO {mode}: размер search space = {total_candidates}.", "blue")
-
-    return candidates
+    return _apply_candidate_limit(
+        candidates,
+        max_candidates=max_candidates,
+        scope_label=f"AUTO {mode}"
+    )
 
 
 def run_cluster_candidate(
@@ -777,7 +800,7 @@ def build_fine_search_space(
         top_results: list[CandidateResult],
         *,
         top_k: int = 5,
-        max_candidates: int = 200
+        max_candidates: Optional[int] = 200
 ) -> list[CandidateConfig]:
     """
     Строит локальное fine-пространство вокруг top-K coarse-кандидатов.
@@ -876,16 +899,11 @@ def build_fine_search_space(
                 seen_signatures.add(sig)
                 fine_candidates.append(candidate)
 
-    total = len(fine_candidates)
-    if total > max_candidates:
-        _set_auto_info(
-            f"AUTO FINE: сгенерировано {total} fine-кандидатов, применен лимит {max_candidates}.",
-            "brown"
-        )
-        return fine_candidates[:max_candidates]
-
-    _set_auto_info(f"AUTO FINE: размер fine search space = {total}.", "blue")
-    return fine_candidates
+    return _apply_candidate_limit(
+        fine_candidates,
+        max_candidates=max_candidates,
+        scope_label="AUTO FINE"
+    )
 
 
 def run_auto_cluster_tuning(
@@ -893,7 +911,7 @@ def run_auto_cluster_tuning(
         *,
         auto_mode: str = "COARSE",
         top_k: int = 5,
-        max_candidates: int = 200,
+        max_candidates: Optional[int] = 200,
         max_clusters: int = 8,
         scaler_only: bool = False,
         pca_only: bool = False,
@@ -1480,7 +1498,13 @@ def calculate_cluster_auto():
     force_recompute_toggle = getattr(ui, "checkBox_cluster_auto_recalc", None)
     force_recompute = bool(force_recompute_toggle.isChecked()) if force_recompute_toggle is not None else False
 
-    max_candidates = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
+    limit_candidates_toggle = _get_ui_control_by_names(
+        "checkBox_cluster_auto_limit_candidates",
+        "checkBox_cluster_auto_limit_200"
+    )
+    use_candidates_limit = bool(limit_candidates_toggle.isChecked()) if limit_candidates_toggle is not None else True
+    max_candidates_value = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
+    max_candidates = max_candidates_value if use_candidates_limit else None
     top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
     max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
     min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
@@ -1496,9 +1520,11 @@ def calculate_cluster_auto():
     cache_key = build_cluster_auto_tuning_cache_key(
         clust_object_id=int(clust_object_id),
         auto_mode=auto_mode,
-        max_candidates=max_candidates,
+        max_candidates=max_candidates_value if use_candidates_limit else 0,
         top_k=top_k,
         constraints={
+            "use_candidates_limit": bool(use_candidates_limit),
+            "max_candidates_value": max_candidates_value,
             "max_clusters": max_clusters,
             "min_pca_components": min_pca_components,
             "scaler_only": scaler_only,
@@ -1523,7 +1549,8 @@ def calculate_cluster_auto():
         set_info("AUTO: лимиты времени отключены (будут рассчитаны все кандидаты).", "blue")
     set_info(
         (
-            f"AUTO: настройки подбора max_candidates={max_candidates}, top_k={top_k}, "
+            f"AUTO: настройки подбора max_candidates={max_candidates if max_candidates is not None else 'OFF'}, "
+            f"top_k={top_k}, "
             f"max_clusters={max_clusters}, min_pca_components={min_pca_components}, "
             f"scaler_only={scaler_only}, pca_only={pca_only}, "
             f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
