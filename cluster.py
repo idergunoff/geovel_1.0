@@ -1510,6 +1510,7 @@ def calculate_cluster_auto():
     force_recompute = bool(force_recompute_toggle.isChecked()) if force_recompute_toggle is not None else False
 
     limit_candidates_toggle = _get_ui_control_by_names(
+        "checkBox_cluster_auto_limit200",
         "checkBox_cluster_auto_limit_candidates",
         "checkBox_cluster_auto_limit_200"
     )
