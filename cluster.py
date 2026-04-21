@@ -4,7 +4,8 @@ import gzip
 import hashlib
 import json
 import random
-from collections import Counter
+import gc
+from collections import Counter, OrderedDict
 from datetime import datetime, timezone
 from itertools import product
 from time import monotonic
@@ -65,6 +66,90 @@ cluster_auto_results_cache: list[CandidateResult] = []
 
 CLUSTER_DATA_GZIP_PREFIX = "gzjson:"
 GMM_COVARIANCE_TYPES = ("full", "diag", "tied", "spherical")
+AUTO_TRANSFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
+AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES = 128 * 1024 * 1024
+AUTO_SILHOUETTE_MAX_SAMPLES = 5000
+AUTO_TUNING_MAX_ROWS = 20000
+AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
+AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
+AUTO_TUNING_MIN_ROWS = 2000
+
+
+def _estimate_array_like_nbytes(value: Any) -> int:
+    """
+    Грубая оценка объема памяти array-like объекта в байтах.
+    """
+    if value is None:
+        return 0
+    if isinstance(value, np.ndarray):
+        return int(value.nbytes)
+    if hasattr(value, "nbytes"):
+        try:
+            return int(value.nbytes)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    try:
+        return int(np.array(value).nbytes)
+    except Exception:
+        return 0
+
+
+def _estimate_transform_cache_item_nbytes(value: Any) -> int:
+    """
+    Оценивает объем одного элемента transform-cache.
+    """
+    if isinstance(value, tuple):
+        return int(sum(_estimate_array_like_nbytes(v) for v in value))
+    return _estimate_array_like_nbytes(value)
+
+
+def _trim_transform_cache(
+        transform_cache: "OrderedDict[tuple, Any]",
+        cache_sizes: "OrderedDict[tuple, int]",
+        cache_total_bytes: int,
+        *,
+        max_cache_bytes: int
+) -> int:
+    """
+    Поддерживает LRU-ограничение transform-cache по памяти.
+    """
+    while cache_total_bytes > max_cache_bytes and transform_cache:
+        evicted_key, _ = transform_cache.popitem(last=False)
+        cache_total_bytes -= int(cache_sizes.pop(evicted_key, 0))
+    return max(0, int(cache_total_bytes))
+
+
+def _sample_rows_for_auto_tuning(data, max_rows: int) -> Any:
+    """
+    Ограничивает число строк для AUTO-подбора, чтобы снизить риск OOM.
+    """
+    if data is None:
+        return data
+    try:
+        max_rows = max(2, int(max_rows))
+    except (TypeError, ValueError):
+        max_rows = AUTO_TUNING_MAX_ROWS
+    data_len = len(data)
+    if data_len <= max_rows:
+        return data
+    n_features = None
+    if data_len > 0:
+        try:
+            first_row = data[0]
+            n_features = len(first_row)
+        except Exception:
+            n_features = None
+    if n_features and n_features > 0:
+        approx_bytes_per_row = int(max(8, n_features * 8 * 6))
+        max_rows_by_memory = int(AUTO_TUNING_MAX_WORKING_SET_BYTES // approx_bytes_per_row)
+        max_rows = min(max_rows, max(AUTO_TUNING_MIN_ROWS, max_rows_by_memory))
+    if data_len <= max_rows:
+        return data
+    rng = np.random.default_rng(42)
+    sampled_idx = np.sort(rng.choice(data_len, size=max_rows, replace=False))
+    if isinstance(data, np.ndarray):
+        return data[sampled_idx]
+    return [data[int(i)] for i in sampled_idx]
 
 
 def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
@@ -466,7 +551,8 @@ def run_cluster_candidate(
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
-        min_pca_components: int = 2
+        min_pca_components: int = 2,
+        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -488,6 +574,7 @@ def run_cluster_candidate(
         clean_params.update(clean_kwargs)
 
     try:
+        base_data = _sample_rows_for_auto_tuning(base_data, AUTO_TUNING_MAX_ROWS)
         clear_data, _ = clean_features(data=base_data, **clean_params)
     except Exception as exc:
         return make_candidate_result(
@@ -578,6 +665,8 @@ def run_cluster_candidate(
 
         if transform_cache is not None:
             transform_cache[transform_key] = (data_for_cluster, pca_components_after)
+            if hasattr(transform_cache, "move_to_end"):
+                transform_cache.move_to_end(transform_key, last=True)  # type: ignore[attr-defined]
     pca_stats: Dict[str, int] = {}
     if pca_components_after is not None:
         pca_stats["pca_components_after"] = int(pca_components_after)
@@ -596,12 +685,11 @@ def run_cluster_candidate(
             error_text=f"cluster_data failed: {exc}"
         )
 
-    labels_np = np.array(labels, dtype=int)
+    labels_np = np.asarray(labels, dtype=int)
     mask_eval = labels_np != -1
     labels_eval = labels_np[mask_eval]
-    x_eval = np.array(data_for_cluster, dtype=float)[mask_eval]
     unique_clusters_eval = np.unique(labels_eval)
-    n_samples_eval = int(len(x_eval))
+    n_samples_eval = int(np.count_nonzero(mask_eval))
 
     if n_samples_eval == 0:
         return make_candidate_result(
@@ -637,7 +725,8 @@ def run_cluster_candidate(
             labels,
             use_silhouette=True,
             use_db=True,
-            use_ch=True
+            use_ch=True,
+            max_silhouette_samples=max_silhouette_samples
         )
     except Exception as exc:
         return make_candidate_result(
@@ -976,7 +1065,15 @@ def run_auto_cluster_tuning(
         pca_only=pca_only
     )
     coarse_results: list[CandidateResult] = []
-    transform_cache: Dict[tuple, Any] = {}
+    auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
+    if not auto_cache_enabled:
+        _set_auto_info(
+            f"AUTO {mode}: transform-cache отключен для большого набора ({len(base_data)} строк).",
+            "brown"
+        )
+    transform_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
+    transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
+    transform_cache_total_bytes = 0
     run_start_ts = monotonic()
     for idx, candidate in enumerate(coarse_candidates, start=1):
         if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
@@ -1031,6 +1128,27 @@ def run_auto_cluster_tuning(
                 ).strip()
 
         coarse_results.append(result)
+        if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
+            stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
+            for key in stale_keys:
+                transform_cache_total_bytes -= int(transform_cache_sizes.pop(key, 0))
+            for key, value in list(transform_cache.items()):
+                if key in transform_cache_sizes:
+                    continue
+                cached_size = _estimate_transform_cache_item_nbytes(value)
+                if cached_size > AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES:
+                    transform_cache.pop(key, None)
+                    continue
+                if cached_size > 0:
+                    transform_cache_sizes[key] = cached_size
+                    transform_cache_total_bytes += cached_size
+            transform_cache_total_bytes = _trim_transform_cache(
+                transform_cache,
+                transform_cache_sizes,
+                transform_cache_total_bytes,
+                max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
+            )
+        gc.collect()
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
@@ -1105,6 +1223,27 @@ def run_auto_cluster_tuning(
                 ).strip()
 
         fine_results.append(result)
+        if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
+            stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
+            for key in stale_keys:
+                transform_cache_total_bytes -= int(transform_cache_sizes.pop(key, 0))
+            for key, value in list(transform_cache.items()):
+                if key in transform_cache_sizes:
+                    continue
+                cached_size = _estimate_transform_cache_item_nbytes(value)
+                if cached_size > AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES:
+                    transform_cache.pop(key, None)
+                    continue
+                if cached_size > 0:
+                    transform_cache_sizes[key] = cached_size
+                    transform_cache_total_bytes += cached_size
+            transform_cache_total_bytes = _trim_transform_cache(
+                transform_cache,
+                transform_cache_sizes,
+                transform_cache_total_bytes,
+                max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
+            )
+        gc.collect()
 
     combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
@@ -2950,7 +3089,8 @@ def evaluate_clustering(
         labels,
         use_silhouette=False,
         use_db=False,
-        use_ch=False
+        use_ch=False,
+        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES
 ):
     """
     Оценка качества кластеризации без эталонной разметки.
@@ -3012,8 +3152,23 @@ def evaluate_clustering(
     # Silhouette
     # --------------------------
     if use_silhouette:
-        val = float(silhouette_score(X_eval, labels_eval))
+        silhouette_sample_size = len(X_eval)
+        if max_silhouette_samples is not None:
+            try:
+                max_silhouette_samples = max(2, int(max_silhouette_samples))
+            except (TypeError, ValueError):
+                max_silhouette_samples = AUTO_SILHOUETTE_MAX_SAMPLES
+            silhouette_sample_size = min(silhouette_sample_size, int(max_silhouette_samples))
+        val = float(
+            silhouette_score(
+                X_eval,
+                labels_eval,
+                sample_size=silhouette_sample_size if silhouette_sample_size < len(X_eval) else None,
+                random_state=42
+            )
+        )
         results["metrics"]["silhouette"] = val
+        results["metrics"]["silhouette_n_samples"] = int(silhouette_sample_size)
 
         if val > 0.5:
             label = "Хорошо"
