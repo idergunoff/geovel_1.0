@@ -75,7 +75,8 @@ AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
 AUTO_TUNING_MIN_ROWS = 256
 AUTO_TUNING_MAX_FEATURES = 512
-AUTO_TUNING_FEATURE_REDUCTION_MODE = "random_projection"
+AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
+AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
 
 
 def _estimate_array_like_nbytes(value: Any) -> int:
@@ -170,11 +171,27 @@ def _reduce_feature_space_for_auto_tuning(data, max_features: int) -> Any:
     data_np = np.asarray(data, dtype=np.float32)
     if data_np.ndim != 2:
         return data
+    n_rows = int(data_np.shape[0])
     n_features = int(data_np.shape[1])
-    if n_features <= max_features:
+    if AUTO_TUNING_FEATURE_REDUCTION_MODE == "off":
+        return data_np
+    matrix_bytes = int(max(1, n_rows) * max(1, n_features) * 4)
+    if AUTO_TUNING_FEATURE_REDUCTION_MODE == "auto":
+        if (
+                n_features <= int(AUTO_TUNING_REDUCE_FEATURES_THRESHOLD)
+                and matrix_bytes <= int(AUTO_TUNING_MAX_WORKING_SET_BYTES)
+        ):
+            return data_np
+        # Оценка безопасной целевой размерности с учетом временных копий.
+        approx_copies_factor = 3
+        max_features_by_memory = int(
+            AUTO_TUNING_MAX_WORKING_SET_BYTES // max(1, n_rows * 4 * approx_copies_factor)
+        )
+        max_features = max(32, min(int(max_features), int(max_features_by_memory)))
+    if n_features <= int(max_features):
         return data_np
 
-    if AUTO_TUNING_FEATURE_REDUCTION_MODE == "random_projection":
+    if AUTO_TUNING_FEATURE_REDUCTION_MODE in {"random_projection", "auto"}:
         projector = SparseRandomProjection(
             n_components=max_features,
             dense_output=True,
