@@ -14,6 +14,7 @@ from typing import Any, Dict, Literal, Optional, TypedDict
 import build_table
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from scipy.interpolate import griddata
+from sklearn.random_projection import SparseRandomProjection
 from draw import draw_radarogram
 from func import *
 
@@ -72,7 +73,9 @@ AUTO_SILHOUETTE_MAX_SAMPLES = 5000
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
-AUTO_TUNING_MIN_ROWS = 2000
+AUTO_TUNING_MIN_ROWS = 256
+AUTO_TUNING_MAX_FEATURES = 512
+AUTO_TUNING_FEATURE_REDUCTION_MODE = "random_projection"
 
 
 def _estimate_array_like_nbytes(value: Any) -> int:
@@ -142,7 +145,8 @@ def _sample_rows_for_auto_tuning(data, max_rows: int) -> Any:
     if n_features and n_features > 0:
         approx_bytes_per_row = int(max(8, n_features * 8 * 6))
         max_rows_by_memory = int(AUTO_TUNING_MAX_WORKING_SET_BYTES // approx_bytes_per_row)
-        max_rows = min(max_rows, max(AUTO_TUNING_MIN_ROWS, max_rows_by_memory))
+        max_rows = min(max_rows, max(2, max_rows_by_memory))
+    max_rows = max(2, min(max_rows, data_len))
     if data_len <= max_rows:
         return data
     rng = np.random.default_rng(42)
@@ -150,6 +154,37 @@ def _sample_rows_for_auto_tuning(data, max_rows: int) -> Any:
     if isinstance(data, np.ndarray):
         return data[sampled_idx]
     return [data[int(i)] for i in sampled_idx]
+
+
+def _reduce_feature_space_for_auto_tuning(data, max_features: int) -> Any:
+    """
+    Ограничивает число признаков для AUTO-подбора при очень высокой размерности.
+    """
+    if data is None:
+        return data
+    try:
+        max_features = max(2, int(max_features))
+    except (TypeError, ValueError):
+        max_features = AUTO_TUNING_MAX_FEATURES
+
+    data_np = np.asarray(data, dtype=np.float32)
+    if data_np.ndim != 2:
+        return data
+    n_features = int(data_np.shape[1])
+    if n_features <= max_features:
+        return data_np
+
+    if AUTO_TUNING_FEATURE_REDUCTION_MODE == "random_projection":
+        projector = SparseRandomProjection(
+            n_components=max_features,
+            dense_output=True,
+            random_state=42
+        )
+        reduced = projector.fit_transform(data_np)
+        return np.asarray(reduced, dtype=np.float32)
+
+    feature_idx = np.linspace(0, n_features - 1, num=max_features, dtype=int)
+    return np.asarray(data_np[:, feature_idx], dtype=np.float32)
 
 
 def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
@@ -575,6 +610,7 @@ def run_cluster_candidate(
 
     try:
         base_data = _sample_rows_for_auto_tuning(base_data, AUTO_TUNING_MAX_ROWS)
+        base_data = _reduce_feature_space_for_auto_tuning(base_data, AUTO_TUNING_MAX_FEATURES)
         clear_data, _ = clean_features(data=base_data, **clean_params)
     except Exception as exc:
         return make_candidate_result(
