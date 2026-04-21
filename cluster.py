@@ -360,7 +360,11 @@ def build_auto_search_space(
     if mode not in {"COARSE", "FINE"}:
         raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
 
-    scaler_modes = ("standard", "robust") if scaler_only else ("none", "standard", "robust")
+    scaler_modes = (
+        ("standard", "robust", "l2_norm", "row_center")
+        if scaler_only
+        else ("none", "standard", "robust", "l2_norm", "row_center")
+    )
     pca_variance_values = (0.85, 0.90, 0.95)
     max_clusters = max(2, int(max_clusters))
     # Для coarse-режима используем более широкий перебор fixed_components,
@@ -381,8 +385,13 @@ def build_auto_search_space(
     )
     candidates: list[CandidateConfig] = []
 
-    # KMeans: k=2..max_clusters.
-    for scaler_mode, pca_variant, k in product(scaler_modes, pca_variants, range(2, max_clusters + 1)):
+    # KMeans: k=2..max_clusters, n_init={10,20,50}.
+    for scaler_mode, pca_variant, k, n_init in product(
+            scaler_modes,
+            pca_variants,
+            range(2, max_clusters + 1),
+            (10, 20, 50)
+    ):
         candidates.append(
             make_candidate_config(
                 scaler_mode=scaler_mode,
@@ -390,7 +399,10 @@ def build_auto_search_space(
                 pca_mode=pca_variant["pca_mode"],
                 pca_value=pca_variant["pca_value"],
                 method="kmeans",
-                method_params={"kmeans_n_clusters": k}
+                method_params={
+                    "kmeans_n_clusters": k,
+                    "kmeans_n_init": int(n_init)
+                }
             )
         )
 
@@ -821,12 +833,6 @@ def build_fine_search_space(
     """
     fine_candidates: list[CandidateConfig] = []
     seen_signatures = set()
-    hdbscan_metric_values = [
-        str(metric).strip()
-        for metric in (hdbscan_metrics or [])
-        if str(metric).strip()
-    ]
-    hdbscan_metric_values = list(dict.fromkeys(hdbscan_metric_values))
 
     for result in top_results[:max(1, int(top_k))]:
         if result.get("status") != "ok":
@@ -885,27 +891,21 @@ def build_fine_search_space(
             base_mcs = int(base_method_params.get("hdbscan_min_cluster_size", 20))
             base_ms = int(base_method_params.get("hdbscan_min_samples", 5))
             base_metric = str(base_method_params.get("hdbscan_metric", "euclidean"))
-            metric_variants = [base_metric]
-            metric_variants.extend(metric for metric in hdbscan_metric_values if metric != base_metric)
             for delta_mcs in (-10, -5, 0, 5, 10):
                 for delta_ms in (-2, -1, 0, 1, 2):
-                    for metric in metric_variants:
-                        method_variants.append({
-                            "hdbscan_min_cluster_size": int(max(5, base_mcs + delta_mcs)),
-                            "hdbscan_min_samples": int(max(1, base_ms + delta_ms)),
-                            "hdbscan_metric": metric
-                        })
+                    method_variants.append({
+                        "hdbscan_min_cluster_size": int(max(5, base_mcs + delta_mcs)),
+                        "hdbscan_min_samples": int(max(1, base_ms + delta_ms)),
+                        "hdbscan_metric": base_metric
+                    })
         elif base_method == "gmm":
             base_n = int(base_method_params.get("gmm_n_components", 4))
             base_cov = str(base_method_params.get("gmm_covariance_type", "full"))
-            cov_variants = [base_cov]
-            cov_variants.extend(cov for cov in GMM_COVARIANCE_TYPES if cov != base_cov)
             for n_components in range(max(2, base_n - 2), base_n + 3):
-                for cov in cov_variants:
-                    method_variants.append({
-                        "gmm_n_components": int(n_components),
-                        "gmm_covariance_type": str(cov)
-                    })
+                method_variants.append({
+                    "gmm_n_components": int(n_components),
+                    "gmm_covariance_type": base_cov
+                })
         else:
             continue
 
@@ -1399,6 +1399,8 @@ def apply_auto_result_to_ui(best_result: CandidateResult) -> None:
     ui.radioButton_clust_scaler_none.setChecked(scaler_mode == "none")
     ui.radioButton_clust_scaler_stnd.setChecked(scaler_mode == "standard")
     ui.radioButton_clust_scaler_rob.setChecked(scaler_mode == "robust")
+    ui.radioButton_clust_scaler_l2.setChecked(scaler_mode == "l2_norm")
+    ui.radioButton_clust_scaler_row.setChecked(scaler_mode == "row_center")
 
     pca_enabled = bool(cfg.get("pca_enabled"))
     pca_mode = cfg.get("pca_mode")
