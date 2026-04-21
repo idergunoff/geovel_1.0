@@ -538,10 +538,19 @@ def run_cluster_candidate(
 
         try:
             if candidate["pca_enabled"]:
+                pca_mode = candidate["pca_mode"] or "variance_ratio"
+                pca_raw_value = candidate.get("pca_value")
+                pca_n_components = 20
+                pca_variance_ratio = 0.9
+                if pca_mode == "fixed_components":
+                    pca_n_components = int(float(pca_raw_value))
+                else:
+                    pca_variance_ratio = float(pca_raw_value)
                 data_for_cluster, pca_info = apply_pca(
                     preprocess_data,
-                    mode=candidate["pca_mode"] or "variance_ratio",
-                    variance_ratio=float(candidate["pca_value"])
+                    mode=pca_mode,
+                    n_components=pca_n_components,
+                    variance_ratio=pca_variance_ratio
                 )
                 pca_components_after = int(pca_info.get("components_after_pca", 0) or 0)
                 if pca_components_after < min_pca_components_value:
