@@ -434,7 +434,8 @@ def _apply_candidate_limit(
         candidates: list[CandidateConfig],
         *,
         max_candidates: Optional[int],
-        scope_label: str
+        scope_label: str,
+        random_seed: Optional[int] = None
 ) -> list[CandidateConfig]:
     """
     Применяет лимит кандидатов.
@@ -450,13 +451,73 @@ def _apply_candidate_limit(
         _set_auto_info(f"{scope_label}: размер search space = {total_candidates}.", "blue")
         return candidates
 
-    sampled_candidates = random.sample(candidates, max_candidates)
+    # Стратифицированная выборка: сохраняем представительство методов,
+    # чтобы случайный сэмпл не состоял только из "тяжелых"/неудачных кандидатов.
+    method_groups: Dict[str, list[CandidateConfig]] = {}
+    for candidate in candidates:
+        method_name = str(candidate.get("method", "unknown"))
+        method_groups.setdefault(method_name, []).append(candidate)
+
+    sampled_candidates: list[CandidateConfig] = []
+    methods = sorted(method_groups.keys())
+    if methods:
+        per_method_quota = max(1, max_candidates // len(methods))
+        if random_seed is None:
+            random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
+        rng = random.Random(int(random_seed))
+        for method_name in methods:
+            method_candidates = method_groups.get(method_name, [])
+            take = min(len(method_candidates), per_method_quota)
+            if take > 0:
+                sampled_candidates.extend(rng.sample(method_candidates, take))
+        if len(sampled_candidates) < max_candidates:
+            sampled_signatures = {
+                _candidate_signature(candidate)
+                for candidate in sampled_candidates
+            }
+            remainder_pool = [
+                candidate for candidate in candidates
+                if _candidate_signature(candidate) not in sampled_signatures
+            ]
+            need = max_candidates - len(sampled_candidates)
+            if need > 0 and remainder_pool:
+                sampled_candidates.extend(rng.sample(remainder_pool, min(need, len(remainder_pool))))
+    else:
+        sampled_candidates = random.sample(candidates, max_candidates)
+
     _set_auto_info(
         f"{scope_label}: сгенерировано {total_candidates} кандидатов, "
-        f"случайно выбрано {max_candidates}.",
+        f"случайно выбрано {max_candidates} (seed={random_seed}).",
         "brown"
     )
     return sampled_candidates
+
+
+def _build_auto_rescue_candidates(max_clusters: int) -> list[CandidateConfig]:
+    """
+    Резервный небольшой набор "надежных" кандидатов, если основной сэмпл
+    не дал ни одной валидной конфигурации.
+    """
+    max_clusters = max(2, int(max_clusters))
+    rescue_candidates: list[CandidateConfig] = []
+    for scaler_mode, pca_enabled, k in product(
+            ("none", "standard", "robust"),
+            (False, True),
+            range(2, min(8, max_clusters) + 1)
+    ):
+        candidate = make_candidate_config(
+            scaler_mode=scaler_mode,
+            pca_enabled=pca_enabled,
+            pca_mode="variance_ratio" if pca_enabled else None,
+            pca_value=0.9 if pca_enabled else None,
+            method="kmeans",
+            method_params={
+                "kmeans_n_clusters": int(k),
+                "kmeans_n_init": 20
+            }
+        )
+        rescue_candidates.append(candidate)
+    return rescue_candidates
 
 
 def build_auto_search_space(
@@ -467,7 +528,8 @@ def build_auto_search_space(
         hdbscan_metric: str = "euclidean",
         hdbscan_metrics: Optional[list[str]] = None,
         scaler_only: bool = False,
-        pca_only: bool = False
+        pca_only: bool = False,
+        random_seed: Optional[int] = None
 ) -> list[CandidateConfig]:
     """
     Формирует coarse/fine пространство кандидатов для AUTO-подбора.
@@ -575,7 +637,8 @@ def build_auto_search_space(
     return _apply_candidate_limit(
         candidates,
         max_candidates=max_candidates,
-        scope_label=f"AUTO {mode}"
+        scope_label=f"AUTO {mode}",
+        random_seed=random_seed
     )
 
 
@@ -1081,7 +1144,8 @@ def run_auto_cluster_tuning(
         candidate_soft_timeout_sec: Optional[float] = None,
         min_pca_components: int = 2,
         weights: Optional[Dict[str, float]] = None,
-        clean_kwargs: Optional[Dict[str, Any]] = None
+        clean_kwargs: Optional[Dict[str, Any]] = None,
+        random_seed: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Orchestrator AUTO-подбора.
@@ -1098,7 +1162,8 @@ def run_auto_cluster_tuning(
         hdbscan_metric=hdbscan_metric,
         hdbscan_metrics=hdbscan_metrics,
         scaler_only=scaler_only,
-        pca_only=pca_only
+        pca_only=pca_only,
+        random_seed=random_seed
     )
     coarse_results: list[CandidateResult] = []
     auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
@@ -1185,6 +1250,32 @@ def run_auto_cluster_tuning(
                 max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
             )
         gc.collect()
+
+    has_valid_coarse = any(row.get("status") == "ok" for row in coarse_results)
+    if not has_valid_coarse:
+        _set_auto_info(
+            "AUTO: в основном наборе не найдено валидных конфигураций, запускаю резервный mini-grid.",
+            "brown"
+        )
+        rescue_candidates = _build_auto_rescue_candidates(max_clusters=max_clusters)
+        for idx, candidate in enumerate(rescue_candidates, start=1):
+            try:
+                result = run_cluster_candidate(
+                    base_data=base_data,
+                    candidate=candidate,
+                    candidate_id=f"R{idx:03d}",
+                    clean_kwargs=clean_kwargs,
+                    transform_cache=transform_cache,
+                    min_pca_components=min_pca_components
+                )
+            except Exception as exc:
+                result = make_candidate_result(
+                    candidate_id=f"R{idx:03d}",
+                    candidate_config=candidate,
+                    status="error",
+                    error_text=f"rescue candidate exception: {exc}"
+                )
+            coarse_results.append(result)
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
@@ -1791,6 +1882,7 @@ def calculate_cluster_auto():
         "blue"
     )
     QApplication.processEvents()
+    auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
 
     if not force_recompute:
         cached_top_results = load_cluster_auto_tuning_cache(
@@ -1823,6 +1915,7 @@ def calculate_cluster_auto():
         weights=metric_weights,
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
+        random_seed=auto_random_seed,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
