@@ -434,7 +434,8 @@ def _apply_candidate_limit(
         candidates: list[CandidateConfig],
         *,
         max_candidates: Optional[int],
-        scope_label: str
+        scope_label: str,
+        random_seed: Optional[int] = None
 ) -> list[CandidateConfig]:
     """
     Применяет лимит кандидатов.
@@ -461,7 +462,9 @@ def _apply_candidate_limit(
     methods = sorted(method_groups.keys())
     if methods:
         per_method_quota = max(1, max_candidates // len(methods))
-        rng = random.Random(42)
+        if random_seed is None:
+            random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
+        rng = random.Random(int(random_seed))
         for method_name in methods:
             method_candidates = method_groups.get(method_name, [])
             take = min(len(method_candidates), per_method_quota)
@@ -484,7 +487,7 @@ def _apply_candidate_limit(
 
     _set_auto_info(
         f"{scope_label}: сгенерировано {total_candidates} кандидатов, "
-        f"случайно выбрано {max_candidates}.",
+        f"случайно выбрано {max_candidates} (seed={random_seed}).",
         "brown"
     )
     return sampled_candidates
@@ -525,7 +528,8 @@ def build_auto_search_space(
         hdbscan_metric: str = "euclidean",
         hdbscan_metrics: Optional[list[str]] = None,
         scaler_only: bool = False,
-        pca_only: bool = False
+        pca_only: bool = False,
+        random_seed: Optional[int] = None
 ) -> list[CandidateConfig]:
     """
     Формирует coarse/fine пространство кандидатов для AUTO-подбора.
@@ -633,7 +637,8 @@ def build_auto_search_space(
     return _apply_candidate_limit(
         candidates,
         max_candidates=max_candidates,
-        scope_label=f"AUTO {mode}"
+        scope_label=f"AUTO {mode}",
+        random_seed=random_seed
     )
 
 
@@ -1139,7 +1144,8 @@ def run_auto_cluster_tuning(
         candidate_soft_timeout_sec: Optional[float] = None,
         min_pca_components: int = 2,
         weights: Optional[Dict[str, float]] = None,
-        clean_kwargs: Optional[Dict[str, Any]] = None
+        clean_kwargs: Optional[Dict[str, Any]] = None,
+        random_seed: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Orchestrator AUTO-подбора.
@@ -1156,7 +1162,8 @@ def run_auto_cluster_tuning(
         hdbscan_metric=hdbscan_metric,
         hdbscan_metrics=hdbscan_metrics,
         scaler_only=scaler_only,
-        pca_only=pca_only
+        pca_only=pca_only,
+        random_seed=random_seed
     )
     coarse_results: list[CandidateResult] = []
     auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
@@ -1875,6 +1882,7 @@ def calculate_cluster_auto():
         "blue"
     )
     QApplication.processEvents()
+    auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
 
     if not force_recompute:
         cached_top_results = load_cluster_auto_tuning_cache(
@@ -1907,6 +1915,7 @@ def calculate_cluster_auto():
         weights=metric_weights,
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
+        random_seed=auto_random_seed,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
