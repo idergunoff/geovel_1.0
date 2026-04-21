@@ -4,7 +4,7 @@ import gzip
 import hashlib
 import json
 import random
-from collections import Counter
+from collections import Counter, OrderedDict
 from datetime import datetime, timezone
 from itertools import product
 from time import monotonic
@@ -65,6 +65,53 @@ cluster_auto_results_cache: list[CandidateResult] = []
 
 CLUSTER_DATA_GZIP_PREFIX = "gzjson:"
 GMM_COVARIANCE_TYPES = ("full", "diag", "tied", "spherical")
+AUTO_TRANSFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
+AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES = 128 * 1024 * 1024
+AUTO_SILHOUETTE_MAX_SAMPLES = 5000
+
+
+def _estimate_array_like_nbytes(value: Any) -> int:
+    """
+    Грубая оценка объема памяти array-like объекта в байтах.
+    """
+    if value is None:
+        return 0
+    if isinstance(value, np.ndarray):
+        return int(value.nbytes)
+    if hasattr(value, "nbytes"):
+        try:
+            return int(value.nbytes)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    try:
+        return int(np.array(value).nbytes)
+    except Exception:
+        return 0
+
+
+def _estimate_transform_cache_item_nbytes(value: Any) -> int:
+    """
+    Оценивает объем одного элемента transform-cache.
+    """
+    if isinstance(value, tuple):
+        return int(sum(_estimate_array_like_nbytes(v) for v in value))
+    return _estimate_array_like_nbytes(value)
+
+
+def _trim_transform_cache(
+        transform_cache: "OrderedDict[tuple, Any]",
+        cache_sizes: "OrderedDict[tuple, int]",
+        cache_total_bytes: int,
+        *,
+        max_cache_bytes: int
+) -> int:
+    """
+    Поддерживает LRU-ограничение transform-cache по памяти.
+    """
+    while cache_total_bytes > max_cache_bytes and transform_cache:
+        evicted_key, _ = transform_cache.popitem(last=False)
+        cache_total_bytes -= int(cache_sizes.pop(evicted_key, 0))
+    return max(0, int(cache_total_bytes))
 
 
 def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
@@ -466,7 +513,8 @@ def run_cluster_candidate(
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
-        min_pca_components: int = 2
+        min_pca_components: int = 2,
+        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -578,6 +626,9 @@ def run_cluster_candidate(
 
         if transform_cache is not None:
             transform_cache[transform_key] = (data_for_cluster, pca_components_after)
+            if hasattr(transform_cache, "move_to_end"):
+                transform_cache.move_to_end(transform_key, last=True)  # type: ignore[attr-defined]
+            transform_cache["__last_inserted_key__"] = transform_key
     pca_stats: Dict[str, int] = {}
     if pca_components_after is not None:
         pca_stats["pca_components_after"] = int(pca_components_after)
@@ -637,7 +688,8 @@ def run_cluster_candidate(
             labels,
             use_silhouette=True,
             use_db=True,
-            use_ch=True
+            use_ch=True,
+            max_silhouette_samples=max_silhouette_samples
         )
     except Exception as exc:
         return make_candidate_result(
@@ -976,7 +1028,9 @@ def run_auto_cluster_tuning(
         pca_only=pca_only
     )
     coarse_results: list[CandidateResult] = []
-    transform_cache: Dict[tuple, Any] = {}
+    transform_cache: "OrderedDict[tuple, Any]" = OrderedDict()
+    transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
+    transform_cache_total_bytes = 0
     run_start_ts = monotonic()
     for idx, candidate in enumerate(coarse_candidates, start=1):
         if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
@@ -1031,6 +1085,23 @@ def run_auto_cluster_tuning(
                 ).strip()
 
         coarse_results.append(result)
+        cached_key = transform_cache.pop("__last_inserted_key__", None)
+        if isinstance(cached_key, tuple):
+            cached_size = _estimate_transform_cache_item_nbytes(transform_cache.get(cached_key))
+            if cached_size > AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES:
+                transform_cache.pop(cached_key, None)
+                transform_cache_sizes.pop(cached_key, None)
+            elif cached_size > 0:
+                previous_size = int(transform_cache_sizes.get(cached_key, 0))
+                transform_cache_sizes[cached_key] = cached_size
+                transform_cache_sizes.move_to_end(cached_key, last=True)
+                transform_cache_total_bytes += cached_size - previous_size
+                transform_cache_total_bytes = _trim_transform_cache(
+                    transform_cache,
+                    transform_cache_sizes,
+                    transform_cache_total_bytes,
+                    max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
+                )
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
@@ -1105,6 +1176,23 @@ def run_auto_cluster_tuning(
                 ).strip()
 
         fine_results.append(result)
+        cached_key = transform_cache.pop("__last_inserted_key__", None)
+        if isinstance(cached_key, tuple):
+            cached_size = _estimate_transform_cache_item_nbytes(transform_cache.get(cached_key))
+            if cached_size > AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES:
+                transform_cache.pop(cached_key, None)
+                transform_cache_sizes.pop(cached_key, None)
+            elif cached_size > 0:
+                previous_size = int(transform_cache_sizes.get(cached_key, 0))
+                transform_cache_sizes[cached_key] = cached_size
+                transform_cache_sizes.move_to_end(cached_key, last=True)
+                transform_cache_total_bytes += cached_size - previous_size
+                transform_cache_total_bytes = _trim_transform_cache(
+                    transform_cache,
+                    transform_cache_sizes,
+                    transform_cache_total_bytes,
+                    max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
+                )
 
     combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
@@ -2950,7 +3038,8 @@ def evaluate_clustering(
         labels,
         use_silhouette=False,
         use_db=False,
-        use_ch=False
+        use_ch=False,
+        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES
 ):
     """
     Оценка качества кластеризации без эталонной разметки.
@@ -3012,8 +3101,23 @@ def evaluate_clustering(
     # Silhouette
     # --------------------------
     if use_silhouette:
-        val = float(silhouette_score(X_eval, labels_eval))
+        silhouette_sample_size = len(X_eval)
+        if max_silhouette_samples is not None:
+            try:
+                max_silhouette_samples = max(2, int(max_silhouette_samples))
+            except (TypeError, ValueError):
+                max_silhouette_samples = AUTO_SILHOUETTE_MAX_SAMPLES
+            silhouette_sample_size = min(silhouette_sample_size, int(max_silhouette_samples))
+        val = float(
+            silhouette_score(
+                X_eval,
+                labels_eval,
+                sample_size=silhouette_sample_size if silhouette_sample_size < len(X_eval) else None,
+                random_state=42
+            )
+        )
         results["metrics"]["silhouette"] = val
+        results["metrics"]["silhouette_n_samples"] = int(silhouette_sample_size)
 
         if val > 0.5:
             label = "Хорошо"
