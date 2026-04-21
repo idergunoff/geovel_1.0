@@ -64,6 +64,7 @@ cluster_auto_results_cache: list[CandidateResult] = []
 
 
 CLUSTER_DATA_GZIP_PREFIX = "gzjson:"
+GMM_COVARIANCE_TYPES = ("full", "diag", "tied", "spherical")
 
 
 def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
@@ -421,9 +422,9 @@ def build_auto_search_space(
             )
         )
 
-    # GMM: n_components=2..max_clusters, covariance_type={full,diag}.
+    # GMM: n_components=2..max_clusters, covariance_type={full,diag,tied,spherical}.
     for scaler_mode, pca_variant, n_components, covariance_type in product(
-            scaler_modes, pca_variants, range(2, max_clusters + 1), ("full", "diag")
+            scaler_modes, pca_variants, range(2, max_clusters + 1), GMM_COVARIANCE_TYPES
     ):
         candidates.append(
             make_candidate_config(
@@ -897,9 +898,10 @@ def build_fine_search_space(
         elif base_method == "gmm":
             base_n = int(base_method_params.get("gmm_n_components", 4))
             base_cov = str(base_method_params.get("gmm_covariance_type", "full"))
-            alt_cov = "diag" if base_cov == "full" else "full"
+            cov_variants = [base_cov]
+            cov_variants.extend(cov for cov in GMM_COVARIANCE_TYPES if cov != base_cov)
             for n_components in range(max(2, base_n - 2), base_n + 3):
-                for cov in {base_cov, alt_cov}:
+                for cov in cov_variants:
                     method_variants.append({
                         "gmm_n_components": int(n_components),
                         "gmm_covariance_type": str(cov)
