@@ -537,6 +537,20 @@ def _build_auto_rescue_candidates(max_clusters: int) -> list[CandidateConfig]:
     return rescue_candidates
 
 
+def _summarize_candidate_failures(results: list[CandidateResult], top_n: int = 5) -> list[tuple[str, int]]:
+    """
+    Возвращает топ причин невалидности/ошибок кандидатов.
+    """
+    counter: Counter[str] = Counter()
+    for row in results:
+        status = str(row.get("status", ""))
+        if status == "ok":
+            continue
+        reason = str(row.get("error_text", "")).strip() or f"status={status}"
+        counter[reason] += 1
+    return counter.most_common(max(1, int(top_n)))
+
+
 def build_auto_search_space(
         auto_mode: str,
         max_candidates: Optional[int] = 200,
@@ -1293,6 +1307,44 @@ def run_auto_cluster_tuning(
                     error_text=f"rescue candidate exception: {exc}"
                 )
             coarse_results.append(result)
+        has_valid_after_rescue = any(row.get("status") == "ok" for row in coarse_results)
+        if not has_valid_after_rescue:
+            _set_auto_info(
+                "AUTO: rescue mini-grid не дал валидных конфигураций, повторяю с упрощенной очисткой.",
+                "brown"
+            )
+            relaxed_clean_kwargs = {
+                "use_non_finite": True,
+                "non_finite_mode": "impute",
+                "use_variance_threshold": False,
+                "use_correlation_filter": False
+            }
+            for idx, candidate in enumerate(rescue_candidates, start=1):
+                try:
+                    result = run_cluster_candidate(
+                        base_data=base_data,
+                        candidate=candidate,
+                        candidate_id=f"RR{idx:03d}",
+                        clean_kwargs=relaxed_clean_kwargs,
+                        transform_cache=transform_cache,
+                        min_pca_components=min_pca_components
+                    )
+                except Exception as exc:
+                    result = make_candidate_result(
+                        candidate_id=f"RR{idx:03d}",
+                        candidate_config=candidate,
+                        status="error",
+                        error_text=f"relaxed rescue exception: {exc}"
+                    )
+                coarse_results.append(result)
+        if not any(row.get("status") == "ok" for row in coarse_results):
+            top_failures = _summarize_candidate_failures(coarse_results, top_n=3)
+            if top_failures:
+                _set_auto_info(
+                    "AUTO: топ причин невалидности: "
+                    + "; ".join(f"{reason} ({count})" for reason, count in top_failures),
+                    "brown"
+                )
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
