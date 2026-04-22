@@ -714,7 +714,7 @@ def run_cluster_candidate(
             error_text=f"clean_features failed: {exc}"
         )
 
-    if not clear_data or len(clear_data) == 0:
+    if clear_data is None or len(clear_data) == 0:
         return make_candidate_result(
             candidate_id=candidate_id,
             candidate_config=candidate,
