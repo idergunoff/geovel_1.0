@@ -3769,9 +3769,22 @@ def calculate_cluster():
         "blue"
     )
 
+    map_data = [data[row_idx] for row_idx in kept_row_indices if 0 <= row_idx < len(data)]
+    if len(map_data) != len(labels_for_output):
+        set_info(
+            f"Внимание: карта кластеров построена по усеченному набору точек "
+            f"(labels={len(labels_for_output)}, map_data={len(map_data)}).",
+            "brown"
+        )
+        map_len = min(len(map_data), len(labels_for_output))
+        map_data = map_data[:map_len]
+        labels_for_map = labels_for_output[:map_len]
+    else:
+        labels_for_map = labels_for_output
+
     plot_cluster_map(
-        labels_for_output,
-        data,
+        labels_for_map,
+        map_data,
         show_interpolation=show_interpolation,
         interpolation_resolution=interpolation_resolution,
         settings_caption=(
