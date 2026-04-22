@@ -168,7 +168,7 @@ def _reduce_feature_space_for_auto_tuning(data, max_features: int) -> Any:
     except (TypeError, ValueError):
         max_features = AUTO_TUNING_MAX_FEATURES
 
-    data_np = np.asarray(data, dtype=np.float32)
+    data_np = np.asarray(data, dtype=np.float64)
     if data_np.ndim != 2:
         return data
     n_rows = int(data_np.shape[0])
@@ -198,10 +198,10 @@ def _reduce_feature_space_for_auto_tuning(data, max_features: int) -> Any:
             random_state=42
         )
         reduced = projector.fit_transform(data_np)
-        return np.asarray(reduced, dtype=np.float32)
+        return np.asarray(reduced, dtype=np.float64)
 
     feature_idx = np.linspace(0, n_features - 1, num=max_features, dtype=int)
-    return np.asarray(data_np[:, feature_idx], dtype=np.float32)
+    return np.asarray(data_np[:, feature_idx], dtype=np.float64)
 
 
 def _serialize_cluster_dataset(data: list[list[Any]]) -> str:
@@ -704,8 +704,8 @@ def run_cluster_candidate(
 
     try:
         base_data = _sample_rows_for_auto_tuning(base_data, AUTO_TUNING_MAX_ROWS)
-        base_data = _reduce_feature_space_for_auto_tuning(base_data, AUTO_TUNING_MAX_FEATURES)
         clear_data, _ = clean_features(data=base_data, **clean_params)
+        clear_data = _reduce_feature_space_for_auto_tuning(clear_data, AUTO_TUNING_MAX_FEATURES)
     except Exception as exc:
         return make_candidate_result(
             candidate_id=candidate_id,
