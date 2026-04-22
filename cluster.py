@@ -3138,7 +3138,8 @@ def plot_cluster_map(
         noise_marker=".",
         noise_label="noise",
         legend=True,
-        show_interpolation=True
+        show_interpolation=True,
+        settings_caption: str | None = None
 ):
     """
     Визуализация кластеров на карте (без подписей профилей).
@@ -3176,6 +3177,9 @@ def plot_cluster_map(
     show_interpolation : bool
         Если True — строится фоновая интерполяция по всей области участка.
         Если False — рисуются только исходные точки.
+
+    settings_caption : str | None
+        Дополнительная подпись с параметрами расчета (scaler/PCA/метод и т.д.).
     """
 
     labels = np.asarray(label_list)
@@ -3190,7 +3194,9 @@ def plot_cluster_map(
     x = arr[:, 1]
     y = arr[:, 2]
 
-    plt.figure(figsize=figsize)
+    # Явно создаем новую фигуру/ось на каждый вызов, чтобы исключить
+    # повторное использование текущей активной оси matplotlib.
+    fig, ax = plt.subplots(figsize=figsize)
 
     unique_labels = np.unique(labels)
     unique_labels_sorted = sorted([int(v) for v in unique_labels])
@@ -3223,7 +3229,7 @@ def plot_cluster_map(
             boundaries.extend([label + 0.5 for label in unique_labels_sorted])
             norm = BoundaryNorm(boundaries, cmap.N, clip=True)
 
-            plt.pcolormesh(
+            ax.pcolormesh(
                 grid_x,
                 grid_y,
                 grid_z,
@@ -3242,7 +3248,7 @@ def plot_cluster_map(
         mask = labels == label
         cluster_color = get_cluster_color(label)
 
-        plt.scatter(
+        ax.scatter(
             x[mask],
             y[mask],
             s=point_size,
@@ -3257,7 +3263,7 @@ def plot_cluster_map(
     if -1 in unique_labels:
         mask = labels == -1
         noise_cluster_color = get_cluster_color(-1)
-        plt.scatter(
+        ax.scatter(
             x[mask],
             y[mask],
             s=point_size,
@@ -3269,16 +3275,28 @@ def plot_cluster_map(
             zorder=4
         )
 
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title(title)
-    plt.axis("equal")
-    plt.grid(True, alpha=0.3)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.grid(True, alpha=0.3)
 
     if legend:
-        plt.legend()
+        ax.legend()
 
-    plt.tight_layout()
+    if settings_caption:
+        fig.text(
+            0.01,
+            0.01,
+            settings_caption,
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            color="dimgray"
+        )
+        fig.tight_layout(rect=(0, 0.05, 1, 1))
+    else:
+        fig.tight_layout()
     plt.show()
 
 
@@ -3755,7 +3773,33 @@ def calculate_cluster():
         labels_for_output,
         data,
         show_interpolation=show_interpolation,
-        interpolation_resolution=interpolation_resolution
+        interpolation_resolution=interpolation_resolution,
+        settings_caption=(
+            f"method={clust_method_analys}; scaler={preprocess_mode}; "
+            f"pca={'on' if mode_pca else 'off'}"
+            + (
+                f"({mode_pca}:{n_comp_pca if mode_pca == 'fixed_components' else disp_pca})"
+                if mode_pca else ""
+            )
+            + f"; smoothing={'on' if smoothing_applied else 'off'}"
+            + (
+                f"({smooth_method},w={smooth_window})"
+                if smoothing_applied else ""
+            )
+            + f"; interp={'on' if show_interpolation else 'off'}({interpolation_resolution})"
+            + (
+                f"; k={kmeans_n},n_init={kmeans_n_init}"
+                if clust_method_analys == "kmeans" else ""
+            )
+            + (
+                f"; min_cluster_size={hdbsc_min_size},min_samples={hdbsc_min_sample},metric={hdbsc_type}"
+                if clust_method_analys == "hdbscan" else ""
+            )
+            + (
+                f"; n_components={gmm_n},cov={gmm_type}"
+                if clust_method_analys == "gmm" else ""
+            )
+        )
     )
 
     print(labels_for_output)
