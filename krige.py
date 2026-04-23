@@ -3,6 +3,9 @@ from cProfile import label
 import matplotlib.pyplot as plt
 import numpy as np
 from sqlalchemy.exc import OperationalError
+from matplotlib.colors import ListedColormap, to_hex
+from matplotlib.patches import Patch
+from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
 from qt.choose_formation_map import *
@@ -25,6 +28,38 @@ dist_func_list = ['euclidean', 'braycurtis', 'canberra', 'chebyshev', 'cityblock
 def convex_hull_boundary(points):
     hull = ConvexHull(points)
     return hull
+
+
+def _build_categorical_palette(labels):
+    unique_labels = sorted({int(v) for v in labels})
+    base_colors = [to_hex(plt.get_cmap("tab20")(i)) for i in range(20)]
+    color_by_label = {}
+    for lbl in unique_labels:
+        if lbl == -1:
+            color_by_label[lbl] = "#4d4d4d"
+            continue
+        color_by_label[lbl] = base_colors[int(lbl) % len(base_colors)]
+    return color_by_label
+
+
+def _inside_hull_mask(xx, yy, points):
+    """Build a boolean mask for grid cells inside the data coverage area.
+
+    Stage 2.2 baseline uses convex hull clipping. If hull construction fails
+    (e.g. degenerate geometry), keep previous behaviour and do not clip.
+    """
+    if len(points) < 3:
+        return np.ones_like(xx, dtype=bool)
+
+    try:
+        hull = ConvexHull(points)
+        hull_points = points[hull.vertices]
+        triangulation = Delaunay(hull_points)
+        flat_points = np.column_stack([xx.ravel(), yy.ravel()])
+        inside_flat = triangulation.find_simplex(flat_points) >= 0
+        return inside_flat.reshape(xx.shape)
+    except Exception:
+        return np.ones_like(xx, dtype=bool)
 
 def show_map():
     global list_z
@@ -117,7 +152,7 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None):
+def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None, initial_map_mode=None):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -131,16 +166,137 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     for i in dist_func_list:
         ui_dm.comboBox_dist_func.addItem(i)
 
+    def _get_control(*names):
+        for name in names:
+            ctrl = getattr(ui_dm, name, None)
+            if ctrl is None:
+                ctrl = Draw_Map.findChild(QtWidgets.QWidget, name)
+            if ctrl is not None:
+                return ctrl
+        return None
+
+    map_mode_combo = _get_control(
+        "comboBox_map_mode",
+        "comboBox_mode_map",
+        "comboBox_render_mode"
+    )
+    interp_method_combo = _get_control(
+        "comboBox_interp_method",
+        "comboBox_interpolation_method"
+    )
+
+    continuous_controls = [
+        _get_control("label_3"),
+        _get_control("comboBox_estimator"),
+        _get_control("label_27"),
+        _get_control("comboBox_var_model"),
+        _get_control("label_4"),
+        _get_control("comboBox_dist_func"),
+        _get_control("label_5"),
+        _get_control("comboBox_bin_func"),
+        _get_control("label_28"),
+        _get_control("spinBox_nlags"),
+        _get_control("checkBox_filt"),
+        _get_control("spinBox_filt"),
+        _get_control("groupBox_kriging")
+    ]
+    categorical_controls = [
+        _get_control("groupBox_categorical"),
+        _get_control("checkBox_clip_to_hull"),
+        _get_control("checkBox_clip_to_data_area"),
+        _get_control("checkBox_show_uncertainty"),
+        _get_control("checkBox_uncertainty"),
+        _get_control("comboBox_boundary_smooth"),
+        _get_control("comboBox_boundary_smoothing"),
+        _get_control("spinBox_prob_power"),
+        _get_control("doubleSpinBox_prob_power"),
+        _get_control("checkBox_hard_labels"),
+        _get_control("checkBox_enforce_hard_labels")
+    ]
+    uncertainty_controls = [
+        _get_control("checkBox_show_uncertainty"),
+        _get_control("checkBox_uncertainty"),
+        _get_control("label_uncertainty"),
+        _get_control("doubleSpinBox_uncertainty_alpha"),
+        _get_control("spinBox_uncertainty_alpha")
+    ]
+
+    def _set_enabled_state(controls, enabled):
+        for ctrl in controls:
+            if ctrl is not None:
+                ctrl.setEnabled(enabled)
+
+    def _is_categorical_mode():
+        if map_mode_combo is None:
+            return False
+        mode_text = map_mode_combo.currentText().strip().lower()
+        return "categor" in mode_text or "cluster" in mode_text or mode_text.startswith("cat")
+
+    def _rebuild_interp_method_options():
+        if interp_method_combo is None:
+            return
+        if _is_categorical_mode():
+            options = ["Nearest", "Probability"]
+            default_value = "Probability"
+        else:
+            options = ["Kriging"]
+            default_value = "Kriging"
+
+        old_text = interp_method_combo.currentText()
+        interp_method_combo.blockSignals(True)
+        interp_method_combo.clear()
+        interp_method_combo.addItems(options)
+        if old_text in options:
+            interp_method_combo.setCurrentText(old_text)
+        else:
+            interp_method_combo.setCurrentText(default_value)
+        interp_method_combo.blockSignals(False)
+
+    def _apply_interpolation_method_deps():
+        if interp_method_combo is None:
+            return
+        can_use_uncertainty = _is_categorical_mode() and interp_method_combo.currentText().strip().lower() == "probability"
+        for ctrl in uncertainty_controls:
+            if ctrl is not None:
+                ctrl.setEnabled(can_use_uncertainty)
+
+    def _apply_map_mode_state():
+        categorical_mode = _is_categorical_mode()
+        _set_enabled_state(continuous_controls, not categorical_mode)
+        _set_enabled_state(categorical_controls, categorical_mode)
+        _rebuild_interp_method_options()
+        _apply_interpolation_method_deps()
+
+    if map_mode_combo is not None:
+        existing_modes = [map_mode_combo.itemText(i) for i in range(map_mode_combo.count())]
+        if not existing_modes:
+            map_mode_combo.addItems(["Continuous (Kriging)", "Categorical (Cluster)"])
+        if isinstance(initial_map_mode, str):
+            initial_mode_norm = initial_map_mode.strip().lower()
+            for idx in range(map_mode_combo.count()):
+                mode_text = map_mode_combo.itemText(idx).strip().lower()
+                if initial_mode_norm in mode_text:
+                    map_mode_combo.setCurrentIndex(idx)
+                    break
+        map_mode_combo.currentTextChanged.connect(lambda _: _apply_map_mode_state())
+
+    if interp_method_combo is not None:
+        interp_method_combo.currentTextChanged.connect(lambda _: _apply_interpolation_method_deps())
+
+    _apply_map_mode_state()
+
 
     def form_lda_ok():
 
-        sparse = ui_dm.spinBox_sparse.value()
+        sparse_ctrl = _get_control("spinBox_sparse")
+        sparse = sparse_ctrl.value() if sparse_ctrl is not None else 1
         # Создание набора данных
         x = np.array(list_x[::sparse])
         y = np.array(list_y[::sparse])
         coord = np.column_stack([x, y])
         z = np.array(list_z[::sparse])
-        grid_size = ui_dm.spinBox_grid.value()
+        grid_ctrl = _get_control("spinBox_grid")
+        grid_size = grid_ctrl.value() if grid_ctrl is not None else 75
 
 
         # Создание сетки для интерполяции
@@ -152,12 +308,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
 
         # Создание объекта OrdinaryKriging
-        var_model = ui_dm.comboBox_var_model.currentText()
-        estimator = ui_dm.comboBox_estimator.currentText()
-        dist_func = ui_dm.comboBox_dist_func.currentText()
-        bin_func = ui_dm.comboBox_bin_func.currentText()
-        filt_power = ui_dm.spinBox_filt.value()
-        nlags = ui_dm.spinBox_nlags.value()
+        var_model_ctrl = _get_control("comboBox_var_model")
+        estimator_ctrl = _get_control("comboBox_estimator")
+        dist_func_ctrl = _get_control("comboBox_dist_func")
+        bin_func_ctrl = _get_control("comboBox_bin_func")
+        filt_power_ctrl = _get_control("spinBox_filt")
+        nlags_ctrl = _get_control("spinBox_nlags")
+
+        var_model = var_model_ctrl.currentText() if var_model_ctrl is not None else "spherical"
+        estimator = estimator_ctrl.currentText() if estimator_ctrl is not None else "matheron"
+        dist_func = dist_func_ctrl.currentText() if dist_func_ctrl is not None else "euclidean"
+        bin_func = bin_func_ctrl.currentText() if bin_func_ctrl is not None else "even"
+        filt_power = filt_power_ctrl.value() if filt_power_ctrl is not None else 13
+        nlags = nlags_ctrl.value() if nlags_ctrl is not None else 6
         legend = ''
         levels_count = 10
         color_map = ui_dm.comboBox_cmap.currentText()
@@ -175,6 +338,68 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             levels_count = len(markers_chem) - 1
         if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
+
+        if _is_categorical_mode():
+            # Отдельный пайплайн categorical (stage 2.1 baseline: nearest).
+            points = np.column_stack([x, y])
+            labels = np.array([int(v) for v in z], dtype=int)
+            if len(points) == 0:
+                set_info("Нет данных для построения категориальной карты.", "red")
+                return
+
+            tree = cKDTree(points)
+            _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
+            grid_labels = labels[nearest_idx].reshape(xx.shape)
+
+            clip_ctrl = _get_control("checkBox_clip_to_hull", "checkBox_clip_to_data_area")
+            clip_on = bool(clip_ctrl is not None and clip_ctrl.isChecked())
+            if clip_on:
+                mask = _inside_hull_mask(xx, yy, points)
+                grid_labels = np.ma.masked_where(~mask, grid_labels)
+
+            unique_labels = sorted({int(v) for v in labels})
+            color_by_label = _build_categorical_palette(unique_labels)
+            sorted_labels = sorted(unique_labels, key=lambda v: (v == -1, v))
+            label_to_index = {lbl: i for i, lbl in enumerate(sorted_labels)}
+            raw_grid = np.asarray(grid_labels.filled(sorted_labels[0]) if np.ma.isMaskedArray(grid_labels) else grid_labels)
+            class_index_grid = np.vectorize(lambda val: label_to_index[int(val)])(raw_grid)
+            if np.ma.isMaskedArray(grid_labels):
+                class_index_grid = np.ma.masked_where(grid_labels.mask, class_index_grid)
+
+            class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
+
+            fig_interp = plt.figure(figsize=(12, 9))
+            plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
+
+            show_contours_ctrl = _get_control("checkBox_show_contours")
+            if show_contours_ctrl is None or show_contours_ctrl.isChecked():
+                contour_levels = np.arange(-0.5, len(sorted_labels), 1.0)
+                plt.contour(xx, yy, class_index_grid, levels=contour_levels, colors='k', linewidths=0.6, alpha=0.8)
+
+            legend_handles = []
+            for lbl in sorted_labels:
+                legend_name = "noise" if lbl == -1 else f"cluster {lbl}"
+                legend_handles.append(Patch(facecolor=color_by_label[lbl], edgecolor='k', label=legend_name))
+
+            show_points_ctrl = _get_control("checkBox_show_points")
+            if show_points_ctrl is None or show_points_ctrl.isChecked():
+                for lbl in sorted_labels:
+                    mask_lbl = labels == lbl
+                    marker_style = "x" if lbl == -1 else "o"
+                    plt.scatter(
+                        x[mask_lbl], y[mask_lbl],
+                        c=color_by_label[lbl], s=18 if lbl == -1 else 24,
+                        marker=marker_style, edgecolors='k' if lbl != -1 else None,
+                        linewidths=0.3
+                    )
+
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.title(f'Categorical map: {param}\nMethod: Nearest\nGrid: {grid_size}, sparse: {sparse}')
+            plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.tight_layout()
+            fig_interp.show()
+            return
         # ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=False)
         # print(1)
         # # Интерполяция значений на сетке
@@ -213,7 +438,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             return
         # print(len(z_interp))
         # print(z_interp)
-        if ui_dm.checkBox_filt.isChecked():
+        filt_checkbox = _get_control("checkBox_filt")
+        if filt_checkbox is not None and filt_checkbox.isChecked():
             try:
                 z_interp = savgol_filter(z_interp, filt_power, 3)
             except ValueError:
@@ -261,7 +487,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
                   # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
-                  f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
+                  f'\nФильтр результата: {filt_power if (filt_checkbox is not None and filt_checkbox.isChecked()) else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
 
@@ -285,7 +511,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
         fig_interp.show()
 
-    ui_dm.pushButton_map.clicked.connect(form_lda_ok)
+    draw_button = _get_control("pushButton_map", "pushButton_draw_map", "pushButton_draw")
+    if draw_button is not None:
+        draw_button.clicked.connect(form_lda_ok)
+    else:
+        set_info("В форме карты не найдена кнопка DRAW (pushButton_map).", "brown")
     Draw_Map.exec_()
 
 
