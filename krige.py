@@ -5,6 +5,7 @@ import numpy as np
 from sqlalchemy.exc import OperationalError
 from matplotlib.colors import ListedColormap, to_hex
 from matplotlib.patches import Patch
+from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
@@ -123,6 +124,85 @@ def _calculate_uncertainty_from_probabilities(prob_cube):
     p_top2 = sorted_probabilities[..., -2]
     uncertainty = 1.0 - (p_top1 - p_top2)
     return np.clip(uncertainty, 0.0, 1.0)
+
+
+def _smooth_categorical_labels(class_index_grid, level):
+    """Boundary smoothing post-process for categorical class indices."""
+    if class_index_grid is None:
+        return class_index_grid
+
+    level_norm = str(level).strip().lower()
+    iterations_by_level = {
+        "off": 0,
+        "low": 1,
+        "medium": 2,
+        "high": 3
+    }
+    iterations = iterations_by_level.get(level_norm, 0)
+    if iterations <= 0:
+        return class_index_grid
+
+    is_masked = np.ma.isMaskedArray(class_index_grid)
+    if is_masked:
+        mask = np.ma.getmaskarray(class_index_grid)
+        work = np.asarray(class_index_grid.filled(0), dtype=int)
+    else:
+        mask = np.zeros(class_index_grid.shape, dtype=bool)
+        work = np.asarray(class_index_grid, dtype=int)
+
+    structure = np.array(
+        [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 1, 0]
+        ],
+        dtype=bool
+    )
+    valid_region = ~mask
+    unique_classes = np.unique(work[valid_region]) if np.any(valid_region) else np.array([], dtype=int)
+    if unique_classes.size <= 1:
+        return class_index_grid
+
+    smoothed = work.copy()
+    for _ in range(iterations):
+        class_vote_cube = np.zeros(smoothed.shape + (len(unique_classes),), dtype=np.int32)
+        for cls_pos, cls_value in enumerate(unique_classes):
+            cls_mask = np.logical_and(smoothed == cls_value, valid_region).astype(np.int32)
+            class_vote_cube[..., cls_pos] = ndimage.convolve(cls_mask, structure.astype(np.int32), mode="nearest")
+        best_class_positions = np.argmax(class_vote_cube, axis=-1)
+        smoothed = unique_classes[best_class_positions].astype(int)
+        smoothed[mask] = work[mask]
+
+    if is_masked:
+        return np.ma.masked_where(mask, smoothed)
+    return smoothed
+
+
+def _enforce_source_point_labels(smoothed_grid, xx, yy, source_points, source_class_indices):
+    """Keep local consistency with source points after smoothing."""
+    if smoothed_grid is None or len(source_points) == 0:
+        return smoothed_grid
+
+    is_masked = np.ma.isMaskedArray(smoothed_grid)
+    if is_masked:
+        mask = np.ma.getmaskarray(smoothed_grid)
+        work = np.asarray(smoothed_grid.filled(0), dtype=int)
+    else:
+        mask = np.zeros(smoothed_grid.shape, dtype=bool)
+        work = np.asarray(smoothed_grid, dtype=int)
+
+    grid_coords = np.column_stack([xx.ravel(), yy.ravel()])
+    tree = cKDTree(grid_coords)
+    _, nearest_grid_idx = tree.query(source_points, k=1)
+
+    for idx, class_idx in zip(nearest_grid_idx, source_class_indices):
+        gx, gy = np.unravel_index(int(idx), work.shape)
+        if not mask[gx, gy]:
+            work[gx, gy] = int(class_idx)
+
+    if is_masked:
+        return np.ma.masked_where(mask, work)
+    return work
 
 def show_map():
     global list_z
@@ -451,6 +531,24 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             if np.ma.isMaskedArray(grid_labels):
                 class_index_grid = np.ma.masked_where(grid_labels.mask, class_index_grid)
 
+            boundary_smoothing_ctrl = _get_control("comboBox_boundary_smooth", "comboBox_boundary_smoothing")
+            boundary_smoothing_level = "Off"
+            if boundary_smoothing_ctrl is not None:
+                boundary_smoothing_level = boundary_smoothing_ctrl.currentText()
+            class_index_grid = _smooth_categorical_labels(class_index_grid, boundary_smoothing_level)
+
+            enforce_hard_labels_ctrl = _get_control("checkBox_hard_labels", "checkBox_enforce_hard_labels")
+            enforce_hard_labels = enforce_hard_labels_ctrl is None or enforce_hard_labels_ctrl.isChecked()
+            if enforce_hard_labels:
+                source_class_indices = np.array([label_to_index[int(lbl)] for lbl in labels], dtype=int)
+                class_index_grid = _enforce_source_point_labels(
+                    smoothed_grid=class_index_grid,
+                    xx=xx,
+                    yy=yy,
+                    source_points=points,
+                    source_class_indices=source_class_indices
+                )
+
             class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
 
             fig_interp = plt.figure(figsize=(12, 9))
@@ -499,7 +597,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
             plt.xlabel('X')
             plt.ylabel('Y')
-            plt.title(f'Categorical map: {param}\nMethod: {method_title}\nGrid: {grid_size}, sparse: {sparse}')
+            plt.title(
+                f'Categorical map: {param}\n'
+                f'Method: {method_title}; smoothing: {boundary_smoothing_level}\n'
+                f'Grid: {grid_size}, sparse: {sparse}'
+            )
             plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
             plt.tight_layout()
             fig_interp.show()
