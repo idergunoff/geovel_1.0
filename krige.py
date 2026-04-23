@@ -61,6 +61,50 @@ def _inside_hull_mask(xx, yy, points):
     except Exception:
         return np.ones_like(xx, dtype=bool)
 
+
+def _categorical_probability_grid(points, labels, xx, yy, smooth_power=2.0, neighbors_count=12):
+    """Probability-style categorical interpolation.
+
+    For each grid point compute class scores via distance weighted voting:
+    score_k = sum(1 / d_i^smooth_power) for points of class k.
+    Then normalize scores into probabilities and return argmax labels.
+    """
+    flat_grid_points = np.column_stack([xx.ravel(), yy.ravel()])
+    unique_labels = sorted({int(v) for v in labels})
+    label_to_index = {lbl: idx for idx, lbl in enumerate(unique_labels)}
+
+    if len(points) == 0 or len(unique_labels) == 0:
+        return (
+            np.zeros(xx.shape, dtype=int),
+            np.zeros(xx.shape + (0,), dtype=float),
+            unique_labels
+        )
+
+    safe_neighbors = max(1, min(int(neighbors_count), len(points)))
+    tree = cKDTree(points)
+    distances, neighbor_idx = tree.query(flat_grid_points, k=safe_neighbors)
+
+    if safe_neighbors == 1:
+        distances = distances[:, np.newaxis]
+        neighbor_idx = neighbor_idx[:, np.newaxis]
+
+    eps = 1e-9
+    weights = 1.0 / np.power(np.maximum(distances, eps), max(float(smooth_power), 1e-6))
+    neighbor_labels = labels[neighbor_idx]
+
+    scores = np.zeros((flat_grid_points.shape[0], len(unique_labels)), dtype=float)
+    for lbl in unique_labels:
+        cls_idx = label_to_index[lbl]
+        scores[:, cls_idx] = np.sum(weights * (neighbor_labels == lbl), axis=1)
+
+    score_sums = np.sum(scores, axis=1, keepdims=True)
+    score_sums[score_sums == 0.0] = 1.0
+    probabilities = scores / score_sums
+    predicted_class_indices = np.argmax(probabilities, axis=1)
+    predicted_labels = np.array(unique_labels, dtype=int)[predicted_class_indices].reshape(xx.shape)
+    prob_cube = probabilities.reshape(xx.shape + (len(unique_labels),))
+    return predicted_labels, prob_cube, unique_labels
+
 def show_map():
     global list_z
     r_id = get_research_id()
@@ -216,6 +260,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     uncertainty_controls = [
         _get_control("checkBox_show_uncertainty"),
         _get_control("checkBox_uncertainty"),
+        _get_control("checkBox_2"),
         _get_control("label_uncertainty"),
         _get_control("doubleSpinBox_uncertainty_alpha"),
         _get_control("spinBox_uncertainty_alpha")
@@ -340,16 +385,33 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             color_map = ui_dm.comboBox_cmap.currentText()
 
         if _is_categorical_mode():
-            # Отдельный пайплайн categorical (stage 2.1 baseline: nearest).
+            # Отдельный пайплайн categorical.
             points = np.column_stack([x, y])
             labels = np.array([int(v) for v in z], dtype=int)
             if len(points) == 0:
                 set_info("Нет данных для построения категориальной карты.", "red")
                 return
 
-            tree = cKDTree(points)
-            _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
-            grid_labels = labels[nearest_idx].reshape(xx.shape)
+            interpolation_method = "nearest"
+            if interp_method_combo is not None:
+                interpolation_method = interp_method_combo.currentText().strip().lower()
+
+            if interpolation_method == "probability":
+                prob_power_ctrl = _get_control("doubleSpinBox_prob_power", "spinBox_prob_power")
+                smoothing_power = prob_power_ctrl.value() if prob_power_ctrl is not None else 2.0
+                grid_labels, _, _ = _categorical_probability_grid(
+                    points=points,
+                    labels=labels,
+                    xx=xx,
+                    yy=yy,
+                    smooth_power=smoothing_power
+                )
+                method_title = f"Probability (power={smoothing_power})"
+            else:
+                tree = cKDTree(points)
+                _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
+                grid_labels = labels[nearest_idx].reshape(xx.shape)
+                method_title = "Nearest"
 
             clip_ctrl = _get_control("checkBox_clip_to_hull", "checkBox_clip_to_data_area")
             clip_on = bool(clip_ctrl is not None and clip_ctrl.isChecked())
@@ -395,7 +457,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
             plt.xlabel('X')
             plt.ylabel('Y')
-            plt.title(f'Categorical map: {param}\nMethod: Nearest\nGrid: {grid_size}, sparse: {sparse}')
+            plt.title(f'Categorical map: {param}\nMethod: {method_title}\nGrid: {grid_size}, sparse: {sparse}')
             plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
             plt.tight_layout()
             fig_interp.show()
