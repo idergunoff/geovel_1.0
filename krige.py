@@ -5,6 +5,7 @@ import numpy as np
 from sqlalchemy.exc import OperationalError
 from matplotlib.colors import ListedColormap, to_hex
 from matplotlib.patches import Patch
+from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
@@ -60,6 +61,148 @@ def _inside_hull_mask(xx, yy, points):
         return inside_flat.reshape(xx.shape)
     except Exception:
         return np.ones_like(xx, dtype=bool)
+
+
+def _categorical_probability_grid(points, labels, xx, yy, smooth_power=2.0, neighbors_count=12):
+    """Probability-style categorical interpolation.
+
+    For each grid point compute class scores via distance weighted voting:
+    score_k = sum(1 / d_i^smooth_power) for points of class k.
+    Then normalize scores into probabilities and return argmax labels.
+    """
+    flat_grid_points = np.column_stack([xx.ravel(), yy.ravel()])
+    unique_labels = sorted({int(v) for v in labels})
+    label_to_index = {lbl: idx for idx, lbl in enumerate(unique_labels)}
+
+    if len(points) == 0 or len(unique_labels) == 0:
+        return (
+            np.zeros(xx.shape, dtype=int),
+            np.zeros(xx.shape + (0,), dtype=float),
+            unique_labels
+        )
+
+    safe_neighbors = max(1, min(int(neighbors_count), len(points)))
+    tree = cKDTree(points)
+    distances, neighbor_idx = tree.query(flat_grid_points, k=safe_neighbors)
+
+    if safe_neighbors == 1:
+        distances = distances[:, np.newaxis]
+        neighbor_idx = neighbor_idx[:, np.newaxis]
+
+    eps = 1e-9
+    weights = 1.0 / np.power(np.maximum(distances, eps), max(float(smooth_power), 1e-6))
+    neighbor_labels = labels[neighbor_idx]
+
+    scores = np.zeros((flat_grid_points.shape[0], len(unique_labels)), dtype=float)
+    for lbl in unique_labels:
+        cls_idx = label_to_index[lbl]
+        scores[:, cls_idx] = np.sum(weights * (neighbor_labels == lbl), axis=1)
+
+    score_sums = np.sum(scores, axis=1, keepdims=True)
+    score_sums[score_sums == 0.0] = 1.0
+    probabilities = scores / score_sums
+    predicted_class_indices = np.argmax(probabilities, axis=1)
+    predicted_labels = np.array(unique_labels, dtype=int)[predicted_class_indices].reshape(xx.shape)
+    prob_cube = probabilities.reshape(xx.shape + (len(unique_labels),))
+    return predicted_labels, prob_cube, unique_labels
+
+
+def _calculate_uncertainty_from_probabilities(prob_cube):
+    """Margin-based uncertainty for categorical probability output.
+
+    uncertainty = 1 - (p_top1 - p_top2)
+    Where top1/top2 are two largest class probabilities for each cell.
+    """
+    if prob_cube is None or prob_cube.size == 0:
+        return None
+
+    if prob_cube.shape[-1] == 1:
+        return np.zeros(prob_cube.shape[:2], dtype=float)
+
+    sorted_probabilities = np.sort(prob_cube, axis=-1)
+    p_top1 = sorted_probabilities[..., -1]
+    p_top2 = sorted_probabilities[..., -2]
+    uncertainty = 1.0 - (p_top1 - p_top2)
+    return np.clip(uncertainty, 0.0, 1.0)
+
+
+def _smooth_categorical_labels(class_index_grid, level):
+    """Boundary smoothing post-process for categorical class indices."""
+    if class_index_grid is None:
+        return class_index_grid
+
+    level_norm = str(level).strip().lower()
+    iterations_by_level = {
+        "off": 0,
+        "low": 1,
+        "medium": 2,
+        "high": 3
+    }
+    iterations = iterations_by_level.get(level_norm, 0)
+    if iterations <= 0:
+        return class_index_grid
+
+    is_masked = np.ma.isMaskedArray(class_index_grid)
+    if is_masked:
+        mask = np.ma.getmaskarray(class_index_grid)
+        work = np.asarray(class_index_grid.filled(0), dtype=int)
+    else:
+        mask = np.zeros(class_index_grid.shape, dtype=bool)
+        work = np.asarray(class_index_grid, dtype=int)
+
+    structure = np.array(
+        [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 1, 0]
+        ],
+        dtype=bool
+    )
+    valid_region = ~mask
+    unique_classes = np.unique(work[valid_region]) if np.any(valid_region) else np.array([], dtype=int)
+    if unique_classes.size <= 1:
+        return class_index_grid
+
+    smoothed = work.copy()
+    for _ in range(iterations):
+        class_vote_cube = np.zeros(smoothed.shape + (len(unique_classes),), dtype=np.int32)
+        for cls_pos, cls_value in enumerate(unique_classes):
+            cls_mask = np.logical_and(smoothed == cls_value, valid_region).astype(np.int32)
+            class_vote_cube[..., cls_pos] = ndimage.convolve(cls_mask, structure.astype(np.int32), mode="nearest")
+        best_class_positions = np.argmax(class_vote_cube, axis=-1)
+        smoothed = unique_classes[best_class_positions].astype(int)
+        smoothed[mask] = work[mask]
+
+    if is_masked:
+        return np.ma.masked_where(mask, smoothed)
+    return smoothed
+
+
+def _enforce_source_point_labels(smoothed_grid, xx, yy, source_points, source_class_indices):
+    """Keep local consistency with source points after smoothing."""
+    if smoothed_grid is None or len(source_points) == 0:
+        return smoothed_grid
+
+    is_masked = np.ma.isMaskedArray(smoothed_grid)
+    if is_masked:
+        mask = np.ma.getmaskarray(smoothed_grid)
+        work = np.asarray(smoothed_grid.filled(0), dtype=int)
+    else:
+        mask = np.zeros(smoothed_grid.shape, dtype=bool)
+        work = np.asarray(smoothed_grid, dtype=int)
+
+    grid_coords = np.column_stack([xx.ravel(), yy.ravel()])
+    tree = cKDTree(grid_coords)
+    _, nearest_grid_idx = tree.query(source_points, k=1)
+
+    for idx, class_idx in zip(nearest_grid_idx, source_class_indices):
+        gx, gy = np.unravel_index(int(idx), work.shape)
+        if not mask[gx, gy]:
+            work[gx, gy] = int(class_idx)
+
+    if is_masked:
+        return np.ma.masked_where(mask, work)
+    return work
 
 def show_map():
     global list_z
@@ -216,6 +359,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     uncertainty_controls = [
         _get_control("checkBox_show_uncertainty"),
         _get_control("checkBox_uncertainty"),
+        _get_control("checkBox_2"),
         _get_control("label_uncertainty"),
         _get_control("doubleSpinBox_uncertainty_alpha"),
         _get_control("spinBox_uncertainty_alpha")
@@ -340,22 +484,43 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             color_map = ui_dm.comboBox_cmap.currentText()
 
         if _is_categorical_mode():
-            # Отдельный пайплайн categorical (stage 2.1 baseline: nearest).
+            # Отдельный пайплайн categorical.
             points = np.column_stack([x, y])
             labels = np.array([int(v) for v in z], dtype=int)
             if len(points) == 0:
                 set_info("Нет данных для построения категориальной карты.", "red")
                 return
 
-            tree = cKDTree(points)
-            _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
-            grid_labels = labels[nearest_idx].reshape(xx.shape)
+            interpolation_method = "nearest"
+            uncertainty_grid = None
+            if interp_method_combo is not None:
+                interpolation_method = interp_method_combo.currentText().strip().lower()
+
+            if interpolation_method == "probability":
+                prob_power_ctrl = _get_control("doubleSpinBox_prob_power", "spinBox_prob_power")
+                smoothing_power = prob_power_ctrl.value() if prob_power_ctrl is not None else 2.0
+                grid_labels, prob_cube, _ = _categorical_probability_grid(
+                    points=points,
+                    labels=labels,
+                    xx=xx,
+                    yy=yy,
+                    smooth_power=smoothing_power
+                )
+                uncertainty_grid = _calculate_uncertainty_from_probabilities(prob_cube)
+                method_title = f"Probability (power={smoothing_power})"
+            else:
+                tree = cKDTree(points)
+                _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
+                grid_labels = labels[nearest_idx].reshape(xx.shape)
+                method_title = "Nearest"
 
             clip_ctrl = _get_control("checkBox_clip_to_hull", "checkBox_clip_to_data_area")
             clip_on = bool(clip_ctrl is not None and clip_ctrl.isChecked())
             if clip_on:
                 mask = _inside_hull_mask(xx, yy, points)
                 grid_labels = np.ma.masked_where(~mask, grid_labels)
+                if uncertainty_grid is not None:
+                    uncertainty_grid = np.ma.masked_where(~mask, uncertainty_grid)
 
             unique_labels = sorted({int(v) for v in labels})
             color_by_label = _build_categorical_palette(unique_labels)
@@ -366,10 +531,47 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             if np.ma.isMaskedArray(grid_labels):
                 class_index_grid = np.ma.masked_where(grid_labels.mask, class_index_grid)
 
+            boundary_smoothing_ctrl = _get_control("comboBox_boundary_smooth", "comboBox_boundary_smoothing")
+            boundary_smoothing_level = "Off"
+            if boundary_smoothing_ctrl is not None:
+                boundary_smoothing_level = boundary_smoothing_ctrl.currentText()
+            class_index_grid = _smooth_categorical_labels(class_index_grid, boundary_smoothing_level)
+
+            enforce_hard_labels_ctrl = _get_control("checkBox_hard_labels", "checkBox_enforce_hard_labels")
+            enforce_hard_labels = enforce_hard_labels_ctrl is None or enforce_hard_labels_ctrl.isChecked()
+            if enforce_hard_labels:
+                source_class_indices = np.array([label_to_index[int(lbl)] for lbl in labels], dtype=int)
+                class_index_grid = _enforce_source_point_labels(
+                    smoothed_grid=class_index_grid,
+                    xx=xx,
+                    yy=yy,
+                    source_points=points,
+                    source_class_indices=source_class_indices
+                )
+
             class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
 
             fig_interp = plt.figure(figsize=(12, 9))
             plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
+
+            show_uncertainty_ctrl = _get_control("checkBox_show_uncertainty", "checkBox_uncertainty", "checkBox_2")
+            if (
+                uncertainty_grid is not None
+                and show_uncertainty_ctrl is not None
+                and show_uncertainty_ctrl.isChecked()
+            ):
+                uncertainty_plot = plt.pcolormesh(
+                    xx,
+                    yy,
+                    uncertainty_grid,
+                    shading='auto',
+                    cmap='binary',
+                    alpha=0.35,
+                    vmin=0.0,
+                    vmax=1.0
+                )
+                cbar = plt.colorbar(uncertainty_plot, fraction=0.046, pad=0.04)
+                cbar.set_label('uncertainty')
 
             show_contours_ctrl = _get_control("checkBox_show_contours")
             if show_contours_ctrl is None or show_contours_ctrl.isChecked():
@@ -395,7 +597,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
             plt.xlabel('X')
             plt.ylabel('Y')
-            plt.title(f'Categorical map: {param}\nMethod: Nearest\nGrid: {grid_size}, sparse: {sparse}')
+            plt.title(
+                f'Categorical map: {param}\n'
+                f'Method: {method_title}; smoothing: {boundary_smoothing_level}\n'
+                f'Grid: {grid_size}, sparse: {sparse}'
+            )
             plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
             plt.tight_layout()
             fig_interp.show()
