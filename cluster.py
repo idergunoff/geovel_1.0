@@ -17,6 +17,7 @@ from scipy.interpolate import griddata
 from sklearn.random_projection import SparseRandomProjection
 from draw import draw_radarogram
 from func import *
+from krige import draw_map
 
 # Runtime-cache результатов кластеризации для быстрой перерисовки по профилям без пересчета.
 # Этап 1 (MVP): ключ анализа = id ObjectSet (clust_object_id).
@@ -3765,40 +3766,6 @@ def calculate_cluster():
             'brown'
         )
 
-    show_interpolation = True
-    interpolation_resolution = CLUSTER_MAP_INTERP_RESOLUTION_DEFAULT
-
-    interpolation_checkbox = _get_ui_control_by_names(
-        "checkBox_cluster_map_interpolation",
-        "checkBox_cluster_interpolation",
-        "checkBox_cluster_interp",
-        "checkBox_clust_map_interpolation",
-        "checkBox_clust_interp"
-    )
-    interpolation_spinbox = _get_ui_control_by_names(
-        "spinBox_cluster_map_interp_resolution",
-        "spinBox_cluster_interp_resolution",
-        "spinBox_clust_map_interp_resolution",
-        "spinBox_clust_interp_resolution",
-        "spinBox_cluster_map_resolution"
-    )
-
-    if interpolation_checkbox is not None:
-        show_interpolation = interpolation_checkbox.isChecked()
-    if interpolation_spinbox is not None:
-        interpolation_spinbox.setMinimum(CLUSTER_MAP_INTERP_RESOLUTION_MIN)
-        interpolation_spinbox.setMaximum(CLUSTER_MAP_INTERP_RESOLUTION_MAX)
-        interpolation_spinbox.setSingleStep(25)
-        interpolation_resolution = interpolation_spinbox.value()
-
-    interpolation_resolution = _normalize_interpolation_resolution(interpolation_resolution)
-
-    set_info(
-        f"Карта кластеров: interpolation={'on' if show_interpolation else 'off'}, "
-        f"resolution={interpolation_resolution}.",
-        "blue"
-    )
-
     map_data = [data[row_idx] for row_idx in kept_row_indices if 0 <= row_idx < len(data)]
     if len(map_data) != len(labels_for_output):
         set_info(
@@ -3812,37 +3779,21 @@ def calculate_cluster():
     else:
         labels_for_map = labels_for_output
 
-    plot_cluster_map(
+    map_x = [float(row[1]) for row in map_data]
+    map_y = [float(row[2]) for row in map_data]
+    map_title = f"Cluster {ui.comboBox_cluster_analys.currentText().split(' id')[0]}"
+
+    set_info(
+        "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
+        "blue"
+    )
+    draw_map(
+        map_x,
+        map_y,
         labels_for_map,
-        map_data,
-        show_interpolation=show_interpolation,
-        interpolation_resolution=interpolation_resolution,
-        settings_caption=(
-            f"method={clust_method_analys}; scaler={preprocess_mode}; "
-            f"pca={'on' if mode_pca else 'off'}"
-            + (
-                f"({mode_pca}:{n_comp_pca if mode_pca == 'fixed_components' else disp_pca})"
-                if mode_pca else ""
-            )
-            + f"; smoothing={'on' if smoothing_applied else 'off'}"
-            + (
-                f"({smooth_method},w={smooth_window})"
-                if smoothing_applied else ""
-            )
-            + f"; interp={'on' if show_interpolation else 'off'}({interpolation_resolution})"
-            + (
-                f"; k={kmeans_n},n_init={kmeans_n_init}"
-                if clust_method_analys == "kmeans" else ""
-            )
-            + (
-                f"; min_cluster_size={hdbsc_min_size},min_samples={hdbsc_min_sample},metric={hdbsc_type}"
-                if clust_method_analys == "hdbscan" else ""
-            )
-            + (
-                f"; n_components={gmm_n},cov={gmm_type}"
-                if clust_method_analys == "gmm" else ""
-            )
-        )
+        map_title,
+        color_marker=False,
+        initial_map_mode="categorical"
     )
 
     print(labels_for_output)

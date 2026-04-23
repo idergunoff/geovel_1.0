@@ -152,7 +152,7 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None):
+def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None, initial_map_mode=None):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -271,6 +271,13 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         existing_modes = [map_mode_combo.itemText(i) for i in range(map_mode_combo.count())]
         if not existing_modes:
             map_mode_combo.addItems(["Continuous (Kriging)", "Categorical (Cluster)"])
+        if isinstance(initial_map_mode, str):
+            initial_mode_norm = initial_map_mode.strip().lower()
+            for idx in range(map_mode_combo.count()):
+                mode_text = map_mode_combo.itemText(idx).strip().lower()
+                if initial_mode_norm in mode_text:
+                    map_mode_combo.setCurrentIndex(idx)
+                    break
         map_mode_combo.currentTextChanged.connect(lambda _: _apply_map_mode_state())
 
     if interp_method_combo is not None:
