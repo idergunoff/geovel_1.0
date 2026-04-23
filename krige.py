@@ -105,6 +105,25 @@ def _categorical_probability_grid(points, labels, xx, yy, smooth_power=2.0, neig
     prob_cube = probabilities.reshape(xx.shape + (len(unique_labels),))
     return predicted_labels, prob_cube, unique_labels
 
+
+def _calculate_uncertainty_from_probabilities(prob_cube):
+    """Margin-based uncertainty for categorical probability output.
+
+    uncertainty = 1 - (p_top1 - p_top2)
+    Where top1/top2 are two largest class probabilities for each cell.
+    """
+    if prob_cube is None or prob_cube.size == 0:
+        return None
+
+    if prob_cube.shape[-1] == 1:
+        return np.zeros(prob_cube.shape[:2], dtype=float)
+
+    sorted_probabilities = np.sort(prob_cube, axis=-1)
+    p_top1 = sorted_probabilities[..., -1]
+    p_top2 = sorted_probabilities[..., -2]
+    uncertainty = 1.0 - (p_top1 - p_top2)
+    return np.clip(uncertainty, 0.0, 1.0)
+
 def show_map():
     global list_z
     r_id = get_research_id()
@@ -393,19 +412,21 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 return
 
             interpolation_method = "nearest"
+            uncertainty_grid = None
             if interp_method_combo is not None:
                 interpolation_method = interp_method_combo.currentText().strip().lower()
 
             if interpolation_method == "probability":
                 prob_power_ctrl = _get_control("doubleSpinBox_prob_power", "spinBox_prob_power")
                 smoothing_power = prob_power_ctrl.value() if prob_power_ctrl is not None else 2.0
-                grid_labels, _, _ = _categorical_probability_grid(
+                grid_labels, prob_cube, _ = _categorical_probability_grid(
                     points=points,
                     labels=labels,
                     xx=xx,
                     yy=yy,
                     smooth_power=smoothing_power
                 )
+                uncertainty_grid = _calculate_uncertainty_from_probabilities(prob_cube)
                 method_title = f"Probability (power={smoothing_power})"
             else:
                 tree = cKDTree(points)
@@ -418,6 +439,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             if clip_on:
                 mask = _inside_hull_mask(xx, yy, points)
                 grid_labels = np.ma.masked_where(~mask, grid_labels)
+                if uncertainty_grid is not None:
+                    uncertainty_grid = np.ma.masked_where(~mask, uncertainty_grid)
 
             unique_labels = sorted({int(v) for v in labels})
             color_by_label = _build_categorical_palette(unique_labels)
@@ -432,6 +455,25 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
             fig_interp = plt.figure(figsize=(12, 9))
             plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
+
+            show_uncertainty_ctrl = _get_control("checkBox_show_uncertainty", "checkBox_uncertainty", "checkBox_2")
+            if (
+                uncertainty_grid is not None
+                and show_uncertainty_ctrl is not None
+                and show_uncertainty_ctrl.isChecked()
+            ):
+                uncertainty_plot = plt.pcolormesh(
+                    xx,
+                    yy,
+                    uncertainty_grid,
+                    shading='auto',
+                    cmap='binary',
+                    alpha=0.35,
+                    vmin=0.0,
+                    vmax=1.0
+                )
+                cbar = plt.colorbar(uncertainty_plot, fraction=0.046, pad=0.04)
+                cbar.set_label('uncertainty')
 
             show_contours_ctrl = _get_control("checkBox_show_contours")
             if show_contours_ctrl is None or show_contours_ctrl.isChecked():
