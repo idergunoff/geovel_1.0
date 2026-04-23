@@ -120,7 +120,11 @@ def show_map():
 def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None):
 
     Draw_Map = QtWidgets.QDialog()
-    ui_dm = Ui_DrawMapForm()
+    ui_form_cls = globals().get("Ui_DrawMapForm") or globals().get("Ui_Form")
+    if ui_form_cls is None:
+        set_info("Ошибка UI: не найден класс формы карты (Ui_DrawMapForm/Ui_Form).", "red")
+        return
+    ui_dm = ui_form_cls()
     ui_dm.setupUi(Draw_Map)
     Draw_Map.show()
     Draw_Map.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
@@ -246,13 +250,15 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
     def form_lda_ok():
 
-        sparse = ui_dm.spinBox_sparse.value()
+        sparse_ctrl = _get_control("spinBox_sparse")
+        sparse = sparse_ctrl.value() if sparse_ctrl is not None else 1
         # Создание набора данных
         x = np.array(list_x[::sparse])
         y = np.array(list_y[::sparse])
         coord = np.column_stack([x, y])
         z = np.array(list_z[::sparse])
-        grid_size = ui_dm.spinBox_grid.value()
+        grid_ctrl = _get_control("spinBox_grid")
+        grid_size = grid_ctrl.value() if grid_ctrl is not None else 75
 
 
         # Создание сетки для интерполяции
@@ -264,12 +270,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
 
         # Создание объекта OrdinaryKriging
-        var_model = ui_dm.comboBox_var_model.currentText()
-        estimator = ui_dm.comboBox_estimator.currentText()
-        dist_func = ui_dm.comboBox_dist_func.currentText()
-        bin_func = ui_dm.comboBox_bin_func.currentText()
-        filt_power = ui_dm.spinBox_filt.value()
-        nlags = ui_dm.spinBox_nlags.value()
+        var_model_ctrl = _get_control("comboBox_var_model")
+        estimator_ctrl = _get_control("comboBox_estimator")
+        dist_func_ctrl = _get_control("comboBox_dist_func")
+        bin_func_ctrl = _get_control("comboBox_bin_func")
+        filt_power_ctrl = _get_control("spinBox_filt")
+        nlags_ctrl = _get_control("spinBox_nlags")
+
+        var_model = var_model_ctrl.currentText() if var_model_ctrl is not None else "spherical"
+        estimator = estimator_ctrl.currentText() if estimator_ctrl is not None else "matheron"
+        dist_func = dist_func_ctrl.currentText() if dist_func_ctrl is not None else "euclidean"
+        bin_func = bin_func_ctrl.currentText() if bin_func_ctrl is not None else "even"
+        filt_power = filt_power_ctrl.value() if filt_power_ctrl is not None else 13
+        nlags = nlags_ctrl.value() if nlags_ctrl is not None else 6
         legend = ''
         levels_count = 10
         color_map = ui_dm.comboBox_cmap.currentText()
@@ -325,7 +338,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             return
         # print(len(z_interp))
         # print(z_interp)
-        if ui_dm.checkBox_filt.isChecked():
+        filt_checkbox = _get_control("checkBox_filt")
+        if filt_checkbox is not None and filt_checkbox.isChecked():
             try:
                 z_interp = savgol_filter(z_interp, filt_power, 3)
             except ValueError:
@@ -373,7 +387,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
                   # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
-                  f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
+                  f'\nФильтр результата: {filt_power if (filt_checkbox is not None and filt_checkbox.isChecked()) else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
 
@@ -397,7 +411,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
         fig_interp.show()
 
-    ui_dm.pushButton_map.clicked.connect(form_lda_ok)
+    draw_button = _get_control("pushButton_map", "pushButton_draw_map", "pushButton_draw")
+    if draw_button is not None:
+        draw_button.clicked.connect(form_lda_ok)
+    else:
+        set_info("В форме карты не найдена кнопка DRAW (pushButton_map).", "brown")
     Draw_Map.exec_()
 
 
