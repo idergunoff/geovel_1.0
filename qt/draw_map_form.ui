@@ -1,297 +1,176 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DrawMapForm</class>
- <widget class="QWidget" name="DrawMapForm">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>390</width>
-    <height>172</height>
+    <width>400</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Draw Map Form</string>
+   <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
+  <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>estimator:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="comboBox_estimator">
-       <item>
-        <property name="text">
-         <string>matheron</string>
-        </property>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_basic">
+      <attribute name="title">
+       <string>Basic</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Map mode:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>cressie</string>
-        </property>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>sparse list:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>dowd</string>
-        </property>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="spinBox_sparse">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>50</number>
+         </property>
+         <property name="value">
+          <number>2</number>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>minmax</string>
-        </property>
+       <item row="5" column="1">
+        <widget class="QCheckBox" name="checkBox_show_contours">
+         <property name="text">
+          <string>show contours</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>entropy</string>
-        </property>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="spinBox_grid">
+         <property name="toolTip">
+          <string>Размер сетки</string>
+         </property>
+         <property name="minimum">
+          <number>20</number>
+         </property>
+         <property name="maximum">
+          <number>250</number>
+         </property>
+         <property name="value">
+          <number>75</number>
+         </property>
+        </widget>
        </item>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="label_27">
-       <property name="text">
-        <string>var_model:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QComboBox" name="comboBox_var_model">
-       <item>
-        <property name="text">
-         <string>spherical</string>
-        </property>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>grid:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>exponential</string>
-        </property>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="checkBox_show_points">
+         <property name="text">
+          <string>show source points</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>gaussian</string>
-        </property>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Method:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>cubic</string>
-        </property>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="comboBox_interp_method"/>
        </item>
-       <item>
-        <property name="text">
-         <string>stable</string>
-        </property>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>cmap:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>matern</string>
-        </property>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="comboBox_map_mode">
+         <item>
+          <property name="text">
+           <string>Continuous (Kriging)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Categorical (Cluster)</string>
+          </property>
+         </item>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>nugget</string>
-        </property>
+       <item row="4" column="1">
+        <widget class="QComboBox" name="comboBox_cmap"/>
        </item>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>dist func:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="comboBox_dist_func"/>
-     </item>
-     <item row="1" column="2">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>bin_func:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QComboBox" name="comboBox_bin_func">
-       <item>
-        <property name="text">
-         <string>even</string>
-        </property>
+       <item row="6" column="0">
+        <widget class="QCheckBox" name="checkBox_clip_to_hull">
+         <property name="text">
+          <string>clip to data area</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>uniform</string>
-        </property>
+       <item row="6" column="1">
+        <widget class="QCheckBox" name="checkBox_2">
+         <property name="text">
+          <string>show uncertainty</string>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>fd</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>sturges</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>scott</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>doane</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>sqrt</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>kmeans</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>ward</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_28">
-       <property name="toolTip">
-        <string>Количество ячеек усреднения для вариограммы</string>
-       </property>
-       <property name="text">
-        <string>nlags:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QSpinBox" name="spinBox_nlags">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>1000</number>
-       </property>
-       <property name="value">
-        <number>6</number>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>sparse list:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="3">
-      <widget class="QSpinBox" name="spinBox_sparse">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>50</number>
-       </property>
-       <property name="value">
-        <number>2</number>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="text">
-        <string>grid:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QSpinBox" name="spinBox_grid">
-       <property name="toolTip">
-        <string>Размер сетки</string>
-       </property>
-       <property name="minimum">
-        <number>20</number>
-       </property>
-       <property name="maximum">
-        <number>250</number>
-       </property>
-       <property name="value">
-        <number>75</number>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="2">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>cmap:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="3">
-      <widget class="QComboBox" name="comboBox_cmap"/>
-     </item>
-     <item row="4" column="0">
-      <widget class="QCheckBox" name="checkBox_filt">
-       <property name="contextMenuPolicy">
-        <enum>Qt::PreventContextMenu</enum>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::RightToLeft</enum>
-       </property>
-       <property name="text">
-        <string>filter</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QSpinBox" name="spinBox_filt">
-       <property name="minimum">
-        <number>5</number>
-       </property>
-       <property name="singleStep">
-        <number>2</number>
-       </property>
-       <property name="value">
-        <number>13</number>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2" colspan="2">
-      <widget class="QPushButton" name="pushButton_map">
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(255, 204, 121);</string>
-       </property>
-       <property name="text">
-        <string>DRAW</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_advanced">
+      <attribute name="title">
+       <string>Advanced</string>
+      </attribute>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>

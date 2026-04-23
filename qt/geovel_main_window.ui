@@ -1316,8 +1316,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>601</width>
-                       <height>200</height>
+                       <width>96</width>
+                       <height>26</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5133,7 +5133,7 @@ Therm</string>
                       <number>1</number>
                      </property>
                      <property name="maximum">
-                      <number>50</number>
+                      <number>500</number>
                      </property>
                      <property name="value">
                       <number>10</number>
@@ -5904,6 +5904,9 @@ Therm</string>
                      </item>
                      <item>
                       <widget class="QCheckBox" name="checkBox_cluster_auto_limit200">
+                       <property name="toolTip">
+                        <string>Лимит 200 случайных кандидатов</string>
+                       </property>
                        <property name="text">
                         <string>limit 200</string>
                        </property>
@@ -6749,9 +6752,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_4"/>
  </buttongroups>
 </ui>
