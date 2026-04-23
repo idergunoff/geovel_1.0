@@ -44,12 +44,21 @@ def _build_categorical_palette(labels):
 
 
 def _inside_hull_mask(xx, yy, points):
+    """Build a boolean mask for grid cells inside the data coverage area.
+
+    Stage 2.2 baseline uses convex hull clipping. If hull construction fails
+    (e.g. degenerate geometry), keep previous behaviour and do not clip.
+    """
     if len(points) < 3:
         return np.ones_like(xx, dtype=bool)
+
     try:
-        hull = Delaunay(points)
+        hull = ConvexHull(points)
+        hull_points = points[hull.vertices]
+        triangulation = Delaunay(hull_points)
         flat_points = np.column_stack([xx.ravel(), yy.ravel()])
-        return hull.find_simplex(flat_points) >= 0
+        inside_flat = triangulation.find_simplex(flat_points) >= 0
+        return inside_flat.reshape(xx.shape)
     except Exception:
         return np.ones_like(xx, dtype=bool)
 
