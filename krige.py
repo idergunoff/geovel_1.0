@@ -3,6 +3,8 @@ from cProfile import label
 import matplotlib.pyplot as plt
 import numpy as np
 from sqlalchemy.exc import OperationalError
+from matplotlib.colors import ListedColormap, to_hex
+from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
 from qt.choose_formation_map import *
@@ -25,6 +27,31 @@ dist_func_list = ['euclidean', 'braycurtis', 'canberra', 'chebyshev', 'cityblock
 def convex_hull_boundary(points):
     hull = ConvexHull(points)
     return hull
+
+
+def _build_categorical_palette(labels):
+    unique_labels = sorted({int(v) for v in labels})
+    base = plt.get_cmap("tab20", max(len(unique_labels), 1))
+    color_by_label = {}
+    color_ix = 0
+    for lbl in unique_labels:
+        if lbl == -1:
+            color_by_label[lbl] = "#4d4d4d"
+            continue
+        color_by_label[lbl] = to_hex(base(color_ix))
+        color_ix += 1
+    return color_by_label
+
+
+def _inside_hull_mask(xx, yy, points):
+    if len(points) < 3:
+        return np.ones_like(xx, dtype=bool)
+    try:
+        hull = Delaunay(points)
+        flat_points = np.column_stack([xx.ravel(), yy.ravel()])
+        return hull.find_simplex(flat_points) >= 0
+    except Exception:
+        return np.ones_like(xx, dtype=bool)
 
 def show_map():
     global list_z
@@ -296,6 +323,64 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             levels_count = len(markers_chem) - 1
         if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
+
+        if _is_categorical_mode():
+            # Отдельный пайплайн categorical (stage 2.1 baseline: nearest).
+            points = np.column_stack([x, y])
+            labels = np.array([int(v) for v in z], dtype=int)
+            if len(points) == 0:
+                set_info("Нет данных для построения категориальной карты.", "red")
+                return
+
+            tree = cKDTree(points)
+            _, nearest_idx = tree.query(np.column_stack([xx.ravel(), yy.ravel()]), k=1)
+            grid_labels = labels[nearest_idx].reshape(xx.shape)
+
+            clip_ctrl = _get_control("checkBox_clip_to_hull", "checkBox_clip_to_data_area")
+            clip_on = bool(clip_ctrl is not None and clip_ctrl.isChecked())
+            if clip_on:
+                mask = _inside_hull_mask(xx, yy, points)
+                grid_labels = np.ma.masked_where(~mask, grid_labels)
+
+            unique_labels = sorted({int(v) for v in labels})
+            color_by_label = _build_categorical_palette(unique_labels)
+            sorted_labels = sorted(unique_labels, key=lambda v: (v == -1, v))
+            label_to_index = {lbl: i for i, lbl in enumerate(sorted_labels)}
+            raw_grid = np.asarray(grid_labels.filled(sorted_labels[0]) if np.ma.isMaskedArray(grid_labels) else grid_labels)
+            class_index_grid = np.vectorize(lambda val: label_to_index[int(val)])(raw_grid)
+            if np.ma.isMaskedArray(grid_labels):
+                class_index_grid = np.ma.masked_where(grid_labels.mask, class_index_grid)
+
+            class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
+
+            fig_interp = plt.figure(figsize=(12, 9))
+            plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
+
+            show_contours_ctrl = _get_control("checkBox_show_contours")
+            if show_contours_ctrl is None or show_contours_ctrl.isChecked():
+                contour_levels = np.arange(-0.5, len(sorted_labels), 1.0)
+                plt.contour(xx, yy, class_index_grid, levels=contour_levels, colors='k', linewidths=0.6, alpha=0.8)
+
+            show_points_ctrl = _get_control("checkBox_show_points")
+            if show_points_ctrl is None or show_points_ctrl.isChecked():
+                for lbl in sorted_labels:
+                    mask_lbl = labels == lbl
+                    legend_name = "noise (-1)" if lbl == -1 else f"cluster {lbl}"
+                    marker_style = "x" if lbl == -1 else "o"
+                    plt.scatter(
+                        x[mask_lbl], y[mask_lbl],
+                        c=color_by_label[lbl], s=18 if lbl == -1 else 24,
+                        marker=marker_style, edgecolors='k' if lbl != -1 else None,
+                        linewidths=0.3, label=legend_name
+                    )
+
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.title(f'Categorical map: {param}\nMethod: Nearest\nGrid: {grid_size}, sparse: {sparse}')
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.tight_layout()
+            fig_interp.show()
+            return
         # ok = OrdinaryKriging(x, y, z, variogram_model=var_model, nlags=nlags, weight=weight, verbose=False)
         # print(1)
         # # Интерполяция значений на сетке
