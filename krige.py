@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sqlalchemy.exc import OperationalError
 from matplotlib.colors import ListedColormap, to_hex
+from matplotlib.patches import Patch
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
@@ -31,15 +32,13 @@ def convex_hull_boundary(points):
 
 def _build_categorical_palette(labels):
     unique_labels = sorted({int(v) for v in labels})
-    base = plt.get_cmap("tab20", max(len(unique_labels), 1))
+    base_colors = [to_hex(plt.get_cmap("tab20")(i)) for i in range(20)]
     color_by_label = {}
-    color_ix = 0
     for lbl in unique_labels:
         if lbl == -1:
             color_by_label[lbl] = "#4d4d4d"
             continue
-        color_by_label[lbl] = to_hex(base(color_ix))
-        color_ix += 1
+        color_by_label[lbl] = base_colors[int(lbl) % len(base_colors)]
     return color_by_label
 
 
@@ -370,23 +369,27 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 contour_levels = np.arange(-0.5, len(sorted_labels), 1.0)
                 plt.contour(xx, yy, class_index_grid, levels=contour_levels, colors='k', linewidths=0.6, alpha=0.8)
 
+            legend_handles = []
+            for lbl in sorted_labels:
+                legend_name = "noise" if lbl == -1 else f"cluster {lbl}"
+                legend_handles.append(Patch(facecolor=color_by_label[lbl], edgecolor='k', label=legend_name))
+
             show_points_ctrl = _get_control("checkBox_show_points")
             if show_points_ctrl is None or show_points_ctrl.isChecked():
                 for lbl in sorted_labels:
                     mask_lbl = labels == lbl
-                    legend_name = "noise (-1)" if lbl == -1 else f"cluster {lbl}"
                     marker_style = "x" if lbl == -1 else "o"
                     plt.scatter(
                         x[mask_lbl], y[mask_lbl],
                         c=color_by_label[lbl], s=18 if lbl == -1 else 24,
                         marker=marker_style, edgecolors='k' if lbl != -1 else None,
-                        linewidths=0.3, label=legend_name
+                        linewidths=0.3
                     )
 
             plt.xlabel('X')
             plt.ylabel('Y')
             plt.title(f'Categorical map: {param}\nMethod: Nearest\nGrid: {grid_size}, sparse: {sparse}')
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
             plt.tight_layout()
             fig_interp.show()
             return
