@@ -131,16 +131,130 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     for i in dist_func_list:
         ui_dm.comboBox_dist_func.addItem(i)
 
+    def _get_control(*names):
+        for name in names:
+            ctrl = getattr(ui_dm, name, None)
+            if ctrl is None:
+                ctrl = Draw_Map.findChild(QtWidgets.QWidget, name)
+            if ctrl is not None:
+                return ctrl
+        return None
+
+    map_mode_combo = _get_control(
+        "comboBox_map_mode",
+        "comboBox_mode_map",
+        "comboBox_render_mode"
+    )
+    interp_method_combo = _get_control(
+        "comboBox_interp_method",
+        "comboBox_interpolation_method"
+    )
+
+    continuous_controls = [
+        _get_control("label_3"),
+        _get_control("comboBox_estimator"),
+        _get_control("label_27"),
+        _get_control("comboBox_var_model"),
+        _get_control("label_4"),
+        _get_control("comboBox_dist_func"),
+        _get_control("label_5"),
+        _get_control("comboBox_bin_func"),
+        _get_control("label_28"),
+        _get_control("spinBox_nlags"),
+        _get_control("checkBox_filt"),
+        _get_control("spinBox_filt"),
+        _get_control("groupBox_kriging")
+    ]
+    categorical_controls = [
+        _get_control("groupBox_categorical"),
+        _get_control("checkBox_clip_to_hull"),
+        _get_control("checkBox_clip_to_data_area"),
+        _get_control("checkBox_show_uncertainty"),
+        _get_control("checkBox_uncertainty"),
+        _get_control("comboBox_boundary_smooth"),
+        _get_control("comboBox_boundary_smoothing"),
+        _get_control("spinBox_prob_power"),
+        _get_control("doubleSpinBox_prob_power"),
+        _get_control("checkBox_hard_labels"),
+        _get_control("checkBox_enforce_hard_labels")
+    ]
+    uncertainty_controls = [
+        _get_control("checkBox_show_uncertainty"),
+        _get_control("checkBox_uncertainty"),
+        _get_control("label_uncertainty"),
+        _get_control("doubleSpinBox_uncertainty_alpha"),
+        _get_control("spinBox_uncertainty_alpha")
+    ]
+
+    def _set_enabled_state(controls, enabled):
+        for ctrl in controls:
+            if ctrl is not None:
+                ctrl.setEnabled(enabled)
+
+    def _is_categorical_mode():
+        if map_mode_combo is None:
+            return False
+        mode_text = map_mode_combo.currentText().strip().lower()
+        return "categor" in mode_text or "cluster" in mode_text or mode_text.startswith("cat")
+
+    def _rebuild_interp_method_options():
+        if interp_method_combo is None:
+            return
+        if _is_categorical_mode():
+            options = ["Nearest", "Probability"]
+            default_value = "Probability"
+        else:
+            options = ["Kriging"]
+            default_value = "Kriging"
+
+        old_text = interp_method_combo.currentText()
+        interp_method_combo.blockSignals(True)
+        interp_method_combo.clear()
+        interp_method_combo.addItems(options)
+        if old_text in options:
+            interp_method_combo.setCurrentText(old_text)
+        else:
+            interp_method_combo.setCurrentText(default_value)
+        interp_method_combo.blockSignals(False)
+
+    def _apply_interpolation_method_deps():
+        if interp_method_combo is None:
+            return
+        can_use_uncertainty = _is_categorical_mode() and interp_method_combo.currentText().strip().lower() == "probability"
+        for ctrl in uncertainty_controls:
+            if ctrl is not None:
+                ctrl.setEnabled(can_use_uncertainty)
+
+    def _apply_map_mode_state():
+        categorical_mode = _is_categorical_mode()
+        _set_enabled_state(continuous_controls, not categorical_mode)
+        _set_enabled_state(categorical_controls, categorical_mode)
+        _rebuild_interp_method_options()
+        _apply_interpolation_method_deps()
+
+    if map_mode_combo is not None:
+        existing_modes = [map_mode_combo.itemText(i) for i in range(map_mode_combo.count())]
+        if not existing_modes:
+            map_mode_combo.addItems(["Continuous (Kriging)", "Categorical (Cluster)"])
+        map_mode_combo.currentTextChanged.connect(lambda _: _apply_map_mode_state())
+
+    if interp_method_combo is not None:
+        interp_method_combo.currentTextChanged.connect(lambda _: _apply_interpolation_method_deps())
+
+    _apply_map_mode_state()
+
 
     def form_lda_ok():
 
-        sparse = ui_dm.spinBox_sparse.value()
+        sparse_ctrl = _get_control("spinBox_sparse")
+        sparse = sparse_ctrl.value() if sparse_ctrl is not None else 1
         # Создание набора данных
         x = np.array(list_x[::sparse])
         y = np.array(list_y[::sparse])
         coord = np.column_stack([x, y])
         z = np.array(list_z[::sparse])
-        grid_size = ui_dm.spinBox_grid.value()
+        grid_ctrl = _get_control("spinBox_grid")
+        grid_size = grid_ctrl.value() if grid_ctrl is not None else 75
 
 
         # Создание сетки для интерполяции
@@ -152,12 +266,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
 
         # Создание объекта OrdinaryKriging
-        var_model = ui_dm.comboBox_var_model.currentText()
-        estimator = ui_dm.comboBox_estimator.currentText()
-        dist_func = ui_dm.comboBox_dist_func.currentText()
-        bin_func = ui_dm.comboBox_bin_func.currentText()
-        filt_power = ui_dm.spinBox_filt.value()
-        nlags = ui_dm.spinBox_nlags.value()
+        var_model_ctrl = _get_control("comboBox_var_model")
+        estimator_ctrl = _get_control("comboBox_estimator")
+        dist_func_ctrl = _get_control("comboBox_dist_func")
+        bin_func_ctrl = _get_control("comboBox_bin_func")
+        filt_power_ctrl = _get_control("spinBox_filt")
+        nlags_ctrl = _get_control("spinBox_nlags")
+
+        var_model = var_model_ctrl.currentText() if var_model_ctrl is not None else "spherical"
+        estimator = estimator_ctrl.currentText() if estimator_ctrl is not None else "matheron"
+        dist_func = dist_func_ctrl.currentText() if dist_func_ctrl is not None else "euclidean"
+        bin_func = bin_func_ctrl.currentText() if bin_func_ctrl is not None else "even"
+        filt_power = filt_power_ctrl.value() if filt_power_ctrl is not None else 13
+        nlags = nlags_ctrl.value() if nlags_ctrl is not None else 6
         legend = ''
         levels_count = 10
         color_map = ui_dm.comboBox_cmap.currentText()
@@ -213,7 +334,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             return
         # print(len(z_interp))
         # print(z_interp)
-        if ui_dm.checkBox_filt.isChecked():
+        filt_checkbox = _get_control("checkBox_filt")
+        if filt_checkbox is not None and filt_checkbox.isChecked():
             try:
                 z_interp = savgol_filter(z_interp, filt_power, 3)
             except ValueError:
@@ -261,7 +383,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
                   # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
-                  f'\nФильтр результата: {filt_power if ui_dm.checkBox_filt.isChecked() else "off"}\n'
+                  f'\nФильтр результата: {filt_power if (filt_checkbox is not None and filt_checkbox.isChecked()) else "off"}\n'
                   f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
         plt.tight_layout()
 
@@ -285,7 +407,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
         fig_interp.show()
 
-    ui_dm.pushButton_map.clicked.connect(form_lda_ok)
+    draw_button = _get_control("pushButton_map", "pushButton_draw_map", "pushButton_draw")
+    if draw_button is not None:
+        draw_button.clicked.connect(form_lda_ok)
+    else:
+        set_info("В форме карты не найдена кнопка DRAW (pushButton_map).", "brown")
     Draw_Map.exec_()
 
 
