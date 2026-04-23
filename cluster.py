@@ -47,6 +47,7 @@ class CandidateStats(TypedDict, total=False):
     noise_fraction: float
     n_samples_eval: int
     pca_components_after: int
+    partition_hash: str
 
 
 class CandidateResult(TypedDict):
@@ -816,6 +817,7 @@ def run_cluster_candidate(
         )
 
     labels_np = np.asarray(labels, dtype=int)
+    partition_hash = _build_partition_hash(labels_np)
     mask_eval = labels_np != -1
     labels_eval = labels_np[mask_eval]
     unique_clusters_eval = np.unique(labels_eval)
@@ -829,6 +831,7 @@ def run_cluster_candidate(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=0,
+                partition_hash=partition_hash,
                 **pca_stats
             ),
             status="invalid",
@@ -843,6 +846,7 @@ def run_cluster_candidate(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=n_samples_eval,
+                partition_hash=partition_hash,
                 **pca_stats
             ),
             status="invalid",
@@ -875,6 +879,7 @@ def run_cluster_candidate(
                 n_clusters=int(cluster_info.get("n_clusters", 0)),
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=n_samples_eval,
+                partition_hash=partition_hash,
                 **pca_stats
             ),
             status="invalid",
@@ -893,6 +898,7 @@ def run_cluster_candidate(
             n_clusters=int(cluster_info.get("n_clusters", 0)),
             noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
             n_samples_eval=n_samples_eval,
+            partition_hash=partition_hash,
             **pca_stats
         ),
         status="ok",
@@ -1603,6 +1609,27 @@ def _safe_num(value: Any, precision: int = 4, fallback: str = "—") -> str:
     return f"{val:.{precision}f}"
 
 
+def _build_partition_hash(labels: np.ndarray) -> str:
+    """
+    Строит хэш разбиения, инвариантный к переименованию меток кластеров.
+    """
+    if labels is None or len(labels) == 0:
+        return "empty"
+
+    labels_arr = np.asarray(labels, dtype=int).ravel()
+    groups: dict[int, list[int]] = {}
+    for row_idx, label in enumerate(labels_arr.tolist()):
+        groups.setdefault(int(label), []).append(int(row_idx))
+
+    canonical_groups: list[list[int]] = []
+    for _, indices in groups.items():
+        canonical_groups.append(sorted(indices))
+
+    canonical_groups.sort(key=lambda idxs: (len(idxs), idxs[0] if idxs else -1, idxs))
+    payload = json.dumps(canonical_groups, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:12]
+
+
 def _candidate_method_short(candidate: CandidateConfig) -> str:
     method = candidate.get("method", "")
     params = candidate.get("method_params", {}) or {}
@@ -1646,7 +1673,7 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
     table = ui.tableWidget_cluster_auto_result
     headers = [
         "Rank", "Score", "Method", "Scaler", "PCA",
-        "PCA comps", "Silhouette", "DB", "CH", "Clusters", "Noise %", "Status"
+        "PCA comps", "Silhouette", "DB", "CH", "Clusters", "Noise %", "PartHash", "Status"
     ]
     table.clear()
     table.setColumnCount(len(headers))
@@ -1679,14 +1706,15 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             _safe_num(metrics.get("calinski_harabasz"), precision=2),
             str(stats.get("n_clusters", "—")),
             (f"{(noise * 100.0):.1f}%" if noise is not None else "—"),
+            str(stats.get("partition_hash", "—")),
             status_view
         ]
 
         for col_idx, value in enumerate(row_values):
             item = QTableWidgetItem(str(value))
-            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10, 11):
+            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10, 11, 12):
                 item.setTextAlignment(Qt.AlignCenter)
-            if col_idx == 11:
+            if col_idx == 12:
                 if status_raw == "ok":
                     item.setForeground(QBrush(QColor("darkgreen")))
                 elif status_raw == "invalid":
@@ -1722,9 +1750,10 @@ def apply_selected_auto_result_from_table(row_idx: int, _column_idx: int) -> Non
         return
 
     apply_auto_result_to_ui(selected_result)
+    selected_hash = str((selected_result.get("stats") or {}).get("partition_hash") or "—")
     set_info(
         f"AUTO: применен вариант #{row_idx + 1} "
-        f"(score={_safe_num(selected_result.get('score'), precision=4)}).",
+        f"(score={_safe_num(selected_result.get('score'), precision=4)}, partition={selected_hash}).",
         "green"
     )
 
@@ -2155,7 +2184,8 @@ def save_cluster_auto_tuning_cache(
                     "stats": {
                         "n_clusters": _safe_int(stats.get("n_clusters")),
                         "noise_fraction": _safe_float(stats.get("noise_fraction")),
-                        "n_samples_eval": _safe_int(stats.get("n_samples_eval"))
+                        "n_samples_eval": _safe_int(stats.get("n_samples_eval")),
+                        "partition_hash": str(stats.get("partition_hash") or "")
                     },
                     "score": _safe_float(score),
                     "status": str(result_row.get("status") or "ok"),
