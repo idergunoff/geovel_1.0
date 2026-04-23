@@ -120,11 +120,7 @@ def show_map():
 def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None):
 
     Draw_Map = QtWidgets.QDialog()
-    ui_form_cls = globals().get("Ui_DrawMapForm") or globals().get("Ui_Form")
-    if ui_form_cls is None:
-        set_info("Ошибка UI: не найден класс формы карты (Ui_DrawMapForm/Ui_Form).", "red")
-        return
-    ui_dm = ui_form_cls()
+    ui_dm = Ui_DrawMapForm()
     ui_dm.setupUi(Draw_Map)
     Draw_Map.show()
     Draw_Map.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
