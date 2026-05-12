@@ -3781,7 +3781,7 @@ def calculate_cluster():
 
     map_x = [float(row[1]) for row in map_data]
     map_y = [float(row[2]) for row in map_data]
-    map_title = f"Cluster {ui.comboBox_cluster_analys.currentText().split(' id')[0]}"
+    map_title = f"Cluster {ui.comboBox_clust_obj.currentText().split(' id')[0]}"
 
     set_info(
         "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
