@@ -104,7 +104,7 @@ def calculate_auto_min_cluster_sample_limits(
     max_spinbox_value = max(min_value, int(np.floor(0.5 * n_samples)))
 
     return {
-        "min_cluster_samples": int(recommended_default_value),
+        "min_cluster_samples": int(min_value),
         "recommended_default_value": int(recommended_default_value),
         "max_spinbox_value": int(max_spinbox_value)
     }
@@ -136,6 +136,19 @@ def sync_auto_min_cluster_spinbox_with_current_object(*, force_recommended: bool
     limits = calculate_auto_min_cluster_sample_limits(n_samples, min_value=1)
     old_value = int(spinbox.value())
     spinbox.setMinimum(int(limits["min_cluster_samples"]))
+
+    tooltip_text = (
+        "Минимальный размер кластера в образцах для AUTO-подбора. "
+        "Кандидаты с кластерами меньше порога помечаются как невалидные."
+    )
+    spinbox.setToolTip(tooltip_text)
+    spinbox.setStatusTip(tooltip_text)
+    reset_btn = getattr(ui, "toolButton_cluster_auto_min_n_reset", None)
+    if reset_btn is not None:
+        reset_btn.setToolTip("Сбросить порог к рекомендованному значению 5% от текущего N.")
+    min_label = getattr(ui, "label_46", None)
+    if min_label is not None:
+        min_label.setToolTip(tooltip_text)
     spinbox.setMaximum(int(limits["max_spinbox_value"]))
 
     if force_recommended:
@@ -145,7 +158,7 @@ def sync_auto_min_cluster_spinbox_with_current_object(*, force_recommended: bool
     if old_value > limits["max_spinbox_value"]:
         spinbox.setValue(int(limits["max_spinbox_value"]))
         set_info(
-            f"AUTO: min cluster samples ограничен до {limits['max_spinbox_value']} для N={n_samples}.",
+            f"AUTO: значение 'Минимальный размер кластера' автоматически скорректировано до {limits['max_spinbox_value']} (допустимый максимум для N={n_samples}).",
             "brown"
         )
     elif old_value < limits["min_cluster_samples"]:

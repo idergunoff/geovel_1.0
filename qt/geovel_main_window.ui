@@ -5922,7 +5922,7 @@ Therm</string>
                      <item>
                       <widget class="QLabel" name="label_46">
                        <property name="text">
-                        <string>Min N cluster</string>
+                        <string>Мин. размер кластера</string>
                        </property>
                       </widget>
                      </item>

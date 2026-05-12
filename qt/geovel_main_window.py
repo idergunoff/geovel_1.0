@@ -3679,7 +3679,7 @@ class Ui_MainWindow(object):
         self.checkBox_cluster_auto_recalc.setText(_translate("MainWindow", "Retune"))
         self.checkBox_cluster_auto_limit200.setToolTip(_translate("MainWindow", "Лимит 200 случайных кандидатов"))
         self.checkBox_cluster_auto_limit200.setText(_translate("MainWindow", "limit 200"))
-        self.label_46.setText(_translate("MainWindow", "Min N cluster"))
+        self.label_46.setText(_translate("MainWindow", "Мин. размер кластера"))
         self.toolButton_cluster_auto_min_n_reset.setText(_translate("MainWindow", "5%"))
         self.label_42.setText(_translate("MainWindow", "Result Auto Clustering"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab), _translate("MainWindow", "Cluster"))
