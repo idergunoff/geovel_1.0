@@ -172,6 +172,15 @@ def reset_auto_min_cluster_spinbox_to_5_percent() -> None:
     sync_auto_min_cluster_spinbox_with_current_object(force_recommended=True)
 
 
+
+def on_cluster_object_selection_changed(*_args) -> None:
+    """
+    Единый обработчик смены выбранного ObjectSet в combobox.
+    """
+    show_finite_report()
+    load_saved_auto_results_for_selected_object()
+    reset_auto_min_cluster_spinbox_to_5_percent()
+
 def _estimate_array_like_nbytes(value: Any) -> int:
     """
     Грубая оценка объема памяти array-like объекта в байтах.
@@ -2812,7 +2821,13 @@ def get_curr_clust_analys_id():
 
 
 def get_curr_clust_object_id():
-    return ui.comboBox_clust_obj.currentText().split(' id')[-1]
+    text = str(ui.comboBox_clust_obj.currentText() or "").strip()
+    if ' id' not in text:
+        return None
+    candidate = text.split(' id')[-1].strip()
+    if not candidate.isdigit():
+        return None
+    return int(candidate)
 
 
 def sync_ui_to_cluster_object_research(clust_object):
