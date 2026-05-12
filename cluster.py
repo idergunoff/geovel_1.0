@@ -104,7 +104,7 @@ def calculate_auto_min_cluster_sample_limits(
     max_spinbox_value = max(min_value, int(np.floor(0.5 * n_samples)))
 
     return {
-        "min_cluster_samples": int(recommended_default_value),
+        "min_cluster_samples": int(min_value),
         "recommended_default_value": int(recommended_default_value),
         "max_spinbox_value": int(max_spinbox_value)
     }
