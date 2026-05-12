@@ -4027,19 +4027,6 @@ def calculate_cluster():
     map_y = [float(row[2]) for row in map_data]
     map_title = f"Cluster {ui.comboBox_clust_obj.currentText().split(' id')[0]}"
 
-    set_info(
-        "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
-        "blue"
-    )
-    draw_map(
-        map_x,
-        map_y,
-        labels_for_map,
-        map_title,
-        color_marker=False,
-        initial_map_mode="categorical"
-    )
-
     print(labels_for_output)
     print(clust_info)
 
@@ -4127,5 +4114,20 @@ def calculate_cluster():
                 profile_labels=profile_labels,
                 use_relief=True
             )
+        else:
+            set_info("Профиль не выбран: результаты кластеров на радарограмме не обновлены.", "brown")
     else:
         set_info("Не удалось автоматически выбрать исследование/профиль для отрисовки кластеров.", "brown")
+
+    set_info(
+        "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
+        "blue"
+    )
+    draw_map(
+        map_x,
+        map_y,
+        labels_for_map,
+        map_title,
+        color_marker=False,
+        initial_map_mode="categorical"
+    )
