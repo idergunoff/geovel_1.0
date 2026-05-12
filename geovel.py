@@ -553,8 +553,11 @@ ui.comboBox_clust_set.activated.connect(update_list_clust_object)
 ui.comboBox_clust_obj.activated.connect(show_finite_report)
 ui.comboBox_clust_obj.activated.connect(load_saved_auto_results_for_selected_object)
 ui.comboBox_clust_obj.activated.connect(sync_auto_min_cluster_spinbox_with_current_object)
-if hasattr(ui, "toolButton"):
-    ui.toolButton.clicked.connect(reset_auto_min_cluster_spinbox_to_5_percent)
+reset_btn = getattr(ui, "toolButton_cluster_auto_min_n_reset", None)
+if reset_btn is None:
+    reset_btn = getattr(ui, "toolButton", None)
+if reset_btn is not None:
+    reset_btn.clicked.connect(reset_auto_min_cluster_spinbox_to_5_percent)
 ui.checkBox_clust_clean_nan.clicked.connect(update_clust_clear_nan)
 ui.pushButton_clust_prev_prof.clicked.connect(draw_prev_cluster_profile)
 ui.pushButton_clust_next_prof.clicked.connect(draw_next_cluster_profile)
