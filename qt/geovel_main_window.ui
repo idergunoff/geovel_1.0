@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1660</width>
+    <width>1672</width>
     <height>1194</height>
    </rect>
   </property>
@@ -1316,8 +1316,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>613</width>
-                       <height>200</height>
+                       <width>96</width>
+                       <height>26</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5940,7 +5940,7 @@ Therm</string>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QToolButton" name="toolButton">
+                      <widget class="QToolButton" name="toolButton_cluster_auto_min_n_reset">
                        <property name="styleSheet">
                         <string notr="true">background-color: rgb(226, 255, 200);</string>
                        </property>
@@ -6764,7 +6764,7 @@ Therm</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1660</width>
+     <width>1672</width>
      <height>29</height>
     </rect>
    </property>
@@ -6787,8 +6787,8 @@ Therm</string>
  <connections/>
  <buttongroups>
   <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_4"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
