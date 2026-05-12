@@ -78,6 +78,7 @@ GMM_COVARIANCE_TYPES = ("full", "diag", "tied", "spherical")
 AUTO_TRANSFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
 AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES = 128 * 1024 * 1024
 AUTO_SILHOUETTE_MAX_SAMPLES = 5000
+AUTO_SILHOUETTE_COARSE_MAX_SAMPLES = 1500
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
@@ -782,6 +783,7 @@ def run_cluster_candidate(
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
+        metrics_cache: Optional[Dict[str, CandidateMetrics]] = None,
         min_pca_components: int = 2,
         max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
         min_cluster_samples: int = 1
@@ -978,6 +980,28 @@ def run_cluster_candidate(
             error_text="less than 2 clusters after noise filtering"
         )
 
+    if metrics_cache is not None:
+        cached_metrics = metrics_cache.get(partition_hash)
+        if cached_metrics is not None:
+            return make_candidate_result(
+                candidate_id=candidate_id,
+                candidate_config=candidate,
+                metrics=CandidateMetrics(
+                    silhouette=float(cached_metrics.get("silhouette")),
+                    davies_bouldin=float(cached_metrics.get("davies_bouldin")),
+                    calinski_harabasz=float(cached_metrics.get("calinski_harabasz"))
+                ),
+                stats=CandidateStats(
+                    n_clusters=int(cluster_info.get("n_clusters", 0)),
+                    noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                    n_samples_eval=n_samples_eval,
+                    partition_hash=partition_hash,
+                    **pca_stats
+                ),
+                status="ok",
+                error_text=""
+            )
+
     try:
         eval_info = evaluate_clustering(
             data_for_cluster,
@@ -1011,14 +1035,18 @@ def run_cluster_candidate(
             error_text="metrics unavailable for candidate"
         )
 
+    metric_payload = CandidateMetrics(
+        silhouette=float(metrics.get("silhouette")),
+        davies_bouldin=float(metrics.get("davies_bouldin")),
+        calinski_harabasz=float(metrics.get("calinski_harabasz"))
+    )
+    if metrics_cache is not None:
+        metrics_cache[partition_hash] = metric_payload
+
     return make_candidate_result(
         candidate_id=candidate_id,
         candidate_config=candidate,
-        metrics=CandidateMetrics(
-            silhouette=float(metrics.get("silhouette")),
-            davies_bouldin=float(metrics.get("davies_bouldin")),
-            calinski_harabasz=float(metrics.get("calinski_harabasz"))
-        ),
+        metrics=metric_payload,
         stats=CandidateStats(
             n_clusters=int(cluster_info.get("n_clusters", 0)),
             noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
@@ -1329,6 +1357,10 @@ def run_auto_cluster_tuning(
         random_seed=random_seed
     )
     coarse_results: list[CandidateResult] = []
+    coarse_silhouette_samples = min(
+        int(AUTO_SILHOUETTE_MAX_SAMPLES),
+        int(AUTO_SILHOUETTE_COARSE_MAX_SAMPLES)
+    )
     auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
     if not auto_cache_enabled:
         _set_auto_info(
@@ -1336,6 +1368,7 @@ def run_auto_cluster_tuning(
             "brown"
         )
     transform_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
+    metrics_cache: Dict[str, CandidateMetrics] = {}
     transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
     transform_cache_total_bytes = 0
     run_start_ts = monotonic()
@@ -1357,7 +1390,9 @@ def run_auto_cluster_tuning(
                 candidate_id=f"C{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
+                metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
+                max_silhouette_samples=coarse_silhouette_samples,
                 min_cluster_samples=min_cluster_samples
             )
         except Exception as exc:
@@ -1436,7 +1471,9 @@ def run_auto_cluster_tuning(
                     candidate_id=f"R{idx:03d}",
                     clean_kwargs=clean_kwargs,
                     transform_cache=transform_cache,
+                    metrics_cache=metrics_cache,
                     min_pca_components=min_pca_components,
+                    max_silhouette_samples=coarse_silhouette_samples,
                     min_cluster_samples=min_cluster_samples
                 )
             except Exception as exc:
@@ -1473,7 +1510,9 @@ def run_auto_cluster_tuning(
                         candidate_id=f"RR{idx:03d}",
                         clean_kwargs=relaxed_clean_kwargs,
                         transform_cache=transform_cache,
+                        metrics_cache=metrics_cache,
                         min_pca_components=min_pca_components,
+                        max_silhouette_samples=coarse_silhouette_samples,
                         min_cluster_samples=min_cluster_samples
                     )
                 except Exception as exc:
@@ -1537,7 +1576,9 @@ def run_auto_cluster_tuning(
                 candidate_id=f"F{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
+                metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
+                max_silhouette_samples=AUTO_SILHOUETTE_MAX_SAMPLES,
                 min_cluster_samples=min_cluster_samples
             )
         except Exception as exc:
