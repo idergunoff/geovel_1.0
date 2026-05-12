@@ -59,6 +59,7 @@ from qt.filter_form import *
 from qt.form_map_well_log import *
 from qt.form_upgrade_predict_model import *
 from qt.qc_form import *
+from cluster_tooltips import apply_cluster_tooltips
 
 import numpy as np
 import pyqtgraph as pg
@@ -185,6 +186,7 @@ app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
 ui = Ui_MainWindow()
 ui.setupUi(MainWindow)
+apply_cluster_tooltips(ui)
 
 radarogramma = ui.radarogram.addPlot()
 img = pg.ImageItem()
