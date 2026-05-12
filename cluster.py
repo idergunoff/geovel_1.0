@@ -2812,7 +2812,13 @@ def get_curr_clust_analys_id():
 
 
 def get_curr_clust_object_id():
-    return ui.comboBox_clust_obj.currentText().split(' id')[-1]
+    text = str(ui.comboBox_clust_obj.currentText() or "").strip()
+    if ' id' not in text:
+        return None
+    candidate = text.split(' id')[-1].strip()
+    if not candidate.isdigit():
+        return None
+    return int(candidate)
 
 
 def sync_ui_to_cluster_object_research(clust_object):
