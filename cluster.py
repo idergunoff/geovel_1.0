@@ -172,6 +172,15 @@ def reset_auto_min_cluster_spinbox_to_5_percent() -> None:
     sync_auto_min_cluster_spinbox_with_current_object(force_recommended=True)
 
 
+
+def on_cluster_object_selection_changed(*_args) -> None:
+    """
+    Единый обработчик смены выбранного ObjectSet в combobox.
+    """
+    show_finite_report()
+    load_saved_auto_results_for_selected_object()
+    reset_auto_min_cluster_spinbox_to_5_percent()
+
 def _estimate_array_like_nbytes(value: Any) -> int:
     """
     Грубая оценка объема памяти array-like объекта в байтах.
