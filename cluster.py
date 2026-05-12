@@ -110,6 +110,55 @@ def calculate_auto_min_cluster_sample_limits(
     }
 
 
+def sync_auto_min_cluster_spinbox_with_current_object(*, force_recommended: bool = False) -> None:
+    """
+    Синхронизирует spinBox минимального размера кластера с текущим ObjectSet.
+    """
+    spinbox = getattr(ui, "spinBox_cluster_auto_min_n_cluster", None)
+    if spinbox is None:
+        return
+
+    clust_object_id = get_curr_clust_object_id()
+    if not clust_object_id:
+        return
+
+    clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
+    if clust_object is None:
+        return
+
+    n_samples = 0
+    try:
+        base_data = _deserialize_cluster_dataset(clust_object.data)
+        n_samples = len(base_data)
+    except Exception:
+        pass
+
+    limits = calculate_auto_min_cluster_sample_limits(n_samples, min_value=1)
+    old_value = int(spinbox.value())
+    spinbox.setMinimum(int(limits["min_cluster_samples"]))
+    spinbox.setMaximum(int(limits["max_spinbox_value"]))
+
+    if force_recommended:
+        spinbox.setValue(int(limits["recommended_default_value"]))
+        return
+
+    if old_value > limits["max_spinbox_value"]:
+        spinbox.setValue(int(limits["max_spinbox_value"]))
+        set_info(
+            f"AUTO: min cluster samples ограничен до {limits['max_spinbox_value']} для N={n_samples}.",
+            "brown"
+        )
+    elif old_value < limits["min_cluster_samples"]:
+        spinbox.setValue(int(limits["min_cluster_samples"]))
+
+
+def reset_auto_min_cluster_spinbox_to_5_percent() -> None:
+    """
+    Обработчик кнопки "Сброс к 5%".
+    """
+    sync_auto_min_cluster_spinbox_with_current_object(force_recommended=True)
+
+
 def _estimate_array_like_nbytes(value: Any) -> int:
     """
     Грубая оценка объема памяти array-like объекта в байтах.
@@ -2727,6 +2776,7 @@ def update_list_clust_object():
     for clust_obj in session.query(ObjectSet.id, ObjectSet.research_id).filter_by(analysis_id=get_curr_clust_analys_id()).all():
         research = session.query(Research).filter_by(id=clust_obj.research_id).first()
         ui.comboBox_clust_obj.addItem(f'{research.object.title} id{clust_obj.id}')
+    sync_auto_min_cluster_spinbox_with_current_object()
     load_saved_auto_results_for_selected_object()
 
 
