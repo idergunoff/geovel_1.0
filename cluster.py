@@ -64,6 +64,12 @@ class CandidateResult(TypedDict):
     error_text: str
 
 
+class AutoTuningClusterSizeLimits(TypedDict):
+    min_cluster_samples: int
+    recommended_default_value: int
+    max_spinbox_value: int
+
+
 cluster_auto_results_cache: list[CandidateResult] = []
 
 
@@ -79,6 +85,29 @@ AUTO_TUNING_MIN_ROWS = 256
 AUTO_TUNING_MAX_FEATURES = 512
 AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
+
+
+def calculate_auto_min_cluster_sample_limits(
+        n_samples: int,
+        min_value: int = 1
+) -> AutoTuningClusterSizeLimits:
+    """
+    Вычисляет лимиты для параметра минимального размера кластера в AUTO-режиме.
+
+    - recommended_default_value = ceil(0.05 * N)
+    - max_spinbox_value = floor(0.5 * N)
+    """
+    min_value = max(1, int(min_value))
+    n_samples = max(0, int(n_samples))
+
+    recommended_default_value = max(min_value, int(np.ceil(0.05 * n_samples)))
+    max_spinbox_value = max(min_value, int(np.floor(0.5 * n_samples)))
+
+    return {
+        "min_cluster_samples": int(recommended_default_value),
+        "recommended_default_value": int(recommended_default_value),
+        "max_spinbox_value": int(max_spinbox_value)
+    }
 
 
 def _estimate_array_like_nbytes(value: Any) -> int:
@@ -1882,6 +1911,8 @@ def calculate_cluster_auto():
         set_info("AUTO: пустой набор данных для подбора.", "brown")
         return
 
+    sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
+
     auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
     selected_button = ui.buttonGroup_3.checkedButton()
     text_method_nan = selected_button.text() if selected_button else "impute"
@@ -1921,6 +1952,12 @@ def calculate_cluster_auto():
     top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
     max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
     min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
+    min_cluster_samples = _read_auto_int_setting(
+        "spinBox_cluster_auto_min_n_cluster",
+        fallback=sample_limits["recommended_default_value"],
+        minimum=sample_limits["min_cluster_samples"]
+    )
+    min_cluster_samples = min(min_cluster_samples, sample_limits["max_spinbox_value"])
     hdbscan_metric = str(ui.comboBox_clust_hdbsc_type.currentText() or "euclidean")
     hdbscan_metrics = [hdbscan_metric]
     for idx in range(ui.comboBox_clust_hdbsc_type.count()):
@@ -1953,7 +1990,10 @@ def calculate_cluster_auto():
             "use_total_timeout": bool(use_total_timeout),
             "use_candidate_timeout": bool(use_candidate_timeout),
             "total_timeout_sec": total_timeout_sec,
-            "candidate_timeout_sec": candidate_timeout_sec
+            "candidate_timeout_sec": candidate_timeout_sec,
+            "min_cluster_samples": min_cluster_samples,
+            "recommended_min_cluster_samples": sample_limits["recommended_default_value"],
+            "max_min_cluster_samples": sample_limits["max_spinbox_value"]
         },
         weights=metric_weights,
         clean_kwargs={
@@ -1973,6 +2013,8 @@ def calculate_cluster_auto():
             f"AUTO: настройки подбора max_candidates={max_candidates if max_candidates is not None else 'OFF'}, "
             f"top_k={top_k}, "
             f"max_clusters={max_clusters}, min_pca_components={min_pca_components}, "
+            f"min_cluster_samples={min_cluster_samples} (recommended={sample_limits['recommended_default_value']}, "
+            f"max={sample_limits['max_spinbox_value']}), "
             f"hdbscan_metrics={hdbscan_metrics}, "
             f"scaler_only={scaler_only}, pca_only={pca_only}, "
             f"weights(sil/db/ch)=({metric_weights['silhouette']:.2f}/"
