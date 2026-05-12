@@ -1316,8 +1316,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>96</width>
-                       <height>26</height>
+                       <width>613</width>
+                       <height>200</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -5765,6 +5765,46 @@ Therm</string>
                    <string>AutoTune Limits</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_41">
+                   <item row="4" column="0">
+                    <widget class="QCheckBox" name="checkBox_cluster_auto_candidate_time">
+                     <property name="text">
+                      <string>Cand time, s</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="5" column="0">
+                    <widget class="QCheckBox" name="checkBox_cluster_auto_total_time">
+                     <property name="text">
+                      <string>Total time, s</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="1">
+                    <widget class="QSpinBox" name="spinBox_cluster_auto_timeout_candidate">
+                     <property name="minimum">
+                      <number>1</number>
+                     </property>
+                     <property name="maximum">
+                      <number>1200</number>
+                     </property>
+                     <property name="value">
+                      <number>30</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="6" column="1">
+                    <widget class="QRadioButton" name="radioButton_cluster_fine_auto">
+                     <property name="text">
+                      <string>FINE</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                     <attribute name="buttonGroup">
+                      <string notr="true">buttonGroup_4</string>
+                     </attribute>
+                    </widget>
+                   </item>
                    <item row="2" column="0" colspan="2">
                     <layout class="QHBoxLayout" name="horizontalLayout_16">
                      <item>
@@ -5790,40 +5830,13 @@ Therm</string>
                     </layout>
                    </item>
                    <item row="6" column="0">
-                    <widget class="QCheckBox" name="checkBox_cluster_auto_pca_only">
-                     <property name="text">
-                      <string>PCA Only</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="5" column="1">
-                    <widget class="QRadioButton" name="radioButton_cluster_fine_auto">
-                     <property name="text">
-                      <string>FINE</string>
-                     </property>
-                     <property name="checked">
-                      <bool>true</bool>
-                     </property>
-                     <attribute name="buttonGroup">
-                      <string notr="true">buttonGroup_4</string>
-                     </attribute>
-                    </widget>
-                   </item>
-                   <item row="5" column="0">
                     <widget class="QCheckBox" name="checkBox_cluster_auto_scaler_only">
                      <property name="text">
                       <string>Scaler Only</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="3" column="0">
-                    <widget class="QCheckBox" name="checkBox_cluster_auto_candidate_time">
-                     <property name="text">
-                      <string>Cand time, s</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="6" column="1">
+                   <item row="7" column="1">
                     <widget class="QRadioButton" name="radioButton_cluster_coarse_auto">
                      <property name="text">
                       <string>COARSE</string>
@@ -5831,26 +5844,6 @@ Therm</string>
                      <attribute name="buttonGroup">
                       <string notr="true">buttonGroup_4</string>
                      </attribute>
-                    </widget>
-                   </item>
-                   <item row="4" column="0">
-                    <widget class="QCheckBox" name="checkBox_cluster_auto_total_time">
-                     <property name="text">
-                      <string>Total time, s</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="4" column="1">
-                    <widget class="QSpinBox" name="spinBox_cluster_auto_timeout_all">
-                     <property name="minimum">
-                      <number>60</number>
-                     </property>
-                     <property name="maximum">
-                      <number>86400</number>
-                     </property>
-                     <property name="value">
-                      <number>900</number>
-                     </property>
                     </widget>
                    </item>
                    <item row="1" column="0" colspan="2">
@@ -5877,16 +5870,23 @@ Therm</string>
                      </item>
                     </layout>
                    </item>
-                   <item row="3" column="1">
-                    <widget class="QSpinBox" name="spinBox_cluster_auto_timeout_candidate">
+                   <item row="7" column="0">
+                    <widget class="QCheckBox" name="checkBox_cluster_auto_pca_only">
+                     <property name="text">
+                      <string>PCA Only</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="5" column="1">
+                    <widget class="QSpinBox" name="spinBox_cluster_auto_timeout_all">
                      <property name="minimum">
-                      <number>1</number>
+                      <number>60</number>
                      </property>
                      <property name="maximum">
-                      <number>1200</number>
+                      <number>86400</number>
                      </property>
                      <property name="value">
-                      <number>30</number>
+                      <number>900</number>
                      </property>
                     </widget>
                    </item>
@@ -5912,6 +5912,40 @@ Therm</string>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="3" column="0" colspan="2">
+                    <layout class="QHBoxLayout" name="horizontalLayout_17">
+                     <item>
+                      <widget class="QLabel" name="label_46">
+                       <property name="text">
+                        <string>Min N cluster</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSpinBox" name="spinBox_cluster_auto_min_n_cluster">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>100</number>
+                       </property>
+                       <property name="value">
+                        <number>5</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QToolButton" name="toolButton">
+                       <property name="styleSheet">
+                        <string notr="true">background-color: rgb(226, 255, 200);</string>
+                       </property>
+                       <property name="text">
+                        <string>5%</string>
                        </property>
                       </widget>
                      </item>
@@ -6752,9 +6786,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup_4"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>
