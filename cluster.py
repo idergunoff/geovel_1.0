@@ -1369,6 +1369,12 @@ def run_auto_cluster_tuning(
                     (result.get("error_text", "") + "; ").strip("; ")
                     + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
                 ).strip()
+        _log_candidate_rejection(
+            result,
+            phase="coarse",
+            min_cluster_samples=min_cluster_samples,
+            n_samples=len(base_data)
+        )
 
         coarse_results.append(result)
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
@@ -1418,6 +1424,12 @@ def run_auto_cluster_tuning(
                     status="error",
                     error_text=f"rescue candidate exception: {exc}"
                 )
+            _log_candidate_rejection(
+                result,
+                phase="rescue",
+                min_cluster_samples=min_cluster_samples,
+                n_samples=len(base_data)
+            )
             coarse_results.append(result)
         has_valid_after_rescue = any(row.get("status") == "ok" for row in coarse_results)
         if not has_valid_after_rescue:
@@ -1449,6 +1461,12 @@ def run_auto_cluster_tuning(
                         status="error",
                         error_text=f"relaxed rescue exception: {exc}"
                     )
+                _log_candidate_rejection(
+                    result,
+                    phase="rescue_relaxed",
+                    min_cluster_samples=min_cluster_samples,
+                    n_samples=len(base_data)
+                )
                 coarse_results.append(result)
         if not any(row.get("status") == "ok" for row in coarse_results):
             top_failures = _summarize_candidate_failures(coarse_results, top_n=3)
@@ -1531,6 +1549,12 @@ def run_auto_cluster_tuning(
                     (result.get("error_text", "") + "; ").strip("; ")
                     + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
                 ).strip()
+        _log_candidate_rejection(
+            result,
+            phase="fine",
+            min_cluster_samples=min_cluster_samples,
+            n_samples=len(base_data)
+        )
 
         fine_results.append(result)
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
@@ -1636,6 +1660,24 @@ def validate_auto_tuning_run(
     }
     summary["passed"] = len(issues) == 0
     return summary
+
+
+def _log_candidate_rejection(result: CandidateResult, *, phase: str, min_cluster_samples: int, n_samples: int) -> None:
+    """
+    Структурированный лог отбраковки кандидата для диагностики AUTO-режима.
+    """
+    if result.get("status") == "ok":
+        return
+    payload = {
+        "event": "cluster_auto_candidate_rejected",
+        "phase": phase,
+        "candidate_id": result.get("candidate_id"),
+        "status": result.get("status"),
+        "reason": result.get("error_text", ""),
+        "min_cluster_samples": int(min_cluster_samples),
+        "n_samples": int(n_samples)
+    }
+    set_info(f"AUTO_REJECT {json.dumps(payload, ensure_ascii=False, sort_keys=True)}", "brown")
 
 
 def validate_auto_tuning_quality(
@@ -2153,6 +2195,14 @@ def calculate_cluster_auto():
     )
     render_auto_results_table(top_results)
     best_result = tuning_result.get("best_result")
+    raw_results = tuning_result.get("raw_results", []) or []
+    dropped_candidates = sum(1 for row in raw_results if row.get("status") != "ok")
+    total_candidates = len(raw_results)
+    if total_candidates > 0:
+        set_info(
+            f"AUTO {auto_mode}: отброшено кандидатов {dropped_candidates}/{total_candidates}.",
+            "blue"
+        )
 
     if not best_result or best_result.get("status") != "ok":
         set_info(
