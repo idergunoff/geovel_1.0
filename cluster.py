@@ -761,7 +761,8 @@ def run_cluster_candidate(
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
         min_pca_components: int = 2,
-        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES
+        max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
+        min_cluster_samples: int = 1
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -902,6 +903,11 @@ def run_cluster_candidate(
     unique_clusters_eval = np.unique(labels_eval)
     n_samples_eval = int(np.count_nonzero(mask_eval))
 
+    try:
+        min_cluster_samples_value = max(1, int(min_cluster_samples))
+    except (TypeError, ValueError):
+        min_cluster_samples_value = 1
+
     if n_samples_eval == 0:
         return make_candidate_result(
             candidate_id=candidate_id,
@@ -915,6 +921,24 @@ def run_cluster_candidate(
             ),
             status="invalid",
             error_text="empty sample after noise filtering"
+        )
+
+    cluster_size_min = int(min((labels_eval == label).sum() for label in unique_clusters_eval)) if len(unique_clusters_eval) > 0 else 0
+    if cluster_size_min < min_cluster_samples_value:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            stats=CandidateStats(
+                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                n_samples_eval=n_samples_eval,
+                partition_hash=partition_hash,
+                **pca_stats
+            ),
+            status="invalid",
+            error_text=(
+                f"cluster min size {cluster_size_min} < min_cluster_samples {min_cluster_samples_value}"
+            )
         )
 
     if len(unique_clusters_eval) < 2:
@@ -1261,7 +1285,8 @@ def run_auto_cluster_tuning(
         min_pca_components: int = 2,
         weights: Optional[Dict[str, float]] = None,
         clean_kwargs: Optional[Dict[str, Any]] = None,
-        random_seed: Optional[int] = None
+        random_seed: Optional[int] = None,
+        min_cluster_samples: int = 1
 ) -> Dict[str, Any]:
     """
     Orchestrator AUTO-подбора.
@@ -1310,7 +1335,8 @@ def run_auto_cluster_tuning(
                 candidate_id=f"C{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
-                min_pca_components=min_pca_components
+                min_pca_components=min_pca_components,
+                min_cluster_samples=min_cluster_samples
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Coarse C{idx:03d}: исключение {exc}", "red")
@@ -1382,7 +1408,8 @@ def run_auto_cluster_tuning(
                     candidate_id=f"R{idx:03d}",
                     clean_kwargs=clean_kwargs,
                     transform_cache=transform_cache,
-                    min_pca_components=min_pca_components
+                    min_pca_components=min_pca_components,
+                    min_cluster_samples=min_cluster_samples
                 )
             except Exception as exc:
                 result = make_candidate_result(
@@ -1412,7 +1439,8 @@ def run_auto_cluster_tuning(
                         candidate_id=f"RR{idx:03d}",
                         clean_kwargs=relaxed_clean_kwargs,
                         transform_cache=transform_cache,
-                        min_pca_components=min_pca_components
+                        min_pca_components=min_pca_components,
+                        min_cluster_samples=min_cluster_samples
                     )
                 except Exception as exc:
                     result = make_candidate_result(
@@ -1469,7 +1497,8 @@ def run_auto_cluster_tuning(
                 candidate_id=f"F{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
-                min_pca_components=min_pca_components
+                min_pca_components=min_pca_components,
+                min_cluster_samples=min_cluster_samples
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Fine F{idx:03d}: исключение {exc}", "red")
@@ -2106,6 +2135,7 @@ def calculate_cluster_auto():
         soft_timeout_sec=total_timeout_sec,
         candidate_soft_timeout_sec=candidate_timeout_sec,
         random_seed=auto_random_seed,
+        min_cluster_samples=min_cluster_samples,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
@@ -2125,7 +2155,10 @@ def calculate_cluster_auto():
     best_result = tuning_result.get("best_result")
 
     if not best_result or best_result.get("status") != "ok":
-        set_info("AUTO: не найдено валидных конфигураций.", "brown")
+        set_info(
+            "AUTO: не найдено валидных конфигураций. Уменьшите порог минимального размера кластера или используйте 'Сброс к 5%'.",
+            "brown"
+        )
         return
 
     if auto_apply_best:
