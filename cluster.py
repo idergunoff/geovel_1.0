@@ -3700,12 +3700,15 @@ def show_cluster_diagnostics(
             cent_tsne_3d = np.empty((0, 3))
 
     fig = plt.figure(figsize=(20, 12))
+    # Порядок графиков:
+    # [1] PCA 2D, [2] t-SNE 2D, [3] Silhouette
+    # [4] PCA 3D, [5] t-SNE 3D, [6] Distance matrix
     ax_pca2 = fig.add_subplot(2, 3, 1)
-    ax_pca3 = fig.add_subplot(2, 3, 2, projection="3d")
-    ax_tsne2 = fig.add_subplot(2, 3, 3)
-    ax_tsne3 = fig.add_subplot(2, 3, 4, projection="3d")
-    ax_dm = fig.add_subplot(2, 3, 5)
-    ax_sil = fig.add_subplot(2, 3, 6)
+    ax_tsne2 = fig.add_subplot(2, 3, 2)
+    ax_sil = fig.add_subplot(2, 3, 3)
+    ax_pca3 = fig.add_subplot(2, 3, 4, projection="3d")
+    ax_tsne3 = fig.add_subplot(2, 3, 5, projection="3d")
+    ax_dm = fig.add_subplot(2, 3, 6)
 
     def _plot_2d(ax, pts, title, centroids_2d=None):
         for lbl in sorted(np.unique(y)):
