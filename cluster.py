@@ -1951,8 +1951,8 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
 
     table = ui.tableWidget_cluster_auto_result
     headers = [
-        "Rank", "Score", "Method", "Scaler", "PCA",
-        "PCA comps", "Silhouette", "DB", "CH", "Clusters", "Noise %", "PartHash", "Status"
+        "Rank", "Score", "Clusters", "Method", "Scaler", "PCA",
+        "PCA comps", "Silhouette", "DB", "CH", "Noise %", "PartHash", "Status"
     ]
     table.clear()
     table.setColumnCount(len(headers))
@@ -1976,6 +1976,7 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
         row_values = [
             str(row_idx + 1),
             _safe_num(score_val, precision=4),
+            str(stats.get("n_clusters", "—")),
             _candidate_method_short(cfg),
             str(cfg.get("scaler_mode", "—")),
             _candidate_pca_short(cfg),
@@ -1983,7 +1984,6 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             _safe_num(metrics.get("silhouette"), precision=4),
             _safe_num(metrics.get("davies_bouldin"), precision=4),
             _safe_num(metrics.get("calinski_harabasz"), precision=2),
-            str(stats.get("n_clusters", "—")),
             (f"{(noise * 100.0):.1f}%" if noise is not None else "—"),
             str(stats.get("partition_hash", "—")),
             status_view
@@ -1991,7 +1991,7 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
 
         for col_idx, value in enumerate(row_values):
             item = QTableWidgetItem(str(value))
-            if col_idx in (0, 1, 5, 6, 7, 8, 9, 10, 11, 12):
+            if col_idx in (0, 1, 2, 6, 7, 8, 9, 10, 11, 12):
                 item.setTextAlignment(Qt.AlignCenter)
             if col_idx == 12:
                 if status_raw == "ok":
