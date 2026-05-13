@@ -1193,6 +1193,56 @@ def rank_candidates(
     return ranked
 
 
+def select_diverse_top_results(
+        ranked_results: list[CandidateResult],
+        *,
+        top_k: int,
+        diversity_key: str = "partition_hash"
+) -> list[CandidateResult]:
+    """
+    Выбирает top-K с дедупликацией по ключу разнообразия (по умолчанию partition_hash).
+
+    Логика:
+    1) сначала добавляются валидные уникальные результаты (status=ok);
+    2) затем, если уникальных меньше top_k, список добивается следующими лучшими
+       (включая дубликаты/невалидные), чтобы сохранить длину leaderboard.
+    """
+    target_k = max(1, int(top_k))
+    selected: list[CandidateResult] = []
+    selected_ids: set[str] = set()
+    seen_diversity_values: set[str] = set()
+
+    for row in ranked_results:
+        if len(selected) >= target_k:
+            break
+        if row.get("status") != "ok":
+            continue
+
+        stats = row.get("stats") or {}
+        diversity_value = str(stats.get(diversity_key) or "").strip()
+        if not diversity_value:
+            diversity_value = f"candidate:{_candidate_signature(row.get('candidate_config', {}))}"
+        if diversity_value in seen_diversity_values:
+            continue
+
+        candidate_id = str(row.get("candidate_id"))
+        selected.append(row)
+        selected_ids.add(candidate_id)
+        seen_diversity_values.add(diversity_value)
+
+    if len(selected) < target_k:
+        for row in ranked_results:
+            if len(selected) >= target_k:
+                break
+            candidate_id = str(row.get("candidate_id"))
+            if candidate_id in selected_ids:
+                continue
+            selected.append(row)
+            selected_ids.add(candidate_id)
+
+    return selected
+
+
 def _candidate_signature(candidate: CandidateConfig) -> tuple:
     """
     Возвращает hashable-подпись кандидата для дедупликации.
@@ -1540,20 +1590,31 @@ def run_auto_cluster_tuning(
 
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
+    coarse_top_diverse = select_diverse_top_results(
+        ranked_coarse,
+        top_k=top_k,
+        diversity_key="partition_hash"
+    )
 
     if mode == "COARSE":
         return {
             "mode": mode,
             "best_result": coarse_best_result,
-            "top_results": ranked_coarse[:max(1, int(top_k))],
+            "top_results": coarse_top_diverse,
             "raw_results": coarse_results,
             "coarse_results": ranked_coarse,
             "fine_results": []
         }
 
-    fine_candidates = build_fine_search_space(
+    fine_seed_count = max(int(top_k), min(max(3, int(top_k)), 10))
+    fine_seed_results = select_diverse_top_results(
         ranked_coarse,
-        top_k=top_k,
+        top_k=fine_seed_count,
+        diversity_key="partition_hash"
+    )
+    fine_candidates = build_fine_search_space(
+        fine_seed_results,
+        top_k=fine_seed_count,
         max_candidates=max_candidates,
         hdbscan_metrics=hdbscan_metrics
     )
@@ -1644,11 +1705,16 @@ def run_auto_cluster_tuning(
 
     combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
+    combined_top_diverse = select_diverse_top_results(
+        combined_ranked,
+        top_k=top_k,
+        diversity_key="partition_hash"
+    )
 
     return {
         "mode": mode,
         "best_result": best_result,
-        "top_results": combined_ranked[:max(1, int(top_k))],
+        "top_results": combined_top_diverse,
         "raw_results": coarse_results + fine_results,
         "coarse_results": ranked_coarse,
         "fine_results": rank_candidates(fine_results, weights=weights),
