@@ -3641,6 +3641,140 @@ def plot_cluster_map(
     plt.show()
 
 
+def show_cluster_diagnostics(
+        data_for_clustering,
+        labels,
+        method_name: str,
+        model=None
+):
+    """
+    Показывает набор диагностических графиков на одном листе:
+    PCA 2D/3D, t-SNE 2D/3D, матрица расстояний, silhouette.
+    """
+    from sklearn.decomposition import PCA
+    from sklearn.metrics import pairwise_distances, silhouette_samples
+    from sklearn.manifold import TSNE
+
+    X = np.asarray(data_for_clustering, dtype=float)
+    y = np.asarray(labels, dtype=int)
+    if len(X) == 0 or len(X) != len(y):
+        return
+
+    if min(X.shape[1], len(X)) < 2:
+        return
+    uniq_lbl = [v for v in sorted(np.unique(y)) if v != -1]
+    centroids = np.array([X[y == lbl].mean(axis=0) for lbl in uniq_lbl]) if uniq_lbl else np.empty((0, X.shape[1]))
+    has_centroids = len(centroids) > 0
+
+    pca_2d_model = PCA(n_components=2).fit(X)
+    pca_2d = pca_2d_model.transform(X)
+    cent_pca_2d = pca_2d_model.transform(centroids) if has_centroids else np.empty((0, 2))
+
+    pca_3d = None
+    cent_pca_3d = None
+    if min(3, X.shape[1], len(X)) >= 3:
+        pca_3d_model = PCA(n_components=3).fit(X)
+        pca_3d = pca_3d_model.transform(X)
+        cent_pca_3d = pca_3d_model.transform(centroids) if has_centroids else np.empty((0, 3))
+
+    perplexity = max(5, min(30, len(X) - 1))
+    tsne_2d_model = TSNE(n_components=2, random_state=42, init="pca", learning_rate="auto", perplexity=perplexity)
+    if has_centroids:
+        comb2 = np.vstack([X, centroids])
+        emb2 = tsne_2d_model.fit_transform(comb2)
+        tsne_2d, cent_tsne_2d = emb2[:len(X)], emb2[len(X):]
+    else:
+        tsne_2d = tsne_2d_model.fit_transform(X)
+        cent_tsne_2d = np.empty((0, 2))
+
+    tsne_3d = None
+    cent_tsne_3d = None
+    if min(3, X.shape[1], len(X)) >= 3:
+        tsne_3d_model = TSNE(n_components=3, random_state=42, init="pca", learning_rate="auto", perplexity=perplexity)
+        if has_centroids:
+            comb3 = np.vstack([X, centroids])
+            emb3 = tsne_3d_model.fit_transform(comb3)
+            tsne_3d, cent_tsne_3d = emb3[:len(X)], emb3[len(X):]
+        else:
+            tsne_3d = tsne_3d_model.fit_transform(X)
+            cent_tsne_3d = np.empty((0, 3))
+
+    fig = plt.figure(figsize=(20, 12))
+    ax_pca2 = fig.add_subplot(2, 3, 1)
+    ax_pca3 = fig.add_subplot(2, 3, 2, projection="3d")
+    ax_tsne2 = fig.add_subplot(2, 3, 3)
+    ax_tsne3 = fig.add_subplot(2, 3, 4, projection="3d")
+    ax_dm = fig.add_subplot(2, 3, 5)
+    ax_sil = fig.add_subplot(2, 3, 6)
+
+    def _plot_2d(ax, pts, title, centroids_2d=None):
+        for lbl in sorted(np.unique(y)):
+            m = y == lbl
+            color = "gray" if lbl == -1 else get_cluster_color(int(lbl))
+            ax.scatter(pts[m, 0], pts[m, 1], s=14, c=color, alpha=0.8, label=f"cluster {lbl}")
+        if centroids_2d is not None and len(centroids_2d) > 0:
+            ax.scatter(centroids_2d[:, 0], centroids_2d[:, 1], marker="X", c="black", s=90, label="centroids")
+        ax.set_title(title)
+        ax.grid(alpha=0.2)
+
+    _plot_2d(ax_pca2, pca_2d, f"{method_name.upper()} • PCA 2D", cent_pca_2d)
+    ax_pca2.set_xlabel("PC1")
+    ax_pca2.set_ylabel("PC2")
+    ax_pca2.legend(loc="best", fontsize=7)
+
+    if pca_3d is not None:
+        for lbl in sorted(np.unique(y)):
+            m = y == lbl
+            color = "gray" if lbl == -1 else get_cluster_color(int(lbl))
+            ax_pca3.scatter(pca_3d[m, 0], pca_3d[m, 1], pca_3d[m, 2], s=12, c=color, alpha=0.75)
+        if cent_pca_3d is not None and len(cent_pca_3d) > 0:
+            ax_pca3.scatter(cent_pca_3d[:, 0], cent_pca_3d[:, 1], cent_pca_3d[:, 2], marker="X", c="black", s=90)
+        ax_pca3.set_title("PCA 3D")
+    else:
+        ax_pca3.set_title("PCA 3D unavailable")
+
+    _plot_2d(ax_tsne2, tsne_2d, "t-SNE 2D", cent_tsne_2d)
+    ax_tsne2.legend(loc="best", fontsize=7)
+
+    if tsne_3d is not None:
+        for lbl in sorted(np.unique(y)):
+            m = y == lbl
+            color = "gray" if lbl == -1 else get_cluster_color(int(lbl))
+            ax_tsne3.scatter(tsne_3d[m, 0], tsne_3d[m, 1], tsne_3d[m, 2], s=12, c=color, alpha=0.75)
+        if cent_tsne_3d is not None and len(cent_tsne_3d) > 0:
+            ax_tsne3.scatter(cent_tsne_3d[:, 0], cent_tsne_3d[:, 1], cent_tsne_3d[:, 2], marker="X", c="black", s=90)
+        ax_tsne3.set_title("t-SNE 3D")
+    else:
+        ax_tsne3.set_title("t-SNE 3D unavailable")
+
+    order = np.argsort(y)
+    dist_mx = pairwise_distances(X[order], metric="euclidean")
+    im = ax_dm.imshow(dist_mx, cmap="turbo", aspect="auto")
+    ax_dm.set_title("Distance matrix (ordered)")
+    fig.colorbar(im, ax=ax_dm, shrink=0.8)
+
+    mask_valid = y != -1
+    y_eval = y[mask_valid]
+    X_eval = X[mask_valid]
+    if len(X_eval) > 2 and len(np.unique(y_eval)) > 1:
+        sil_values = silhouette_samples(X_eval, y_eval)
+        y_lower = 10
+        for lbl in sorted(np.unique(y_eval)):
+            vals = np.sort(sil_values[y_eval == lbl])
+            y_upper = y_lower + len(vals)
+            ax_sil.fill_betweenx(np.arange(y_lower, y_upper), 0, vals, alpha=0.7, color=get_cluster_color(int(lbl)))
+            y_lower = y_upper + 10
+        sil_avg = float(np.mean(sil_values))
+        ax_sil.axvline(sil_avg, color="red", linestyle="--", linewidth=1.2, label=f"avg={sil_avg:.3f}")
+        ax_sil.set_title("Silhouette plot")
+        ax_sil.legend(loc="best", fontsize=8)
+    else:
+        ax_sil.set_title("Silhouette unavailable")
+
+    fig.suptitle(f"Cluster diagnostics • {method_name.upper()}", fontsize=14)
+    fig.tight_layout(rect=(0, 0.02, 1, 0.96))
+    plt.show()
+
 def evaluate_clustering(
         data,
         labels,
@@ -4184,6 +4318,16 @@ def calculate_cluster():
             set_info("Профиль не выбран: результаты кластеров на радарограмме не обновлены.", "brown")
     else:
         set_info("Не удалось автоматически выбрать исследование/профиль для отрисовки кластеров.", "brown")
+
+    try:
+        show_cluster_diagnostics(
+            data_for_clustering=data_pca,
+            labels=labels_for_output,
+            method_name=clust_method_analys
+        )
+        set_info("Открыты диагностические графики кластеризации (PCA 2D/3D, distance matrix, silhouette и спец-графики метода).", "blue")
+    except Exception as exc:
+        set_info(f"Не удалось построить диагностические графики: {exc}", "brown")
 
     set_info(
         "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
