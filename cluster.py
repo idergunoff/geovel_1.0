@@ -3641,6 +3641,155 @@ def plot_cluster_map(
     plt.show()
 
 
+def show_cluster_diagnostics(
+        data_for_clustering,
+        labels,
+        method_name: str,
+        model=None
+):
+    """
+    Показывает набор диагностических графиков после расчета кластеризации:
+    - PCA 2D
+    - PCA 3D
+    - матрица расстояний
+    - silhouette plot (если применимо)
+    - доп. графики: центроиды/ковариации (KMeans/GMM), шум/core points (HDBSCAN)
+    """
+    from matplotlib.patches import Ellipse
+    from sklearn.decomposition import PCA
+    from sklearn.metrics import pairwise_distances, silhouette_samples
+
+    X = np.asarray(data_for_clustering, dtype=float)
+    y = np.asarray(labels, dtype=int)
+    if len(X) == 0 or len(X) != len(y):
+        return
+
+    n_comp_2d = min(2, X.shape[1], len(X))
+    if n_comp_2d < 2:
+        return
+    pca_2d = PCA(n_components=2).fit_transform(X)
+
+    # 2D PCA
+    fig2d, ax2d = plt.subplots(figsize=(8, 6))
+    for lbl in sorted(np.unique(y)):
+        mask = y == lbl
+        color = "gray" if lbl == -1 else get_cluster_color(int(lbl))
+        ax2d.scatter(pca_2d[mask, 0], pca_2d[mask, 1], s=18, c=color, alpha=0.85, label=f"cluster {lbl}")
+    ax2d.set_title(f"{method_name.upper()} • PCA 2D")
+    ax2d.set_xlabel("PC1")
+    ax2d.set_ylabel("PC2")
+    ax2d.legend(loc="best", fontsize=8)
+    fig2d.tight_layout()
+
+    # 3D PCA
+    n_comp_3d = min(3, X.shape[1], len(X))
+    if n_comp_3d >= 3:
+        pca_3d = PCA(n_components=3).fit_transform(X)
+        fig3d = plt.figure(figsize=(9, 7))
+        ax3d = fig3d.add_subplot(111, projection='3d')
+        for lbl in sorted(np.unique(y)):
+            mask = y == lbl
+            color = "gray" if lbl == -1 else get_cluster_color(int(lbl))
+            ax3d.scatter(pca_3d[mask, 0], pca_3d[mask, 1], pca_3d[mask, 2], s=16, c=color, alpha=0.8, label=f"cluster {lbl}")
+        ax3d.set_title(f"{method_name.upper()} • PCA 3D")
+        ax3d.set_xlabel("PC1")
+        ax3d.set_ylabel("PC2")
+        ax3d.set_zlabel("PC3")
+        ax3d.legend(loc="best", fontsize=8)
+        fig3d.tight_layout()
+
+    # Distance matrix
+    order = np.argsort(y)
+    X_ord = X[order]
+    y_ord = y[order]
+    dist_mx = pairwise_distances(X_ord, metric="euclidean")
+    figdm, axdm = plt.subplots(figsize=(8, 6))
+    im = axdm.imshow(dist_mx, cmap="viridis", aspect="auto")
+    axdm.set_title("Distance matrix (ordered by cluster labels)")
+    axdm.set_xlabel("samples")
+    axdm.set_ylabel("samples")
+    figdm.colorbar(im, ax=axdm, shrink=0.8)
+    # границы кластеров
+    uniq, counts = np.unique(y_ord, return_counts=True)
+    pos = np.cumsum(counts)
+    for p in pos[:-1]:
+        axdm.axhline(p - 0.5, color="white", linewidth=0.8)
+        axdm.axvline(p - 0.5, color="white", linewidth=0.8)
+    figdm.tight_layout()
+
+    # Silhouette
+    mask_valid = y != -1
+    y_eval = y[mask_valid]
+    X_eval = X[mask_valid]
+    if len(X_eval) > 2 and len(np.unique(y_eval)) > 1:
+        sil_values = silhouette_samples(X_eval, y_eval)
+        figsil, axsil = plt.subplots(figsize=(8, 6))
+        y_lower = 10
+        for lbl in sorted(np.unique(y_eval)):
+            vals = np.sort(sil_values[y_eval == lbl])
+            size = len(vals)
+            y_upper = y_lower + size
+            axsil.fill_betweenx(np.arange(y_lower, y_upper), 0, vals, alpha=0.7, color=get_cluster_color(int(lbl)))
+            axsil.text(-0.05, y_lower + 0.5 * size, str(lbl))
+            y_lower = y_upper + 10
+        axsil.set_title("Silhouette plot")
+        axsil.set_xlabel("Silhouette coefficient")
+        axsil.set_ylabel("Cluster")
+        figsil.tight_layout()
+
+    # Спец-графики
+    if method_name == "kmeans":
+        if model is not None and hasattr(model, "cluster_centers_"):
+            centers = model.cluster_centers_
+        else:
+            uniq_lbl = [v for v in sorted(np.unique(y)) if v != -1]
+            centers = np.array([X[y == lbl].mean(axis=0) for lbl in uniq_lbl]) if uniq_lbl else np.empty((0, X.shape[1]))
+        if len(centers) == 0:
+            centers_2d = np.empty((0, 2))
+        else:
+            centers_2d = PCA(n_components=2).fit(X).transform(centers)
+        figk, axk = plt.subplots(figsize=(8, 6))
+        axk.scatter(pca_2d[:, 0], pca_2d[:, 1], c=[("gray" if v == -1 else get_cluster_color(int(v))) for v in y], s=14, alpha=0.6)
+        if len(centers_2d) > 0:
+            axk.scatter(centers_2d[:, 0], centers_2d[:, 1], c="black", marker="X", s=120, label="centroids")
+        axk.set_title("KMeans centroids in PCA 2D")
+        axk.legend(loc="best")
+        figk.tight_layout()
+
+    if method_name == "gmm":
+        if model is not None and hasattr(model, "means_"):
+            means = model.means_
+        else:
+            uniq_lbl = [v for v in sorted(np.unique(y)) if v != -1]
+            means = np.array([X[y == lbl].mean(axis=0) for lbl in uniq_lbl]) if uniq_lbl else np.empty((0, X.shape[1]))
+        means_2d = PCA(n_components=2).fit(X).transform(means) if len(means) > 0 else np.empty((0, 2))
+        figg, axg = plt.subplots(figsize=(8, 6))
+        axg.scatter(pca_2d[:, 0], pca_2d[:, 1], c=[("gray" if v == -1 else get_cluster_color(int(v))) for v in y], s=14, alpha=0.6)
+        axg.scatter(means_2d[:, 0], means_2d[:, 1], c="black", marker="x", s=100, label="means")
+        for m in means_2d:
+            ell = Ellipse((m[0], m[1]), width=0.8, height=0.5, angle=0, edgecolor="black", facecolor="none", linewidth=1.0)
+            axg.add_patch(ell)
+        axg.set_title("GMM means and covariance ellipses (schematic)")
+        axg.legend(loc="best")
+        figg.tight_layout()
+
+    if method_name == "hdbscan":
+        figh, axh = plt.subplots(figsize=(8, 6))
+        core_idx = np.array([], dtype=int)
+        if model is not None and hasattr(model, "probabilities_"):
+            core_idx = np.where(np.asarray(model.probabilities_) > 0.5)[0]
+        axh.scatter(pca_2d[:, 0], pca_2d[:, 1], c=[("gray" if v == -1 else get_cluster_color(int(v))) for v in y], s=14, alpha=0.5)
+        if len(core_idx) > 0:
+            axh.scatter(pca_2d[core_idx, 0], pca_2d[core_idx, 1], facecolors="none", edgecolors="black", s=36, label="core points")
+        noise_idx = np.where(y == -1)[0]
+        if len(noise_idx) > 0:
+            axh.scatter(pca_2d[noise_idx, 0], pca_2d[noise_idx, 1], c="gray", s=22, marker="x", label="noise")
+        axh.set_title("HDBSCAN: noise and core points")
+        axh.legend(loc="best")
+        figh.tight_layout()
+
+    plt.show()
+
 def evaluate_clustering(
         data,
         labels,
@@ -4184,6 +4333,16 @@ def calculate_cluster():
             set_info("Профиль не выбран: результаты кластеров на радарограмме не обновлены.", "brown")
     else:
         set_info("Не удалось автоматически выбрать исследование/профиль для отрисовки кластеров.", "brown")
+
+    try:
+        show_cluster_diagnostics(
+            data_for_clustering=data_pca,
+            labels=labels_for_output,
+            method_name=clust_method_analys
+        )
+        set_info("Открыты диагностические графики кластеризации (PCA 2D/3D, distance matrix, silhouette и спец-графики метода).", "blue")
+    except Exception as exc:
+        set_info(f"Не удалось построить диагностические графики: {exc}", "brown")
 
     set_info(
         "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
