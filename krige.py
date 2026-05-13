@@ -3,7 +3,7 @@ from cProfile import label
 import matplotlib.pyplot as plt
 import numpy as np
 from sqlalchemy.exc import OperationalError
-from matplotlib.colors import ListedColormap, to_hex
+from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
@@ -32,12 +32,17 @@ def convex_hull_boundary(points):
 
 
 def _build_categorical_palette(labels):
+    """Build cluster colors consistent with radarogram/diagnostics palette."""
     unique_labels = sorted({int(v) for v in labels})
-    base_colors = [to_hex(plt.get_cmap("tab20")(i)) for i in range(20)]
+    base_colors = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        "#393b79", "#637939", "#8c6d31", "#843c39", "#7b4173"
+    ]
     color_by_label = {}
     for lbl in unique_labels:
         if lbl == -1:
-            color_by_label[lbl] = "#4d4d4d"
+            color_by_label[lbl] = "#808080"
             continue
         color_by_label[lbl] = base_colors[int(lbl) % len(base_colors)]
     return color_by_label
