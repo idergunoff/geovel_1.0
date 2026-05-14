@@ -7,7 +7,7 @@ class AnalysisCluster(Base):
     title = Column(String)
     parameter = Column(String)
 
-    object_set = relationship('ObjectSet', back_populates='analysis')
+    object_set = relationship('ObjectSet', back_populates='analysis', cascade='all, delete-orphan')
 
 
 class ObjectSet(Base):
@@ -21,7 +21,7 @@ class ObjectSet(Base):
 
     research = relationship('Research', back_populates='cluster_set')
     analysis = relationship('AnalysisCluster', back_populates='object_set')
-    auto_tuning_cache = relationship('ClusterAutoTuningCache', back_populates='object_set')
+    auto_tuning_cache = relationship('ClusterAutoTuningCache', back_populates='object_set', cascade='all, delete-orphan')
 
 
 class ClusterAutoTuningCache(Base):

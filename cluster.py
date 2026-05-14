@@ -2862,7 +2862,41 @@ def add_clust_analys_from_reg():
 
 
 def remove_clust_analys():
-    session.query(AnalysisCluster).filter_by(id=get_curr_clust_analys_id()).delete()
+    clust_analys_id = get_curr_clust_analys_id()
+    if not str(clust_analys_id).isdigit():
+        set_info("Не выбран набор признаков для удаления.", "brown")
+        return
+
+    object_count = session.query(ObjectSet).filter_by(analysis_id=int(clust_analys_id)).count()
+    cache_count = (
+        session.query(ClusterAutoTuningCache)
+        .join(ObjectSet, ClusterAutoTuningCache.object_set_id == ObjectSet.id)
+        .filter(ObjectSet.analysis_id == int(clust_analys_id))
+        .count()
+    )
+    confirm_text = (
+        "Вы уверены, что хотите удалить набор признаков?\n\n"
+        f"Будет удалено:\n"
+        f"• наборов объектов: {object_count}\n"
+        f"• сохраненных AUTO-результатов: {cache_count}\n\n"
+        "Это действие нельзя отменить."
+    )
+    answer = QMessageBox.question(
+        MainWindow,
+        "Подтверждение удаления",
+        confirm_text,
+        QMessageBox.Yes | QMessageBox.Cancel,
+        QMessageBox.Cancel
+    )
+    if answer != QMessageBox.Yes:
+        return
+
+    object_ids_subquery = session.query(ObjectSet.id).filter_by(analysis_id=int(clust_analys_id)).subquery()
+    session.query(ClusterAutoTuningCache).filter(
+        ClusterAutoTuningCache.object_set_id.in_(select(object_ids_subquery.c.id))
+    ).delete(synchronize_session=False)
+    session.query(ObjectSet).filter_by(analysis_id=int(clust_analys_id)).delete(synchronize_session=False)
+    session.query(AnalysisCluster).filter_by(id=int(clust_analys_id)).delete(synchronize_session=False)
     session.commit()
     update_list_clust_analys()
 
@@ -2954,7 +2988,29 @@ def collect_clust_object():
 
 
 def remove_clust_object():
-    session.query(ObjectSet).filter_by(id=get_curr_clust_object_id()).delete()
+    clust_object_id = get_curr_clust_object_id()
+    if not clust_object_id:
+        set_info("Не выбран набор объектов для удаления.", "brown")
+        return
+
+    cache_count = session.query(ClusterAutoTuningCache).filter_by(object_set_id=int(clust_object_id)).count()
+    confirm_text = (
+        "Вы уверены, что хотите удалить набор объектов?\n\n"
+        f"Будет удалено сохраненных AUTO-результатов: {cache_count}\n\n"
+        "Это действие нельзя отменить."
+    )
+    answer = QMessageBox.question(
+        MainWindow,
+        "Подтверждение удаления",
+        confirm_text,
+        QMessageBox.Yes | QMessageBox.Cancel,
+        QMessageBox.Cancel
+    )
+    if answer != QMessageBox.Yes:
+        return
+
+    session.query(ClusterAutoTuningCache).filter_by(object_set_id=int(clust_object_id)).delete(synchronize_session=False)
+    session.query(ObjectSet).filter_by(id=int(clust_object_id)).delete(synchronize_session=False)
     session.commit()
     update_list_clust_object()
 
