@@ -783,6 +783,7 @@ def run_cluster_candidate(
         candidate_id: str = "",
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
+        preprocess_cache: Optional[Dict[tuple, Any]] = None,
         metrics_cache: Optional[Dict[str, CandidateMetrics]] = None,
         min_pca_components: int = 2,
         max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
@@ -832,9 +833,12 @@ def run_cluster_candidate(
         min_pca_components_value = max(2, int(min_pca_components))
     except (TypeError, ValueError):
         min_pca_components_value = 2
-    transform_key = (
+    preprocess_key = (
         clean_key,
-        candidate["scaler_mode"],
+        candidate["scaler_mode"]
+    )
+    transform_key = (
+        preprocess_key,
         bool(candidate["pca_enabled"]),
         candidate.get("pca_mode"),
         candidate.get("pca_value"),
@@ -848,15 +852,23 @@ def run_cluster_candidate(
             data_for_cluster, pca_components_after = cached_value
 
     if data_for_cluster is None:
-        try:
-            preprocess_data = preprocess_features(clear_data, mode=candidate["scaler_mode"])
-        except Exception as exc:
-            return make_candidate_result(
-                candidate_id=candidate_id,
-                candidate_config=candidate,
-                status="error",
-                error_text=f"preprocess_features failed: {exc}"
-            )
+        preprocess_data = None
+        if preprocess_cache is not None:
+            preprocess_data = preprocess_cache.get(preprocess_key)
+        if preprocess_data is None:
+            try:
+                preprocess_data = preprocess_features(clear_data, mode=candidate["scaler_mode"])
+            except Exception as exc:
+                return make_candidate_result(
+                    candidate_id=candidate_id,
+                    candidate_config=candidate,
+                    status="error",
+                    error_text=f"preprocess_features failed: {exc}"
+                )
+            if preprocess_cache is not None:
+                preprocess_cache[preprocess_key] = preprocess_data
+                if hasattr(preprocess_cache, "move_to_end"):
+                    preprocess_cache.move_to_end(preprocess_key, last=True)  # type: ignore[attr-defined]
 
         try:
             if candidate["pca_enabled"]:
@@ -866,8 +878,27 @@ def run_cluster_candidate(
                 pca_variance_ratio = 0.9
                 if pca_mode == "fixed_components":
                     pca_n_components = int(float(pca_raw_value))
+                    max_components = int(min(len(preprocess_data), len(preprocess_data[0]))) if len(preprocess_data) > 0 else 0
+                    if pca_n_components < 1 or pca_n_components > max_components:
+                        return make_candidate_result(
+                            candidate_id=candidate_id,
+                            candidate_config=candidate,
+                            status="invalid",
+                            error_text=(
+                                f"pca n_components {pca_n_components} out of range [1, {max_components}]"
+                            )
+                        )
                 else:
                     pca_variance_ratio = float(pca_raw_value)
+                    if not (0.0 < pca_variance_ratio <= 1.0):
+                        return make_candidate_result(
+                            candidate_id=candidate_id,
+                            candidate_config=candidate,
+                            status="invalid",
+                            error_text=(
+                                f"pca variance_ratio {pca_variance_ratio} out of range (0, 1]"
+                            )
+                        )
                 data_for_cluster, pca_info = apply_pca(
                     preprocess_data,
                     mode=pca_mode,
@@ -1418,6 +1449,7 @@ def run_auto_cluster_tuning(
             "brown"
         )
     transform_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
+    preprocess_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
     metrics_cache: Dict[str, CandidateMetrics] = {}
     transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
     transform_cache_total_bytes = 0
@@ -1440,6 +1472,7 @@ def run_auto_cluster_tuning(
                 candidate_id=f"C{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
+                preprocess_cache=preprocess_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=coarse_silhouette_samples,
@@ -1521,6 +1554,7 @@ def run_auto_cluster_tuning(
                     candidate_id=f"R{idx:03d}",
                     clean_kwargs=clean_kwargs,
                     transform_cache=transform_cache,
+                    preprocess_cache=preprocess_cache,
                     metrics_cache=metrics_cache,
                     min_pca_components=min_pca_components,
                     max_silhouette_samples=coarse_silhouette_samples,
@@ -1560,6 +1594,7 @@ def run_auto_cluster_tuning(
                         candidate_id=f"RR{idx:03d}",
                         clean_kwargs=relaxed_clean_kwargs,
                         transform_cache=transform_cache,
+                        preprocess_cache=preprocess_cache,
                         metrics_cache=metrics_cache,
                         min_pca_components=min_pca_components,
                         max_silhouette_samples=coarse_silhouette_samples,
@@ -1637,6 +1672,7 @@ def run_auto_cluster_tuning(
                 candidate_id=f"F{idx:03d}",
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
+                preprocess_cache=preprocess_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=AUTO_SILHOUETTE_MAX_SAMPLES,
