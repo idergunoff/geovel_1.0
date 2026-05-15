@@ -1444,7 +1444,11 @@ def run_cluster_candidate_isolated(
         hard_timeout_sec: Optional[float] = AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
         **kwargs
 ) -> CandidateResult:
-    ctx = mp.get_context("spawn")
+    start_methods = mp.get_all_start_methods()
+    if "fork" not in start_methods:
+        # Windows fallback: избегаем spawn, чтобы дочерний процесс не инициализировал GUI.
+        return run_cluster_candidate(**kwargs)
+    ctx = mp.get_context("fork")
     q = ctx.Queue(maxsize=1)
     proc = ctx.Process(target=_cluster_candidate_worker, args=(kwargs, q), daemon=True)
     proc.start()
