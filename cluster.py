@@ -88,6 +88,7 @@ AUTO_TUNING_MAX_FEATURES = 512
 AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
 AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
+AUTO_CHECKPOINT_SAVE_EVERY = 10
 
 
 def calculate_auto_min_cluster_sample_limits(
@@ -1590,8 +1591,15 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
+        _log_candidate_rejection(
+            result,
+            phase="coarse",
+            min_cluster_samples=min_cluster_samples,
+            n_samples=len(base_data)
+        )
+        coarse_results.append(result)
         completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
-        if run_key and object_set_id is not None:
+        if run_key and object_set_id is not None and (len(coarse_results) % int(AUTO_CHECKPOINT_SAVE_EVERY) == 0):
             _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=[])
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
             stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
@@ -1615,7 +1623,7 @@ def run_auto_cluster_tuning(
             )
         gc.collect()
 
-    has_valid_coarse = any(row.get("status") == "ok" for row in coarse_results)
+    has_valid_coarse = any(row.get("status") == "ok" for row in (restored_raw_results + coarse_results))
     if not has_valid_coarse:
         _set_auto_info(
             "AUTO: в основном наборе не найдено валидных конфигураций, запускаю резервный mini-grid.",
@@ -1792,8 +1800,15 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
+        _log_candidate_rejection(
+            result,
+            phase="fine",
+            min_cluster_samples=min_cluster_samples,
+            n_samples=len(base_data)
+        )
+        fine_results.append(result)
         completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
-        if run_key and object_set_id is not None:
+        if run_key and object_set_id is not None and (len(coarse_results) + len(fine_results)) % int(AUTO_CHECKPOINT_SAVE_EVERY) == 0:
             _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=fine_results)
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
             stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
@@ -1816,6 +1831,9 @@ def run_auto_cluster_tuning(
                 max_cache_bytes=AUTO_TRANSFORM_CACHE_MAX_BYTES
             )
         gc.collect()
+
+    if run_key and object_set_id is not None and (coarse_results or fine_results):
+        _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=fine_results)
 
     combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
