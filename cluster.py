@@ -2051,6 +2051,42 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
     table.resizeColumnsToContents()
 
 
+
+
+def clear_cluster_auto_tune_results_with_confirm() -> None:
+    """
+    Очищает таблицу результатов AUTO-подбора после подтверждения пользователя.
+    """
+    table = getattr(ui, "tableWidget_cluster_auto_result", None)
+    if table is None:
+        return
+
+    global cluster_auto_results_cache
+    has_cached_results = len(cluster_auto_results_cache) > 0
+    has_table_results = table.rowCount() > 0
+
+    if not (has_cached_results or has_table_results):
+        set_info("AUTO: таблица результатов уже пустая.", "brown")
+        return
+
+    reply = QMessageBox.warning(
+        ui,
+        "Очистка результатов AUTO",
+        "Вы действительно хотите очистить результаты автоподбора?\nЭто действие удалит строки из таблицы и кэш текущей сессии.",
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.No
+    )
+
+    if reply != QMessageBox.Yes:
+        set_info("AUTO: очистка результатов отменена пользователем.", "brown")
+        return
+
+    cluster_auto_results_cache = []
+    table.clear()
+    table.setRowCount(0)
+    table.setColumnCount(0)
+    set_info("AUTO: результаты автоподбора очищены.", "green")
+
 def apply_selected_auto_result_from_table(row_idx: int, _column_idx: int) -> None:
     """
     По двойному клику в таблице AUTO применяет выбранный вариант к настройкам UI.
