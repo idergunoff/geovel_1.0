@@ -3092,7 +3092,8 @@ def update_list_clust_object():
 
 def show_finite_report():
     obj_set = session.query(ObjectSet.report).filter_by(id=get_curr_clust_object_id()).first()
-    set_info(obj_set.report, 'brown')
+    if obj_set:
+        set_info(obj_set.report, 'brown')
 
 
 def load_saved_auto_results_for_selected_object() -> None:
