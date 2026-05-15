@@ -2183,6 +2183,21 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
     table.clear()
     table.setRowCount(0)
     table.setColumnCount(0)
+
+    clust_object_id = get_curr_clust_object_id()
+    if clust_object_id:
+        try:
+            (
+                session.query(ClusterAutoTuningCache)
+                .filter_by(object_set_id=int(clust_object_id))
+                .delete(synchronize_session=False)
+            )
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            set_info(f"AUTO: таблица очищена, но не удалось удалить сохраненный кэш: {exc}", "brown")
+            return
+
     set_info("AUTO: результаты автоподбора очищены.", "green")
 
 def apply_selected_auto_result_from_table(row_idx: int, _column_idx: int) -> None:
