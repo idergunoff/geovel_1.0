@@ -2232,6 +2232,16 @@ def calculate_cluster_auto():
         set_info("AUTO: пустой набор данных для подбора.", "brown")
         return
 
+    original_rows_count = len(base_data)
+    sampled_base_data = _sample_rows_for_auto_tuning(base_data, AUTO_TUNING_MAX_ROWS)
+    sampled_rows_count = len(sampled_base_data) if sampled_base_data is not None else 0
+    if sampled_rows_count < original_rows_count:
+        set_info(
+            f"AUTO: для устойчивости расчетов использована подвыборка {sampled_rows_count}/{original_rows_count} строк.",
+            "brown"
+        )
+    base_data = sampled_base_data
+
     sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
 
     auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
@@ -2529,6 +2539,16 @@ def calculate_cluster_auto_batch() -> None:
             failed += 1
             set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (пустой набор данных).", "brown")
             continue
+
+        original_rows_count = len(base_data)
+        base_data = _sample_rows_for_auto_tuning(base_data, AUTO_TUNING_MAX_ROWS)
+        sampled_rows_count = len(base_data) if base_data is not None else 0
+        if sampled_rows_count < original_rows_count:
+            set_info(
+                f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: "
+                f"использована подвыборка {sampled_rows_count}/{original_rows_count} строк.",
+                "brown"
+            )
 
         sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
         min_cluster_samples = int(sample_limits["recommended_default_value"])
