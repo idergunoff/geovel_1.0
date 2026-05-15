@@ -5639,6 +5639,16 @@ Therm</string>
                      </widget>
                     </item>
                     <item>
+                     <widget class="QPushButton" name="pushButton_cluster_clear_result_auto_tune">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 108, 162);</string>
+                      </property>
+                      <property name="text">
+                       <string>CLEAR RESULT</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
                      <spacer name="horizontalSpacer_3">
                       <property name="orientation">
                        <enum>Qt::Horizontal</enum>
