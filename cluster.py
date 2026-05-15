@@ -2399,6 +2399,216 @@ def calculate_cluster_auto():
     )
 
 
+def calculate_cluster_auto_batch() -> None:
+    """
+    Запускает AUTO-подбор последовательно для всех ObjectSet в текущем анализе.
+    В batch-режиме:
+    - min_cluster_samples принудительно = 5% от N для каждого объекта;
+    - apply_auto_best отключен;
+    - если retune выключен и есть cache, объект пропускается.
+    """
+    clust_analys_id = get_curr_clust_analys_id()
+    if not str(clust_analys_id).isdigit():
+        set_info("AUTO BATCH: не выбран набор кластерного анализа.", "brown")
+        return
+
+    clust_objects = (
+        session.query(ObjectSet.id, ObjectSet.research_id, ObjectSet.data)
+        .filter_by(analysis_id=int(clust_analys_id))
+        .order_by(ObjectSet.id.asc())
+        .all()
+    )
+    if not clust_objects:
+        set_info("AUTO BATCH: нет добавленных наборов объектов для обработки.", "brown")
+        return
+
+    auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
+    selected_button = ui.buttonGroup_3.checkedButton()
+    text_method_nan = selected_button.text() if selected_button else "impute"
+    force_recompute_toggle = getattr(ui, "checkBox_cluster_auto_recalc", None)
+    force_recompute = bool(force_recompute_toggle.isChecked()) if force_recompute_toggle is not None else False
+
+    total_timeout_toggle = getattr(ui, "checkBox_cluster_auto_total_time", None)
+    candidate_timeout_toggle = getattr(ui, "checkBox_cluster_auto_candidate_time", None)
+    use_total_timeout = bool(total_timeout_toggle.isChecked()) if total_timeout_toggle is not None else False
+    use_candidate_timeout = bool(candidate_timeout_toggle.isChecked()) if candidate_timeout_toggle is not None else False
+    total_timeout_ctrl = getattr(ui, "spinBox_cluster_auto_timeout_all", None)
+    per_candidate_timeout_ctrl = getattr(ui, "spinBox_cluster_auto_timeout_candidate", None)
+    total_timeout_sec = float(total_timeout_ctrl.value()) if (use_total_timeout and total_timeout_ctrl is not None) else None
+    candidate_timeout_sec = (
+        float(per_candidate_timeout_ctrl.value())
+        if (use_candidate_timeout and per_candidate_timeout_ctrl is not None)
+        else None
+    )
+
+    limit_candidates_toggle = _get_ui_control_by_names(
+        "checkBox_cluster_auto_limit200",
+        "checkBox_cluster_auto_limit_candidates",
+        "checkBox_cluster_auto_limit_200"
+    )
+    use_candidates_limit = bool(limit_candidates_toggle.isChecked()) if limit_candidates_toggle is not None else True
+    max_candidates_value = _read_auto_int_setting("spinBox_cluster_auto_max_candidates", fallback=200, minimum=1)
+    max_candidates = max_candidates_value if use_candidates_limit else None
+    top_k = _read_auto_int_setting("spinBox_cluster_auto_top_results", fallback=5, minimum=1)
+    max_clusters = _read_auto_int_setting("spinBox_cluster_auto_max_cluster", fallback=8, minimum=2)
+    min_pca_components = _read_auto_min_pca_components_setting(fallback=2)
+    hdbscan_metric = str(ui.comboBox_clust_hdbsc_type.currentText() or "euclidean")
+    hdbscan_metrics = [hdbscan_metric]
+    for idx in range(ui.comboBox_clust_hdbsc_type.count()):
+        metric_name = str(ui.comboBox_clust_hdbsc_type.itemText(idx)).strip()
+        if metric_name and metric_name not in hdbscan_metrics:
+            hdbscan_metrics.append(metric_name)
+    scaler_only_toggle = getattr(ui, "checkBox_cluster_auto_scaler_only", None)
+    pca_only_toggle = getattr(ui, "checkBox_cluster_auto_pca_only", None)
+    scaler_only = bool(scaler_only_toggle.isChecked()) if scaler_only_toggle is not None else False
+    pca_only = bool(pca_only_toggle.isChecked()) if pca_only_toggle is not None else False
+    metric_weights = {
+        "silhouette": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_sil", fallback=0.4),
+        "davies_bouldin": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_db", fallback=0.3),
+        "calinski_harabasz": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_ch", fallback=0.3)
+    }
+
+    total_objects = len(clust_objects)
+    started_at = monotonic()
+    skipped_cached = 0
+    calculated = 0
+    failed = 0
+
+    set_info(
+        f"AUTO BATCH {auto_mode}: старт по {total_objects} объектам | retune={force_recompute} | apply_auto_best=OFF.",
+        "blue"
+    )
+
+    for idx, clust_obj in enumerate(clust_objects, start=1):
+        object_id = int(clust_obj.id)
+        object_name = f"object_set_id={object_id}"
+        try:
+            base_data = _deserialize_cluster_dataset(clust_obj.data)
+        except Exception as exc:
+            failed += 1
+            set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (чтение данных: {exc}).", "red")
+            continue
+
+        if not base_data:
+            failed += 1
+            set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (пустой набор данных).", "brown")
+            continue
+
+        sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
+        min_cluster_samples = int(sample_limits["recommended_default_value"])
+        cache_key = build_cluster_auto_tuning_cache_key(
+            clust_object_id=object_id,
+            auto_mode=auto_mode,
+            max_candidates=max_candidates_value if use_candidates_limit else 0,
+            top_k=top_k,
+            constraints={
+                "use_candidates_limit": bool(use_candidates_limit),
+                "max_candidates_value": max_candidates_value,
+                "max_clusters": max_clusters,
+                "hdbscan_metric": hdbscan_metric,
+                "hdbscan_metrics": hdbscan_metrics,
+                "min_pca_components": min_pca_components,
+                "scaler_only": scaler_only,
+                "pca_only": pca_only,
+                "use_total_timeout": bool(use_total_timeout),
+                "use_candidate_timeout": bool(use_candidate_timeout),
+                "total_timeout_sec": total_timeout_sec,
+                "candidate_timeout_sec": candidate_timeout_sec,
+                "min_cluster_samples": min_cluster_samples,
+                "recommended_min_cluster_samples": sample_limits["recommended_default_value"],
+                "max_min_cluster_samples": sample_limits["max_spinbox_value"]
+            },
+            weights=metric_weights,
+            clean_kwargs={
+                "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
+                "non_finite_mode": text_method_nan,
+                "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
+                "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
+            }
+        )
+
+        if not force_recompute:
+            cached_top_results = load_cluster_auto_tuning_cache(
+                cache_key=cache_key,
+                clust_object_id=object_id,
+                top_k=top_k
+            )
+            if cached_top_results:
+                skipped_cached += 1
+                best_cached = cached_top_results[0] if cached_top_results else {}
+                set_info(
+                    f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: "
+                    f"SKIPPED_CACHED top={len(cached_top_results)} score={_safe_num(best_cached.get('score'), 4)} "
+                    f"min_cluster_samples={min_cluster_samples}.",
+                    "green"
+                )
+                continue
+
+        auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
+        tuning_result = run_auto_cluster_tuning(
+            base_data=base_data,
+            auto_mode=auto_mode,
+            max_candidates=max_candidates,
+            top_k=top_k,
+            max_clusters=max_clusters,
+            hdbscan_metric=hdbscan_metric,
+            hdbscan_metrics=hdbscan_metrics,
+            scaler_only=scaler_only,
+            pca_only=pca_only,
+            min_pca_components=min_pca_components,
+            weights=metric_weights,
+            soft_timeout_sec=total_timeout_sec,
+            candidate_soft_timeout_sec=candidate_timeout_sec,
+            random_seed=auto_random_seed,
+            min_cluster_samples=min_cluster_samples,
+            clean_kwargs={
+                "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
+                "non_finite_mode": text_method_nan,
+                "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
+                "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
+            }
+        )
+        top_results = tuning_result.get("top_results", [])
+        save_cluster_auto_tuning_cache(
+            cache_key=cache_key,
+            clust_object_id=object_id,
+            top_results=top_results,
+            top_k=top_k
+        )
+
+        best_result = tuning_result.get("best_result")
+        if not best_result or best_result.get("status") != "ok":
+            failed += 1
+            set_info(
+                f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED "
+                f"(нет валидных конфигураций) min_cluster_samples={min_cluster_samples}.",
+                "brown"
+            )
+            continue
+
+        calculated += 1
+        best_metrics = best_result.get("metrics", {})
+        best_cfg = best_result.get("candidate_config", {})
+        set_info(
+            f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: CALCULATED "
+            f"score={_safe_num(best_result.get('score'), 4)} "
+            f"method={_candidate_method_short(best_cfg)} "
+            f"sil={_safe_num(best_metrics.get('silhouette'), 3)} "
+            f"db={_safe_num(best_metrics.get('davies_bouldin'), 3)} "
+            f"ch={_safe_num(best_metrics.get('calinski_harabasz'), 1)} "
+            f"min_cluster_samples={min_cluster_samples}.",
+            "blue"
+        )
+        QApplication.processEvents()
+
+    elapsed_sec = monotonic() - started_at
+    set_info(
+        f"AUTO BATCH {auto_mode}: завершено за {elapsed_sec:.1f} сек | total={total_objects}, "
+        f"calculated={calculated}, skipped_cached={skipped_cached}, failed={failed}.",
+        "green" if failed == 0 else "brown"
+    )
+
+
 def _normalize_cache_payload(data: Any) -> Any:
     """
     Нормализует структуру данных для стабильного JSON/hash.
