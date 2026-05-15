@@ -5,6 +5,7 @@ import hashlib
 import json
 import random
 import gc
+import multiprocessing as mp
 from collections import Counter, OrderedDict
 from datetime import datetime, timezone
 from itertools import product
@@ -86,6 +87,7 @@ AUTO_TUNING_MIN_ROWS = 256
 AUTO_TUNING_MAX_FEATURES = 512
 AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
+AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
 
 
 def calculate_auto_min_cluster_sample_limits(
@@ -259,6 +261,35 @@ def _sample_rows_for_auto_tuning(data, max_rows: int) -> Any:
         return data[sampled_idx]
     return [data[int(i)] for i in sampled_idx]
 
+
+
+
+def _build_sample_indices_for_auto_tuning(data_len: int, max_rows: int, *, seed: int) -> np.ndarray:
+    """
+    Строит детерминированные индексы подвыборки для AUTO по seed.
+    """
+    data_len = max(0, int(data_len))
+    if data_len == 0:
+        return np.array([], dtype=int)
+    try:
+        max_rows = max(2, int(max_rows))
+    except (TypeError, ValueError):
+        max_rows = AUTO_TUNING_MAX_ROWS
+    if data_len <= max_rows:
+        return np.arange(data_len, dtype=int)
+    rng = np.random.default_rng(int(seed))
+    sampled_idx = np.sort(rng.choice(data_len, size=max_rows, replace=False))
+    return np.asarray(sampled_idx, dtype=int)
+
+
+def _apply_sample_indices(data, sampled_idx: np.ndarray) -> Any:
+    if data is None:
+        return data
+    if sampled_idx is None or len(sampled_idx) == 0:
+        return data
+    if isinstance(data, np.ndarray):
+        return data[sampled_idx]
+    return [data[int(i)] for i in sampled_idx]
 
 def _reduce_feature_space_for_auto_tuning(data, max_features: int) -> Any:
     """
@@ -1400,6 +1431,48 @@ def build_fine_search_space(
     )
 
 
+def _cluster_candidate_worker(payload: dict, out_queue) -> None:
+    try:
+        result = run_cluster_candidate(**payload)
+        out_queue.put({"ok": True, "result": result})
+    except Exception as exc:
+        out_queue.put({"ok": False, "error": f"subprocess exception: {exc}"})
+
+
+def run_cluster_candidate_isolated(
+        *,
+        hard_timeout_sec: Optional[float] = AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
+        **kwargs
+) -> CandidateResult:
+    start_methods = mp.get_all_start_methods()
+    if "fork" not in start_methods:
+        # Windows fallback: избегаем spawn, чтобы дочерний процесс не инициализировал GUI.
+        return run_cluster_candidate(**kwargs)
+    ctx = mp.get_context("fork")
+    q = ctx.Queue(maxsize=1)
+    proc = ctx.Process(target=_cluster_candidate_worker, args=(kwargs, q), daemon=True)
+    proc.start()
+    if hard_timeout_sec is None:
+        proc.join()
+    else:
+        proc.join(timeout=max(1.0, float(hard_timeout_sec)))
+    candidate_id = str(kwargs.get("candidate_id") or "")
+    candidate = kwargs.get("candidate")
+    if proc.is_alive():
+        proc.kill()
+        proc.join(timeout=1.0)
+        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="invalid", error_text=f"hard-timeout>{hard_timeout_sec:.1f}s (isolated worker killed)")
+    if proc.exitcode not in (0, None):
+        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=f"isolated worker exitcode={proc.exitcode}")
+    try:
+        msg = q.get_nowait()
+    except Exception:
+        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text="isolated worker: empty result")
+    if not msg.get("ok"):
+        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=str(msg.get("error") or "isolated worker unknown error"))
+    return msg.get("result")
+
+
 def run_auto_cluster_tuning(
         base_data,
         *,
@@ -1417,7 +1490,9 @@ def run_auto_cluster_tuning(
         weights: Optional[Dict[str, float]] = None,
         clean_kwargs: Optional[Dict[str, Any]] = None,
         random_seed: Optional[int] = None,
-        min_cluster_samples: int = 1
+        min_cluster_samples: int = 1,
+        run_key: Optional[str] = None,
+        object_set_id: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Orchestrator AUTO-подбора.
@@ -1426,6 +1501,17 @@ def run_auto_cluster_tuning(
     mode = (auto_mode or "COARSE").strip().upper()
     if mode not in {"COARSE", "FINE"}:
         raise ValueError(f"Unsupported auto_mode='{auto_mode}'. Expected 'COARSE' or 'FINE'.")
+
+    completed_candidate_ids: set[str] = set()
+    restored_raw_results: list[CandidateResult] = []
+    if run_key and object_set_id is not None:
+        restored_state = _load_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id))
+        if restored_state is not None:
+            completed_candidate_ids = set(restored_state.get("completed_ids", set()))
+            restored_raw_results = list(restored_state.get("raw_results", []))
+            if random_seed is None:
+                random_seed = int(restored_state.get("random_seed", random_seed or 42))
+            set_info(f"AUTO {mode}: восстановлен checkpoint, выполнено {len(completed_candidate_ids)} кандидатов.", "brown")
 
     coarse_candidates = build_auto_search_space(
         "COARSE",
@@ -1455,6 +1541,9 @@ def run_auto_cluster_tuning(
     transform_cache_total_bytes = 0
     run_start_ts = monotonic()
     for idx, candidate in enumerate(coarse_candidates, start=1):
+        candidate_id = f"C{idx:03d}"
+        if candidate_id in completed_candidate_ids:
+            continue
         if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
             _set_auto_info(
                 f"AUTO {mode}: достигнут soft-timeout {soft_timeout_sec:.1f}s, "
@@ -1466,22 +1555,23 @@ def run_auto_cluster_tuning(
         QApplication.processEvents()
         candidate_start_ts = monotonic()
         try:
-            result = run_cluster_candidate(
+            result = run_cluster_candidate_isolated(
                 base_data=base_data,
                 candidate=candidate,
-                candidate_id=f"C{idx:03d}",
+                candidate_id=candidate_id,
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=coarse_silhouette_samples,
-                min_cluster_samples=min_cluster_samples
+                min_cluster_samples=min_cluster_samples,
+                hard_timeout_sec=candidate_soft_timeout_sec
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Coarse C{idx:03d}: исключение {exc}", "red")
             result = make_candidate_result(
-                candidate_id=f"C{idx:03d}",
+                candidate_id=candidate_id,
                 candidate_config=candidate,
                 status="error",
                 error_text=f"unexpected candidate exception: {exc}"
@@ -1500,23 +1590,9 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
-        if result.get("status") == "ok":
-            n_clusters = int((result.get("stats") or {}).get("n_clusters", 0) or 0)
-            if n_clusters > int(max_clusters):
-                result["status"] = "invalid"
-                result["score"] = None
-                result["error_text"] = (
-                    (result.get("error_text", "") + "; ").strip("; ")
-                    + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
-                ).strip()
-        _log_candidate_rejection(
-            result,
-            phase="coarse",
-            min_cluster_samples=min_cluster_samples,
-            n_samples=len(base_data)
-        )
-
-        coarse_results.append(result)
+        completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
+        if run_key and object_set_id is not None:
+            _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=[])
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
             stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
             for key in stale_keys:
@@ -1548,7 +1624,7 @@ def run_auto_cluster_tuning(
         rescue_candidates = _build_auto_rescue_candidates(max_clusters=max_clusters)
         for idx, candidate in enumerate(rescue_candidates, start=1):
             try:
-                result = run_cluster_candidate(
+                result = run_cluster_candidate_isolated(
                     base_data=base_data,
                     candidate=candidate,
                     candidate_id=f"R{idx:03d}",
@@ -1558,7 +1634,8 @@ def run_auto_cluster_tuning(
                     metrics_cache=metrics_cache,
                     min_pca_components=min_pca_components,
                     max_silhouette_samples=coarse_silhouette_samples,
-                    min_cluster_samples=min_cluster_samples
+                    min_cluster_samples=min_cluster_samples,
+                    hard_timeout_sec=candidate_soft_timeout_sec
                 )
             except Exception as exc:
                 result = make_candidate_result(
@@ -1574,6 +1651,9 @@ def run_auto_cluster_tuning(
                 n_samples=len(base_data)
             )
             coarse_results.append(result)
+        completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
+        if run_key and object_set_id is not None:
+            _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=[])
         has_valid_after_rescue = any(row.get("status") == "ok" for row in coarse_results)
         if not has_valid_after_rescue:
             _set_auto_info(
@@ -1588,7 +1668,7 @@ def run_auto_cluster_tuning(
             }
             for idx, candidate in enumerate(rescue_candidates, start=1):
                 try:
-                    result = run_cluster_candidate(
+                    result = run_cluster_candidate_isolated(
                         base_data=base_data,
                         candidate=candidate,
                         candidate_id=f"RR{idx:03d}",
@@ -1598,7 +1678,8 @@ def run_auto_cluster_tuning(
                         metrics_cache=metrics_cache,
                         min_pca_components=min_pca_components,
                         max_silhouette_samples=coarse_silhouette_samples,
-                        min_cluster_samples=min_cluster_samples
+                        min_cluster_samples=min_cluster_samples,
+                        hard_timeout_sec=candidate_soft_timeout_sec
                     )
                 except Exception as exc:
                     result = make_candidate_result(
@@ -1614,6 +1695,9 @@ def run_auto_cluster_tuning(
                     n_samples=len(base_data)
                 )
                 coarse_results.append(result)
+        completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
+        if run_key and object_set_id is not None:
+            _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=[])
         if not any(row.get("status") == "ok" for row in coarse_results):
             top_failures = _summarize_candidate_failures(coarse_results, top_n=3)
             if top_failures:
@@ -1623,6 +1707,8 @@ def run_auto_cluster_tuning(
                     "brown"
                 )
 
+    if restored_raw_results:
+        coarse_results = list(restored_raw_results) + coarse_results
     ranked_coarse = rank_candidates(coarse_results, weights=weights)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
     coarse_top_diverse = select_diverse_top_results(
@@ -1632,6 +1718,8 @@ def run_auto_cluster_tuning(
     )
 
     if mode == "COARSE":
+        if run_key and object_set_id is not None and coarse_top_diverse:
+            _clear_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id))
         return {
             "mode": mode,
             "best_result": coarse_best_result,
@@ -1655,6 +1743,9 @@ def run_auto_cluster_tuning(
     )
     fine_results: list[CandidateResult] = []
     for idx, candidate in enumerate(fine_candidates, start=1):
+        candidate_id = f"F{idx:03d}"
+        if candidate_id in completed_candidate_ids:
+            continue
         if soft_timeout_sec is not None and (monotonic() - run_start_ts) > float(soft_timeout_sec):
             _set_auto_info(
                 f"AUTO {mode}: достигнут soft-timeout {soft_timeout_sec:.1f}s, "
@@ -1666,22 +1757,23 @@ def run_auto_cluster_tuning(
         QApplication.processEvents()
         candidate_start_ts = monotonic()
         try:
-            result = run_cluster_candidate(
+            result = run_cluster_candidate_isolated(
                 base_data=base_data,
                 candidate=candidate,
-                candidate_id=f"F{idx:03d}",
+                candidate_id=candidate_id,
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=AUTO_SILHOUETTE_MAX_SAMPLES,
-                min_cluster_samples=min_cluster_samples
+                min_cluster_samples=min_cluster_samples,
+                hard_timeout_sec=candidate_soft_timeout_sec
             )
         except Exception as exc:
             _set_auto_info(f"AUTO Fine F{idx:03d}: исключение {exc}", "red")
             result = make_candidate_result(
-                candidate_id=f"F{idx:03d}",
+                candidate_id=candidate_id,
                 candidate_config=candidate,
                 status="error",
                 error_text=f"unexpected candidate exception: {exc}"
@@ -1700,23 +1792,9 @@ def run_auto_cluster_tuning(
                 (result.get("error_text", "") + "; ").strip("; ")
                 + f"candidate soft-timeout {elapsed_candidate:.2f}s > {candidate_soft_timeout_sec:.2f}s"
             ).strip()
-        if result.get("status") == "ok":
-            n_clusters = int((result.get("stats") or {}).get("n_clusters", 0) or 0)
-            if n_clusters > int(max_clusters):
-                result["status"] = "invalid"
-                result["score"] = None
-                result["error_text"] = (
-                    (result.get("error_text", "") + "; ").strip("; ")
-                    + f"n_clusters {n_clusters} > max_clusters {int(max_clusters)}"
-                ).strip()
-        _log_candidate_rejection(
-            result,
-            phase="fine",
-            min_cluster_samples=min_cluster_samples,
-            n_samples=len(base_data)
-        )
-
-        fine_results.append(result)
+        completed_candidate_ids.add(str(result.get("candidate_id") or candidate_id))
+        if run_key and object_set_id is not None:
+            _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=fine_results)
         if transform_cache is not None and len(transform_cache_sizes) != len(transform_cache):
             stale_keys = [key for key in list(transform_cache_sizes.keys()) if key not in transform_cache]
             for key in stale_keys:
@@ -1747,6 +1825,8 @@ def run_auto_cluster_tuning(
         diversity_key="partition_hash"
     )
 
+    if run_key and object_set_id is not None and combined_top_diverse:
+        _clear_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id))
     return {
         "mode": mode,
         "best_result": best_result,
@@ -2232,6 +2312,18 @@ def calculate_cluster_auto():
         set_info("AUTO: пустой набор данных для подбора.", "brown")
         return
 
+    auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
+    original_rows_count = len(base_data)
+    sample_idx = _build_sample_indices_for_auto_tuning(original_rows_count, AUTO_TUNING_MAX_ROWS, seed=auto_random_seed)
+    sampled_base_data = _apply_sample_indices(base_data, sample_idx)
+    sampled_rows_count = len(sampled_base_data) if sampled_base_data is not None else 0
+    if sampled_rows_count < original_rows_count:
+        set_info(
+            f"AUTO: для устойчивости расчетов использована подвыборка {sampled_rows_count}/{original_rows_count} строк.",
+            "brown"
+        )
+    base_data = sampled_base_data
+
     sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
 
     auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
@@ -2344,7 +2436,6 @@ def calculate_cluster_auto():
         "blue"
     )
     QApplication.processEvents()
-    auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
 
     if not force_recompute:
         cached_top_results = load_cluster_auto_tuning_cache(
@@ -2379,6 +2470,8 @@ def calculate_cluster_auto():
         candidate_soft_timeout_sec=candidate_timeout_sec,
         random_seed=auto_random_seed,
         min_cluster_samples=min_cluster_samples,
+        run_key=cache_key,
+        object_set_id=int(clust_object_id),
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
@@ -2530,6 +2623,18 @@ def calculate_cluster_auto_batch() -> None:
             set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (пустой набор данных).", "brown")
             continue
 
+        auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
+        original_rows_count = len(base_data)
+        sample_idx = _build_sample_indices_for_auto_tuning(original_rows_count, AUTO_TUNING_MAX_ROWS, seed=auto_random_seed)
+        base_data = _apply_sample_indices(base_data, sample_idx)
+        sampled_rows_count = len(base_data) if base_data is not None else 0
+        if sampled_rows_count < original_rows_count:
+            set_info(
+                f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: "
+                f"использована подвыборка {sampled_rows_count}/{original_rows_count} строк.",
+                "brown"
+            )
+
         sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
         min_cluster_samples = int(sample_limits["recommended_default_value"])
         cache_key = build_cluster_auto_tuning_cache_key(
@@ -2580,7 +2685,6 @@ def calculate_cluster_auto_batch() -> None:
                 )
                 continue
 
-        auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
         tuning_result = run_auto_cluster_tuning(
             base_data=base_data,
             auto_mode=auto_mode,
@@ -2597,6 +2701,8 @@ def calculate_cluster_auto_batch() -> None:
             candidate_soft_timeout_sec=candidate_timeout_sec,
             random_seed=auto_random_seed,
             min_cluster_samples=min_cluster_samples,
+            run_key=cache_key,
+            object_set_id=int(object_id),
             clean_kwargs={
                 "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
                 "non_finite_mode": text_method_nan,
@@ -2684,6 +2790,65 @@ def build_cluster_auto_tuning_cache_key(
     }
     payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+
+
+def _ensure_cluster_auto_tuning_run_state_table() -> None:
+    """
+    Создает таблицу checkpoint-состояния AUTO-подбора (если ее еще нет).
+    """
+    ClusterAutoTuningRunState.__table__.create(bind=engine, checkfirst=True)
+
+
+def _save_auto_tuning_run_state(
+        *,
+        run_key: str,
+        object_set_id: int,
+        random_seed: int,
+        sampled_indices: np.ndarray,
+        completed_candidate_ids: set[str],
+        coarse_results: list[CandidateResult],
+        fine_results: list[CandidateResult]
+) -> None:
+    _ensure_cluster_auto_tuning_run_state_table()
+    row = session.query(ClusterAutoTuningRunState).filter_by(run_key=str(run_key), object_set_id=int(object_set_id)).first()
+    if row is None:
+        row = ClusterAutoTuningRunState(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed), sampled_indices_json='[]')
+        session.add(row)
+    row.random_seed = int(random_seed)
+    row.sampled_indices_json = json.dumps([int(i) for i in np.asarray(sampled_indices, dtype=int).tolist()], ensure_ascii=False)
+    row.completed_candidate_ids_json = json.dumps(sorted(str(x) for x in completed_candidate_ids), ensure_ascii=False)
+    row.raw_results_json = json.dumps((coarse_results or []) + (fine_results or []), ensure_ascii=False)
+    row.coarse_count = int(len(coarse_results or []))
+    row.fine_count = int(len(fine_results or []))
+    row.updated_at = datetime.datetime.utcnow()
+    session.commit()
+
+
+def _load_auto_tuning_run_state(*, run_key: str, object_set_id: int) -> Optional[dict]:
+    _ensure_cluster_auto_tuning_run_state_table()
+    row = session.query(ClusterAutoTuningRunState).filter_by(run_key=str(run_key), object_set_id=int(object_set_id)).first()
+    if row is None:
+        return None
+    try:
+        sampled_indices = np.asarray(json.loads(row.sampled_indices_json or '[]'), dtype=int)
+        completed_ids = set(str(x) for x in json.loads(row.completed_candidate_ids_json or '[]'))
+        raw_results = json.loads(row.raw_results_json or '[]')
+    except Exception:
+        return None
+    return {
+        'random_seed': int(row.random_seed),
+        'sampled_indices': sampled_indices,
+        'completed_ids': completed_ids,
+        'raw_results': raw_results,
+        'coarse_count': int(row.coarse_count or 0),
+        'fine_count': int(row.fine_count or 0)
+    }
+
+
+def _clear_auto_tuning_run_state(*, run_key: str, object_set_id: int) -> None:
+    _ensure_cluster_auto_tuning_run_state_table()
+    session.query(ClusterAutoTuningRunState).filter_by(run_key=str(run_key), object_set_id=int(object_set_id)).delete(synchronize_session=False)
+    session.commit()
 
 
 def _ensure_cluster_auto_tuning_cache_table() -> None:
