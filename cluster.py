@@ -83,6 +83,8 @@ AUTO_SILHOUETTE_COARSE_MAX_SAMPLES = 1500
 AUTO_SILHOUETTE_ADAPTIVE_ALPHA = 24.0
 AUTO_SILHOUETTE_MIN_SAMPLES = 400
 AUTO_FINE_SEED_DELTA_FROM_BEST = 0.03
+AUTO_PCA_PILOT_ENABLED = True
+AUTO_PCA_PILOT_MAX_ROWS = 1200
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
@@ -114,6 +116,17 @@ def _compute_auto_silhouette_sample_size(
 
     adaptive_value = int(AUTO_SILHOUETTE_ADAPTIVE_ALPHA * np.sqrt(n_rows) * estimated_n_clusters)
     return int(min(stage_cap, max(int(AUTO_SILHOUETTE_MIN_SAMPLES), adaptive_value)))
+
+
+def _build_pilot_sample_for_pca(data, max_rows: int, seed: int = 42) -> Any:
+    n_rows = int(len(data)) if data is not None else 0
+    if n_rows <= 0 or max_rows <= 0 or n_rows <= int(max_rows):
+        return data
+    rng = np.random.RandomState(int(seed))
+    idx = np.sort(rng.choice(n_rows, size=int(max_rows), replace=False))
+    if isinstance(data, np.ndarray):
+        return data[idx]
+    return np.asarray(data)[idx]
 
 
 def calculate_auto_min_cluster_sample_limits(
@@ -987,6 +1000,45 @@ def run_cluster_candidate(
                                 f"pca variance_ratio {pca_variance_ratio} out of range (0, 1]"
                             )
                         )
+                    if bool(AUTO_PCA_PILOT_ENABLED):
+                        pilot_data = _build_pilot_sample_for_pca(
+                            preprocess_data,
+                            max_rows=int(AUTO_PCA_PILOT_MAX_ROWS),
+                            seed=42
+                        )
+                        try:
+                            _, pilot_info = apply_pca(
+                                pilot_data,
+                                mode="variance_ratio",
+                                variance_ratio=pca_variance_ratio
+                            )
+                            pilot_components = int(pilot_info.get("components_after_pca", 0) or 0)
+                        except Exception as exc:
+                            return make_candidate_result(
+                                candidate_id=candidate_id,
+                                candidate_config=candidate,
+                                status="invalid",
+                                error_text=f"pca pilot failed: {exc}"
+                            )
+                        if pilot_components < min_pca_components_value:
+                            _set_auto_info(
+                                f"AUTO PRECHECK {candidate_id or 'candidate'}: PCA pilot skipped "
+                                f"(pilot_comp={pilot_components}, min_required={min_pca_components_value}, "
+                                f"pilot_rows={len(pilot_data)}).",
+                                "brown"
+                            )
+                            return make_candidate_result(
+                                candidate_id=candidate_id,
+                                candidate_config=candidate,
+                                stats=CandidateStats(
+                                    pca_components_after=pilot_components
+                                ),
+                                status="invalid",
+                                error_text=(
+                                    f"pca pilot components {pilot_components} "
+                                    f"< min_pca_components {min_pca_components_value}"
+                                )
+                            )
                 data_for_cluster, pca_info = apply_pca(
                     preprocess_data,
                     mode=pca_mode,
