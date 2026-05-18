@@ -841,6 +841,7 @@ def run_cluster_candidate(
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
         preprocess_cache: Optional[Dict[tuple, Any]] = None,
+        preprocess_rank_cache: Optional[Dict[tuple, int]] = None,
         metrics_cache: Optional[Dict[str, CandidateMetrics]] = None,
         min_pca_components: int = 2,
         max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
@@ -929,6 +930,9 @@ def run_cluster_candidate(
 
         try:
             if candidate["pca_enabled"]:
+                rank_precheck = None
+                if preprocess_rank_cache is not None:
+                    rank_precheck = preprocess_rank_cache.get(preprocess_key)
                 pca_mode = candidate["pca_mode"] or "variance_ratio"
                 pca_raw_value = candidate.get("pca_value")
                 pca_n_components = 20
@@ -936,8 +940,18 @@ def run_cluster_candidate(
 
                 n_rows_pre = int(len(preprocess_data)) if preprocess_data is not None else 0
                 n_features_pre = int(len(preprocess_data[0])) if n_rows_pre > 0 else 0
-                max_possible_components = max(0, min(n_features_pre, max(0, n_rows_pre - 1)))
+                max_possible_components_geom = max(0, min(n_features_pre, max(0, n_rows_pre - 1)))
+                if rank_precheck is None:
+                    rank_precheck = int(np.linalg.matrix_rank(np.asarray(preprocess_data))) if n_rows_pre > 0 and n_features_pre > 0 else 0
+                    if preprocess_rank_cache is not None:
+                        preprocess_rank_cache[preprocess_key] = int(rank_precheck)
+                max_possible_components = int(min(max_possible_components_geom, max(0, int(rank_precheck))))
                 if max_possible_components < min_pca_components_value:
+                    _set_auto_info(
+                        f"AUTO PRECHECK {candidate_id or 'candidate'}: PCA skipped "
+                        f"(rank={int(rank_precheck or 0)}, max_comp={max_possible_components}, min_required={min_pca_components_value}).",
+                        "brown"
+                    )
                     return make_candidate_result(
                         candidate_id=candidate_id,
                         candidate_config=candidate,
@@ -1580,6 +1594,7 @@ def run_auto_cluster_tuning(
         )
     transform_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
     preprocess_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
+    preprocess_rank_cache: Dict[tuple, int] = {}
     metrics_cache: Dict[str, CandidateMetrics] = {}
     transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
     transform_cache_total_bytes = 0
@@ -1606,6 +1621,7 @@ def run_auto_cluster_tuning(
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
+                preprocess_rank_cache=preprocess_rank_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=coarse_silhouette_samples,
@@ -1682,6 +1698,7 @@ def run_auto_cluster_tuning(
                     clean_kwargs=clean_kwargs,
                     transform_cache=transform_cache,
                     preprocess_cache=preprocess_cache,
+                    preprocess_rank_cache=preprocess_rank_cache,
                     metrics_cache=metrics_cache,
                     min_pca_components=min_pca_components,
                     max_silhouette_samples=coarse_silhouette_samples,
@@ -1726,6 +1743,7 @@ def run_auto_cluster_tuning(
                         clean_kwargs=relaxed_clean_kwargs,
                         transform_cache=transform_cache,
                         preprocess_cache=preprocess_cache,
+                        preprocess_rank_cache=preprocess_rank_cache,
                         metrics_cache=metrics_cache,
                         min_pca_components=min_pca_components,
                         max_silhouette_samples=coarse_silhouette_samples,
@@ -1830,6 +1848,7 @@ def run_auto_cluster_tuning(
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
+                preprocess_rank_cache=preprocess_rank_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=_compute_auto_silhouette_sample_size(len(base_data), stage="fine", estimated_n_clusters=max_clusters),
