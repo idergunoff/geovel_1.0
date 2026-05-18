@@ -80,6 +80,9 @@ AUTO_TRANSFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
 AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES = 128 * 1024 * 1024
 AUTO_SILHOUETTE_MAX_SAMPLES = 5000
 AUTO_SILHOUETTE_COARSE_MAX_SAMPLES = 1500
+AUTO_SILHOUETTE_ADAPTIVE_ALPHA = 24.0
+AUTO_SILHOUETTE_MIN_SAMPLES = 400
+AUTO_FINE_SEED_DELTA_FROM_BEST = 0.03
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
@@ -89,6 +92,28 @@ AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
 AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
 AUTO_CHECKPOINT_SAVE_EVERY = 10
+
+
+def _compute_auto_silhouette_sample_size(
+        n_rows: int,
+        *,
+        stage: str = "coarse",
+        estimated_n_clusters: int = 3
+) -> int:
+    """
+    Адаптивно подбирает размер подвыборки для silhouette в AUTO-режиме.
+
+    Формула: alpha * sqrt(n_rows) * estimated_n_clusters с нижним и верхним лимитами.
+    """
+    n_rows = max(1, int(n_rows))
+    estimated_n_clusters = max(2, int(estimated_n_clusters))
+    stage_name = str(stage or "coarse").strip().lower()
+    stage_cap = int(AUTO_SILHOUETTE_MAX_SAMPLES)
+    if stage_name == "coarse":
+        stage_cap = min(stage_cap, int(AUTO_SILHOUETTE_COARSE_MAX_SAMPLES))
+
+    adaptive_value = int(AUTO_SILHOUETTE_ADAPTIVE_ALPHA * np.sqrt(n_rows) * estimated_n_clusters)
+    return int(min(stage_cap, max(int(AUTO_SILHOUETTE_MIN_SAMPLES), adaptive_value)))
 
 
 def calculate_auto_min_cluster_sample_limits(
@@ -816,6 +841,7 @@ def run_cluster_candidate(
         clean_kwargs: Optional[Dict[str, Any]] = None,
         transform_cache: Optional[Dict[tuple, Any]] = None,
         preprocess_cache: Optional[Dict[tuple, Any]] = None,
+        preprocess_rank_cache: Optional[Dict[tuple, int]] = None,
         metrics_cache: Optional[Dict[str, CandidateMetrics]] = None,
         min_pca_components: int = 2,
         max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
@@ -904,20 +930,50 @@ def run_cluster_candidate(
 
         try:
             if candidate["pca_enabled"]:
+                rank_precheck = None
+                if preprocess_rank_cache is not None:
+                    rank_precheck = preprocess_rank_cache.get(preprocess_key)
                 pca_mode = candidate["pca_mode"] or "variance_ratio"
                 pca_raw_value = candidate.get("pca_value")
                 pca_n_components = 20
                 pca_variance_ratio = 0.9
+
+                n_rows_pre = int(len(preprocess_data)) if preprocess_data is not None else 0
+                n_features_pre = int(len(preprocess_data[0])) if n_rows_pre > 0 else 0
+                max_possible_components_geom = max(0, min(n_features_pre, max(0, n_rows_pre - 1)))
+                if rank_precheck is None:
+                    rank_precheck = int(np.linalg.matrix_rank(np.asarray(preprocess_data))) if n_rows_pre > 0 and n_features_pre > 0 else 0
+                    if preprocess_rank_cache is not None:
+                        preprocess_rank_cache[preprocess_key] = int(rank_precheck)
+                max_possible_components = int(min(max_possible_components_geom, max(0, int(rank_precheck))))
+                if max_possible_components < min_pca_components_value:
+                    _set_auto_info(
+                        f"AUTO PRECHECK {candidate_id or 'candidate'}: PCA skipped "
+                        f"(rank={int(rank_precheck or 0)}, max_comp={max_possible_components}, min_required={min_pca_components_value}).",
+                        "brown"
+                    )
+                    return make_candidate_result(
+                        candidate_id=candidate_id,
+                        candidate_config=candidate,
+                        stats=CandidateStats(
+                            pca_components_after=max_possible_components
+                        ),
+                        status="invalid",
+                        error_text=(
+                            f"pca skipped: max possible components {max_possible_components} "
+                            f"< min_pca_components {min_pca_components_value}"
+                        )
+                    )
+
                 if pca_mode == "fixed_components":
                     pca_n_components = int(float(pca_raw_value))
-                    max_components = int(min(len(preprocess_data), len(preprocess_data[0]))) if len(preprocess_data) > 0 else 0
-                    if pca_n_components < 1 or pca_n_components > max_components:
+                    if pca_n_components < 1 or pca_n_components > max_possible_components:
                         return make_candidate_result(
                             candidate_id=candidate_id,
                             candidate_config=candidate,
                             status="invalid",
                             error_text=(
-                                f"pca n_components {pca_n_components} out of range [1, {max_components}]"
+                                f"pca n_components {pca_n_components} out of range [1, {max_possible_components}]"
                             )
                         )
                 else:
@@ -1525,9 +1581,10 @@ def run_auto_cluster_tuning(
         random_seed=random_seed
     )
     coarse_results: list[CandidateResult] = []
-    coarse_silhouette_samples = min(
-        int(AUTO_SILHOUETTE_MAX_SAMPLES),
-        int(AUTO_SILHOUETTE_COARSE_MAX_SAMPLES)
+    coarse_silhouette_samples = _compute_auto_silhouette_sample_size(
+        len(base_data),
+        stage="coarse",
+        estimated_n_clusters=max_clusters
     )
     auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
     if not auto_cache_enabled:
@@ -1537,6 +1594,7 @@ def run_auto_cluster_tuning(
         )
     transform_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
     preprocess_cache: Optional["OrderedDict[tuple, Any]"] = OrderedDict() if auto_cache_enabled else None
+    preprocess_rank_cache: Dict[tuple, int] = {}
     metrics_cache: Dict[str, CandidateMetrics] = {}
     transform_cache_sizes: "OrderedDict[tuple, int]" = OrderedDict()
     transform_cache_total_bytes = 0
@@ -1563,6 +1621,7 @@ def run_auto_cluster_tuning(
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
+                preprocess_rank_cache=preprocess_rank_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=coarse_silhouette_samples,
@@ -1639,6 +1698,7 @@ def run_auto_cluster_tuning(
                     clean_kwargs=clean_kwargs,
                     transform_cache=transform_cache,
                     preprocess_cache=preprocess_cache,
+                    preprocess_rank_cache=preprocess_rank_cache,
                     metrics_cache=metrics_cache,
                     min_pca_components=min_pca_components,
                     max_silhouette_samples=coarse_silhouette_samples,
@@ -1683,6 +1743,7 @@ def run_auto_cluster_tuning(
                         clean_kwargs=relaxed_clean_kwargs,
                         transform_cache=transform_cache,
                         preprocess_cache=preprocess_cache,
+                        preprocess_rank_cache=preprocess_rank_cache,
                         metrics_cache=metrics_cache,
                         min_pca_components=min_pca_components,
                         max_silhouette_samples=coarse_silhouette_samples,
@@ -1743,6 +1804,21 @@ def run_auto_cluster_tuning(
         top_k=fine_seed_count,
         diversity_key="partition_hash"
     )
+    best_coarse_score = coarse_best_result.get("score") if coarse_best_result else None
+    if best_coarse_score is not None:
+        score_delta = float(AUTO_FINE_SEED_DELTA_FROM_BEST)
+        filtered_seed_results = [
+            row for row in fine_seed_results
+            if row.get("score") is not None and float(row.get("score")) >= float(best_coarse_score) - score_delta
+        ]
+        if filtered_seed_results:
+            removed_count = len(fine_seed_results) - len(filtered_seed_results)
+            if removed_count > 0:
+                _set_auto_info(
+                    f"AUTO FINE: отфильтровано {removed_count} seed-кандидатов по delta_score>{score_delta:.3f}.",
+                    "blue"
+                )
+            fine_seed_results = filtered_seed_results
     fine_candidates = build_fine_search_space(
         fine_seed_results,
         top_k=fine_seed_count,
@@ -1772,9 +1848,10 @@ def run_auto_cluster_tuning(
                 clean_kwargs=clean_kwargs,
                 transform_cache=transform_cache,
                 preprocess_cache=preprocess_cache,
+                preprocess_rank_cache=preprocess_rank_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
-                max_silhouette_samples=AUTO_SILHOUETTE_MAX_SAMPLES,
+                max_silhouette_samples=_compute_auto_silhouette_sample_size(len(base_data), stage="fine", estimated_n_clusters=max_clusters),
                 min_cluster_samples=min_cluster_samples,
                 hard_timeout_sec=candidate_soft_timeout_sec
             )
