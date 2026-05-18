@@ -80,6 +80,9 @@ AUTO_TRANSFORM_CACHE_MAX_BYTES = 512 * 1024 * 1024
 AUTO_TRANSFORM_CACHE_MAX_ITEM_BYTES = 128 * 1024 * 1024
 AUTO_SILHOUETTE_MAX_SAMPLES = 5000
 AUTO_SILHOUETTE_COARSE_MAX_SAMPLES = 1500
+AUTO_SILHOUETTE_ADAPTIVE_ALPHA = 24.0
+AUTO_SILHOUETTE_MIN_SAMPLES = 400
+AUTO_FINE_SEED_DELTA_FROM_BEST = 0.03
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
@@ -89,6 +92,28 @@ AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
 AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
 AUTO_CHECKPOINT_SAVE_EVERY = 10
+
+
+def _compute_auto_silhouette_sample_size(
+        n_rows: int,
+        *,
+        stage: str = "coarse",
+        estimated_n_clusters: int = 3
+) -> int:
+    """
+    Адаптивно подбирает размер подвыборки для silhouette в AUTO-режиме.
+
+    Формула: alpha * sqrt(n_rows) * estimated_n_clusters с нижним и верхним лимитами.
+    """
+    n_rows = max(1, int(n_rows))
+    estimated_n_clusters = max(2, int(estimated_n_clusters))
+    stage_name = str(stage or "coarse").strip().lower()
+    stage_cap = int(AUTO_SILHOUETTE_MAX_SAMPLES)
+    if stage_name == "coarse":
+        stage_cap = min(stage_cap, int(AUTO_SILHOUETTE_COARSE_MAX_SAMPLES))
+
+    adaptive_value = int(AUTO_SILHOUETTE_ADAPTIVE_ALPHA * np.sqrt(n_rows) * estimated_n_clusters)
+    return int(min(stage_cap, max(int(AUTO_SILHOUETTE_MIN_SAMPLES), adaptive_value)))
 
 
 def calculate_auto_min_cluster_sample_limits(
@@ -1525,9 +1550,10 @@ def run_auto_cluster_tuning(
         random_seed=random_seed
     )
     coarse_results: list[CandidateResult] = []
-    coarse_silhouette_samples = min(
-        int(AUTO_SILHOUETTE_MAX_SAMPLES),
-        int(AUTO_SILHOUETTE_COARSE_MAX_SAMPLES)
+    coarse_silhouette_samples = _compute_auto_silhouette_sample_size(
+        len(base_data),
+        stage="coarse",
+        estimated_n_clusters=max_clusters
     )
     auto_cache_enabled = len(base_data) <= int(AUTO_TRANSFORM_CACHE_MAX_ROWS)
     if not auto_cache_enabled:
@@ -1743,6 +1769,21 @@ def run_auto_cluster_tuning(
         top_k=fine_seed_count,
         diversity_key="partition_hash"
     )
+    best_coarse_score = coarse_best_result.get("score") if coarse_best_result else None
+    if best_coarse_score is not None:
+        score_delta = float(AUTO_FINE_SEED_DELTA_FROM_BEST)
+        filtered_seed_results = [
+            row for row in fine_seed_results
+            if row.get("score") is not None and float(row.get("score")) >= float(best_coarse_score) - score_delta
+        ]
+        if filtered_seed_results:
+            removed_count = len(fine_seed_results) - len(filtered_seed_results)
+            if removed_count > 0:
+                _set_auto_info(
+                    f"AUTO FINE: отфильтровано {removed_count} seed-кандидатов по delta_score>{score_delta:.3f}.",
+                    "blue"
+                )
+            fine_seed_results = filtered_seed_results
     fine_candidates = build_fine_search_space(
         fine_seed_results,
         top_k=fine_seed_count,
@@ -1774,7 +1815,7 @@ def run_auto_cluster_tuning(
                 preprocess_cache=preprocess_cache,
                 metrics_cache=metrics_cache,
                 min_pca_components=min_pca_components,
-                max_silhouette_samples=AUTO_SILHOUETTE_MAX_SAMPLES,
+                max_silhouette_samples=_compute_auto_silhouette_sample_size(len(base_data), stage="fine", estimated_n_clusters=max_clusters),
                 min_cluster_samples=min_cluster_samples,
                 hard_timeout_sec=candidate_soft_timeout_sec
             )
