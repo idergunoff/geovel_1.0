@@ -933,16 +933,33 @@ def run_cluster_candidate(
                 pca_raw_value = candidate.get("pca_value")
                 pca_n_components = 20
                 pca_variance_ratio = 0.9
+
+                n_rows_pre = int(len(preprocess_data)) if preprocess_data is not None else 0
+                n_features_pre = int(len(preprocess_data[0])) if n_rows_pre > 0 else 0
+                max_possible_components = max(0, min(n_features_pre, max(0, n_rows_pre - 1)))
+                if max_possible_components < min_pca_components_value:
+                    return make_candidate_result(
+                        candidate_id=candidate_id,
+                        candidate_config=candidate,
+                        stats=CandidateStats(
+                            pca_components_after=max_possible_components
+                        ),
+                        status="invalid",
+                        error_text=(
+                            f"pca skipped: max possible components {max_possible_components} "
+                            f"< min_pca_components {min_pca_components_value}"
+                        )
+                    )
+
                 if pca_mode == "fixed_components":
                     pca_n_components = int(float(pca_raw_value))
-                    max_components = int(min(len(preprocess_data), len(preprocess_data[0]))) if len(preprocess_data) > 0 else 0
-                    if pca_n_components < 1 or pca_n_components > max_components:
+                    if pca_n_components < 1 or pca_n_components > max_possible_components:
                         return make_candidate_result(
                             candidate_id=candidate_id,
                             candidate_config=candidate,
                             status="invalid",
                             error_text=(
-                                f"pca n_components {pca_n_components} out of range [1, {max_components}]"
+                                f"pca n_components {pca_n_components} out of range [1, {max_possible_components}]"
                             )
                         )
                 else:
