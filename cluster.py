@@ -954,15 +954,28 @@ def run_cluster_candidate(
                 n_rows_pre = int(len(preprocess_data)) if preprocess_data is not None else 0
                 n_features_pre = int(len(preprocess_data[0])) if n_rows_pre > 0 else 0
                 max_possible_components_geom = max(0, min(n_features_pre, max(0, n_rows_pre - 1)))
+
+                pilot_data = _build_pilot_sample_for_pca(
+                    preprocess_data,
+                    max_rows=int(AUTO_PCA_PILOT_MAX_ROWS),
+                    seed=42
+                )
+                pilot_rows = int(len(pilot_data)) if pilot_data is not None else 0
+                rank_cache_key = (preprocess_key, int(AUTO_PCA_PILOT_MAX_ROWS))
+                rank_precheck = None
+                if preprocess_rank_cache is not None:
+                    rank_precheck = preprocess_rank_cache.get(rank_cache_key)
                 if rank_precheck is None:
-                    rank_precheck = int(np.linalg.matrix_rank(np.asarray(preprocess_data))) if n_rows_pre > 0 and n_features_pre > 0 else 0
+                    pilot_arr = np.asarray(pilot_data) if pilot_rows > 0 else np.asarray([])
+                    rank_precheck = int(np.linalg.matrix_rank(pilot_arr)) if pilot_arr.size > 0 else 0
                     if preprocess_rank_cache is not None:
-                        preprocess_rank_cache[preprocess_key] = int(rank_precheck)
+                        preprocess_rank_cache[rank_cache_key] = int(rank_precheck)
                 max_possible_components = int(min(max_possible_components_geom, max(0, int(rank_precheck))))
                 if max_possible_components < min_pca_components_value:
                     _set_auto_info(
                         f"AUTO PRECHECK {candidate_id or 'candidate'}: PCA skipped "
-                        f"(rank={int(rank_precheck or 0)}, max_comp={max_possible_components}, min_required={min_pca_components_value}).",
+                        f"(pilot_rank={int(rank_precheck or 0)}, max_comp={max_possible_components}, "
+                        f"min_required={min_pca_components_value}, pilot_rows={pilot_rows}).",
                         "brown"
                     )
                     return make_candidate_result(
@@ -977,7 +990,6 @@ def run_cluster_candidate(
                             f"< min_pca_components {min_pca_components_value}"
                         )
                     )
-
                 if pca_mode == "fixed_components":
                     pca_n_components = int(float(pca_raw_value))
                     if pca_n_components < 1 or pca_n_components > max_possible_components:
@@ -1001,11 +1013,6 @@ def run_cluster_candidate(
                             )
                         )
                     if bool(AUTO_PCA_PILOT_ENABLED):
-                        pilot_data = _build_pilot_sample_for_pca(
-                            preprocess_data,
-                            max_rows=int(AUTO_PCA_PILOT_MAX_ROWS),
-                            seed=42
-                        )
                         try:
                             _, pilot_info = apply_pca(
                                 pilot_data,
@@ -1024,7 +1031,7 @@ def run_cluster_candidate(
                             _set_auto_info(
                                 f"AUTO PRECHECK {candidate_id or 'candidate'}: PCA pilot skipped "
                                 f"(pilot_comp={pilot_components}, min_required={min_pca_components_value}, "
-                                f"pilot_rows={len(pilot_data)}).",
+                                f"pilot_rows={pilot_rows}).",
                                 "brown"
                             )
                             return make_candidate_result(
