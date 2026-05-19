@@ -5251,6 +5251,16 @@ Therm</string>
                      </widget>
                     </item>
                     <item>
+                     <widget class="QPushButton" name="pushButton_cluster_remove_result_auto_tune">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 135, 127);</string>
+                      </property>
+                      <property name="text">
+                       <string>REMOVE ROW</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
                      <widget class="QPushButton" name="pushButton_cluster_clear_result_auto_tune">
                       <property name="styleSheet">
                        <string notr="true">background-color: rgb(255, 108, 162);</string>
