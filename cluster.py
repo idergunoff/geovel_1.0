@@ -84,7 +84,7 @@ AUTO_SILHOUETTE_ADAPTIVE_ALPHA = 24.0
 AUTO_SILHOUETTE_MIN_SAMPLES = 400
 AUTO_FINE_SEED_DELTA_FROM_BEST = 0.03
 AUTO_PCA_PILOT_ENABLED = True
-AUTO_PCA_PILOT_MAX_ROWS = 1200
+AUTO_PCA_PILOT_MAX_ROWS = 500
 AUTO_TUNING_MAX_ROWS = 20000
 AUTO_TRANSFORM_CACHE_MAX_ROWS = 12000
 AUTO_TUNING_MAX_WORKING_SET_BYTES = 256 * 1024 * 1024
@@ -2304,7 +2304,7 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
         return
 
     reply = QMessageBox.warning(
-        ui,
+        MainWindow,
         "Очистка результатов AUTO",
         "Вы действительно хотите очистить результаты автоподбора?\nЭто действие удалит строки из таблицы и кэш текущей сессии.",
         QMessageBox.Yes | QMessageBox.No,
