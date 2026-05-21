@@ -1,3 +1,5 @@
+import datetime
+
 from models_db.model import *
 
 class AnalysisCluster(Base):
@@ -52,3 +54,114 @@ class ClusterAutoTuningRunState(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     object_set = relationship('ObjectSet', back_populates='auto_tuning_runs')
+
+
+########################################################################################
+###########################       WELL LOG CLUSTERING       ############################
+########################################################################################
+
+
+class WellLogClusterDataset(Base):
+    __tablename__ = 'well_log_cluster_dataset'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    created_by = Column(DateTime, default=datetime.datetime.now())
+
+    well_for_cluster = relationship('WellForCluster', back_populates='well_cluster_set')
+    cluster_well_log_param = relationship('ClusterWellLogParameter', back_populates='well_cluster_set')
+    cluster_well_log_param_from_calculator = relationship('ClusterWellLogParameterFromCalculator', back_populates='well_cluster_set')
+    data = relationship('WellLogClusterDatasetData', back_populates='well_cluster_set')
+
+
+class WellForCluster(Base):
+    __tablename__ = 'well_for_cluster'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'))
+    well_id = Column(Integer, ForeignKey('well.id'))
+    top_md = Column(Float)
+    bottom_md = Column(Float)
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='well_for_cluster')
+    well = relationship('Well', back_populates='well_for_cluster')
+
+
+class CanonicalWellLog(Base):
+    __tablename__ = 'canonical_well_log'
+
+    id = Column(Integer, primary_key=True)
+    canonical_name = Column(String)
+    description = Column(String)
+
+    alias_name = relationship('AliasWellLog', back_populates='canonical_name')
+    cluster_well_log_param = relationship('ClusterWellLogParameter', back_populates='canonical_name')
+
+
+class AliasWellLog(Base):
+    __tablename__ = 'alias_well_log'
+
+    id = Column(Integer, primary_key=True)
+    alias_name = Column(String)
+    canonical_id = Column(Integer, ForeignKey('canonical_well_log.id'))
+
+    canonical_name = relationship('CanonicalWellLog', back_populates='alias_name')
+
+
+class FeatureCalculator(Base):
+    __tablename__ = 'feature_calculator'
+
+    id = Column(Integer, primary_key=True)
+    feature_name = Column(String)
+    expression = Column(Text)
+    used_canonical_well_log = Column(Text)
+    transform_type = Column(String)
+    params_json = Column(Text)
+    created_at = Column(DateTime)
+
+    cluster_well_log_param_from_calculator = relationship('ClusterWellLogParameterFromCalculator', back_populates='calculator')
+
+
+class ClusterWellLogParameter(Base):
+    __tablename__ = 'cluster_well_log_parameter'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'))
+    canonical_id = Column(Integer, ForeignKey('canonical_well_log.id'))
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='cluster_well_log_param')
+    canonical_name = relationship('CanonicalWellLog', back_populates='cluster_well_log_param')
+
+
+class ClusterWellLogParameterFromCalculator(Base):
+    __tablename__ = 'cluster_well_log_parameter_from_calculator'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'))
+    calculator_id = Column(Integer, ForeignKey('feature_calculator.id'))
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='cluster_well_log_param_from_calculator')
+    calculator = relationship('FeatureCalculator', back_populates='cluster_well_log_param_from_calculator')
+
+
+class WellLogClusterDatasetData(Base):
+    __tablename__ = 'cluster_well_log_dataset_data'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'))
+    data = Column(Text)
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='data')
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -6,6 +6,7 @@ from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, 
                         distinct)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload, joinedload
 
+
 DATABASE_NAME = 'geovel_db.sqlite'
 
 engine = create_engine(f'sqlite:///{DATABASE_NAME}', echo=False)
@@ -761,6 +762,7 @@ class Well(Base):
     well_logs = relationship("WellLog", back_populates="well")
     markups_mlp = relationship('MarkupMLP', back_populates='well')
     markups_reg = relationship('MarkupReg', back_populates='well')
+    well_for_cluster = relationship('WellForCluster', back_populates='well')
 
 
 class Boundary(Base):
