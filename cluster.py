@@ -118,6 +118,65 @@ def update_cluster_well_dataset_combobox(select_dataset_id: int | None = None) -
                 index_to_select = found_index
         combo.setCurrentIndex(index_to_select)
     combo.blockSignals(False)
+    load_cluster_well_dataset_state_to_form(combo.currentData())
+
+
+def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> None:
+    """
+    Этап 1.3:
+    При выборе dataset загружает связанное состояние вкладки:
+    - список скважин набора;
+    - список каротажных параметров (canonical + calculator).
+    """
+    list_well = getattr(ui, 'listWidget_cluster_list_well', None)
+    list_log = getattr(ui, 'listWidget_cluster_list_log', None)
+    if list_well is None or list_log is None:
+        return
+
+    list_well.clear()
+    list_log.clear()
+    if dataset_id is None:
+        return
+
+    wells = (
+        session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == dataset_id)
+        .join(Well, Well.id == WellForCluster.well_id)
+        .order_by(Well.title, Well.id)
+        .all()
+    )
+    for row in wells:
+        title = row.well.title if row.well and row.well.title else f'well_id={row.well_id}'
+        text = f'{title} [{row.top_md:g} - {row.bottom_md:g}]'
+        item = QListWidgetItem(text)
+        item.setData(Qt.UserRole, row.well_id)
+        list_well.addItem(item)
+
+    canonical_params = (
+        session.query(ClusterWellLogParameter)
+        .filter(ClusterWellLogParameter.dataset_id == dataset_id)
+        .join(CanonicalWellLog, CanonicalWellLog.id == ClusterWellLogParameter.canonical_id)
+        .order_by(CanonicalWellLog.canonical_name)
+        .all()
+    )
+    for row in canonical_params:
+        canonical_name = row.canonical_name.canonical_name if row.canonical_name else f'canonical_id={row.canonical_id}'
+        item = QListWidgetItem(canonical_name)
+        item.setData(Qt.UserRole, ('canonical', row.canonical_id))
+        list_log.addItem(item)
+
+    calculator_params = (
+        session.query(ClusterWellLogParameterFromCalculator)
+        .filter(ClusterWellLogParameterFromCalculator.dataset_id == dataset_id)
+        .join(FeatureCalculator, FeatureCalculator.id == ClusterWellLogParameterFromCalculator.calculator_id)
+        .order_by(FeatureCalculator.feature_name)
+        .all()
+    )
+    for row in calculator_params:
+        feature_name = row.calculator.feature_name if row.calculator else f'calculator_id={row.calculator_id}'
+        item = QListWidgetItem(f'{feature_name} [calc]')
+        item.setData(Qt.UserRole, ('calculator', row.calculator_id))
+        list_log.addItem(item)
 
 
 def create_cluster_well_dataset() -> None:
