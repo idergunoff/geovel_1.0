@@ -169,6 +169,7 @@ def show_canonical_aliases_manager():
         for row in range(ui.listWidget_well.count()):
             if ui.listWidget_well.item(row).text().split(' id')[-1] == target_well_id:
                 ui.listWidget_well.setCurrentRow(row)
+                dialog.accept()
                 show_well_log()
                 return
 
