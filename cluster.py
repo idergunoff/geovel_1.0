@@ -433,6 +433,108 @@ def add_wells_to_cluster_dataset_from_radius() -> None:
     )
 
 
+def remove_selected_wells_from_cluster_dataset() -> None:
+    """
+    Этап 2.3 (ручное удаление скважин):
+    - удаляет выделенные скважины из списка скважин набора;
+    - очищает связанные интервалы (строки WellForCluster);
+    - очищает собранные данные data для текущего dataset
+      (на текущей схеме data хранится на уровне dataset).
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    list_well = getattr(ui, 'listWidget_cluster_list_well', None)
+    if combo is None or list_well is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'RM WELL', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    selected_items = list_well.selectedItems()
+    if not selected_items:
+        QMessageBox.information(MainWindow, 'RM WELL', 'Выберите скважины в списке набора для удаления.')
+        return
+
+    well_ids_to_remove: set[int] = set()
+    for item in selected_items:
+        well_id = item.data(Qt.UserRole)
+        if well_id is None:
+            continue
+        try:
+            well_ids_to_remove.add(int(well_id))
+        except (TypeError, ValueError):
+            continue
+
+    if not well_ids_to_remove:
+        QMessageBox.warning(MainWindow, 'RM WELL', 'Не удалось определить id выбранных скважин.')
+        return
+
+    removed_wells_count = (
+        session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == dataset_id, WellForCluster.well_id.in_(well_ids_to_remove))
+        .delete(synchronize_session=False)
+    )
+    removed_data_rows = (
+        session.query(WellLogClusterDatasetData)
+        .filter(WellLogClusterDatasetData.dataset_id == dataset_id)
+        .delete(synchronize_session=False)
+    )
+    session.commit()
+
+    load_cluster_well_dataset_state_to_form(dataset_id)
+    set_info(
+        f'RM WELL: удалено скважин {removed_wells_count}, удалено строк data {removed_data_rows}.',
+        'green'
+    )
+
+
+def clear_all_wells_from_cluster_dataset() -> None:
+    """
+    Полная очистка списка добавленных скважин по кнопке CLEAR:
+    - удаляет все скважины текущего dataset;
+    - очищает собранные data текущего dataset.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    list_well = getattr(ui, 'listWidget_cluster_list_well', None)
+    if combo is None or list_well is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'CLEAR WELLS', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    answer = QMessageBox.question(
+        MainWindow,
+        'Подтверждение очистки',
+        'Очистить весь список скважин текущего набора?\n\n'
+        'Будут удалены все добавленные скважины и связанные собранные данные.',
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.No
+    )
+    if answer != QMessageBox.Yes:
+        return
+
+    removed_wells_count = (
+        session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == dataset_id)
+        .delete(synchronize_session=False)
+    )
+    removed_data_rows = (
+        session.query(WellLogClusterDatasetData)
+        .filter(WellLogClusterDatasetData.dataset_id == dataset_id)
+        .delete(synchronize_session=False)
+    )
+    session.commit()
+
+    load_cluster_well_dataset_state_to_form(dataset_id)
+    set_info(
+        f'CLEAR WELLS: удалено скважин {removed_wells_count}, удалено строк data {removed_data_rows}.',
+        'green'
+    )
+
+
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
     Возвращает все уникальные названия каротажных кривых из БД с частотностью.
