@@ -154,6 +154,7 @@ ui.pushButton_prof_wells_excel.clicked.connect(profile_wells_to_Excel)
 ui.pushButton_all_prof_wells_excel.clicked.connect(all_profile_wells_to_Excel)
 ui.pushButton_rem_dupl_wells.clicked.connect(remove_duplicate_wells)
 ui.pushButton_wells_to_excel.clicked.connect(wells_to_excel)
+ui.pushButton_well_log_aliac.clicked.connect(show_canonical_aliases_manager)
 
 
 ui.pushButton_color.clicked.connect(change_color)

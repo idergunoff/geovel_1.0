@@ -1,10 +1,42 @@
 import pandas as pd
 
+from canonical_well_log_service import get_all_curve_names_with_frequency, get_canonical_well_logs_stats
 from filter_well import get_names_boundary
 from func import *
 from krige import draw_map
 from regression import update_list_reg, remove_all_param_geovel_reg, update_list_well_markup_reg
 from well import show_data_well
+
+
+def show_canonical_aliases_manager():
+    """Открывает модальную форму управления canonical/alias из раздела скважин."""
+    dialog = QtWidgets.QDialog(MainWindow)
+    dialog.setWindowTitle('Управление canonical/alias каротажа')
+    dialog.setModal(True)
+    dialog.setAttribute(Qt.WA_DeleteOnClose)
+
+    layout = QtWidgets.QVBoxLayout(dialog)
+    info_label = QtWidgets.QLabel(
+        'Форма управления canonical/alias открыта из раздела скважин (кнопка ALIAC).\n'
+        'Текущая реализация: точка входа и модальное окно.'
+    )
+    info_label.setWordWrap(True)
+    layout.addWidget(info_label)
+
+    stats = get_canonical_well_logs_stats()
+    curve_names = get_all_curve_names_with_frequency()
+    summary_label = QtWidgets.QLabel(
+        f'Canonical: {len(stats)} | Названий кривых в БД: {len(curve_names)}'
+    )
+    layout.addWidget(summary_label)
+
+    close_button = QtWidgets.QPushButton('Закрыть')
+    close_button.clicked.connect(dialog.accept)
+    layout.addWidget(close_button)
+
+    m_width, m_height = get_width_height_monitor()
+    dialog.resize(int(m_width / 3), int(m_height / 3))
+    dialog.exec_()
 
 
 def show_well_log():
