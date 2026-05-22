@@ -566,6 +566,7 @@ ui.pushButton_clust_auto_batch.clicked.connect(calculate_cluster_auto_batch)
 ui.pushButton_cluster_clear_result_auto_tune.clicked.connect(clear_cluster_auto_tune_results_with_confirm)
 ui.tableWidget_cluster_auto_result.cellDoubleClicked.connect(apply_selected_auto_result_from_table)
 ui.pushButton_cluster_create_well_set.clicked.connect(create_cluster_well_dataset)
+ui.pushButton_cluster_remove_well_set.clicked.connect(remove_cluster_well_dataset)
 
 
 time = datetime.datetime.now()
