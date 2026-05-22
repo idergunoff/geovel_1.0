@@ -1468,18 +1468,13 @@
               </item>
               <item row="2" column="2">
                <layout class="QGridLayout" name="gridLayout_12">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_12">
-                  <property name="font">
-                   <font>
-                    <pointsize>12</pointsize>
-                   </font>
-                  </property>
-                  <property name="toolTip">
-                   <string>Данные скважины</string>
+                <item row="0" column="3">
+                 <widget class="QToolButton" name="toolButton_add_data_well">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(191, 255, 191);</string>
                   </property>
                   <property name="text">
-                   <string>Data of Well:</string>
+                   <string>add</string>
                   </property>
                  </widget>
                 </item>
@@ -1496,23 +1491,38 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="2">
-                 <widget class="QToolButton" name="toolButton_add_data_well">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(191, 255, 191);</string>
-                  </property>
-                  <property name="text">
-                   <string>add</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
+                <item row="0" column="4">
                  <widget class="QToolButton" name="toolButton_del_data_well">
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(255, 185, 185);</string>
                   </property>
                   <property name="text">
                    <string>del</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_12">
+                  <property name="font">
+                   <font>
+                    <pointsize>12</pointsize>
+                   </font>
+                  </property>
+                  <property name="toolTip">
+                   <string>Данные скважины</string>
+                  </property>
+                  <property name="text">
+                   <string>Data of Well:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_well_log_aliac">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(204, 180, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>ALIAC</string>
                   </property>
                  </widget>
                 </item>
@@ -6082,6 +6092,16 @@ Therm</string>
                     </item>
                     <item row="0" column="1">
                      <layout class="QGridLayout" name="gridLayout_167">
+                      <item row="2" column="0">
+                       <widget class="QPushButton" name="pushButton_cluster_remove_well_log">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 166, 166);</string>
+                        </property>
+                        <property name="text">
+                         <string>REMOVE</string>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
                        <widget class="QPushButton" name="pushButton_cluster_add_well_log">
                         <property name="styleSheet">
@@ -6089,6 +6109,16 @@ Therm</string>
                         </property>
                         <property name="text">
                          <string>ADD</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QPushButton" name="pushButton_cluster_clear_list_log">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 138, 162);</string>
+                        </property>
+                        <property name="text">
+                         <string>CLEAR</string>
                         </property>
                        </widget>
                       </item>
@@ -6102,23 +6132,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="2" column="0">
-                       <widget class="QPushButton" name="pushButton_cluster_remove_well_log">
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_clust_collect_well_log">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 166, 166);</string>
+                         <string notr="true">background-color: rgb(226, 255, 165);</string>
                         </property>
                         <property name="text">
-                         <string>REMOVE</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="3" column="0">
-                       <widget class="QPushButton" name="pushButton_cluster_clear_list_log">
-                        <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 138, 162);</string>
-                        </property>
-                        <property name="text">
-                         <string>CLEAR</string>
+                         <string>COLLECT</string>
                         </property>
                        </widget>
                       </item>
@@ -6934,6 +6954,7 @@ Therm</string>
    <class>PlotWidget</class>
    <extends>QGraphicsView</extends>
    <header>pyqtgraph</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>GraphicsLayoutWidget</class>

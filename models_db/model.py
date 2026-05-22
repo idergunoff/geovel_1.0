@@ -3,7 +3,7 @@ import json
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
                         Date, Text, text, literal_column, or_, func, Index, desc, select, update, bindparam, literal,
-                        distinct)
+                        distinct, UniqueConstraint)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload, joinedload
 
 
