@@ -96,6 +96,7 @@ class CanonicalWellLog(Base):
 
     id = Column(Integer, primary_key=True)
     canonical_name = Column(String, nullable=False, unique=True, index=True)
+    canonical_name_norm = Column(String, nullable=False, unique=True, index=True)
     description = Column(String)
 
     aliases = relationship('AliasWellLog', back_populates='canonical_log', cascade='all, delete-orphan')
@@ -107,10 +108,41 @@ class AliasWellLog(Base):
 
     id = Column(Integer, primary_key=True)
     alias_name = Column(String, nullable=False, unique=True, index=True)
+    alias_name_norm = Column(String, nullable=False, unique=True, index=True)
     canonical_id = Column(Integer, ForeignKey('canonical_well_log.id'), nullable=False, index=True)
 
     canonical_log = relationship('CanonicalWellLog', back_populates='aliases')
 
+
+
+
+def _normalize_well_log_name(value):
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized.casefold()
+
+
+@event.listens_for(CanonicalWellLog, 'before_insert')
+@event.listens_for(CanonicalWellLog, 'before_update')
+def _sync_canonical_name_norm(mapper, connection, target):
+    if target.canonical_name is None:
+        raise ValueError('canonical_name cannot be empty')
+    target.canonical_name = target.canonical_name.strip()
+    if not target.canonical_name:
+        raise ValueError('canonical_name cannot be empty')
+    target.canonical_name_norm = _normalize_well_log_name(target.canonical_name)
+
+
+@event.listens_for(AliasWellLog, 'before_insert')
+@event.listens_for(AliasWellLog, 'before_update')
+def _sync_alias_name_norm(mapper, connection, target):
+    if target.alias_name is None:
+        raise ValueError('alias_name cannot be empty')
+    target.alias_name = target.alias_name.strip()
+    if not target.alias_name:
+        raise ValueError('alias_name cannot be empty')
+    target.alias_name_norm = _normalize_well_log_name(target.alias_name)
 
 class FeatureCalculator(Base):
     __tablename__ = 'feature_calculator'
