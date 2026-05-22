@@ -120,3 +120,48 @@ def get_canonical_well_logs_stats() -> List[Dict[str, object]]:
         })
 
     return result
+
+
+def add_alias_to_canonical(canonical_id: int, alias_name: str) -> AliasWellLog:
+    alias_name = _clean_name(alias_name)
+
+    canonical = session.query(CanonicalWellLog).filter(CanonicalWellLog.id == canonical_id).first()
+    if canonical is None:
+        raise CanonicalWellLogNotFoundError(f'Canonical well log with id={canonical_id} not found')
+
+    alias = AliasWellLog(alias_name=alias_name, canonical_id=canonical_id)
+    session.add(alias)
+
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise CanonicalWellLogConflictError(
+            f'Alias name "{alias_name}" is already assigned to another canonical'
+        ) from exc
+
+    return alias
+
+
+def remove_alias_from_canonical(canonical_id: int, alias_name: str) -> None:
+    alias_name = _clean_name(alias_name)
+
+    canonical = session.query(CanonicalWellLog).filter(CanonicalWellLog.id == canonical_id).first()
+    if canonical is None:
+        raise CanonicalWellLogNotFoundError(f'Canonical well log with id={canonical_id} not found')
+
+    alias = (
+        session.query(AliasWellLog)
+        .filter(
+            AliasWellLog.canonical_id == canonical_id,
+            AliasWellLog.alias_name_norm == func.lower(func.trim(alias_name))
+        )
+        .first()
+    )
+    if alias is None:
+        raise CanonicalWellLogNotFoundError(
+            f'Alias name "{alias_name}" is not assigned to canonical with id={canonical_id}'
+        )
+
+    session.delete(alias)
+    session.commit()
