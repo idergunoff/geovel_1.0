@@ -21,7 +21,8 @@ def show_canonical_aliases_manager():
     """Открывает модальную форму управления canonical/alias из раздела скважин."""
     dialog = QtWidgets.QDialog(MainWindow)
     dialog.setWindowTitle('Управление canonical/alias каротажа')
-    dialog.setModal(True)
+    dialog.setModal(False)
+    dialog.setWindowModality(Qt.NonModal)
     dialog.setAttribute(Qt.WA_DeleteOnClose)
 
     root_layout = QtWidgets.QVBoxLayout(dialog)
@@ -299,7 +300,7 @@ def show_canonical_aliases_manager():
 
     m_width, m_height = get_width_height_monitor()
     dialog.resize(int(m_width * 0.75), int(m_height * 0.65))
-    dialog.exec_()
+    dialog.show()
 
 
 def show_well_log():
