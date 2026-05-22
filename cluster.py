@@ -96,6 +96,42 @@ AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
 AUTO_CHECKPOINT_SAVE_EVERY = 10
 
 
+def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
+    """
+    Возвращает все уникальные названия каротажных кривых из БД с частотностью.
+
+    Используется как источник «всех возможных названий» для формы
+    управления canonical/alias (этап 1.3).
+    """
+    rows = (
+        session.query(WellLog.curve_name, func.count(WellLog.id))
+        .filter(WellLog.curve_name.isnot(None))
+        .group_by(WellLog.curve_name)
+        .all()
+    )
+
+    aggregated: dict[str, dict[str, int | str]] = {}
+    for curve_name, count in rows:
+        raw_name = str(curve_name)
+        normalized_name = raw_name.strip()
+        if not normalized_name:
+            continue
+        normalized_key = normalized_name.casefold()
+        bucket = aggregated.get(normalized_key)
+        if bucket is None:
+            aggregated[normalized_key] = {
+                'curve_name': normalized_name,
+                'frequency': int(count),
+            }
+            continue
+        bucket['frequency'] = int(bucket['frequency']) + int(count)
+
+    return sorted(
+        aggregated.values(),
+        key=lambda item: (-int(item['frequency']), str(item['curve_name']).casefold(), str(item['curve_name']))
+    )
+
+
 def _compute_auto_silhouette_sample_size(
         n_rows: int,
         *,
