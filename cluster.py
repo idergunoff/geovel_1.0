@@ -147,7 +147,21 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
     )
     for row in wells:
         well_name = row.well.name if row.well and row.well.name else f'well_id={row.well_id}'
-        text = f'{well_name} [{row.top_md:g} - {row.bottom_md:g}]'
+        marker_text = ''
+        full_interval = (
+            session.query(func.min(WellLog.begin), func.max(WellLog.end))
+            .filter(WellLog.well_id == row.well_id)
+            .first()
+        )
+        if full_interval and full_interval[0] is not None and full_interval[1] is not None:
+            full_top = float(full_interval[0])
+            full_bottom = float(full_interval[1])
+            if full_bottom < full_top:
+                full_top, full_bottom = full_bottom, full_top
+            if abs(float(row.top_md) - full_top) > 1e-9 or abs(float(row.bottom_md) - full_bottom) > 1e-9:
+                marker_text = ' ✓interval'
+
+        text = f'{well_name} [{row.top_md:g} - {row.bottom_md:g}]{marker_text}'
         item = QListWidgetItem(text)
         item.setData(Qt.UserRole, row.well_id)
         list_well.addItem(item)
@@ -177,6 +191,28 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
         item = QListWidgetItem(f'{feature_name} [calc]')
         item.setData(Qt.UserRole, ('calculator', row.calculator_id))
         list_log.addItem(item)
+
+
+def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None:
+    """
+    Этап 2.4:
+    Двойной клик по скважине набора открывает form_well_log для этой скважины.
+    """
+    if item is None:
+        return
+
+    well_id = item.data(Qt.UserRole)
+    try:
+        well_id = int(well_id)
+    except (TypeError, ValueError):
+        QMessageBox.warning(MainWindow, 'Интервал скважины', 'Не удалось определить id выбранной скважины.')
+        return
+
+    try:
+        ui.comboBox_well.setCurrentText(str(well_id))
+        show_well_log()
+    except Exception as exc:
+        QMessageBox.warning(MainWindow, 'Интервал скважины', f'Не удалось открыть form_well_log: {exc}')
 
 
 def create_cluster_well_dataset() -> None:

@@ -933,6 +933,43 @@ def show_well_log():
             session.commit()
             show_data_well()
 
+        def save_interval_to_cluster_dataset():
+            cluster_combo = getattr(ui, 'comboBox_cluster_well_set', None)
+            if cluster_combo is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER INTERVAL', 'Не найден combobox набора cluster_well.')
+                return
+
+            dataset_id = cluster_combo.currentData()
+            if dataset_id is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER INTERVAL', 'Сначала выберите набор каротажа во вкладке Cluster.')
+                return
+
+            well_id = get_well_id()
+            row = (
+                session.query(WellForCluster)
+                .filter(WellForCluster.dataset_id == int(dataset_id), WellForCluster.well_id == int(well_id))
+                .first()
+            )
+            if row is None:
+                QMessageBox.warning(
+                    WellLogForm,
+                    'CLUSTER INTERVAL',
+                    'Текущая скважина не добавлена в выбранный набор. Сначала выполните ADD WELL/ADD WELLS.'
+                )
+                return
+
+            depth = float(ui_wl.doubleSpinBox_depth.value())
+            interval = abs(float(ui_wl.doubleSpinBox_interval.value()))
+            top_md = depth - interval
+            bottom_md = depth + interval
+            if bottom_md < top_md:
+                top_md, bottom_md = bottom_md, top_md
+
+            row.top_md = top_md
+            row.bottom_md = bottom_md
+            session.commit()
+            set_info(f'Интервал [{top_md:g} - {bottom_md:g}] сохранен в cluster dataset id={int(dataset_id)}.', 'green')
+
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
@@ -953,6 +990,7 @@ def show_well_log():
         ui_wl.pushButton_clean.clicked.connect(clean_double_well_logging)
         ui_wl.pushButton_uf_to_bound.clicked.connect(uf_to_well_boundary)
         ui_wl.pushButton_mosh_pesch_to_data.clicked.connect(m_ss_to_well_data)
+        ui_wl.pushButton_add_interval_to_cluster.clicked.connect(save_interval_to_cluster_dataset)
 
         update_list_well_log()
 
