@@ -21,7 +21,8 @@ def show_canonical_aliases_manager():
     """Открывает модальную форму управления canonical/alias из раздела скважин."""
     dialog = QtWidgets.QDialog(MainWindow)
     dialog.setWindowTitle('Управление canonical/alias каротажа')
-    dialog.setModal(True)
+    dialog.setModal(False)
+    dialog.setWindowModality(Qt.NonModal)
     dialog.setAttribute(Qt.WA_DeleteOnClose)
 
     root_layout = QtWidgets.QVBoxLayout(dialog)
@@ -70,9 +71,20 @@ def show_canonical_aliases_manager():
     curves_list = QtWidgets.QListWidget()
     curves_layout.addWidget(curves_list)
 
+
+    wells_box = QtWidgets.QGroupBox('Скважины по выбранной кривой')
+    wells_layout = QtWidgets.QVBoxLayout(wells_box)
+    wells_hint = QtWidgets.QLabel('Выберите кривую в списке справа')
+    wells_layout.addWidget(wells_hint)
+    wells_list = QtWidgets.QListWidget()
+    wells_layout.addWidget(wells_list)
+    btn_open_well_log = QtWidgets.QPushButton('Открыть well logging form')
+    wells_layout.addWidget(btn_open_well_log)
+
     content_layout.addWidget(canonical_box, 1)
     content_layout.addWidget(alias_box, 1)
     content_layout.addWidget(curves_box, 1)
+    content_layout.addWidget(wells_box, 1)
 
     close_button = QtWidgets.QPushButton('Закрыть')
     close_button.clicked.connect(dialog.accept)
@@ -122,6 +134,48 @@ def show_canonical_aliases_manager():
                 item.setBackground(QtGui.QColor(255, 228, 196))
             curves_list.addItem(item)
 
+
+    def get_wells_for_curve(curve_name):
+        if not curve_name:
+            return []
+        return (
+            session.query(Well.id, Well.name)
+            .join(WellLog, WellLog.well_id == Well.id)
+            .filter(WellLog.curve_name == curve_name)
+            .distinct()
+            .order_by(Well.name.asc(), Well.id.asc())
+            .all()
+        )
+
+    def refresh_wells_for_selected_curve():
+        wells_list.clear()
+        curve_item = curves_list.currentItem()
+        if curve_item is None:
+            return
+
+        curve_name = curve_item.data(Qt.UserRole)
+        wells = get_wells_for_curve(curve_name)
+        for well_id, well_name in wells:
+            item = QtWidgets.QListWidgetItem(f'{well_name} id{well_id}')
+            item.setData(Qt.UserRole, int(well_id))
+            wells_list.addItem(item)
+
+    def open_selected_well_log():
+        selected = wells_list.currentItem()
+        if selected is None:
+            QMessageBox.information(dialog, 'Скважины', 'Выберите скважину из списка')
+            return
+
+        target_well_id = str(selected.data(Qt.UserRole))
+        for row in range(ui.listWidget_well.count()):
+            if ui.listWidget_well.item(row).text().split(' id')[-1] == target_well_id:
+                ui.listWidget_well.setCurrentRow(row)
+                dialog.accept()
+                show_well_log()
+                return
+
+        QMessageBox.warning(dialog, 'Скважины', 'Скважина не найдена в текущем фильтре списка скважин')
+
     def refresh_all(keep_canonical_id=None):
         canonical_list.clear()
         stats = get_canonical_well_logs_stats()
@@ -138,6 +192,7 @@ def show_canonical_aliases_manager():
             canonical_list.setCurrentRow(min(selected_row, canonical_list.count() - 1))
         refresh_aliases()
         refresh_curves()
+        refresh_wells_for_selected_curve()
 
     def handle_error(exc):
         QMessageBox.critical(dialog, 'Ошибка', str(exc))
@@ -237,12 +292,15 @@ def show_canonical_aliases_manager():
     curves_search.textChanged.connect(refresh_curves)
     curves_unassigned_only.toggled.connect(refresh_curves)
     curves_list.itemDoubleClicked.connect(on_curve_double_click)
+    curves_list.itemSelectionChanged.connect(refresh_wells_for_selected_curve)
+    btn_open_well_log.clicked.connect(open_selected_well_log)
+    wells_list.itemDoubleClicked.connect(lambda _: open_selected_well_log())
 
     refresh_all()
 
     m_width, m_height = get_width_height_monitor()
     dialog.resize(int(m_width * 0.75), int(m_height * 0.65))
-    dialog.exec_()
+    dialog.show()
 
 
 def show_well_log():
