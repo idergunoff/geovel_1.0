@@ -96,6 +96,62 @@ AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
 AUTO_CHECKPOINT_SAVE_EVERY = 10
 
 
+def update_cluster_well_dataset_combobox(select_dataset_id: int | None = None) -> None:
+    """
+    Перечитывает список наборов каротажа и заполняет comboBox_cluster_well_set.
+    """
+    if not hasattr(ui, 'comboBox_cluster_well_set'):
+        return
+
+    datasets = session.query(WellLogClusterDataset).order_by(WellLogClusterDataset.created_at, WellLogClusterDataset.id).all()
+    combo = ui.comboBox_cluster_well_set
+    combo.blockSignals(True)
+    combo.clear()
+    for dataset in datasets:
+        combo.addItem(dataset.name, dataset.id)
+
+    if combo.count() > 0:
+        index_to_select = 0
+        if select_dataset_id is not None:
+            found_index = combo.findData(select_dataset_id)
+            if found_index >= 0:
+                index_to_select = found_index
+        combo.setCurrentIndex(index_to_select)
+    combo.blockSignals(False)
+
+
+def create_cluster_well_dataset() -> None:
+    """
+    Этап 1.1:
+    - берет имя из lineEdit_string;
+    - валидирует;
+    - проверяет дубликаты;
+    - создает набор и выбирает его в combobox.
+    """
+    raw_name = ui.lineEdit_string.text()
+    dataset_name = raw_name.strip() if raw_name else ''
+    if not dataset_name:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Введите имя набора в строке lineEdit_string.')
+        return
+
+    existing_dataset = (
+        session.query(WellLogClusterDataset)
+        .filter(func.lower(WellLogClusterDataset.name) == dataset_name.casefold())
+        .first()
+    )
+    if existing_dataset is not None:
+        QMessageBox.critical(MainWindow, 'Ошибка', f'Набор "{dataset_name}" уже существует.')
+        update_cluster_well_dataset_combobox(select_dataset_id=existing_dataset.id)
+        return
+
+    new_dataset = WellLogClusterDataset(name=dataset_name)
+    session.add(new_dataset)
+    session.commit()
+
+    update_cluster_well_dataset_combobox(select_dataset_id=new_dataset.id)
+    set_info(f'Добавлен набор каротажа "{dataset_name}"', 'green')
+
+
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
     Возвращает все уникальные названия каротажных кривых из БД с частотностью.
