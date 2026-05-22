@@ -1,6 +1,15 @@
 import pandas as pd
 
-from canonical_well_log_service import get_all_curve_names_from_db, get_canonical_well_logs_stats
+from canonical_well_log_service import (
+    CanonicalWellLogServiceError,
+    add_alias_to_canonical,
+    create_canonical_well_log,
+    delete_canonical_well_log,
+    get_aliases_for_canonical,
+    get_all_curve_names_from_db,
+    get_canonical_well_logs_stats,
+    remove_alias_from_canonical,
+)
 from filter_well import get_names_boundary
 from func import *
 from krige import draw_map
@@ -15,27 +24,195 @@ def show_canonical_aliases_manager():
     dialog.setModal(True)
     dialog.setAttribute(Qt.WA_DeleteOnClose)
 
-    layout = QtWidgets.QVBoxLayout(dialog)
-    info_label = QtWidgets.QLabel(
-        'Форма управления canonical/alias открыта из раздела скважин (кнопка ALIAC).\n'
-        'Текущая реализация: точка входа и модальное окно.'
-    )
-    info_label.setWordWrap(True)
-    layout.addWidget(info_label)
+    root_layout = QtWidgets.QVBoxLayout(dialog)
+    content_layout = QtWidgets.QHBoxLayout()
+    root_layout.addLayout(content_layout)
 
-    stats = get_canonical_well_logs_stats()
-    curve_names = get_all_curve_names_from_db()
-    summary_label = QtWidgets.QLabel(
-        f'Canonical: {len(stats)} | Названий кривых в БД: {len(curve_names)}'
-    )
-    layout.addWidget(summary_label)
+    canonical_box = QtWidgets.QGroupBox('Канонические названия')
+    canonical_layout = QtWidgets.QVBoxLayout(canonical_box)
+    canonical_list = QtWidgets.QListWidget()
+    canonical_layout.addWidget(canonical_list)
+
+    canonical_name_input = QtWidgets.QLineEdit()
+    canonical_name_input.setPlaceholderText('Новое canonical название')
+    canonical_layout.addWidget(canonical_name_input)
+
+    canonical_buttons = QtWidgets.QHBoxLayout()
+    btn_add_canonical = QtWidgets.QPushButton('Добавить')
+    btn_del_canonical = QtWidgets.QPushButton('Удалить')
+    canonical_buttons.addWidget(btn_add_canonical)
+    canonical_buttons.addWidget(btn_del_canonical)
+    canonical_layout.addLayout(canonical_buttons)
+
+    alias_box = QtWidgets.QGroupBox('Алиасы выбранного canonical')
+    alias_layout = QtWidgets.QVBoxLayout(alias_box)
+    alias_list = QtWidgets.QListWidget()
+    alias_layout.addWidget(alias_list)
+
+    alias_input = QtWidgets.QLineEdit()
+    alias_input.setPlaceholderText('Alias из списка названий или вручную')
+    alias_layout.addWidget(alias_input)
+
+    alias_buttons = QtWidgets.QHBoxLayout()
+    btn_add_alias = QtWidgets.QPushButton('Добавить alias')
+    btn_del_alias = QtWidgets.QPushButton('Удалить alias')
+    alias_buttons.addWidget(btn_add_alias)
+    alias_buttons.addWidget(btn_del_alias)
+    alias_layout.addLayout(alias_buttons)
+
+    curves_box = QtWidgets.QGroupBox('Все названия кривых из БД')
+    curves_layout = QtWidgets.QVBoxLayout(curves_box)
+    curves_search = QtWidgets.QLineEdit()
+    curves_search.setPlaceholderText('Поиск по названию')
+    curves_layout.addWidget(curves_search)
+    curves_list = QtWidgets.QListWidget()
+    curves_layout.addWidget(curves_list)
+
+    content_layout.addWidget(canonical_box, 1)
+    content_layout.addWidget(alias_box, 1)
+    content_layout.addWidget(curves_box, 1)
 
     close_button = QtWidgets.QPushButton('Закрыть')
     close_button.clicked.connect(dialog.accept)
-    layout.addWidget(close_button)
+    root_layout.addWidget(close_button)
+
+    def selected_canonical_id():
+        item = canonical_list.currentItem()
+        if item is None:
+            return None
+        return item.data(Qt.UserRole)
+
+    def selected_canonical_name():
+        item = canonical_list.currentItem()
+        if item is None:
+            return None
+        return item.text()
+
+    def refresh_aliases():
+        alias_list.clear()
+        canonical_id = selected_canonical_id()
+        if canonical_id is None:
+            return
+        for alias_name in get_aliases_for_canonical(canonical_id):
+            alias_list.addItem(alias_name)
+
+    def refresh_curves():
+        query = curves_search.text().strip().lower()
+        curve_names = get_all_curve_names_from_db()
+        assigned = set()
+        for row in get_canonical_well_logs_stats():
+            for alias_name in get_aliases_for_canonical(row['id']):
+                assigned.add(alias_name.strip().lower())
+
+        curves_list.clear()
+        for row in curve_names:
+            curve_name = row['curve_name']
+            if query and query not in curve_name.lower():
+                continue
+
+            is_assigned = curve_name.strip().lower() in assigned
+            status = 'распределен' if is_assigned else 'не распределен'
+            item = QtWidgets.QListWidgetItem(f"{curve_name} | частота: {row['usage_count']} | {status}")
+            item.setData(Qt.UserRole, curve_name)
+            if not is_assigned:
+                item.setBackground(QtGui.QColor(255, 247, 208))
+            curves_list.addItem(item)
+
+    def refresh_all(keep_canonical_id=None):
+        canonical_list.clear()
+        stats = get_canonical_well_logs_stats()
+        selected_row = 0
+        for idx, row in enumerate(stats):
+            item = QtWidgets.QListWidgetItem(row['canonical_name'])
+            item.setToolTip(f"alias: {row['alias_count']}; coverage: {row['coverage_count']} ({row['coverage_pct']}%)")
+            item.setData(Qt.UserRole, row['id'])
+            canonical_list.addItem(item)
+            if keep_canonical_id is not None and row['id'] == keep_canonical_id:
+                selected_row = idx
+
+        if canonical_list.count() > 0:
+            canonical_list.setCurrentRow(min(selected_row, canonical_list.count() - 1))
+        refresh_aliases()
+        refresh_curves()
+
+    def handle_error(exc):
+        QMessageBox.critical(dialog, 'Ошибка', str(exc))
+
+    def on_add_canonical():
+        try:
+            canonical = create_canonical_well_log(canonical_name_input.text())
+            canonical_name_input.clear()
+            refresh_all(keep_canonical_id=canonical.id)
+        except CanonicalWellLogServiceError as exc:
+            handle_error(exc)
+
+    def on_del_canonical():
+        canonical_id = selected_canonical_id()
+        canonical_name = selected_canonical_name()
+        if canonical_id is None:
+            QMessageBox.information(dialog, 'Удаление canonical', 'Сначала выберите canonical')
+            return
+
+        reply = QMessageBox.question(
+            dialog,
+            'Подтверждение удаления',
+            f'Удалить canonical "{canonical_name}" вместе со всеми alias?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        try:
+            delete_canonical_well_log(canonical_id)
+            refresh_all()
+        except CanonicalWellLogServiceError as exc:
+            handle_error(exc)
+
+    def on_add_alias():
+        canonical_id = selected_canonical_id()
+        if canonical_id is None:
+            QMessageBox.information(dialog, 'Добавление alias', 'Сначала выберите canonical')
+            return
+
+        alias_name = alias_input.text().strip()
+        if not alias_name and curves_list.currentItem() is not None:
+            alias_name = curves_list.currentItem().data(Qt.UserRole)
+
+        try:
+            add_alias_to_canonical(canonical_id, alias_name)
+            alias_input.clear()
+            refresh_all(keep_canonical_id=canonical_id)
+        except CanonicalWellLogServiceError as exc:
+            handle_error(exc)
+
+    def on_del_alias():
+        canonical_id = selected_canonical_id()
+        item = alias_list.currentItem()
+        if canonical_id is None or item is None:
+            QMessageBox.information(dialog, 'Удаление alias', 'Выберите canonical и alias')
+            return
+        try:
+            remove_alias_from_canonical(canonical_id, item.text())
+            refresh_all(keep_canonical_id=canonical_id)
+        except CanonicalWellLogServiceError as exc:
+            handle_error(exc)
+
+    def on_curve_double_click(item):
+        alias_input.setText(item.data(Qt.UserRole))
+
+    btn_add_canonical.clicked.connect(on_add_canonical)
+    btn_del_canonical.clicked.connect(on_del_canonical)
+    btn_add_alias.clicked.connect(on_add_alias)
+    btn_del_alias.clicked.connect(on_del_alias)
+    canonical_list.itemSelectionChanged.connect(refresh_aliases)
+    curves_search.textChanged.connect(refresh_curves)
+    curves_list.itemDoubleClicked.connect(on_curve_double_click)
+
+    refresh_all()
 
     m_width, m_height = get_width_height_monitor()
-    dialog.resize(int(m_width / 3), int(m_height / 3))
+    dialog.resize(int(m_width * 0.75), int(m_height * 0.65))
     dialog.exec_()
 
 
