@@ -342,13 +342,23 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
+          <item row="5" column="0">
            <widget class="QPushButton" name="pushButton_add_interval_to_cluster">
             <property name="styleSheet">
              <string notr="true">background-color: rgb(191, 255, 191);</string>
             </property>
             <property name="text">
-             <string>INTERVAL TO CLUSTER</string>
+             <string>INT TO CLUST</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_add_well_log_to_cluster">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(92, 215, 173);</string>
+            </property>
+            <property name="text">
+             <string>LOG TO CLUST</string>
             </property>
            </widget>
           </item>

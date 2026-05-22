@@ -159,7 +159,11 @@ class Ui_Form_well_log(object):
         self.pushButton_add_interval_to_cluster = QtWidgets.QPushButton(self.groupBox)
         self.pushButton_add_interval_to_cluster.setStyleSheet("background-color: rgb(191, 255, 191);")
         self.pushButton_add_interval_to_cluster.setObjectName("pushButton_add_interval_to_cluster")
-        self.gridLayout_5.addWidget(self.pushButton_add_interval_to_cluster, 5, 0, 1, 2)
+        self.gridLayout_5.addWidget(self.pushButton_add_interval_to_cluster, 5, 0, 1, 1)
+        self.pushButton_add_well_log_to_cluster = QtWidgets.QPushButton(self.groupBox)
+        self.pushButton_add_well_log_to_cluster.setStyleSheet("background-color: rgb(92, 215, 173);")
+        self.pushButton_add_well_log_to_cluster.setObjectName("pushButton_add_well_log_to_cluster")
+        self.gridLayout_5.addWidget(self.pushButton_add_well_log_to_cluster, 5, 1, 1, 1)
         self.gridLayout_4.addLayout(self.gridLayout_5, 0, 0, 1, 1)
         self.gridLayout_2.addWidget(self.groupBox, 1, 0, 1, 1)
         self.gridLayout_3.addLayout(self.gridLayout_2, 1, 1, 1, 1)
@@ -205,7 +209,8 @@ class Ui_Form_well_log(object):
         self.pushButton_uf_to_bound.setText(_translate("Form_well_log", "TO BOUND"))
         self.label_mr_value.setText(_translate("Form_well_log", "value"))
         self.label_4.setText(_translate("Form_well_log", "Медиана:"))
-        self.pushButton_add_interval_to_cluster.setText(_translate("Form_well_log", "INTERVAL TO CLUSTER"))
+        self.pushButton_add_interval_to_cluster.setText(_translate("Form_well_log", "INT TO CLUST"))
+        self.pushButton_add_well_log_to_cluster.setText(_translate("Form_well_log", "LOG TO CLUST"))
 from pyqtgraph import PlotWidget
 
 
