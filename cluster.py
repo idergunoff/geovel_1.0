@@ -142,12 +142,12 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
         session.query(WellForCluster)
         .filter(WellForCluster.dataset_id == dataset_id)
         .join(Well, Well.id == WellForCluster.well_id)
-        .order_by(Well.title, Well.id)
+        .order_by(Well.name, Well.id)
         .all()
     )
     for row in wells:
-        title = row.well.title if row.well and row.well.title else f'well_id={row.well_id}'
-        text = f'{title} [{row.top_md:g} - {row.bottom_md:g}]'
+        well_name = row.well.name if row.well and row.well.name else f'well_id={row.well_id}'
+        text = f'{well_name} [{row.top_md:g} - {row.bottom_md:g}]'
         item = QListWidgetItem(text)
         item.setData(Qt.UserRole, row.well_id)
         list_well.addItem(item)
