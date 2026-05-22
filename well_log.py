@@ -143,8 +143,20 @@ def show_canonical_aliases_manager():
         QMessageBox.critical(dialog, 'Ошибка', str(exc))
 
     def on_add_canonical():
+        canonical_name = canonical_name_input.text().strip()
+        if not canonical_name:
+            QMessageBox.information(dialog, 'Добавление canonical', 'Нельзя добавить пустой canonical')
+            return
+
+        normalized_canonical = canonical_name.lower()
+        for idx in range(canonical_list.count()):
+            list_item = canonical_list.item(idx)
+            if list_item.text().strip().lower() == normalized_canonical:
+                QMessageBox.information(dialog, 'Добавление canonical', 'Такое canonical уже существует')
+                return
+
         try:
-            canonical = create_canonical_well_log(canonical_name_input.text())
+            canonical = create_canonical_well_log(canonical_name)
             canonical_name_input.clear()
             refresh_all(keep_canonical_id=canonical.id)
         except CanonicalWellLogServiceError as exc:
@@ -182,6 +194,18 @@ def show_canonical_aliases_manager():
         alias_name = alias_input.text().strip()
         if not alias_name and curves_list.currentItem() is not None:
             alias_name = curves_list.currentItem().data(Qt.UserRole)
+
+        alias_name = (alias_name or '').strip()
+        if not alias_name:
+            QMessageBox.information(dialog, 'Добавление alias', 'Нельзя добавить пустой alias')
+            return
+
+        normalized_alias = alias_name.lower()
+        for idx in range(alias_list.count()):
+            list_item = alias_list.item(idx)
+            if list_item.text().strip().lower() == normalized_alias:
+                QMessageBox.information(dialog, 'Добавление alias', 'Такой alias уже добавлен в выбранный canonical')
+                return
 
         try:
             add_alias_to_canonical(canonical_id, alias_name)
