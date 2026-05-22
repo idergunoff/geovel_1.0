@@ -224,3 +224,25 @@ def get_unassigned_curve_names() -> List[Dict[str, object]]:
         }
         for curve_name, usage_count in rows
     ]
+
+
+def resolve_canonical(curve_name: Optional[str]) -> Optional[str]:
+    """Resolve raw curve name to canonical name using alias mapping."""
+    if curve_name is None:
+        return None
+
+    normalized_curve_name = curve_name.strip().lower()
+    if not normalized_curve_name:
+        return None
+
+    row = (
+        session.query(CanonicalWellLog.canonical_name)
+        .join(AliasWellLog, AliasWellLog.canonical_id == CanonicalWellLog.id)
+        .filter(AliasWellLog.alias_name_norm == normalized_curve_name)
+        .first()
+    )
+
+    if row is None:
+        return None
+
+    return row[0]
