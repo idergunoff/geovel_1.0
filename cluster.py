@@ -255,6 +255,78 @@ def remove_cluster_well_dataset() -> None:
     set_info(f'Набор каротажа "{dataset.name}" удален', 'green')
 
 
+def add_selected_well_to_cluster_dataset() -> None:
+    """
+    Этап 2.1 (ADD WELL):
+    - берет текущую выбранную скважину из listWidget_well;
+    - проверяет, что скважина выбрана;
+    - проверяет наличие каротажа (well_log);
+    - проверяет отсутствие дубля в текущем наборе;
+    - добавляет скважину в набор и обновляет состояние формы.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'ADD WELL', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    current_well_item = getattr(ui, 'listWidget_well', None).currentItem() if hasattr(ui, 'listWidget_well') else None
+    if current_well_item is None:
+        QMessageBox.warning(MainWindow, 'ADD WELL', 'Выберите скважину в списке listWidget_well.')
+        return
+
+    try:
+        well_id = int(current_well_item.text().split(' id')[-1])
+    except (TypeError, ValueError, AttributeError):
+        QMessageBox.warning(MainWindow, 'ADD WELL', 'Не удалось определить id выбранной скважины.')
+        return
+
+    well = session.query(Well).filter_by(id=well_id).first()
+    if well is None:
+        QMessageBox.warning(MainWindow, 'ADD WELL', 'Выбранная скважина не найдена в БД.')
+        return
+
+    has_well_log = session.query(WellLog.id).filter(WellLog.well_id == well_id).first() is not None
+    if not has_well_log:
+        QMessageBox.warning(MainWindow, 'ADD WELL', f'У скважины "{well.name}" отсутствует каротаж (well_log).')
+        return
+
+    existing_row = (
+        session.query(WellForCluster.id)
+        .filter(WellForCluster.dataset_id == dataset_id, WellForCluster.well_id == well_id)
+        .first()
+    )
+    if existing_row is not None:
+        QMessageBox.information(MainWindow, 'ADD WELL', f'Скважина "{well.name}" уже добавлена в набор.')
+        return
+
+    top_bottom_row = (
+        session.query(func.min(WellLog.begin), func.max(WellLog.end))
+        .filter(WellLog.well_id == well_id)
+        .first()
+    )
+    top_md = float(top_bottom_row[0]) if top_bottom_row and top_bottom_row[0] is not None else 0.0
+    bottom_md = float(top_bottom_row[1]) if top_bottom_row and top_bottom_row[1] is not None else top_md
+    if bottom_md < top_md:
+        top_md, bottom_md = bottom_md, top_md
+
+    session.add(
+        WellForCluster(
+            dataset_id=dataset_id,
+            well_id=well_id,
+            top_md=top_md,
+            bottom_md=bottom_md,
+        )
+    )
+    session.commit()
+
+    load_cluster_well_dataset_state_to_form(dataset_id)
+    set_info(f'Скважина "{well.name}" добавлена в набор каротажа.', 'green')
+
+
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
     Возвращает все уникальные названия каротажных кривых из БД с частотностью.

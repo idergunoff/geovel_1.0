@@ -567,6 +567,7 @@ ui.pushButton_cluster_clear_result_auto_tune.clicked.connect(clear_cluster_auto_
 ui.tableWidget_cluster_auto_result.cellDoubleClicked.connect(apply_selected_auto_result_from_table)
 ui.pushButton_cluster_create_well_set.clicked.connect(create_cluster_well_dataset)
 ui.pushButton_cluster_remove_well_set.clicked.connect(remove_cluster_well_dataset)
+ui.pushButton_cluster_add_well.clicked.connect(add_selected_well_to_cluster_dataset)
 ui.comboBox_cluster_well_set.currentIndexChanged.connect(lambda _: load_cluster_well_dataset_state_to_form(ui.comboBox_cluster_well_set.currentData()))
 
 
