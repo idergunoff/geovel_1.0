@@ -152,6 +152,50 @@ def create_cluster_well_dataset() -> None:
     set_info(f'Добавлен набор каротажа "{dataset_name}"', 'green')
 
 
+def remove_cluster_well_dataset() -> None:
+    """
+    Этап 1.2:
+    - подтверждает удаление набора;
+    - удаляет набор и все зависимые сущности (каскад ORM);
+    - обновляет combobox и выбирает ближайший доступный набор.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return
+
+    current_dataset_id = combo.currentData()
+    if current_dataset_id is None:
+        QMessageBox.information(MainWindow, 'Удаление набора', 'Нет выбранного набора для удаления.')
+        return
+
+    dataset = session.query(WellLogClusterDataset).filter_by(id=current_dataset_id).first()
+    if dataset is None:
+        update_cluster_well_dataset_combobox()
+        QMessageBox.warning(MainWindow, 'Удаление набора', 'Выбранный набор не найден. Список будет обновлен.')
+        return
+
+    answer = QMessageBox.question(
+        MainWindow,
+        'Подтверждение удаления',
+        f'Удалить набор "{dataset.name}"?\n\n'
+        'Будут удалены связанные скважины, интервалы, каротажи и собранные данные.',
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.No
+    )
+    if answer != QMessageBox.Yes:
+        return
+
+    current_index = combo.currentIndex()
+    session.delete(dataset)
+    session.commit()
+
+    next_index = current_index if current_index >= 0 else 0
+    update_cluster_well_dataset_combobox()
+    if combo.count() > 0:
+        combo.setCurrentIndex(min(next_index, combo.count() - 1))
+    set_info(f'Набор каротажа "{dataset.name}" удален', 'green')
+
+
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
     Возвращает все уникальные названия каротажных кривых из БД с частотностью.
