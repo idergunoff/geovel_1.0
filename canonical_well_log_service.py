@@ -165,3 +165,62 @@ def remove_alias_from_canonical(canonical_id: int, alias_name: str) -> None:
 
     session.delete(alias)
     session.commit()
+
+
+def get_aliases_for_canonical(canonical_id: int) -> List[str]:
+    canonical = session.query(CanonicalWellLog).filter(CanonicalWellLog.id == canonical_id).first()
+    if canonical is None:
+        raise CanonicalWellLogNotFoundError(f'Canonical well log with id={canonical_id} not found')
+
+    rows = (
+        session.query(AliasWellLog.alias_name)
+        .filter(AliasWellLog.canonical_id == canonical_id)
+        .order_by(AliasWellLog.alias_name)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
+def get_all_curve_names_from_db() -> List[Dict[str, object]]:
+    rows = (
+        session.query(
+            WellLog.curve_name,
+            func.count(WellLog.id).label('usage_count')
+        )
+        .filter(WellLog.curve_name.isnot(None), func.trim(WellLog.curve_name) != '')
+        .group_by(WellLog.curve_name)
+        .order_by(func.count(WellLog.id).desc(), WellLog.curve_name.asc())
+        .all()
+    )
+
+    return [
+        {
+            'curve_name': curve_name,
+            'usage_count': int(usage_count),
+        }
+        for curve_name, usage_count in rows
+    ]
+
+
+def get_unassigned_curve_names() -> List[Dict[str, object]]:
+    alias_norm_subquery = session.query(AliasWellLog.alias_name_norm)
+
+    rows = (
+        session.query(
+            WellLog.curve_name,
+            func.count(WellLog.id).label('usage_count')
+        )
+        .filter(WellLog.curve_name.isnot(None), func.trim(WellLog.curve_name) != '')
+        .filter(~func.lower(func.trim(WellLog.curve_name)).in_(alias_norm_subquery))
+        .group_by(WellLog.curve_name)
+        .order_by(func.count(WellLog.id).desc(), WellLog.curve_name.asc())
+        .all()
+    )
+
+    return [
+        {
+            'curve_name': curve_name,
+            'usage_count': int(usage_count),
+        }
+        for curve_name, usage_count in rows
+    ]
