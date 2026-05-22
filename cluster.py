@@ -327,6 +327,112 @@ def add_selected_well_to_cluster_dataset() -> None:
     set_info(f'Скважина "{well.name}" добавлена в набор каротажа.', 'green')
 
 
+def add_wells_to_cluster_dataset_from_radius() -> None:
+    """
+    Этап 2.2 (ADD WELLS):
+    - берет радиус из spinBox_well_distance;
+    - получает скважины вокруг профилей текущего ObjectSet;
+    - добавляет только скважины с каротажем;
+    - пропускает дубли в текущем наборе.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'ADD WELLS', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    radius_spinbox = getattr(ui, 'spinBox_well_distance', None)
+    if radius_spinbox is None:
+        QMessageBox.warning(MainWindow, 'ADD WELLS', 'Не найден spinBox_well_distance для чтения радиуса.')
+        return
+    radius = float(radius_spinbox.value())
+
+    clust_object_id = get_curr_clust_object_id()
+    if not clust_object_id:
+        QMessageBox.warning(MainWindow, 'ADD WELLS', 'Выберите текущий ObjectSet кластерного анализа.')
+        return
+
+    clust_object = session.query(ObjectSet).filter_by(id=int(clust_object_id)).first()
+    if clust_object is None or clust_object.research_id is None:
+        QMessageBox.warning(MainWindow, 'ADD WELLS', 'Не удалось получить исследование выбранного ObjectSet.')
+        return
+
+    profiles = (
+        session.query(Profile)
+        .filter(Profile.research_id == int(clust_object.research_id))
+        .order_by(Profile.id)
+        .all()
+    )
+    if not profiles:
+        QMessageBox.information(MainWindow, 'ADD WELLS', 'У текущего объекта нет профилей для поиска скважин.')
+        return
+
+    existing_well_ids = {
+        row[0] for row in session.query(WellForCluster.well_id).filter(WellForCluster.dataset_id == dataset_id).all()
+    }
+
+    selected_well_ids: set[int] = set()
+    for profile in profiles:
+        nearest_wells = get_list_nearest_well(profile.id)
+        if not nearest_wells:
+            continue
+        for near_well in nearest_wells:
+            if near_well and near_well[0] is not None and near_well[0].id is not None:
+                selected_well_ids.add(int(near_well[0].id))
+
+    if not selected_well_ids:
+        QMessageBox.information(MainWindow, 'ADD WELLS', f'В радиусе {radius:g} м от профилей скважины не найдены.')
+        return
+
+    wells_to_add = []
+    added_count = 0
+    skipped_no_log = 0
+    skipped_duplicates = 0
+    for well_id in sorted(selected_well_ids):
+        if well_id in existing_well_ids:
+            skipped_duplicates += 1
+            continue
+
+        top_bottom_row = (
+            session.query(func.min(WellLog.begin), func.max(WellLog.end))
+            .filter(WellLog.well_id == well_id)
+            .first()
+        )
+        if top_bottom_row is None or top_bottom_row[0] is None or top_bottom_row[1] is None:
+            skipped_no_log += 1
+            continue
+
+        top_md = float(top_bottom_row[0])
+        bottom_md = float(top_bottom_row[1])
+        if bottom_md < top_md:
+            top_md, bottom_md = bottom_md, top_md
+
+        wells_to_add.append(
+            WellForCluster(
+                dataset_id=dataset_id,
+                well_id=well_id,
+                top_md=top_md,
+                bottom_md=bottom_md,
+            )
+        )
+        added_count += 1
+
+    if wells_to_add:
+        session.add_all(wells_to_add)
+        session.commit()
+        load_cluster_well_dataset_state_to_form(dataset_id)
+    else:
+        session.rollback()
+
+    set_info(
+        f'ADD WELLS: добавлено {added_count}, без каротажа {skipped_no_log}, дублей {skipped_duplicates}.',
+        'green' if added_count > 0 else 'brown'
+    )
+
+
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
     Возвращает все уникальные названия каротажных кривых из БД с частотностью.
