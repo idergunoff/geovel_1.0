@@ -65,6 +65,8 @@ def show_canonical_aliases_manager():
     curves_search = QtWidgets.QLineEdit()
     curves_search.setPlaceholderText('Поиск по названию')
     curves_layout.addWidget(curves_search)
+    curves_unassigned_only = QtWidgets.QCheckBox('Только нераспределенные')
+    curves_layout.addWidget(curves_unassigned_only)
     curves_list = QtWidgets.QListWidget()
     curves_layout.addWidget(curves_list)
 
@@ -111,11 +113,13 @@ def show_canonical_aliases_manager():
                 continue
 
             is_assigned = curve_name.strip().lower() in assigned
+            if curves_unassigned_only.isChecked() and is_assigned:
+                continue
             status = 'распределен' if is_assigned else 'не распределен'
             item = QtWidgets.QListWidgetItem(f"{curve_name} | частота: {row['usage_count']} | {status}")
             item.setData(Qt.UserRole, curve_name)
             if not is_assigned:
-                item.setBackground(QtGui.QColor(255, 247, 208))
+                item.setBackground(QtGui.QColor(255, 228, 196))
             curves_list.addItem(item)
 
     def refresh_all(keep_canonical_id=None):
@@ -207,6 +211,7 @@ def show_canonical_aliases_manager():
     btn_del_alias.clicked.connect(on_del_alias)
     canonical_list.itemSelectionChanged.connect(refresh_aliases)
     curves_search.textChanged.connect(refresh_curves)
+    curves_unassigned_only.toggled.connect(refresh_curves)
     curves_list.itemDoubleClicked.connect(on_curve_double_click)
 
     refresh_all()
