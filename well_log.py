@@ -1,6 +1,6 @@
 import pandas as pd
 
-from canonical_well_log_service import get_all_curve_names_with_frequency, get_canonical_well_logs_stats
+from canonical_well_log_service import get_all_curve_names_from_db, get_canonical_well_logs_stats
 from filter_well import get_names_boundary
 from func import *
 from krige import draw_map
@@ -24,7 +24,7 @@ def show_canonical_aliases_manager():
     layout.addWidget(info_label)
 
     stats = get_canonical_well_logs_stats()
-    curve_names = get_all_curve_names_with_frequency()
+    curve_names = get_all_curve_names_from_db()
     summary_label = QtWidgets.QLabel(
         f'Canonical: {len(stats)} | Названий кривых в БД: {len(curve_names)}'
     )
