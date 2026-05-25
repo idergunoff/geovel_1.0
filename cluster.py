@@ -396,12 +396,21 @@ def add_wells_to_cluster_dataset_from_radius() -> None:
         QMessageBox.warning(MainWindow, 'ADD WELLS', 'Не удалось получить исследование выбранного ObjectSet.')
         return
 
+    # Профили берем по текущему GeoradarObject (а не по ObjectSet):
+    # это исключает попадание скважин из профилей других объектов.
+    current_object_id = get_object_id()
+    if not current_object_id:
+        QMessageBox.warning(MainWindow, 'ADD WELLS', 'Не выбран текущий GeoradarObject.')
+        return
+
     profiles = (
         session.query(Profile)
-        .filter(Profile.research_id == int(clust_object.research_id))
+        .join(Research, Profile.research_id == Research.id)
+        .filter(Research.object_id == int(current_object_id))
         .order_by(Profile.id)
         .all()
     )
+
     if not profiles:
         QMessageBox.information(MainWindow, 'ADD WELLS', 'У текущего объекта нет профилей для поиска скважин.')
         return
