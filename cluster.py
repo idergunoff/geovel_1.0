@@ -232,6 +232,35 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
         QMessageBox.warning(MainWindow, 'Интервал скважины', f'Не удалось открыть form_well_log: {exc}')
 
 
+def add_single_well_log_parameter_to_cluster_dataset() -> None:
+    """
+    Этап 3.1:
+    Кнопка pushButton_cluster_add_well_log:
+    - если форма form_well_log уже открыта, выполняет добавление через её кнопку LOG TO CLUST;
+    - иначе открывает form_well_log для текущей скважины.
+    """
+    try:
+        app = QtWidgets.QApplication.instance()
+        if app is None:
+            return
+
+        for widget in app.topLevelWidgets():
+            if not isinstance(widget, QtWidgets.QDialog):
+                continue
+            button = widget.findChild(QtWidgets.QPushButton, 'pushButton_add_well_log_to_cluster')
+            if button is None:
+                continue
+            widget.raise_()
+            widget.activateWindow()
+            button.click()
+            return
+
+        from well_log import show_well_log as open_well_log_form
+        open_well_log_form()
+    except Exception as exc:
+        QMessageBox.warning(MainWindow, 'ADD LOG', f'Не удалось выполнить добавление параметра: {exc}')
+
+
 def create_cluster_well_dataset() -> None:
     """
     Этап 1.1:

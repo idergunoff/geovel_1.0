@@ -9,6 +9,7 @@ from canonical_well_log_service import (
     get_all_curve_names_from_db,
     get_canonical_well_logs_stats,
     remove_alias_from_canonical,
+    resolve_canonical,
 )
 from filter_well import get_names_boundary
 from func import *
@@ -978,6 +979,73 @@ def show_well_log():
 
             set_info(f'Интервал [{top_md:g} - {bottom_md:g}] сохранен в cluster dataset id={int(dataset_id)}.', 'green')
 
+        def add_current_well_log_to_cluster_dataset():
+            cluster_combo = getattr(ui, 'comboBox_cluster_well_set', None)
+            if cluster_combo is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER LOG', 'Не найден combobox набора cluster_well.')
+                return
+
+            dataset_id = cluster_combo.currentData()
+            if dataset_id is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER LOG', 'Сначала выберите набор каротажа во вкладке Cluster.')
+                return
+
+            current_item = ui_wl.listWidget_well_log.currentItem()
+            if current_item is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER LOG', 'Сначала выберите каротажную кривую.')
+                return
+
+            well_log_id = str(current_item.text()).split(' ID')[-1]
+            well_log = session.query(WellLog).filter_by(id=well_log_id).first()
+            if well_log is None:
+                QMessageBox.warning(WellLogForm, 'CLUSTER LOG', 'Не удалось загрузить выбранную кривую из БД.')
+                return
+
+            canonical_name = resolve_canonical(well_log.curve_name)
+            if not canonical_name:
+                QMessageBox.information(
+                    WellLogForm,
+                    'CLUSTER LOG',
+                    f'Для кривой "{well_log.curve_name}" не найдено canonical-имя. Добавление пропущено.'
+                )
+                return
+
+            canonical = session.query(CanonicalWellLog).filter(CanonicalWellLog.canonical_name == canonical_name).first()
+            if canonical is None:
+                QMessageBox.warning(
+                    WellLogForm,
+                    'CLUSTER LOG',
+                    f'Canonical "{canonical_name}" не найдено в таблице canonical_well_log.'
+                )
+                return
+
+            already_exists = (
+                session.query(ClusterWellLogParameter)
+                .filter(
+                    ClusterWellLogParameter.dataset_id == int(dataset_id),
+                    ClusterWellLogParameter.canonical_id == int(canonical.id),
+                )
+                .first()
+            )
+            if already_exists is not None:
+                QMessageBox.information(
+                    WellLogForm,
+                    'CLUSTER LOG',
+                    f'Параметр "{canonical_name}" уже добавлен в выбранный cluster dataset.'
+                )
+                return
+
+            row = ClusterWellLogParameter(dataset_id=int(dataset_id), canonical_id=int(canonical.id))
+            session.add(row)
+            session.commit()
+
+            try:
+                from cluster import load_cluster_well_dataset_state_to_form
+                load_cluster_well_dataset_state_to_form(int(dataset_id))
+            except Exception:
+                pass
+
+            set_info(f'Параметр "{canonical_name}" добавлен в cluster dataset id={int(dataset_id)}.', 'green')
 
         ui_wl.pushButton_add_well_log.clicked.connect(load_well_log)
         ui_wl.pushButton_add_xls.clicked.connect(load_well_log_xls)
@@ -999,6 +1067,7 @@ def show_well_log():
         ui_wl.pushButton_uf_to_bound.clicked.connect(uf_to_well_boundary)
         ui_wl.pushButton_mosh_pesch_to_data.clicked.connect(m_ss_to_well_data)
         ui_wl.pushButton_add_interval_to_cluster.clicked.connect(save_interval_to_cluster_dataset)
+        ui_wl.pushButton_add_well_log_to_cluster.clicked.connect(add_current_well_log_to_cluster_dataset)
 
         update_list_well_log()
 
