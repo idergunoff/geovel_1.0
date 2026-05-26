@@ -209,8 +209,25 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
         return
 
     try:
-        ui.comboBox_well.setCurrentText(str(well_id))
-        show_well_log()
+        selected_item = None
+        for idx in range(ui.listWidget_well.count()):
+            candidate = ui.listWidget_well.item(idx)
+            if candidate is None:
+                continue
+            candidate_well_id = str(candidate.text()).split(' id')[-1].strip()
+            if candidate_well_id == str(well_id):
+                selected_item = candidate
+                break
+
+        if selected_item is None:
+            raise RuntimeError(
+                f'Скважина id={well_id} не найдена в основном списке listWidget_well. '
+                f'Выберите её на вкладке скважин и повторите.'
+            )
+
+        ui.listWidget_well.setCurrentItem(selected_item)
+        from well_log import show_well_log as open_well_log_form
+        open_well_log_form()
     except Exception as exc:
         QMessageBox.warning(MainWindow, 'Интервал скважины', f'Не удалось открыть form_well_log: {exc}')
 
