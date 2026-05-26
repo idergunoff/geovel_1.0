@@ -173,9 +173,28 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
         .order_by(CanonicalWellLog.canonical_name)
         .all()
     )
+    dataset_well_count = (
+        session.query(func.count(WellForCluster.id))
+        .filter(WellForCluster.dataset_id == dataset_id)
+        .scalar()
+    ) or 0
+
     for row in canonical_params:
         canonical_name = row.canonical_name.canonical_name if row.canonical_name else f'canonical_id={row.canonical_id}'
-        item = QListWidgetItem(canonical_name)
+        covered_well_count = (
+            session.query(func.count(func.distinct(WellLog.well_id)))
+            .join(AliasWellLog, AliasWellLog.alias_name_norm == func.lower(func.trim(WellLog.curve_name)))
+            .filter(
+                AliasWellLog.canonical_id == row.canonical_id,
+                WellLog.well_id.in_(
+                    session.query(WellForCluster.well_id).filter(WellForCluster.dataset_id == dataset_id)
+                ),
+            )
+            .scalar()
+        ) or 0
+
+        label_text = f'{canonical_name} ({int(covered_well_count)}/{int(dataset_well_count)})'
+        item = QListWidgetItem(label_text)
         item.setData(Qt.UserRole, ('canonical', row.canonical_id))
         list_log.addItem(item)
 
@@ -259,6 +278,79 @@ def add_single_well_log_parameter_to_cluster_dataset() -> None:
         open_well_log_form()
     except Exception as exc:
         QMessageBox.warning(MainWindow, 'ADD LOG', f'Не удалось выполнить добавление параметра: {exc}')
+
+
+def add_all_well_log_parameters_to_cluster_dataset() -> None:
+    """
+    Этап 3.2 (ADD ALL):
+    - добавляет все доступные "чистые" (не calculator) canonical-параметры,
+      встречающиеся в скважинах текущего dataset;
+    - пропускает неканонизируемые названия и дубли.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'ADD ALL LOG', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    from canonical_well_log_service import resolve_canonical
+
+    well_ids = [
+        int(row[0])
+        for row in session.query(WellForCluster.well_id).filter(WellForCluster.dataset_id == int(dataset_id)).all()
+    ]
+    if not well_ids:
+        QMessageBox.information(MainWindow, 'ADD ALL LOG', 'В наборе нет скважин. Сначала добавьте скважины.')
+        return
+
+    existing_canonical_ids = {
+        int(row[0])
+        for row in (
+            session.query(ClusterWellLogParameter.canonical_id)
+            .filter(ClusterWellLogParameter.dataset_id == int(dataset_id))
+            .all()
+        )
+    }
+
+    curves = (
+        session.query(WellLog.curve_name)
+        .filter(WellLog.well_id.in_(well_ids), WellLog.curve_name.isnot(None), func.trim(WellLog.curve_name) != '')
+        .all()
+    )
+
+    canonical_ids_to_add: set[int] = set()
+    skipped_unmapped = 0
+    for (curve_name,) in curves:
+        canonical_name = resolve_canonical(curve_name)
+        if not canonical_name:
+            skipped_unmapped += 1
+            continue
+        canonical = session.query(CanonicalWellLog.id).filter(CanonicalWellLog.canonical_name == canonical_name).first()
+        if canonical is None:
+            skipped_unmapped += 1
+            continue
+        canonical_id = int(canonical[0])
+        if canonical_id in existing_canonical_ids:
+            continue
+        canonical_ids_to_add.add(canonical_id)
+
+    if canonical_ids_to_add:
+        session.add_all(
+            ClusterWellLogParameter(dataset_id=int(dataset_id), canonical_id=canonical_id)
+            for canonical_id in sorted(canonical_ids_to_add)
+        )
+        session.commit()
+    else:
+        session.rollback()
+
+    load_cluster_well_dataset_state_to_form(int(dataset_id))
+    set_info(
+        f'ADD ALL LOG: добавлено {len(canonical_ids_to_add)} параметров, пропущено без canonical {skipped_unmapped}.',
+        'green' if canonical_ids_to_add else 'brown'
+    )
 
 
 def create_cluster_well_dataset() -> None:
