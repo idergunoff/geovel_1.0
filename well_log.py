@@ -968,6 +968,14 @@ def show_well_log():
             row.top_md = top_md
             row.bottom_md = bottom_md
             session.commit()
+
+            update_list_well(select_well=True, selected_well_id=get_well_id())
+            try:
+                from cluster import load_cluster_well_dataset_state_to_form
+                load_cluster_well_dataset_state_to_form(int(dataset_id))
+            except Exception:
+                pass
+
             set_info(f'Интервал [{top_md:g} - {bottom_md:g}] сохранен в cluster dataset id={int(dataset_id)}.', 'green')
 
 
