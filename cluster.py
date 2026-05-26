@@ -226,7 +226,8 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
             )
 
         ui.listWidget_well.setCurrentItem(selected_item)
-        show_well_log()
+        from well_log import show_well_log as open_well_log_form
+        open_well_log_form()
     except Exception as exc:
         QMessageBox.warning(MainWindow, 'Интервал скважины', f'Не удалось открыть form_well_log: {exc}')
 
