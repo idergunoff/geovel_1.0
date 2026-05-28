@@ -275,6 +275,34 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
             )
 
         ui.listWidget_well.setCurrentItem(selected_item)
+        dataset_well_list = getattr(ui, 'listWidget_cluster_list_well', None)
+        selected_dataset_well = dataset_well_list.currentItem() if dataset_well_list is not None else None
+        if selected_dataset_well is None:
+            QMessageBox.information(MainWindow, 'ADD LOG', 'Выберите скважину из списка набора (listWidget_cluster_list_well).')
+            return
+
+        well_id = selected_dataset_well.data(Qt.UserRole)
+        try:
+            well_id = int(well_id)
+        except (TypeError, ValueError):
+            QMessageBox.warning(MainWindow, 'ADD LOG', 'Не удалось определить id скважины из списка набора.')
+            return
+
+        selected_item = None
+        for idx in range(ui.listWidget_well.count()):
+            candidate = ui.listWidget_well.item(idx)
+            if candidate is None:
+                continue
+            candidate_well_id = str(candidate.text()).split(' id')[-1].strip()
+            if candidate_well_id == str(well_id):
+                selected_item = candidate
+                break
+
+        if selected_item is None:
+            QMessageBox.warning(MainWindow, 'ADD LOG', f'Скважина id={well_id} не найдена в основном списке listWidget_well.')
+            return
+
+        ui.listWidget_well.setCurrentItem(selected_item)
         from well_log import show_well_log as open_well_log_form
         open_well_log_form()
     except Exception as exc:
@@ -372,13 +400,14 @@ def add_all_well_log_parameters_to_cluster_dataset() -> None:
             ClusterWellLogParameter(dataset_id=int(dataset_id), canonical_id=canonical_id)
             for canonical_id in sorted(canonical_ids_to_add)
         )
+        removed_data_rows = _invalidate_cluster_well_dataset_data(int(dataset_id))
         session.commit()
     else:
         session.rollback()
 
     load_cluster_well_dataset_state_to_form(int(dataset_id))
     set_info(
-        f'ADD ALL LOG: добавлено {len(canonical_ids_to_add)} параметров, пропущено без canonical {skipped_unmapped}.',
+        f'ADD ALL LOG: добавлено {len(canonical_ids_to_add)} параметров, сброшено строк data {removed_data_rows if canonical_ids_to_add else 0}, пропущено без canonical {skipped_unmapped}.',
         'green' if canonical_ids_to_add else 'brown'
     )
 
@@ -646,10 +675,11 @@ def add_selected_well_to_cluster_dataset() -> None:
             bottom_md=bottom_md,
         )
     )
+    removed_data_rows = _invalidate_cluster_well_dataset_data(int(dataset_id))
     session.commit()
 
     load_cluster_well_dataset_state_to_form(dataset_id)
-    set_info(f'Скважина "{well.name}" добавлена в набор каротажа.', 'green')
+    set_info(f'Скважина "{well.name}" добавлена в набор каротажа. Сброшено строк data: {removed_data_rows}.', 'green')
 
 
 def add_wells_to_cluster_dataset_from_radius() -> None:
@@ -756,13 +786,14 @@ def add_wells_to_cluster_dataset_from_radius() -> None:
 
     if wells_to_add:
         session.add_all(wells_to_add)
+        removed_data_rows = _invalidate_cluster_well_dataset_data(int(dataset_id))
         session.commit()
         load_cluster_well_dataset_state_to_form(dataset_id)
     else:
         session.rollback()
 
     set_info(
-        f'ADD WELLS: добавлено {added_count}, без каротажа {skipped_no_log}, дублей {skipped_duplicates}.',
+        f'ADD WELLS: добавлено {added_count}, сброшено строк data {removed_data_rows if added_count > 0 else 0}, без каротажа {skipped_no_log}, дублей {skipped_duplicates}.',
         'green' if added_count > 0 else 'brown'
     )
 
@@ -906,39 +937,12 @@ def collect_cluster_well_log_dataset_data() -> None:
     aliases = session.query(AliasWellLog.alias_name_norm, AliasWellLog.canonical_id).all()
     alias_to_canonical = {str(name): int(cid) for name, cid in aliases}
 
-    columns = ['well_depth'] + [row.canonical_name.canonical_name for row in params if row.canonical_name]
+    columns = ['well_id_depth'] + [row.canonical_name.canonical_name for row in params if row.canonical_name]
     rows = [columns]
 
     for wf in wells:
         top_md = float(wf.top_md)
         bottom_md = float(wf.bottom_md)
-        for param in params:
-            pass
-        for wl in session.query(WellLog).filter(WellLog.well_id == wf.well_id).all():
-            if wl.curve_data is None or wl.step in (None, 0):
-                continue
-            alias_key = str(wl.curve_name or '').strip().casefold()
-            canonical_id = alias_to_canonical.get(alias_key)
-            if canonical_id is None:
-                continue
-            values = None
-            try:
-                values = json.loads(wl.curve_data)
-            except Exception:
-                continue
-            if not isinstance(values, list):
-                continue
-            for idx, value in enumerate(values):
-                try:
-                    depth = float(wl.begin) + idx * float(wl.step)
-                    value_f = float(value)
-                except Exception:
-                    continue
-                if depth < top_md or depth > bottom_md:
-                    continue
-                key = f"{wf.well.name if wf.well and wf.well.name else wf.well_id}_{depth:g}"
-                while len(rows) == 1 or rows[-1][0] != key:
-                    break
         # сбор по глубине
         depth_map = {}
         for wl in session.query(WellLog).filter(WellLog.well_id == wf.well_id).all():
@@ -968,7 +972,7 @@ def collect_cluster_well_log_dataset_data() -> None:
                 depth_map[key][canonical_id] = value
 
         for depth in sorted(depth_map.keys()):
-            line = [f"{wf.well.name if wf.well and wf.well.name else wf.well_id}_{depth:g}"]
+            line = [f"{int(wf.well_id)}_{depth:g}"]
             values_by_canonical = depth_map[depth]
             for param in params:
                 line.append(values_by_canonical.get(param.canonical_id, None))
