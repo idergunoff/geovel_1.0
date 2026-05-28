@@ -353,6 +353,135 @@ def add_all_well_log_parameters_to_cluster_dataset() -> None:
     )
 
 
+def remove_selected_well_log_parameters_from_cluster_dataset() -> None:
+    """
+    Этап 3.3 (удаление параметров):
+    - удаляет выделенные параметры каротажа из списка набора;
+    - поддерживает удаление canonical и calculator-параметров;
+    - очищает собранные строки data текущего dataset.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    list_log = getattr(ui, 'listWidget_cluster_list_log', None)
+    if combo is None or list_log is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'RM LOG', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    selected_items = list_log.selectedItems()
+    if not selected_items:
+        QMessageBox.information(MainWindow, 'RM LOG', 'Выберите параметры в списке набора для удаления.')
+        return
+
+    canonical_ids_to_remove: set[int] = set()
+    calculator_ids_to_remove: set[int] = set()
+    for item in selected_items:
+        payload = item.data(Qt.UserRole)
+        if not isinstance(payload, tuple) or len(payload) != 2:
+            continue
+        entity_type, entity_id = payload
+        try:
+            entity_id_int = int(entity_id)
+        except (TypeError, ValueError):
+            continue
+        if entity_type == 'canonical':
+            canonical_ids_to_remove.add(entity_id_int)
+        elif entity_type == 'calculator':
+            calculator_ids_to_remove.add(entity_id_int)
+
+    if not canonical_ids_to_remove and not calculator_ids_to_remove:
+        QMessageBox.warning(MainWindow, 'RM LOG', 'Не удалось определить id выбранных параметров.')
+        return
+
+    removed_canonical_count = 0
+    removed_calculator_count = 0
+    if canonical_ids_to_remove:
+        removed_canonical_count = (
+            session.query(ClusterWellLogParameter)
+            .filter(
+                ClusterWellLogParameter.dataset_id == int(dataset_id),
+                ClusterWellLogParameter.canonical_id.in_(canonical_ids_to_remove)
+            )
+            .delete(synchronize_session=False)
+        )
+    if calculator_ids_to_remove:
+        removed_calculator_count = (
+            session.query(ClusterWellLogParameterFromCalculator)
+            .filter(
+                ClusterWellLogParameterFromCalculator.dataset_id == int(dataset_id),
+                ClusterWellLogParameterFromCalculator.calculator_id.in_(calculator_ids_to_remove)
+            )
+            .delete(synchronize_session=False)
+        )
+
+    removed_data_rows = (
+        session.query(WellLogClusterDatasetData)
+        .filter(WellLogClusterDatasetData.dataset_id == int(dataset_id))
+        .delete(synchronize_session=False)
+    )
+    session.commit()
+
+    load_cluster_well_dataset_state_to_form(int(dataset_id))
+    set_info(
+        f'RM LOG: удалено canonical {removed_canonical_count}, calculator {removed_calculator_count}, '
+        f'удалено строк data {removed_data_rows}.',
+        'green'
+    )
+
+
+def clear_all_well_log_parameters_from_cluster_dataset() -> None:
+    """
+    Полная очистка списка параметров каротажа по кнопке CLEAR:
+    - удаляет все canonical и calculator-параметры текущего dataset;
+    - очищает собранные строки data текущего dataset.
+    """
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'CLEAR LOGS', 'Сначала создайте или выберите набор каротажа.')
+        return
+
+    answer = QMessageBox.question(
+        MainWindow,
+        'Подтверждение очистки',
+        'Очистить весь список каротажных параметров текущего набора?\n\n'
+        'Будут удалены все выбранные параметры и связанные собранные данные.',
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.No
+    )
+    if answer != QMessageBox.Yes:
+        return
+
+    removed_canonical_count = (
+        session.query(ClusterWellLogParameter)
+        .filter(ClusterWellLogParameter.dataset_id == int(dataset_id))
+        .delete(synchronize_session=False)
+    )
+    removed_calculator_count = (
+        session.query(ClusterWellLogParameterFromCalculator)
+        .filter(ClusterWellLogParameterFromCalculator.dataset_id == int(dataset_id))
+        .delete(synchronize_session=False)
+    )
+    removed_data_rows = (
+        session.query(WellLogClusterDatasetData)
+        .filter(WellLogClusterDatasetData.dataset_id == int(dataset_id))
+        .delete(synchronize_session=False)
+    )
+    session.commit()
+
+    load_cluster_well_dataset_state_to_form(int(dataset_id))
+    set_info(
+        f'CLEAR LOGS: удалено canonical {removed_canonical_count}, calculator {removed_calculator_count}, '
+        f'удалено строк data {removed_data_rows}.',
+        'green'
+    )
+
+
 def create_cluster_well_dataset() -> None:
     """
     Этап 1.1:
