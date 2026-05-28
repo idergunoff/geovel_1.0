@@ -968,6 +968,11 @@ def show_well_log():
 
             row.top_md = top_md
             row.bottom_md = bottom_md
+            try:
+                from cluster import _invalidate_cluster_well_dataset_data
+                _invalidate_cluster_well_dataset_data(int(dataset_id))
+            except Exception:
+                pass
             session.commit()
 
             update_list_well(select_well=True, selected_well_id=get_well_id())
@@ -1037,6 +1042,11 @@ def show_well_log():
 
             row = ClusterWellLogParameter(dataset_id=int(dataset_id), canonical_id=int(canonical.id))
             session.add(row)
+            try:
+                from cluster import _invalidate_cluster_well_dataset_data
+                _invalidate_cluster_well_dataset_data(int(dataset_id))
+            except Exception:
+                pass
             session.commit()
 
             try:
