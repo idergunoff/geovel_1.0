@@ -961,10 +961,8 @@ def show_well_log():
 
             depth = float(ui_wl.doubleSpinBox_depth.value())
             interval = abs(float(ui_wl.doubleSpinBox_interval.value()))
-            top_md = depth - interval
+            top_md = depth
             bottom_md = depth + interval
-            if bottom_md < top_md:
-                top_md, bottom_md = bottom_md, top_md
 
             row.top_md = top_md
             row.bottom_md = bottom_md
