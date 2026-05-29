@@ -118,6 +118,7 @@ class AutoTuningClusterSizeLimits(TypedDict):
 
 
 cluster_auto_results_cache: list[CandidateResult] = []
+cluster_auto_results_by_context: dict[tuple[str, int, str], list[CandidateResult]] = {}
 well_log_cluster_result_cache: dict[int, dict[str, Any]] = {}
 well_log_cluster_visualization_window = None
 
@@ -1602,6 +1603,111 @@ def _parse_well_log_row_key(value: Any) -> tuple[int, float]:
     return int(well_part), float(depth_part)
 
 
+def _normalize_well_log_source_curve_names(raw_value: Any, feature_names: list[str]) -> dict[str, str]:
+    """
+    Нормализует трассировку исходных curve-name для runtime-строки Well Log.
+
+    Компактный формат старых COLLECT-записей не хранит отдельные source_curve_names,
+    поэтому для него каноническое имя признака считается одновременно исходным именем.
+    """
+    if isinstance(raw_value, dict):
+        return {str(name): str(raw_value.get(name, name)) for name in feature_names}
+    return {str(name): str(name) for name in feature_names}
+
+
+def _normalize_well_log_runtime_rows(stored_rows: Any) -> tuple[list[str], list[dict[str, Any]], dict[str, Any]]:
+    """
+    Приводит WellLogClusterDatasetData.data к единому runtime-формату этапа 4.
+
+    Поддерживаются два формата хранения:
+    - компактная таблица COLLECT: header ``[well_id_depth, GR, ...]`` + строки;
+    - явные JSON-строки: ``well_id``, ``depth_md``, ``features``, ``source_curve_names``.
+
+    Возвращает ``feature_names``, список нормализованных строк с meta/features и
+    диагностический summary по отброшенным строкам.
+    """
+    invalid_rows: list[dict[str, Any]] = []
+    normalized_rows: list[dict[str, Any]] = []
+
+    if not isinstance(stored_rows, list) or not stored_rows:
+        return [], [], {"invalid_row_count": 0, "invalid_rows_preview": []}
+
+    first_row = stored_rows[0]
+    if isinstance(first_row, dict):
+        feature_order: OrderedDict[str, None] = OrderedDict()
+        for source_idx, row in enumerate(stored_rows):
+            if not isinstance(row, dict):
+                invalid_rows.append({"row": source_idx, "reason": "row is not an object"})
+                continue
+            features = row.get("features")
+            if not isinstance(features, dict):
+                invalid_rows.append({"row": source_idx, "reason": "missing features object"})
+                continue
+            for feature_name in features:
+                feature_order.setdefault(str(feature_name), None)
+
+        feature_names = list(feature_order.keys())
+        for source_idx, row in enumerate(stored_rows):
+            if not isinstance(row, dict):
+                continue
+            features = row.get("features")
+            if not isinstance(features, dict):
+                continue
+            try:
+                well_id = int(row["well_id"])
+                depth_md = float(row["depth_md"])
+            except Exception as exc:
+                invalid_rows.append({"row": source_idx, "reason": f"invalid well_id/depth_md: {exc}"})
+                continue
+            feature_values = {name: features.get(name) for name in feature_names}
+            normalized_rows.append(
+                {
+                    "source_row_index": int(source_idx),
+                    "well_id": well_id,
+                    "well_name": str(row.get("well_name") or f"well_id={well_id}"),
+                    "depth_md": depth_md,
+                    "features": feature_values,
+                    "source_curve_names": _normalize_well_log_source_curve_names(row.get("source_curve_names"), feature_names),
+                }
+            )
+        return feature_names, normalized_rows, {
+            "invalid_row_count": len(invalid_rows),
+            "invalid_rows_preview": invalid_rows[:10],
+        }
+
+    header = first_row
+    if not isinstance(header, list) or len(header) < 2:
+        invalid_rows.append({"row": 0, "reason": "invalid compact header"})
+        return [], [], {"invalid_row_count": len(invalid_rows), "invalid_rows_preview": invalid_rows[:10]}
+
+    feature_names = [str(name) for name in header[1:]]
+    for source_idx, row in enumerate(stored_rows[1:]):
+        stored_row_number = source_idx + 1
+        if not isinstance(row, list) or len(row) < len(feature_names) + 1:
+            invalid_rows.append({"row": stored_row_number, "reason": "row length/header mismatch"})
+            continue
+        try:
+            well_id, depth_md = _parse_well_log_row_key(row[0])
+        except Exception as exc:
+            invalid_rows.append({"row": stored_row_number, "reason": f"invalid well_id/depth_md: {exc}"})
+            continue
+        normalized_rows.append(
+            {
+                "source_row_index": int(source_idx),
+                "well_id": int(well_id),
+                "well_name": f"well_id={well_id}",
+                "depth_md": float(depth_md),
+                "features": dict(zip(feature_names, row[1:len(feature_names) + 1])),
+                "source_curve_names": _normalize_well_log_source_curve_names(None, feature_names),
+            }
+        )
+
+    return feature_names, normalized_rows, {
+        "invalid_row_count": len(invalid_rows),
+        "invalid_rows_preview": invalid_rows[:10],
+    }
+
+
 def build_well_log_cluster_context() -> ClusterRunContext:
     """
     Адаптер WellLogClusterDatasetData.data к единому ClusterRunContext.
@@ -1639,54 +1745,57 @@ def build_well_log_cluster_context() -> ClusterRunContext:
             f'Well Log dataset "{dataset.name}" не содержит строк расчета. Выполните COLLECT.'
         )
 
-    header = stored_rows[0]
-    data_rows = stored_rows[1:]
-    if not isinstance(header, list) or len(header) < 2:
-        raise ClusterContextError("Well Log data имеет некорректный заголовок. Повторите COLLECT.")
-    feature_names = [str(name) for name in header[1:]]
+    feature_names, runtime_rows, normalize_diagnostics = _normalize_well_log_runtime_rows(stored_rows)
     if not feature_names:
         raise ClusterContextError("В Well Log data нет признаков каротажа. Добавьте параметры и выполните COLLECT.")
+    if not runtime_rows:
+        raise ClusterContextError(
+            f'Well Log dataset "{dataset.name}" не содержит валидных runtime-строк. Повторите COLLECT.'
+        )
 
     well_names = {
         int(row.id): str(row.name or f"well_id={row.id}")
         for row in session.query(Well.id, Well.name).all()
     }
 
-    invalid_rows: list[dict[str, Any]] = []
+    invalid_rows: list[dict[str, Any]] = list(normalize_diagnostics.get("invalid_rows_preview", []))
+    invalid_row_count = int(normalize_diagnostics.get("invalid_row_count", len(invalid_rows)))
     prepared_rows: list[list[Any]] = []
     meta_rows: list[dict[str, Any]] = []
     x_rows: list[list[float]] = []
     row_index_by_well: dict[int, int] = {}
+    dropped_rows_by_reason: Counter[str] = Counter()
 
-    for source_idx, row in enumerate(data_rows):
-        if not isinstance(row, list) or len(row) < len(feature_names) + 1:
-            invalid_rows.append({"row": source_idx + 1, "reason": "row length/header mismatch"})
-            continue
-        try:
-            well_id, depth_md = _parse_well_log_row_key(row[0])
-        except Exception as exc:
-            invalid_rows.append({"row": source_idx + 1, "reason": f"invalid well_id/depth_md: {exc}"})
-            continue
-
-        feature_values = [_coerce_well_log_feature_value(value) for value in row[1:len(feature_names) + 1]]
+    runtime_rows.sort(key=lambda item: (int(item["well_id"]), float(item["depth_md"]), int(item["source_row_index"])))
+    for row in runtime_rows:
+        well_id = int(row["well_id"])
+        depth_md = float(row["depth_md"])
+        source_idx = int(row.get("source_row_index", len(meta_rows)))
+        raw_features = row.get("features", {}) or {}
+        feature_values = [_coerce_well_log_feature_value(raw_features.get(name)) for name in feature_names]
         if not any(np.isfinite(value) for value in feature_values):
-            invalid_rows.append({"row": source_idx + 1, "reason": "all feature values are non-finite"})
+            invalid_row_count += 1
+            dropped_rows_by_reason["all feature values are non-finite"] += 1
+            if len(invalid_rows) < 10:
+                invalid_rows.append({"row": source_idx, "reason": "all feature values are non-finite"})
             continue
 
         row_index = row_index_by_well.get(well_id, 0)
         row_index_by_well[well_id] = row_index + 1
-        well_name = well_names.get(well_id, f"well_id={well_id}")
+        well_name = well_names.get(well_id, str(row.get("well_name") or f"well_id={well_id}"))
+        source_curve_names = _normalize_well_log_source_curve_names(row.get("source_curve_names"), feature_names)
         meta = {
-            "well_id": int(well_id),
+            "well_id": well_id,
             "well_name": well_name,
-            "depth_md": float(depth_md),
+            "depth_md": depth_md,
             "row_index_in_well": int(row_index),
-            "source_row_index": int(source_idx),
-            "source_curve_values": dict(zip(feature_names, row[1:len(feature_names) + 1])),
+            "source_row_index": source_idx,
+            "source_curve_values": dict(zip(feature_names, feature_values)),
+            "source_curve_names": source_curve_names,
         }
         meta_rows.append(meta)
         x_rows.append(feature_values)
-        prepared_rows.append([int(source_idx), int(well_id), float(depth_md)] + row[1:len(feature_names) + 1])
+        prepared_rows.append([source_idx, well_id, depth_md] + feature_values)
 
     rows_by_well: dict[int, int] = Counter(int(meta["well_id"]) for meta in meta_rows)
     excluded_wells = [
@@ -1695,8 +1804,10 @@ def build_well_log_cluster_context() -> ClusterRunContext:
         if count < WELL_LOG_CLUSTER_MIN_VALID_ROWS_PER_WELL
     ]
     excluded_ids = {int(item["well_id"]) for item in excluded_wells}
+    excluded_row_count = 0
     if excluded_ids:
         keep_mask = [int(meta["well_id"]) not in excluded_ids for meta in meta_rows]
+        excluded_row_count = sum(1 for keep in keep_mask if not keep)
         prepared_rows = [row for row, keep in zip(prepared_rows, keep_mask) if keep]
         meta_rows = [meta for meta, keep in zip(meta_rows, keep_mask) if keep]
         x_rows = [row for row, keep in zip(x_rows, keep_mask) if keep]
@@ -1713,12 +1824,16 @@ def build_well_log_cluster_context() -> ClusterRunContext:
         )
 
     diagnostics = {
-        "invalid_row_count": len(invalid_rows),
+        "invalid_row_count": invalid_row_count,
         "invalid_rows_preview": invalid_rows[:10],
+        "dropped_rows_by_reason": dict(dropped_rows_by_reason),
         "excluded_wells": excluded_wells,
+        "excluded_well_count": len(excluded_wells),
+        "excluded_row_count": excluded_row_count,
         "valid_well_count": len(remaining_wells),
         "valid_row_count": len(prepared_rows),
         "feature_count": len(feature_names),
+        "runtime_format": "object_rows" if isinstance(stored_rows[0], dict) else "compact_table",
     }
 
     return ClusterRunContext(
@@ -3541,22 +3656,87 @@ def _candidate_pca_short(candidate: CandidateConfig) -> str:
     return "on"
 
 
+def _auto_context_cache_key(run_context: ClusterRunContext) -> tuple[str, int, str]:
+    return (
+        str(run_context.get("source_type", "gpr")),
+        int(run_context.get("dataset_id", 0)),
+        str(run_context.get("data_hash", "")),
+    )
+
+
+def _format_well_log_auto_diagnostics(diagnostics: dict[str, Any]) -> str:
+    if not diagnostics:
+        return "—"
+    valid_wells = diagnostics.get("valid_well_count", "—")
+    valid_rows = diagnostics.get("valid_row_count", "—")
+    excluded = diagnostics.get("excluded_well_count", 0)
+    invalid = diagnostics.get("invalid_row_count", 0)
+    return f"wells={valid_wells}, rows={valid_rows}, excl={excluded}, invalid={invalid}"
+
+
+def enrich_auto_results_for_context(
+        results: list[CandidateResult],
+        run_context: ClusterRunContext,
+        *,
+        auto_mode: str
+) -> list[CandidateResult]:
+    """Добавляет к AUTO-кандидатам источник/dataset для общей таблицы результатов."""
+    enriched_results: list[CandidateResult] = []
+    source_type = str(run_context.get("source_type", "gpr"))
+    diagnostics = dict(run_context.get("diagnostics", {}) or {})
+    for result in results or []:
+        enriched = dict(result)
+        enriched["source_type"] = source_type
+        enriched["dataset_id"] = int(run_context.get("dataset_id", 0))
+        enriched["dataset_title"] = str(run_context.get("dataset_title", ""))
+        enriched["data_hash"] = str(run_context.get("data_hash", ""))
+        enriched["auto_mode"] = str(auto_mode).upper()
+        if source_type == "well_log":
+            enriched["well_log_diagnostics"] = diagnostics
+            enriched["well_log_diagnostics_text"] = _format_well_log_auto_diagnostics(diagnostics)
+        enriched_results.append(enriched)
+    return enriched_results
+
+
+def remember_auto_results_for_context(run_context: ClusterRunContext, results: list[CandidateResult]) -> None:
+    cluster_auto_results_by_context[_auto_context_cache_key(run_context)] = list(results or [])
+
+
+def refresh_cluster_auto_results_for_active_context() -> None:
+    """Перерисовывает общую AUTO-таблицу для текущей вкладки/dataset, если есть runtime-кэш."""
+    run_context = build_cluster_run_context(show_errors=False)
+    if run_context is None:
+        render_auto_results_table([])
+        return
+    cached_results = cluster_auto_results_by_context.get(_auto_context_cache_key(run_context))
+    if cached_results is not None:
+        render_auto_results_table(cached_results)
+        return
+    if run_context.get("source_type") == "gpr":
+        load_saved_auto_results_for_selected_object()
+        return
+    render_auto_results_table([])
+
+
 def render_auto_results_table(results: list[CandidateResult]) -> None:
     """
-    Заполняет таблицу результатов AUTO-подбора.
+    Заполняет общую таблицу результатов AUTO-подбора для GPR и Well Log.
     """
     global cluster_auto_results_cache
     cluster_auto_results_cache = list(results or [])
 
     table = ui.tableWidget_cluster_auto_result
     headers = [
-        "Rank", "Score", "Clusters", "Method", "Scaler", "PCA",
-        "PCA comps", "Silhouette", "DB", "CH", "Noise %", "PartHash", "Status"
+        "Rank", "Score", "Source", "Dataset", "Clusters", "Method", "Scaler", "PCA",
+        "PCA comps", "Silhouette", "DB", "CH", "Noise %", "Well diagnostics", "PartHash", "Status"
     ]
     table.clear()
     table.setColumnCount(len(headers))
     table.setHorizontalHeaderLabels(headers)
     table.setRowCount(len(results))
+
+    center_columns = {0, 1, 2, 4, 8, 9, 10, 11, 12, 14, 15}
+    status_col = headers.index("Status")
 
     for row_idx, result in enumerate(results):
         cfg = result.get("candidate_config", {})
@@ -3564,6 +3744,9 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
         stats = result.get("stats", {})
         score_val = result.get("score")
         noise = _to_finite_float(stats.get("noise_fraction"))
+        source_type = str(result.get("source_type") or "gpr")
+        dataset_title = str(result.get("dataset_title") or result.get("dataset_id") or "—")
+        well_diagnostics_text = str(result.get("well_log_diagnostics_text") or ("—" if source_type != "well_log" else "no diagnostics"))
 
         status_raw = str(result.get("status", "—"))
         status_view = {
@@ -3575,6 +3758,8 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
         row_values = [
             str(row_idx + 1),
             _safe_num(score_val, precision=4),
+            source_type,
+            dataset_title,
             str(stats.get("n_clusters", "—")),
             _candidate_method_short(cfg),
             str(cfg.get("scaler_mode", "—")),
@@ -3584,35 +3769,39 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
             _safe_num(metrics.get("davies_bouldin"), precision=4),
             _safe_num(metrics.get("calinski_harabasz"), precision=2),
             (f"{(noise * 100.0):.1f}%" if noise is not None else "—"),
+            well_diagnostics_text,
             str(stats.get("partition_hash", "—")),
             status_view
         ]
 
+        tooltip_payload = {
+            "candidate_id": result.get("candidate_id"),
+            "source_type": source_type,
+            "dataset_id": result.get("dataset_id"),
+            "dataset_title": result.get("dataset_title"),
+            "data_hash": result.get("data_hash"),
+            "auto_mode": result.get("auto_mode"),
+            "candidate_config": cfg,
+            "well_log_diagnostics": result.get("well_log_diagnostics", {}),
+            "error_text": result.get("error_text", "")
+        }
+        tooltip = json.dumps(tooltip_payload, ensure_ascii=False, default=str)
+
         for col_idx, value in enumerate(row_values):
             item = QTableWidgetItem(str(value))
-            if col_idx in (0, 1, 2, 6, 7, 8, 9, 10, 11, 12):
+            if col_idx in center_columns:
                 item.setTextAlignment(Qt.AlignCenter)
-            if col_idx == 12:
+            if col_idx == status_col:
                 if status_raw == "ok":
                     item.setForeground(QBrush(QColor("darkgreen")))
                 elif status_raw == "invalid":
                     item.setForeground(QBrush(QColor("darkorange")))
                 else:
                     item.setForeground(QBrush(QColor("darkred")))
-            item.setToolTip(
-                json.dumps(
-                    {
-                        "candidate_id": result.get("candidate_id"),
-                        "candidate_config": cfg,
-                        "error_text": result.get("error_text", "")
-                    },
-                    ensure_ascii=False
-                )
-            )
+            item.setToolTip(tooltip)
             table.setItem(row_idx, col_idx, item)
 
     table.resizeColumnsToContents()
-
 
 
 
@@ -3625,6 +3814,8 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
         return
 
     global cluster_auto_results_cache
+    active_context = build_cluster_run_context(show_errors=False)
+    active_context_key = _auto_context_cache_key(active_context) if active_context is not None else None
     has_cached_results = len(cluster_auto_results_cache) > 0
     has_table_results = table.rowCount() > 0
 
@@ -3645,6 +3836,8 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
         return
 
     cluster_auto_results_cache = []
+    if active_context_key is not None:
+        cluster_auto_results_by_context.pop(active_context_key, None)
     table.clear()
     table.setRowCount(0)
     table.setColumnCount(0)
@@ -3794,20 +3987,14 @@ def calculate_cluster_auto():
     if run_context is None:
         return
 
-    if run_context["source_type"] == "well_log":
-        set_info(
-            f"AUTO Well Log: контекст dataset id={run_context['dataset_id']} подготовлен "
-            f"({run_context['row_count']} строк, {len(run_context['feature_names'])} признаков). "
-            "Подключение Well Log к AUTO pipeline выполняется на этапе 3.",
-            "blue"
-        )
-        return
-
-    clust_object_id = int(run_context["dataset_id"])
-    clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
-    if clust_object is None:
-        set_info(f"AUTO: объект id={clust_object_id} не найден.", "brown")
-        return
+    source_type = str(run_context["source_type"])
+    dataset_id = int(run_context["dataset_id"])
+    use_persistent_auto_cache = source_type == "gpr"
+    if use_persistent_auto_cache:
+        clust_object = session.query(ObjectSet).filter_by(id=dataset_id).first()
+        if clust_object is None:
+            set_info(f"AUTO: объект id={dataset_id} не найден.", "brown")
+            return
 
     base_data = run_context["raw_rows"]
     if not base_data:
@@ -3889,7 +4076,7 @@ def calculate_cluster_auto():
         "calinski_harabasz": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_ch", fallback=0.3)
     }
     cache_key = build_cluster_auto_tuning_cache_key(
-        clust_object_id=int(clust_object_id),
+        clust_object_id=dataset_id,
         auto_mode=auto_mode,
         max_candidates=max_candidates_value if use_candidates_limit else 0,
         top_k=top_k,
@@ -3939,19 +4126,21 @@ def calculate_cluster_auto():
     )
     QApplication.processEvents()
 
-    if not force_recompute:
+    if not force_recompute and use_persistent_auto_cache:
         cached_top_results = load_cluster_auto_tuning_cache(
             cache_key=cache_key,
-            clust_object_id=int(clust_object_id),
+            clust_object_id=dataset_id,
             top_k=top_k
         )
         if cached_top_results:
-            render_auto_results_table(cached_top_results)
-            best_result = cached_top_results[0]
+            enriched_cached_results = enrich_auto_results_for_context(cached_top_results, run_context, auto_mode=auto_mode)
+            remember_auto_results_for_context(run_context, enriched_cached_results)
+            render_auto_results_table(enriched_cached_results)
+            best_result = enriched_cached_results[0]
             if auto_apply_best:
                 apply_auto_result_to_ui(best_result)
             set_info(
-                f"AUTO {auto_mode}: использованы сохраненные top-{len(cached_top_results)} настройки.",
+                f"AUTO {auto_mode}: использованы сохраненные top-{len(enriched_cached_results)} настройки.",
                 "green"
             )
             return
@@ -3973,7 +4162,7 @@ def calculate_cluster_auto():
         random_seed=auto_random_seed,
         min_cluster_samples=min_cluster_samples,
         run_key=cache_key,
-        object_set_id=int(clust_object_id),
+        object_set_id=dataset_id if use_persistent_auto_cache else None,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
@@ -3983,14 +4172,17 @@ def calculate_cluster_auto():
     )
 
     top_results = tuning_result.get("top_results", [])
-    save_cluster_auto_tuning_cache(
-        cache_key=cache_key,
-        clust_object_id=int(clust_object_id),
-        top_results=top_results,
-        top_k=top_k
-    )
-    render_auto_results_table(top_results)
-    best_result = tuning_result.get("best_result")
+    enriched_top_results = enrich_auto_results_for_context(top_results, run_context, auto_mode=auto_mode)
+    if use_persistent_auto_cache:
+        save_cluster_auto_tuning_cache(
+            cache_key=cache_key,
+            clust_object_id=dataset_id,
+            top_results=top_results,
+            top_k=top_k
+        )
+    remember_auto_results_for_context(run_context, enriched_top_results)
+    render_auto_results_table(enriched_top_results)
+    best_result = enriched_top_results[0] if enriched_top_results else tuning_result.get("best_result")
     raw_results = tuning_result.get("raw_results", []) or []
     dropped_candidates = sum(1 for row in raw_results if row.get("status") != "ok")
     total_candidates = len(raw_results)
@@ -6178,6 +6370,7 @@ def build_well_log_cluster_visualization_data(
             continue
         meta = dict(meta_rows[source_row_idx])
         source_values = meta.get("source_curve_values", {}) or {}
+        source_curve_names = meta.get("source_curve_names", {}) or {}
         rows.append(
             {
                 "cluster_label": int(label),
@@ -6187,6 +6380,7 @@ def build_well_log_cluster_visualization_data(
                 "row_index_in_well": int(meta.get("row_index_in_well", 0)),
                 "source_row_index": int(meta.get("source_row_index", source_row_idx)),
                 "features": {name: source_values.get(name) for name in feature_names},
+                "source_curve_names": {name: source_curve_names.get(name, name) for name in feature_names},
             }
         )
 

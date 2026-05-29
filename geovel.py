@@ -577,6 +577,8 @@ ui.pushButton_cluster_remove_well_log.clicked.connect(remove_selected_well_log_p
 ui.pushButton_cluster_clear_list_log.clicked.connect(clear_all_well_log_parameters_from_cluster_dataset)
 ui.pushButton_clust_collect_well_log.clicked.connect(collect_cluster_well_log_dataset_data)
 ui.comboBox_cluster_well_set.currentIndexChanged.connect(lambda _: load_cluster_well_dataset_state_to_form(ui.comboBox_cluster_well_set.currentData()))
+ui.comboBox_cluster_well_set.currentIndexChanged.connect(lambda _: refresh_cluster_auto_results_for_active_context())
+ui.tabWidget.currentChanged.connect(lambda _: refresh_cluster_auto_results_for_active_context())
 ui.listWidget_cluster_list_well.itemDoubleClicked.connect(open_cluster_well_interval_form)
 
 
