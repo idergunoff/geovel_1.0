@@ -1,11 +1,3 @@
-"""Backward-compatible helpers for cluster canonical preparation.
-
-The implementation lives in ``cluster/canonical_preparation.py`` with the rest
-of the cluster-analysis modules. This standalone shim intentionally avoids
-importing the full ``cluster`` package so lightweight tests can run without GUI
-or scientific optional dependencies installed.
-"""
-
 from __future__ import annotations
 
 from typing import Callable, Iterable, TypedDict
