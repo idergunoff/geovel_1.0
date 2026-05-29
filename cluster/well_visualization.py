@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .common import *
 
 def _build_well_log_cluster_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -183,26 +185,31 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         controls_layout.addWidget(QtWidgets.QLabel("Mode:"), 0, 0)
         self.mode_combo = QtWidgets.QComboBox()
         self.mode_combo.addItems(self.MODE_TITLES)
+        self.mode_combo.setToolTip("Переключает режим визуализации без повторного расчета кластеров.")
         self.mode_combo.currentIndexChanged.connect(self._sync_mode_tab)
         controls_layout.addWidget(self.mode_combo, 0, 1)
 
         controls_layout.addWidget(QtWidgets.QLabel("Well:"), 0, 2)
         self.well_combo = QtWidgets.QComboBox()
+        self.well_combo.setToolTip("Скважина для режима «1 скважина → все кривые» и таблицы интервалов.")
         self.well_combo.currentIndexChanged.connect(self._handle_well_changed)
         controls_layout.addWidget(self.well_combo, 0, 3)
 
         controls_layout.addWidget(QtWidgets.QLabel("Curve:"), 0, 4)
         self.curve_combo = QtWidgets.QComboBox()
+        self.curve_combo.setToolTip("Кривая для межскважинного сравнения small multiples.")
         self.curve_combo.currentIndexChanged.connect(self._render_curve_across_wells)
         controls_layout.addWidget(self.curve_combo, 0, 5)
 
         self.show_noise_checkbox = QtWidgets.QCheckBox("Show noise")
+        self.show_noise_checkbox.setToolTip("Показывать строки HDBSCAN noise (cluster -1) на графиках и в таблицах.")
         self.show_noise_checkbox.setChecked(True)
         self.show_noise_checkbox.stateChanged.connect(self._apply_cluster_filter_to_tables)
         controls_layout.addWidget(self.show_noise_checkbox, 1, 0)
 
         controls_layout.addWidget(QtWidgets.QLabel("Cluster opacity:"), 1, 1)
         self.opacity_spin = QtWidgets.QDoubleSpinBox()
+        self.opacity_spin.setToolTip("Прозрачность цветной подложки кластерных интервалов на графиках.")
         self.opacity_spin.setRange(0.05, 1.0)
         self.opacity_spin.setSingleStep(0.05)
         self.opacity_spin.setValue(0.35)
@@ -210,9 +217,27 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.opacity_spin.valueChanged.connect(self._render_curve_across_wells)
         controls_layout.addWidget(self.opacity_spin, 1, 2)
 
-        self.export_button = QtWidgets.QPushButton("Export (next stages)")
-        self.export_button.setEnabled(False)
-        controls_layout.addWidget(self.export_button, 1, 5)
+        export_layout = QtWidgets.QHBoxLayout()
+        self.export_intervals_button = QtWidgets.QPushButton("Export intervals")
+        self.export_intervals_button.setToolTip("Сохранить все видимые интервалы кластеров в CSV или XLSX.")
+        self.export_intervals_button.clicked.connect(self.export_intervals)
+        export_layout.addWidget(self.export_intervals_button)
+
+        self.export_profiles_button = QtWidgets.QPushButton("Export profiles")
+        self.export_profiles_button.setToolTip("Сохранить статистические портреты видимых кластеров в CSV или XLSX.")
+        self.export_profiles_button.clicked.connect(self.export_cluster_profiles)
+        export_layout.addWidget(self.export_profiles_button)
+
+        self.save_screenshot_button = QtWidgets.QPushButton("Save graph")
+        self.save_screenshot_button.setToolTip("Сохранить текущий график активного режима в PNG/SVG/PDF.")
+        self.save_screenshot_button.clicked.connect(self.save_current_graph_screenshot)
+        export_layout.addWidget(self.save_screenshot_button)
+        controls_layout.addLayout(export_layout, 1, 3, 1, 3)
+
+        self.status_label = QtWidgets.QLabel("Готово")
+        self.status_label.setWordWrap(True)
+        self.status_label.setStyleSheet("color: #2e7d32;")
+        controls_layout.addWidget(self.status_label, 2, 0, 1, 6)
         root_layout.addWidget(controls_group)
 
         splitter = QtWidgets.QSplitter(Qt.Horizontal)
@@ -262,12 +287,14 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         curve_wells_controls = QtWidgets.QHBoxLayout()
         curve_wells_controls.addWidget(QtWidgets.QLabel("Wells:"))
         self.curve_wells_list = QtWidgets.QListWidget()
+        self.curve_wells_list.setToolTip("Выберите одну или несколько скважин для сравнения выбранной кривой.")
         self.curve_wells_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.curve_wells_list.itemSelectionChanged.connect(self._render_curve_across_wells)
         curve_wells_controls.addWidget(self.curve_wells_list, stretch=1)
 
         curve_wells_options = QtWidgets.QFormLayout()
         self.curve_wells_sort_combo = QtWidgets.QComboBox()
+        self.curve_wells_sort_combo.setToolTip("Сортировка small multiples по имени, доле кластера или похожести кластерной последовательности.")
         self.curve_wells_sort_combo.addItems([
             "по имени",
             "по доле выбранного кластера",
@@ -277,16 +304,19 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         curve_wells_options.addRow("Sort:", self.curve_wells_sort_combo)
 
         self.curve_wells_cluster_combo = QtWidgets.QComboBox()
+        self.curve_wells_cluster_combo.setToolTip("Кластер для расчета доли и сортировки скважин в режиме сравнения кривой.")
         self.curve_wells_cluster_combo.currentIndexChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Cluster:", self.curve_wells_cluster_combo)
 
         self.curve_wells_limit_spin = QtWidgets.QSpinBox()
+        self.curve_wells_limit_spin.setToolTip("Максимальное число скважин, выводимых на график small multiples.")
         self.curve_wells_limit_spin.setRange(1, 50)
         self.curve_wells_limit_spin.setValue(12)
         self.curve_wells_limit_spin.valueChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Top wells:", self.curve_wells_limit_spin)
 
         self.curve_wells_shared_x = QtWidgets.QCheckBox("общая шкала X")
+        self.curve_wells_shared_x.setToolTip("Использовать одну шкалу значений кривой для всех скважин.")
         self.curve_wells_shared_x.setChecked(True)
         self.curve_wells_shared_x.stateChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Scale:", self.curve_wells_shared_x)
@@ -317,10 +347,12 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         cluster_profile_controls = QtWidgets.QHBoxLayout()
         cluster_profile_controls.addWidget(QtWidgets.QLabel("Cluster:"))
         self.profile_cluster_combo = QtWidgets.QComboBox()
+        self.profile_cluster_combo.setToolTip("Кластер, для которого строится bar chart наиболее отличающихся кривых.")
         self.profile_cluster_combo.currentIndexChanged.connect(self._render_cluster_profile_view)
         cluster_profile_controls.addWidget(self.profile_cluster_combo)
         cluster_profile_controls.addWidget(QtWidgets.QLabel("Top features:"))
         self.profile_top_features_spin = QtWidgets.QSpinBox()
+        self.profile_top_features_spin.setToolTip("Количество кривых с максимальным отклонением среднего значения от общего среднего.")
         self.profile_top_features_spin.setRange(3, 50)
         self.profile_top_features_spin.setValue(15)
         self.profile_top_features_spin.valueChanged.connect(self._render_cluster_profile_view)
@@ -346,6 +378,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         tables_splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.interval_table = QtWidgets.QTableWidget(0, 6)
+        self.interval_table.setToolTip("Непрерывные глубинные интервалы кластеров для выбранной скважины; клик подсвечивает интервал на графике.")
         self.interval_table.setHorizontalHeaderLabels(["Well", "From MD", "To MD", "Thickness", "Cluster", "Rows"])
         self.interval_table.setSortingEnabled(True)
         self.interval_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -354,10 +387,186 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         tables_splitter.addWidget(self.interval_table)
 
         self.profile_table = QtWidgets.QTableWidget(0, 8)
+        self.profile_table.setToolTip("Табличный средний портрет видимых кластеров по выбранным каротажным кривым.")
         self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Z-mean", "Median", "Std", "P10–P90"])
         self.profile_table.setSortingEnabled(True)
         tables_splitter.addWidget(self.profile_table)
         root_layout.addWidget(tables_splitter, stretch=1)
+
+    def _set_status(self, message: str, level: str = "info") -> None:
+        """Показывает UX-status в окне и дублирует сообщение в общий статус приложения."""
+        palette = {
+            "info": "#1565c0",
+            "success": "#2e7d32",
+            "warning": "#8a5a00",
+            "error": "#c62828",
+        }
+        if hasattr(self, "status_label"):
+            self.status_label.setText(message)
+            self.status_label.setStyleSheet(f"color: {palette.get(level, palette['info'])};")
+        try:
+            set_info(message, {"success": "green", "warning": "brown", "error": "red"}.get(level, "blue"))
+        except Exception:
+            pass
+
+    def _default_export_basename(self, suffix: str) -> str:
+        data = self.visualization_data or {}
+        dataset_title = re.sub(r"[^0-9A-Za-zА-Яа-я_.-]+", "_", str(data.get("dataset_title", "well_log_cluster"))).strip("_")
+        if not dataset_title:
+            dataset_title = "well_log_cluster"
+        run_id = str(data.get("run_id", "run"))[:8] or "run"
+        return f"{dataset_title}_{run_id}_{suffix}"
+
+    def _save_dataframe(self, dataframe: pd.DataFrame, caption: str, suffix: str) -> bool:
+        if dataframe.empty:
+            self._set_status(f"{caption}: нет данных для экспорта.", "warning")
+            QMessageBox.information(self, "Well Log Cluster Export", "Нет данных для экспорта.")
+            return False
+        default_name = f"{self._default_export_basename(suffix)}.xlsx"
+        file_path, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            caption,
+            default_name,
+            "Excel (*.xlsx);;CSV (*.csv)",
+        )
+        if not file_path:
+            self._set_status(f"{caption}: экспорт отменен пользователем.", "warning")
+            return False
+        try:
+            lower_path = file_path.lower()
+            if lower_path.endswith(".csv") or "CSV" in selected_filter:
+                if not lower_path.endswith(".csv"):
+                    file_path = f"{file_path}.csv"
+                dataframe.to_csv(file_path, index=False, encoding="utf-8-sig")
+            else:
+                if not lower_path.endswith(".xlsx"):
+                    file_path = f"{file_path}.xlsx"
+                dataframe.to_excel(file_path, index=False)
+            self._set_status(f"Экспорт завершен: {file_path}", "success")
+            return True
+        except Exception as exc:
+            self._set_status(f"Ошибка экспорта: {exc}", "error")
+            QMessageBox.critical(self, "Well Log Cluster Export", f"Не удалось сохранить файл:\n{exc}")
+            return False
+
+    def _intervals_dataframe(self) -> pd.DataFrame:
+        rows: list[dict[str, Any]] = []
+        for well_id, intervals in sorted(self.interval_cache.items(), key=lambda pair: pair[0]):
+            for interval in intervals:
+                label = int(interval.get("cluster_label", 0))
+                if not self._is_cluster_visible(label):
+                    continue
+                rows.append(
+                    {
+                        "well_id": int(well_id),
+                        "well_name": interval.get("well_name", ""),
+                        "from_md": interval.get("from_md"),
+                        "to_md": interval.get("to_md"),
+                        "thickness": interval.get("thickness"),
+                        "cluster_id": label,
+                        "row_count": interval.get("row_count", 0),
+                        "row_index_start": interval.get("row_index_start"),
+                        "row_index_end": interval.get("row_index_end"),
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    def _cluster_profiles_dataframe(self) -> pd.DataFrame:
+        rows: list[dict[str, Any]] = []
+        for label in sorted(self.profile_cache.keys(), key=_cluster_label_sort_key):
+            if not self._is_cluster_visible(int(label)):
+                continue
+            profile = self.profile_cache.get(int(label), {}) or {}
+            for feature_name, stats in sorted((profile.get("features", {}) or {}).items(), key=lambda pair: str(pair[0])):
+                stats = stats or {}
+                rows.append(
+                    {
+                        "cluster_id": int(label),
+                        "feature": str(feature_name),
+                        "row_count": profile.get("row_count", 0),
+                        "well_count": profile.get("well_count", 0),
+                        "depth_min": profile.get("depth_min"),
+                        "depth_max": profile.get("depth_max"),
+                        "count": stats.get("count"),
+                        "mean": stats.get("mean"),
+                        "standardized_mean": stats.get("standardized_mean"),
+                        "median": stats.get("median"),
+                        "std": stats.get("std"),
+                        "p10": stats.get("p10"),
+                        "p90": stats.get("p90"),
+                        "global_mean": stats.get("global_mean"),
+                        "global_std": stats.get("global_std"),
+                        "valid_fraction_in_cluster": stats.get("valid_fraction_in_cluster"),
+                        "description": profile.get("description", ""),
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    def export_intervals(self) -> None:
+        """Экспортирует интервалы всех видимых кластеров по всем скважинам."""
+        try:
+            self._save_dataframe(
+                self._intervals_dataframe(),
+                "Сохранить интервалы кластеров Well Log",
+                "intervals",
+            )
+        except Exception as exc:
+            self._set_status(f"Ошибка подготовки таблицы интервалов: {exc}", "error")
+            QMessageBox.critical(self, "Well Log Cluster Export", f"Ошибка подготовки интервалов:\n{exc}")
+
+    def export_cluster_profiles(self) -> None:
+        """Экспортирует средние портреты всех видимых кластеров."""
+        try:
+            self._save_dataframe(
+                self._cluster_profiles_dataframe(),
+                "Сохранить профили кластеров Well Log",
+                "cluster_profiles",
+            )
+        except Exception as exc:
+            self._set_status(f"Ошибка подготовки профилей кластеров: {exc}", "error")
+            QMessageBox.critical(self, "Well Log Cluster Export", f"Ошибка подготовки профилей:\n{exc}")
+
+    def _current_graph_figure(self) -> tuple[Figure | None, str]:
+        index = self.mode_tabs.currentIndex() if hasattr(self, "mode_tabs") else 0
+        if index == 1:
+            return self.one_well_figure, "one_well"
+        if index == 2:
+            return self.curve_wells_figure, "curve_across_wells"
+        if index == 3:
+            return self.cluster_profile_figure, "cluster_profile"
+        return None, "summary"
+
+    def save_current_graph_screenshot(self) -> None:
+        """Сохраняет текущий matplotlib-график активного режима в файл отчета."""
+        figure, suffix = self._current_graph_figure()
+        if figure is None:
+            self._set_status("В режиме Summary нет графика для сохранения.", "warning")
+            QMessageBox.information(self, "Well Log Cluster Screenshot", "Переключитесь на режим с графиком.")
+            return
+        default_name = f"{self._default_export_basename(suffix)}.png"
+        file_path, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить скриншот графика Well Log",
+            default_name,
+            "PNG (*.png);;SVG (*.svg);;PDF (*.pdf)",
+        )
+        if not file_path:
+            self._set_status("Сохранение графика отменено пользователем.", "warning")
+            return
+        try:
+            lower_path = file_path.lower()
+            if not lower_path.endswith((".png", ".svg", ".pdf")):
+                if "SVG" in selected_filter:
+                    file_path = f"{file_path}.svg"
+                elif "PDF" in selected_filter:
+                    file_path = f"{file_path}.pdf"
+                else:
+                    file_path = f"{file_path}.png"
+            figure.savefig(file_path, dpi=200, bbox_inches="tight")
+            self._set_status(f"График сохранен: {file_path}", "success")
+        except Exception as exc:
+            self._set_status(f"Ошибка сохранения графика: {exc}", "error")
+            QMessageBox.critical(self, "Well Log Cluster Screenshot", f"Не удалось сохранить график:\n{exc}")
 
     def load_visualization_data(self, visualization_data: WellLogClusterVisualizationData) -> None:
         self.visualization_data = visualization_data
@@ -371,6 +580,11 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._render_one_well_curves()
         self._render_curve_across_wells()
         self._render_cluster_profile_view()
+        self._set_status(
+            f"Загружен результат Well Log: {len(visualization_data.get('rows', []))} строк, "
+            f"{len(self.interval_cache)} скважин, {len(self.profile_cache)} кластеров.",
+            "success",
+        )
 
     def _populate_controls(self) -> None:
         data = self.visualization_data or {}
