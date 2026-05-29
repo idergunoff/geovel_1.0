@@ -986,7 +986,8 @@ def collect_cluster_well_log_dataset_data() -> None:
     aliases = session.query(AliasWellLog.alias_name_norm, AliasWellLog.canonical_id).all()
     alias_to_canonical = {str(name): int(cid) for name, cid in aliases}
 
-    columns = ['well_id_depth'] + [row.canonical_name.canonical_name for row in params if row.canonical_name]
+    log_feature_columns = [row.canonical_name.canonical_name for row in params if row.canonical_name]
+    columns = ['well_id_depth', WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME] + log_feature_columns
     rows = [columns]
 
     for wf in wells:
@@ -1020,8 +1021,8 @@ def collect_cluster_well_log_dataset_data() -> None:
                     depth_map[key] = {}
                 depth_map[key][canonical_id] = value
 
-        for depth in sorted(depth_map.keys()):
-            line = [f"{int(wf.well_id)}_{depth:g}"]
+        for sample_index, depth in enumerate(sorted(depth_map.keys())):
+            line = [f"{int(wf.well_id)}_{depth:g}", sample_index]
             values_by_canonical = depth_map[depth]
             for param in params:
                 line.append(values_by_canonical.get(param.canonical_id, None))
@@ -1031,7 +1032,11 @@ def collect_cluster_well_log_dataset_data() -> None:
     session.add(WellLogClusterDatasetData(dataset_id=dataset_id, data=_serialize_cluster_dataset(rows)))
     session.commit()
     _set_cluster_well_collect_button_state(True)
-    set_info(f'COLLECT WELL LOG: собрано строк {max(0, len(rows)-1)} и параметров {len(columns)-1}.', 'green')
+    set_info(
+        f'COLLECT WELL LOG: собрано строк {max(0, len(rows)-1)} и признаков {len(columns)-1} '
+        f'(включая {WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME}).',
+        'green'
+    )
 
 def get_available_well_log_curve_names_with_frequency() -> list[dict[str, int | str]]:
     """
@@ -1383,6 +1388,7 @@ def _deserialize_cluster_dataset(raw_data: str) -> list[list[Any]]:
 
 
 WELL_LOG_CLUSTER_REQUIRED_META_COLUMNS = ["well_id", "well_name", "depth_md", "row_index_in_well"]
+WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME = "sample_index_in_well"
 WELL_LOG_CLUSTER_MIN_VALID_ROWS_PER_WELL = 2
 WELL_LOG_CLUSTER_MIN_TOTAL_ROWS = 4
 
@@ -1748,6 +1754,9 @@ def build_well_log_cluster_context() -> ClusterRunContext:
     feature_names, runtime_rows, normalize_diagnostics = _normalize_well_log_runtime_rows(stored_rows)
     if not feature_names:
         raise ClusterContextError("В Well Log data нет признаков каротажа. Добавьте параметры и выполните COLLECT.")
+    feature_names = [WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME] + [
+        name for name in feature_names if name != WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME
+    ]
     if not runtime_rows:
         raise ClusterContextError(
             f'Well Log dataset "{dataset.name}" не содержит валидных runtime-строк. Повторите COLLECT.'
@@ -1771,17 +1780,26 @@ def build_well_log_cluster_context() -> ClusterRunContext:
         well_id = int(row["well_id"])
         depth_md = float(row["depth_md"])
         source_idx = int(row.get("source_row_index", len(meta_rows)))
-        raw_features = row.get("features", {}) or {}
-        feature_values = [_coerce_well_log_feature_value(raw_features.get(name)) for name in feature_names]
-        if not any(np.isfinite(value) for value in feature_values):
-            invalid_row_count += 1
-            dropped_rows_by_reason["all feature values are non-finite"] += 1
-            if len(invalid_rows) < 10:
-                invalid_rows.append({"row": source_idx, "reason": "all feature values are non-finite"})
-            continue
-
         row_index = row_index_by_well.get(well_id, 0)
         row_index_by_well[well_id] = row_index + 1
+
+        raw_features = dict(row.get("features", {}) or {})
+        # Обязательный признак последовательности всегда пересчитываем после фильтрации
+        # выбранного интервала и сортировки глубин внутри каждой скважины. Так CALC/AUTO
+        # используют именно номер отсчета в текущем интервале, даже для старых COLLECT-данных.
+        raw_features[WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME] = int(row_index)
+        feature_values = [_coerce_well_log_feature_value(raw_features.get(name)) for name in feature_names]
+        log_feature_values = [
+            value for name, value in zip(feature_names, feature_values)
+            if name != WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME
+        ]
+        if not any(np.isfinite(value) for value in log_feature_values):
+            invalid_row_count += 1
+            dropped_rows_by_reason["all log feature values are non-finite"] += 1
+            if len(invalid_rows) < 10:
+                invalid_rows.append({"row": source_idx, "reason": "all log feature values are non-finite"})
+            continue
+
         well_name = well_names.get(well_id, str(row.get("well_name") or f"well_id={well_id}"))
         source_curve_names = _normalize_well_log_source_curve_names(row.get("source_curve_names"), feature_names)
         meta = {
