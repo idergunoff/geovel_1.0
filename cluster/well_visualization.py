@@ -172,8 +172,16 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Well Log Cluster Visualization")
-        self.resize(1060, 720)
+        self.resize(1500, 950)
+        self.setMinimumSize(1180, 760)
+        screen = QtWidgets.QApplication.primaryScreen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            self.resize(int(available.width() * 0.92), int(available.height() * 0.90))
+            self.move(available.center() - self.rect().center())
         root_layout = QtWidgets.QVBoxLayout(self)
+        root_layout.setContentsMargins(8, 8, 8, 8)
+        root_layout.setSpacing(6)
 
         self.title_label = QtWidgets.QLabel("Well Log Cluster Visualization")
         self.title_label.setWordWrap(True)
@@ -182,6 +190,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         controls_group = QtWidgets.QGroupBox("Controls")
         controls_layout = QtWidgets.QGridLayout(controls_group)
+        controls_layout.setContentsMargins(8, 8, 8, 8)
+        controls_layout.setHorizontalSpacing(8)
+        controls_layout.setVerticalSpacing(4)
         controls_layout.addWidget(QtWidgets.QLabel("Mode:"), 0, 0)
         self.mode_combo = QtWidgets.QComboBox()
         self.mode_combo.addItems(self.MODE_TITLES)
@@ -242,7 +253,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         splitter = QtWidgets.QSplitter(Qt.Horizontal)
         left_widget = QtWidgets.QWidget()
+        left_widget.setMaximumWidth(300)
+        left_widget.setMinimumWidth(210)
         left_layout = QtWidgets.QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 6, 0)
         left_layout.addWidget(QtWidgets.QLabel("Cluster legend / filter"))
         self.legend_scroll = QtWidgets.QScrollArea()
         self.legend_scroll.setWidgetResizable(True)
@@ -255,6 +269,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         center_widget = QtWidgets.QWidget()
         center_layout = QtWidgets.QVBoxLayout(center_widget)
+        center_layout.setContentsMargins(0, 0, 0, 0)
         self.mode_tabs = QtWidgets.QTabWidget()
         self.mode_tabs.currentChanged.connect(self._sync_mode_combo)
         self.summary_text = QtWidgets.QPlainTextEdit()
@@ -268,11 +283,15 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         )
         self.one_well_hint.setWordWrap(True)
         one_well_layout.addWidget(self.one_well_hint)
-        self.one_well_figure = Figure(figsize=(9, 5))
+        self.one_well_figure = Figure(figsize=(12, 6.5), dpi=110)
         self.one_well_canvas = FigureCanvas(self.one_well_figure)
+        self.one_well_canvas.setMinimumSize(900, 520)
         self.one_well_toolbar = NavigationToolbar(self.one_well_canvas, self.one_well_tab)
+        self.one_well_scroll = QtWidgets.QScrollArea()
+        self.one_well_scroll.setWidgetResizable(True)
+        self.one_well_scroll.setWidget(self.one_well_canvas)
         one_well_layout.addWidget(self.one_well_toolbar)
-        one_well_layout.addWidget(self.one_well_canvas, stretch=1)
+        one_well_layout.addWidget(self.one_well_scroll, stretch=1)
         self.mode_tabs.addTab(self.one_well_tab, self.MODE_TITLES[1])
 
         self.curve_wells_tab = QtWidgets.QWidget()
@@ -323,15 +342,20 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         curve_wells_controls.addLayout(curve_wells_options)
         curve_wells_layout.addLayout(curve_wells_controls)
 
-        self.curve_wells_figure = Figure(figsize=(9, 5))
+        self.curve_wells_figure = Figure(figsize=(12, 7), dpi=110)
         self.curve_wells_canvas = FigureCanvas(self.curve_wells_figure)
+        self.curve_wells_canvas.setMinimumSize(900, 560)
         self.curve_wells_toolbar = NavigationToolbar(self.curve_wells_canvas, self.curve_wells_tab)
+        self.curve_wells_scroll = QtWidgets.QScrollArea()
+        self.curve_wells_scroll.setWidgetResizable(True)
+        self.curve_wells_scroll.setWidget(self.curve_wells_canvas)
         curve_wells_layout.addWidget(self.curve_wells_toolbar)
-        curve_wells_layout.addWidget(self.curve_wells_canvas, stretch=1)
+        curve_wells_layout.addWidget(self.curve_wells_scroll, stretch=1)
 
         self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
         self.curve_wells_summary_table.setHorizontalHeaderLabels(["Well", "Rows", "Dominant cluster", "Selected cluster %", "Clusters summary"])
         self.curve_wells_summary_table.setSortingEnabled(True)
+        self.curve_wells_summary_table.setMaximumHeight(180)
         curve_wells_layout.addWidget(self.curve_wells_summary_table)
         self.mode_tabs.addTab(self.curve_wells_tab, self.MODE_TITLES[2])
 
@@ -365,18 +389,26 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.cluster_profile_description.setMaximumHeight(115)
         cluster_profile_layout.addWidget(self.cluster_profile_description)
 
-        self.cluster_profile_figure = Figure(figsize=(9, 5))
+        self.cluster_profile_figure = Figure(figsize=(12, 6.5), dpi=110)
         self.cluster_profile_canvas = FigureCanvas(self.cluster_profile_figure)
+        self.cluster_profile_canvas.setMinimumSize(900, 520)
         self.cluster_profile_toolbar = NavigationToolbar(self.cluster_profile_canvas, self.cluster_profile_tab)
+        self.cluster_profile_scroll = QtWidgets.QScrollArea()
+        self.cluster_profile_scroll.setWidgetResizable(True)
+        self.cluster_profile_scroll.setWidget(self.cluster_profile_canvas)
         cluster_profile_layout.addWidget(self.cluster_profile_toolbar)
-        cluster_profile_layout.addWidget(self.cluster_profile_canvas, stretch=1)
+        cluster_profile_layout.addWidget(self.cluster_profile_scroll, stretch=1)
         self.mode_tabs.addTab(self.cluster_profile_tab, self.MODE_TITLES[3])
         center_layout.addWidget(self.mode_tabs)
         splitter.addWidget(center_widget)
+        splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
+        splitter.setSizes([240, 1200])
         root_layout.addWidget(splitter, stretch=1)
 
-        tables_splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        self.tables_tabs = QtWidgets.QTabWidget()
+        self.tables_tabs.setMaximumHeight(240)
+        self.tables_tabs.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
         self.interval_table = QtWidgets.QTableWidget(0, 6)
         self.interval_table.setToolTip("Непрерывные глубинные интервалы кластеров для выбранной скважины; клик подсвечивает интервал на графике.")
         self.interval_table.setHorizontalHeaderLabels(["Well", "From MD", "To MD", "Thickness", "Cluster", "Rows"])
@@ -384,14 +416,20 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.interval_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.interval_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.interval_table.itemSelectionChanged.connect(self._handle_interval_selection_changed)
-        tables_splitter.addWidget(self.interval_table)
+        self.tables_tabs.addTab(self.interval_table, "Cluster intervals")
 
         self.profile_table = QtWidgets.QTableWidget(0, 8)
         self.profile_table.setToolTip("Табличный средний портрет видимых кластеров по выбранным каротажным кривым.")
         self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Z-mean", "Median", "Std", "P10–P90"])
         self.profile_table.setSortingEnabled(True)
-        tables_splitter.addWidget(self.profile_table)
-        root_layout.addWidget(tables_splitter, stretch=1)
+        self.tables_tabs.addTab(self.profile_table, "Cluster profiles")
+        root_layout.addWidget(self.tables_tabs, stretch=0)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not getattr(self, "_initial_maximize_done", False):
+            self._initial_maximize_done = True
+            self.showMaximized()
 
     def _set_status(self, message: str, level: str = "info") -> None:
         """Показывает UX-status в окне и дублирует сообщение в общий статус приложения."""
@@ -796,6 +834,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             depth_min -= 0.5
             depth_max += 0.5
         track_count = len(finite_features) + 1
+        canvas_width = max(900, int(track_count * 170))
+        self.one_well_canvas.setMinimumSize(canvas_width, 560)
+        self.one_well_figure.set_size_inches(max(12.0, track_count * 1.65), 6.7, forward=True)
         axes = self.one_well_figure.subplots(1, track_count, sharey=True)
         if track_count == 1:
             axes = [axes]
@@ -823,7 +864,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             plot_y = [depth for value, depth in zip(values, depths) if value is not None]
             if plot_x:
                 ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3)
-            ax.set_xlabel(feature_name)
+            ax.set_xlabel(feature_name, fontsize=9)
+            ax.tick_params(axis="x", labelsize=8)
             ax.grid(True, alpha=0.25)
             if feature_idx == 0:
                 ax.set_ylabel("Depth MD")
@@ -1026,6 +1068,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         global_x_max = max(all_values) if all_values else None
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
+        canvas_height = max(560, int(len(payloads) * 155))
+        self.curve_wells_canvas.setMinimumSize(900, canvas_height)
+        self.curve_wells_figure.set_size_inches(12.0, max(7.0, len(payloads) * 1.55), forward=True)
         axes = self.curve_wells_figure.subplots(len(payloads), 1, sharex=shared_x)
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
@@ -1057,7 +1102,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if shared_x and global_x_min is not None and global_x_max is not None and global_x_min != global_x_max:
                 ax.set_xlim(global_x_min, global_x_max)
             ax.grid(True, alpha=0.25)
-            ax.set_ylabel("Depth MD")
+            ax.set_ylabel("Depth MD", fontsize=9)
+            ax.tick_params(axis="both", labelsize=8)
             ax.set_title(
                 f"{payload['well_name']} | dominant cluster {payload.get('dominant_label', '—')} "
                 f"({payload.get('dominant_fraction', 0.0) * 100:.0f}%)",
@@ -1113,6 +1159,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 if value is not None:
                     matrix[row_idx, col_idx] = float(value)
 
+        canvas_width = max(900, int(len(feature_names) * 85))
+        self.cluster_profile_canvas.setMinimumSize(canvas_width, 560)
+        self.cluster_profile_figure.set_size_inches(max(12.0, len(feature_names) * 0.75), 6.7, forward=True)
         axes = self.cluster_profile_figure.subplots(1, 2, gridspec_kw={"width_ratios": [1.45, 1.0]})
         heatmap_ax, bar_ax = axes
         finite_values = matrix[np.isfinite(matrix)]
