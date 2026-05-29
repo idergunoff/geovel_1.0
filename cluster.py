@@ -6442,62 +6442,389 @@ def build_well_log_cluster_visualization_data(
     )
 
 
-def show_well_log_cluster_visualization_stub(visualization_data: WellLogClusterVisualizationData) -> None:
-    """
-    Открывает MVP/stub-окно визуализации Well Log с summary последнего расчета.
-    """
-    global well_log_cluster_visualization_window
+def _cluster_label_sort_key(label: Any) -> tuple[int, int]:
+    """Стабильная сортировка labels: noise (-1) в конце списка."""
     try:
-        dialog = QtWidgets.QDialog(MainWindow)
-        dialog.setWindowTitle("Well Log Cluster Visualization — summary")
-        dialog.resize(760, 520)
-        layout = QtWidgets.QVBoxLayout(dialog)
-        title = QtWidgets.QLabel(
-            f"Dataset: {visualization_data['dataset_title']} (id={visualization_data['dataset_id']})"
-        )
-        title.setWordWrap(True)
-        layout.addWidget(title)
+        label_int = int(label)
+    except (TypeError, ValueError):
+        label_int = 0
+    return (1, label_int) if label_int == -1 else (0, label_int)
 
-        summary = visualization_data.get("summary", {})
-        metrics = visualization_data.get("metrics", {}).get("metrics", {})
+
+def _well_log_cluster_color(label: int) -> str:
+    """Возвращает стабильный цвет кластера для всех MVP-контролов визуализации."""
+    if int(label) == -1:
+        return "#9E9E9E"
+    palette = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
+        "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8", "#ffbb78",
+    ]
+    return palette[int(label) % len(palette)]
+
+
+def _format_well_log_visual_metric(value: Any, precision: int = 4) -> str:
+    return _safe_num(value, precision, fallback="—")
+
+
+class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
+    """
+    MVP-окно визуализации результата Well Log clustering.
+
+    Этап 5 intentionally не рисует полноценные графики режимов 6–8, но уже хранит
+    подготовленные runtime-структуры: список скважин/кривых, легенду, фильтр
+    кластеров, кэш интервалов и статистические профили кластеров.
+    """
+
+    MODE_TITLES = (
+        "Summary",
+        "1 скважина → все кривые",
+        "1 кривая → разные скважины",
+        "Средний портрет кластера",
+    )
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.visualization_data: WellLogClusterVisualizationData | None = None
+        self.interval_cache: dict[int, list[dict[str, Any]]] = {}
+        self.profile_cache: dict[int, dict[str, Any]] = {}
+        self._cluster_checkboxes: dict[int, Any] = {}
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self.setWindowTitle("Well Log Cluster Visualization")
+        self.resize(1060, 720)
+        root_layout = QtWidgets.QVBoxLayout(self)
+
+        self.title_label = QtWidgets.QLabel("Well Log Cluster Visualization")
+        self.title_label.setWordWrap(True)
+        self.title_label.setStyleSheet("font-weight: 600; font-size: 14px;")
+        root_layout.addWidget(self.title_label)
+
+        controls_group = QtWidgets.QGroupBox("Controls")
+        controls_layout = QtWidgets.QGridLayout(controls_group)
+        controls_layout.addWidget(QtWidgets.QLabel("Mode:"), 0, 0)
+        self.mode_combo = QtWidgets.QComboBox()
+        self.mode_combo.addItems(self.MODE_TITLES)
+        self.mode_combo.currentIndexChanged.connect(self._sync_mode_tab)
+        controls_layout.addWidget(self.mode_combo, 0, 1)
+
+        controls_layout.addWidget(QtWidgets.QLabel("Well:"), 0, 2)
+        self.well_combo = QtWidgets.QComboBox()
+        controls_layout.addWidget(self.well_combo, 0, 3)
+
+        controls_layout.addWidget(QtWidgets.QLabel("Curve:"), 0, 4)
+        self.curve_combo = QtWidgets.QComboBox()
+        controls_layout.addWidget(self.curve_combo, 0, 5)
+
+        self.show_noise_checkbox = QtWidgets.QCheckBox("Show noise")
+        self.show_noise_checkbox.setChecked(True)
+        self.show_noise_checkbox.stateChanged.connect(self._apply_cluster_filter_to_tables)
+        controls_layout.addWidget(self.show_noise_checkbox, 1, 0)
+
+        controls_layout.addWidget(QtWidgets.QLabel("Cluster opacity:"), 1, 1)
+        self.opacity_spin = QtWidgets.QDoubleSpinBox()
+        self.opacity_spin.setRange(0.05, 1.0)
+        self.opacity_spin.setSingleStep(0.05)
+        self.opacity_spin.setValue(0.35)
+        controls_layout.addWidget(self.opacity_spin, 1, 2)
+
+        self.export_button = QtWidgets.QPushButton("Export (next stages)")
+        self.export_button.setEnabled(False)
+        controls_layout.addWidget(self.export_button, 1, 5)
+        root_layout.addWidget(controls_group)
+
+        splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        left_widget = QtWidgets.QWidget()
+        left_layout = QtWidgets.QVBoxLayout(left_widget)
+        left_layout.addWidget(QtWidgets.QLabel("Cluster legend / filter"))
+        self.legend_scroll = QtWidgets.QScrollArea()
+        self.legend_scroll.setWidgetResizable(True)
+        self.legend_container = QtWidgets.QWidget()
+        self.legend_layout = QtWidgets.QVBoxLayout(self.legend_container)
+        self.legend_layout.addStretch(1)
+        self.legend_scroll.setWidget(self.legend_container)
+        left_layout.addWidget(self.legend_scroll)
+        splitter.addWidget(left_widget)
+
+        center_widget = QtWidgets.QWidget()
+        center_layout = QtWidgets.QVBoxLayout(center_widget)
+        self.mode_tabs = QtWidgets.QTabWidget()
+        self.mode_tabs.currentChanged.connect(self._sync_mode_combo)
+        self.summary_text = QtWidgets.QPlainTextEdit()
+        self.summary_text.setReadOnly(True)
+        self.mode_tabs.addTab(self.summary_text, "Summary")
+        for title in self.MODE_TITLES[1:]:
+            placeholder = QtWidgets.QPlainTextEdit()
+            placeholder.setReadOnly(True)
+            placeholder.setPlainText(
+                f"Режим «{title}» будет отрисован на следующих этапах.\n"
+                "Данные, фильтр кластеров, интервалы и профили уже подготовлены в этом окне."
+            )
+            self.mode_tabs.addTab(placeholder, title)
+        center_layout.addWidget(self.mode_tabs)
+        splitter.addWidget(center_widget)
+        splitter.setStretchFactor(1, 1)
+        root_layout.addWidget(splitter, stretch=1)
+
+        tables_splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        self.interval_table = QtWidgets.QTableWidget(0, 6)
+        self.interval_table.setHorizontalHeaderLabels(["Well", "From MD", "To MD", "Thickness", "Cluster", "Rows"])
+        self.interval_table.setSortingEnabled(True)
+        tables_splitter.addWidget(self.interval_table)
+
+        self.profile_table = QtWidgets.QTableWidget(0, 7)
+        self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Median", "Std", "P10–P90"])
+        self.profile_table.setSortingEnabled(True)
+        tables_splitter.addWidget(self.profile_table)
+        root_layout.addWidget(tables_splitter, stretch=1)
+
+    def load_visualization_data(self, visualization_data: WellLogClusterVisualizationData) -> None:
+        self.visualization_data = visualization_data
+        self.interval_cache = self._build_interval_cache(visualization_data.get("rows", []))
+        self.profile_cache = self._build_profile_cache(visualization_data.get("rows", []), visualization_data.get("feature_names", []))
+        self._populate_controls()
+        self._populate_legend()
+        self._populate_summary()
+        self._populate_interval_table()
+        self._populate_profile_table()
+
+    def _populate_controls(self) -> None:
+        data = self.visualization_data or {}
+        rows = data.get("rows", [])
+        wells = OrderedDict()
+        for row in sorted(rows, key=lambda item: (str(item.get("well_name", "")), float(item.get("depth_md", 0.0)))):
+            wells[int(row["well_id"])] = str(row.get("well_name", f"well_id={row['well_id']}"))
+        self.well_combo.blockSignals(True)
+        self.well_combo.clear()
+        for well_id, well_name in wells.items():
+            self.well_combo.addItem(f"{well_name} (id={well_id})", int(well_id))
+        self.well_combo.blockSignals(False)
+
+        self.curve_combo.blockSignals(True)
+        self.curve_combo.clear()
+        self.curve_combo.addItems([str(name) for name in data.get("feature_names", [])])
+        self.curve_combo.blockSignals(False)
+
+        self.title_label.setText(
+            f"Dataset: {data.get('dataset_title', '—')} (id={data.get('dataset_id', '—')}) | "
+            f"run={data.get('run_id', '—')} | hash={str(data.get('data_hash', ''))[:12]}"
+        )
+
+    def _populate_legend(self) -> None:
+        while self.legend_layout.count() > 1:
+            item = self.legend_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self._cluster_checkboxes.clear()
+        labels = sorted(self.profile_cache.keys(), key=_cluster_label_sort_key)
+        rows_by_label = Counter(int(row.get("cluster_label", 0)) for row in (self.visualization_data or {}).get("rows", []))
+        for label in labels:
+            checkbox = QtWidgets.QCheckBox(f"cluster {label} — {rows_by_label.get(label, 0)} rows")
+            checkbox.setChecked(label != -1 or self.show_noise_checkbox.isChecked())
+            checkbox.stateChanged.connect(self._apply_cluster_filter_to_tables)
+            checkbox.setStyleSheet(f"QCheckBox {{ color: {_well_log_cluster_color(label)}; font-weight: 600; }}")
+            self.legend_layout.insertWidget(self.legend_layout.count() - 1, checkbox)
+            self._cluster_checkboxes[int(label)] = checkbox
+
+    def _populate_summary(self) -> None:
+        data = self.visualization_data or {}
+        summary = data.get("summary", {})
+        metrics = data.get("metrics", {}).get("metrics", {}) if isinstance(data.get("metrics"), dict) else {}
+        diagnostics = data.get("diagnostics", {})
         lines = [
-            f"Run id: {visualization_data.get('run_id')}",
-            f"Created at: {visualization_data.get('created_at')}",
+            "Well Log clustering result summary",
+            "==================================",
+            f"Dataset: {data.get('dataset_title', '—')} (id={data.get('dataset_id', '—')})",
+            f"Run id: {data.get('run_id', '—')}",
+            f"Created at: {data.get('created_at', '—')}",
             f"Rows with labels: {summary.get('row_count', 0)}",
             f"Wells: {summary.get('well_count', 0)}",
-            f"Clusters: {summary.get('cluster_count', 0)}",
+            f"Clusters (without noise): {summary.get('cluster_count', 0)}",
             f"Noise rows: {summary.get('noise_count', 0)}",
             f"Smoothing changes: {summary.get('smoothing_changes', 0)}",
             "",
-            "Metrics:",
+            "Available modes:",
         ]
+        lines.extend(f"  - {title}" for title in self.MODE_TITLES[1:])
+        lines.extend(["", "Metrics:"])
         if metrics:
-            lines.extend(f"  {name}: {_safe_num(value, 4)}" for name, value in metrics.items())
+            lines.extend(f"  {name}: {_format_well_log_visual_metric(value)}" for name, value in metrics.items())
         else:
             lines.append("  metrics were not requested or unavailable")
-        lines.extend(["", "Cluster summary:"])
-        for item in visualization_data.get("cluster_summary", []):
-            lines.append(
-                f"  cluster {item['cluster_label']}: rows={item['row_count']}, wells={item['well_count']}, "
-                f"depth={_safe_num(item.get('depth_min'), 2)}..{_safe_num(item.get('depth_max'), 2)}"
-            )
-        lines.extend(
-            [
-                "",
-                "Visualization modes will be implemented in the next stages:",
-                "  1) one well → all curves",
-                "  2) one curve → multiple wells",
-                "  3) average cluster portrait",
-            ]
-        )
-        text = QtWidgets.QPlainTextEdit("\n".join(lines))
-        text.setReadOnly(True)
-        layout.addWidget(text)
-        dialog.show()
-        well_log_cluster_visualization_window = dialog
-    except Exception as exc:
-        set_info(f"Не удалось открыть stub-окно визуализации Well Log: {exc}", "brown")
+        lines.extend(["", "Prepared caches:"])
+        lines.append(f"  interval_cache wells: {len(self.interval_cache)}")
+        lines.append(f"  interval_cache intervals: {sum(len(v) for v in self.interval_cache.values())}")
+        lines.append(f"  profile_cache clusters: {len(self.profile_cache)}")
+        lines.extend(["", "Diagnostics:"])
+        for key in ("valid_well_count", "valid_row_count", "kept_row_count_after_clean", "dropped_row_count_after_clean"):
+            if key in diagnostics:
+                lines.append(f"  {key}: {diagnostics.get(key)}")
+        self.summary_text.setPlainText("\n".join(lines))
 
+    def _is_cluster_visible(self, label: int) -> bool:
+        if int(label) == -1 and not self.show_noise_checkbox.isChecked():
+            return False
+        checkbox = self._cluster_checkboxes.get(int(label))
+        return True if checkbox is None else bool(checkbox.isChecked())
+
+    def _apply_cluster_filter_to_tables(self) -> None:
+        if -1 in self._cluster_checkboxes:
+            self._cluster_checkboxes[-1].blockSignals(True)
+            self._cluster_checkboxes[-1].setChecked(self.show_noise_checkbox.isChecked() and self._cluster_checkboxes[-1].isChecked())
+            self._cluster_checkboxes[-1].blockSignals(False)
+        self._populate_interval_table()
+        self._populate_profile_table()
+
+    def _populate_interval_table(self) -> None:
+        intervals = []
+        for well_intervals in self.interval_cache.values():
+            intervals.extend(item for item in well_intervals if self._is_cluster_visible(int(item["cluster_label"])))
+        self.interval_table.setSortingEnabled(False)
+        self.interval_table.setRowCount(len(intervals))
+        for row_idx, interval in enumerate(intervals):
+            values = [
+                interval.get("well_name", "—"),
+                _format_well_log_visual_metric(interval.get("from_md"), 2),
+                _format_well_log_visual_metric(interval.get("to_md"), 2),
+                _format_well_log_visual_metric(interval.get("thickness"), 2),
+                str(interval.get("cluster_label", "—")),
+                str(interval.get("row_count", 0)),
+            ]
+            for col_idx, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                if col_idx == 4:
+                    item.setForeground(QBrush(QColor(_well_log_cluster_color(int(interval.get("cluster_label", 0))))))
+                self.interval_table.setItem(row_idx, col_idx, item)
+        self.interval_table.setSortingEnabled(True)
+        self.interval_table.resizeColumnsToContents()
+
+    def _populate_profile_table(self) -> None:
+        profile_rows = []
+        for label, profile in sorted(self.profile_cache.items(), key=lambda pair: _cluster_label_sort_key(pair[0])):
+            if not self._is_cluster_visible(int(label)):
+                continue
+            for feature_name, stats in sorted((profile.get("features", {}) or {}).items()):
+                profile_rows.append((label, feature_name, stats))
+        self.profile_table.setSortingEnabled(False)
+        self.profile_table.setRowCount(len(profile_rows))
+        for row_idx, (label, feature_name, stats) in enumerate(profile_rows):
+            values = [
+                str(label),
+                str(feature_name),
+                str(stats.get("count", 0)),
+                _format_well_log_visual_metric(stats.get("mean"), 4),
+                _format_well_log_visual_metric(stats.get("median"), 4),
+                _format_well_log_visual_metric(stats.get("std"), 4),
+                f"{_format_well_log_visual_metric(stats.get('p10'), 4)}–{_format_well_log_visual_metric(stats.get('p90'), 4)}",
+            ]
+            for col_idx, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                if col_idx == 0:
+                    item.setForeground(QBrush(QColor(_well_log_cluster_color(int(label)))))
+                self.profile_table.setItem(row_idx, col_idx, item)
+        self.profile_table.setSortingEnabled(True)
+        self.profile_table.resizeColumnsToContents()
+
+    def _sync_mode_tab(self, index: int) -> None:
+        if 0 <= int(index) < self.mode_tabs.count() and self.mode_tabs.currentIndex() != int(index):
+            self.mode_tabs.setCurrentIndex(int(index))
+
+    def _sync_mode_combo(self, index: int) -> None:
+        if 0 <= int(index) < self.mode_combo.count() and self.mode_combo.currentIndex() != int(index):
+            self.mode_combo.setCurrentIndex(int(index))
+
+    @staticmethod
+    def _build_interval_cache(rows: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
+        grouped: dict[int, list[dict[str, Any]]] = {}
+        for row in rows:
+            grouped.setdefault(int(row["well_id"]), []).append(row)
+        interval_cache: dict[int, list[dict[str, Any]]] = {}
+        for well_id, well_rows in grouped.items():
+            sorted_rows = sorted(well_rows, key=lambda item: (float(item.get("depth_md", 0.0)), int(item.get("row_index_in_well", 0))))
+            intervals: list[dict[str, Any]] = []
+            current: dict[str, Any] | None = None
+            for row in sorted_rows:
+                label = int(row.get("cluster_label", 0))
+                depth = float(row.get("depth_md", 0.0))
+                if current is None or int(current["cluster_label"]) != label:
+                    if current is not None:
+                        current["thickness"] = max(0.0, float(current["to_md"]) - float(current["from_md"]))
+                        intervals.append(current)
+                    current = {
+                        "well_id": int(well_id),
+                        "well_name": str(row.get("well_name", f"well_id={well_id}")),
+                        "from_md": depth,
+                        "to_md": depth,
+                        "cluster_label": label,
+                        "row_count": 1,
+                    }
+                else:
+                    current["to_md"] = depth
+                    current["row_count"] = int(current.get("row_count", 0)) + 1
+            if current is not None:
+                current["thickness"] = max(0.0, float(current["to_md"]) - float(current["from_md"]))
+                intervals.append(current)
+            interval_cache[int(well_id)] = intervals
+        return interval_cache
+
+    @staticmethod
+    def _build_profile_cache(rows: list[dict[str, Any]], feature_names: list[str]) -> dict[int, dict[str, Any]]:
+        grouped: dict[int, list[dict[str, Any]]] = {}
+        for row in rows:
+            grouped.setdefault(int(row.get("cluster_label", 0)), []).append(row)
+        profile_cache: dict[int, dict[str, Any]] = {}
+        for label, cluster_rows in grouped.items():
+            features: dict[str, Any] = {}
+            for feature_name in feature_names:
+                values = []
+                for row in cluster_rows:
+                    value = (row.get("features", {}) or {}).get(feature_name)
+                    value_float = _to_finite_float(value)
+                    if value_float is not None:
+                        values.append(value_float)
+                if not values:
+                    continue
+                arr = np.asarray(values, dtype=float)
+                features[str(feature_name)] = {
+                    "count": int(arr.size),
+                    "mean": float(np.mean(arr)),
+                    "median": float(np.median(arr)),
+                    "std": float(np.std(arr)),
+                    "p10": float(np.percentile(arr, 10)),
+                    "p90": float(np.percentile(arr, 90)),
+                }
+            profile_cache[int(label)] = {
+                "cluster_label": int(label),
+                "row_count": len(cluster_rows),
+                "well_count": len({int(row["well_id"]) for row in cluster_rows}),
+                "features": features,
+            }
+        return profile_cache
+
+
+def show_well_log_cluster_visualization(visualization_data: WellLogClusterVisualizationData) -> None:
+    """
+    Открывает или обновляет MVP-окно визуализации Well Log с summary, контролами,
+    легендой, фильтром кластеров и подготовленными кэшами интервалов/профилей.
+    """
+    global well_log_cluster_visualization_window
+    try:
+        dialog = well_log_cluster_visualization_window
+        if dialog is None or not isinstance(dialog, WellLogClusterVisualizationWindow):
+            dialog = WellLogClusterVisualizationWindow(MainWindow)
+            well_log_cluster_visualization_window = dialog
+        dialog.load_visualization_data(visualization_data)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+    except Exception as exc:
+        set_info(f"Не удалось открыть окно визуализации Well Log: {exc}", "brown")
+
+
+def show_well_log_cluster_visualization_stub(visualization_data: WellLogClusterVisualizationData) -> None:
+    """Backward-compatible alias для старого имени MVP-окна визуализации."""
+    show_well_log_cluster_visualization(visualization_data)
 
 def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogClusterVisualizationData | None:
     """
