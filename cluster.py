@@ -6633,13 +6633,40 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         curve_wells_layout.addWidget(self.curve_wells_summary_table)
         self.mode_tabs.addTab(self.curve_wells_tab, self.MODE_TITLES[2])
 
-        placeholder = QtWidgets.QPlainTextEdit()
-        placeholder.setReadOnly(True)
-        placeholder.setPlainText(
-            f"Режим «{self.MODE_TITLES[3]}» будет отрисован на следующих этапах.\n"
-            "Данные, фильтр кластеров, интервалы и профили уже подготовлены в этом окне."
+        self.cluster_profile_tab = QtWidgets.QWidget()
+        cluster_profile_layout = QtWidgets.QVBoxLayout(self.cluster_profile_tab)
+        self.cluster_profile_hint = QtWidgets.QLabel(
+            "Средний портрет кластера: heatmap показывает стандартизованные средние "
+            "по всем кластерам и кривым, bar chart детализирует выбранный кластер."
         )
-        self.mode_tabs.addTab(placeholder, self.MODE_TITLES[3])
+        self.cluster_profile_hint.setWordWrap(True)
+        cluster_profile_layout.addWidget(self.cluster_profile_hint)
+
+        cluster_profile_controls = QtWidgets.QHBoxLayout()
+        cluster_profile_controls.addWidget(QtWidgets.QLabel("Cluster:"))
+        self.profile_cluster_combo = QtWidgets.QComboBox()
+        self.profile_cluster_combo.currentIndexChanged.connect(self._render_cluster_profile_view)
+        cluster_profile_controls.addWidget(self.profile_cluster_combo)
+        cluster_profile_controls.addWidget(QtWidgets.QLabel("Top features:"))
+        self.profile_top_features_spin = QtWidgets.QSpinBox()
+        self.profile_top_features_spin.setRange(3, 50)
+        self.profile_top_features_spin.setValue(15)
+        self.profile_top_features_spin.valueChanged.connect(self._render_cluster_profile_view)
+        cluster_profile_controls.addWidget(self.profile_top_features_spin)
+        cluster_profile_controls.addStretch(1)
+        cluster_profile_layout.addLayout(cluster_profile_controls)
+
+        self.cluster_profile_description = QtWidgets.QPlainTextEdit()
+        self.cluster_profile_description.setReadOnly(True)
+        self.cluster_profile_description.setMaximumHeight(115)
+        cluster_profile_layout.addWidget(self.cluster_profile_description)
+
+        self.cluster_profile_figure = Figure(figsize=(9, 5))
+        self.cluster_profile_canvas = FigureCanvas(self.cluster_profile_figure)
+        self.cluster_profile_toolbar = NavigationToolbar(self.cluster_profile_canvas, self.cluster_profile_tab)
+        cluster_profile_layout.addWidget(self.cluster_profile_toolbar)
+        cluster_profile_layout.addWidget(self.cluster_profile_canvas, stretch=1)
+        self.mode_tabs.addTab(self.cluster_profile_tab, self.MODE_TITLES[3])
         center_layout.addWidget(self.mode_tabs)
         splitter.addWidget(center_widget)
         splitter.setStretchFactor(1, 1)
@@ -6654,8 +6681,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.interval_table.itemSelectionChanged.connect(self._handle_interval_selection_changed)
         tables_splitter.addWidget(self.interval_table)
 
-        self.profile_table = QtWidgets.QTableWidget(0, 7)
-        self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Median", "Std", "P10–P90"])
+        self.profile_table = QtWidgets.QTableWidget(0, 8)
+        self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Z-mean", "Median", "Std", "P10–P90"])
         self.profile_table.setSortingEnabled(True)
         tables_splitter.addWidget(self.profile_table)
         root_layout.addWidget(tables_splitter, stretch=1)
@@ -6671,6 +6698,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._populate_profile_table()
         self._render_one_well_curves()
         self._render_curve_across_wells()
+        self._render_cluster_profile_view()
 
     def _populate_controls(self) -> None:
         data = self.visualization_data or {}
@@ -6705,6 +6733,13 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         for label in labels:
             self.curve_wells_cluster_combo.addItem(f"cluster {label}", int(label))
         self.curve_wells_cluster_combo.blockSignals(False)
+
+        if hasattr(self, "profile_cluster_combo"):
+            self.profile_cluster_combo.blockSignals(True)
+            self.profile_cluster_combo.clear()
+            for label in labels:
+                self.profile_cluster_combo.addItem(f"cluster {label}", int(label))
+            self.profile_cluster_combo.blockSignals(False)
         self._highlight_interval = None
 
         self.title_label.setText(
@@ -6779,6 +6814,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._populate_profile_table()
         self._render_one_well_curves()
         self._render_curve_across_wells()
+        self._render_cluster_profile_view()
 
     def _populate_interval_table(self) -> None:
         well_id = self._current_well_id()
@@ -7152,6 +7188,126 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.96))
         self.curve_wells_canvas.draw_idle()
 
+    def _current_profile_cluster_label(self) -> int | None:
+        if not hasattr(self, "profile_cluster_combo"):
+            return None
+        value = self.profile_cluster_combo.currentData()
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _render_cluster_profile_view(self) -> None:
+        if not hasattr(self, "cluster_profile_figure"):
+            return
+        self.cluster_profile_figure.clear()
+        labels = [
+            int(label) for label in sorted(self.profile_cache.keys(), key=_cluster_label_sort_key)
+            if self._is_cluster_visible(int(label))
+        ]
+        feature_names = [str(name) for name in (self.visualization_data or {}).get("feature_names", [])]
+        if not labels or not feature_names:
+            ax = self.cluster_profile_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "Нет профилей для выбранных кластеров/кривых", ha="center", va="center")
+            ax.set_axis_off()
+            self.cluster_profile_canvas.draw_idle()
+            if hasattr(self, "cluster_profile_description"):
+                self.cluster_profile_description.setPlainText("Нет данных для среднего портрета кластера.")
+            return
+
+        selected_label = self._current_profile_cluster_label()
+        if selected_label not in self.profile_cache or not self._is_cluster_visible(int(selected_label)):
+            selected_label = labels[0]
+
+        matrix = np.full((len(labels), len(feature_names)), np.nan, dtype=float)
+        for row_idx, label in enumerate(labels):
+            features = (self.profile_cache.get(int(label), {}) or {}).get("features", {}) or {}
+            for col_idx, feature_name in enumerate(feature_names):
+                value = _to_finite_float((features.get(feature_name, {}) or {}).get("standardized_mean"))
+                if value is not None:
+                    matrix[row_idx, col_idx] = float(value)
+
+        axes = self.cluster_profile_figure.subplots(1, 2, gridspec_kw={"width_ratios": [1.45, 1.0]})
+        heatmap_ax, bar_ax = axes
+        finite_values = matrix[np.isfinite(matrix)]
+        value_limit = max(1.0, float(np.nanmax(np.abs(finite_values)))) if finite_values.size else 1.0
+        image = heatmap_ax.imshow(matrix, aspect="auto", cmap="coolwarm", vmin=-value_limit, vmax=value_limit)
+        heatmap_ax.set_yticks(range(len(labels)))
+        heatmap_ax.set_yticklabels([f"cluster {label}" for label in labels])
+        heatmap_ax.set_xticks(range(len(feature_names)))
+        heatmap_ax.set_xticklabels(feature_names, rotation=55, ha="right", fontsize=8)
+        heatmap_ax.set_title("Heatmap: cluster × feature (z-mean)")
+        heatmap_ax.set_xlabel("Feature")
+        heatmap_ax.set_ylabel("Cluster")
+        if selected_label in labels:
+            selected_row = labels.index(int(selected_label))
+            heatmap_ax.add_patch(Rectangle((-0.5, selected_row - 0.5), len(feature_names), 1, fill=False, edgecolor="black", linewidth=1.8))
+        self.cluster_profile_figure.colorbar(image, ax=heatmap_ax, fraction=0.046, pad=0.04, label="standardized mean")
+
+        selected_profile = self.profile_cache.get(int(selected_label), {}) if selected_label is not None else {}
+        selected_features = []
+        for feature_name, stats in (selected_profile.get("features", {}) or {}).items():
+            z_mean = _to_finite_float((stats or {}).get("standardized_mean"))
+            if z_mean is not None:
+                selected_features.append((str(feature_name), float(z_mean)))
+        selected_features.sort(key=lambda item: abs(item[1]), reverse=True)
+        top_n = int(self.profile_top_features_spin.value()) if hasattr(self, "profile_top_features_spin") else 15
+        selected_features = selected_features[:max(1, top_n)]
+        if selected_features:
+            names = [item[0] for item in selected_features][::-1]
+            values = [item[1] for item in selected_features][::-1]
+            colors = ["#d62728" if value > 0 else "#1f77b4" for value in values]
+            bar_ax.barh(names, values, color=colors, alpha=0.85)
+            bar_ax.axvline(0.0, color="black", linewidth=0.8)
+            bar_ax.set_xlabel("standardized mean")
+            bar_ax.set_title(f"Cluster {selected_label}: strongest deviations")
+            bar_ax.grid(True, axis="x", alpha=0.25)
+        else:
+            bar_ax.text(0.5, 0.5, "Нет числовой статистики для выбранного кластера", ha="center", va="center")
+            bar_ax.set_axis_off()
+
+        self.cluster_profile_figure.tight_layout()
+        self.cluster_profile_canvas.draw_idle()
+        if hasattr(self, "cluster_profile_description"):
+            self.cluster_profile_description.setPlainText(str(selected_profile.get("description", "Нет описания кластера.")))
+
+    @staticmethod
+    def _build_cluster_profile_description(label: int, profile: dict[str, Any]) -> str:
+        row_count = int(profile.get("row_count", 0))
+        well_count = int(profile.get("well_count", 0))
+        depth_min = profile.get("depth_min")
+        depth_max = profile.get("depth_max")
+        features = profile.get("features", {}) or {}
+        ranked = []
+        for feature_name, stats in features.items():
+            z_mean = _to_finite_float((stats or {}).get("standardized_mean"))
+            mean_value = _to_finite_float((stats or {}).get("mean"))
+            if z_mean is not None:
+                ranked.append((str(feature_name), float(z_mean), mean_value))
+        ranked.sort(key=lambda item: abs(item[1]), reverse=True)
+        high = [item for item in ranked if item[1] > 0][:3]
+        low = [item for item in ranked if item[1] < 0][:3]
+
+        def format_feature(items: list[tuple[str, float, float | None]]) -> str:
+            if not items:
+                return "нет выраженных отклонений"
+            chunks = []
+            for feature_name, z_mean, mean_value in items:
+                mean_text = _format_well_log_visual_metric(mean_value, 4)
+                chunks.append(f"{feature_name} (z={z_mean:+.2f}, mean={mean_text})")
+            return "; ".join(chunks)
+
+        depth_text = "—"
+        if depth_min is not None and depth_max is not None:
+            depth_text = f"{_format_well_log_visual_metric(depth_min, 2)}–{_format_well_log_visual_metric(depth_max, 2)} MD"
+        return "\n".join([
+            f"Cluster {label}: {row_count} rows, {well_count} wells, depth range {depth_text}.",
+            f"Повышенные средние относительно всего dataset: {format_feature(high)}.",
+            f"Пониженные средние относительно всего dataset: {format_feature(low)}.",
+            "Интерпретация: признаки с |z|≈1 и выше сильнее всего отличают кластер от общего среднего; "
+            "знак z показывает направление отклонения.",
+        ])
+
     @staticmethod
     def _intervals_match(left: dict[str, Any] | None, right: dict[str, Any] | None) -> bool:
         if not left or not right:
@@ -7178,6 +7334,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 str(feature_name),
                 str(stats.get("count", 0)),
                 _format_well_log_visual_metric(stats.get("mean"), 4),
+                _format_well_log_visual_metric(stats.get("standardized_mean"), 4),
                 _format_well_log_visual_metric(stats.get("median"), 4),
                 _format_well_log_visual_metric(stats.get("std"), 4),
                 f"{_format_well_log_visual_metric(stats.get('p10'), 4)}–{_format_well_log_visual_metric(stats.get('p90'), 4)}",
@@ -7248,12 +7405,33 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
     @staticmethod
     def _build_profile_cache(rows: list[dict[str, Any]], feature_names: list[str]) -> dict[int, dict[str, Any]]:
+        global_feature_stats: dict[str, dict[str, float]] = {}
+        for feature_name in feature_names:
+            values = []
+            for row in rows:
+                value = (row.get("features", {}) or {}).get(feature_name)
+                value_float = _to_finite_float(value)
+                if value_float is not None:
+                    values.append(value_float)
+            if values:
+                arr = np.asarray(values, dtype=float)
+                global_feature_stats[str(feature_name)] = {
+                    "mean": float(np.mean(arr)),
+                    "std": float(np.std(arr)),
+                    "count": int(arr.size),
+                }
+
         grouped: dict[int, list[dict[str, Any]]] = {}
         for row in rows:
             grouped.setdefault(int(row.get("cluster_label", 0)), []).append(row)
         profile_cache: dict[int, dict[str, Any]] = {}
         for label, cluster_rows in grouped.items():
             features: dict[str, Any] = {}
+            depths = []
+            for row in cluster_rows:
+                depth_value = _to_finite_float(row.get("depth_md"))
+                if depth_value is not None:
+                    depths.append(depth_value)
             for feature_name in feature_names:
                 values = []
                 for row in cluster_rows:
@@ -7264,20 +7442,34 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 if not values:
                     continue
                 arr = np.asarray(values, dtype=float)
+                global_stats = global_feature_stats.get(str(feature_name), {})
+                global_std = float(global_stats.get("std", 0.0) or 0.0)
+                mean_value = float(np.mean(arr))
+                standardized_mean = None
+                if global_std > 1e-12:
+                    standardized_mean = float((mean_value - float(global_stats.get("mean", 0.0))) / global_std)
                 features[str(feature_name)] = {
                     "count": int(arr.size),
-                    "mean": float(np.mean(arr)),
+                    "mean": mean_value,
                     "median": float(np.median(arr)),
                     "std": float(np.std(arr)),
                     "p10": float(np.percentile(arr, 10)),
                     "p90": float(np.percentile(arr, 90)),
+                    "global_mean": global_stats.get("mean"),
+                    "global_std": global_stats.get("std"),
+                    "standardized_mean": standardized_mean,
+                    "valid_fraction_in_cluster": float(arr.size / max(1, len(cluster_rows))),
                 }
-            profile_cache[int(label)] = {
+            profile = {
                 "cluster_label": int(label),
                 "row_count": len(cluster_rows),
                 "well_count": len({int(row["well_id"]) for row in cluster_rows}),
+                "depth_min": float(min(depths)) if depths else None,
+                "depth_max": float(max(depths)) if depths else None,
                 "features": features,
             }
+            profile["description"] = WellLogClusterVisualizationWindow._build_cluster_profile_description(int(label), profile)
+            profile_cache[int(label)] = profile
         return profile_cache
 
 
