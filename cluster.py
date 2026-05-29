@@ -1394,6 +1394,30 @@ def _cluster_data_hash(raw_data: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _current_tab_matches(tab_widget: Any, *, expected_widget: Any = None, expected_titles: set[str] | None = None) -> bool:
+    """
+    Проверяет активную вкладку без жесткой привязки только к сгенерированному имени.
+
+    В старом UI вкладка Well Log известна как ``tab_14``, но для тестов/будущих форм
+    надежнее дополнительно сверять текст вкладки.
+    """
+    if tab_widget is None:
+        return False
+
+    try:
+        current_widget = tab_widget.currentWidget()
+    except Exception:
+        current_widget = None
+    if expected_widget is not None and current_widget is expected_widget:
+        return True
+
+    try:
+        current_text = str(tab_widget.tabText(tab_widget.currentIndex())).strip().casefold()
+    except Exception:
+        current_text = ""
+    return bool(expected_titles and current_text in expected_titles)
+
+
 def get_active_cluster_source_type() -> Literal["gpr", "well_log"]:
     """
     Определяет активный источник кластеризации по вложенной вкладке Cluster.
@@ -1402,19 +1426,12 @@ def get_active_cluster_source_type() -> Literal["gpr", "well_log"]:
     случаях используется исторический источник ``gpr``.
     """
     tab_widget = getattr(ui, "tabWidget", None)
-    if tab_widget is None:
-        return "gpr"
-
-    current_widget = tab_widget.currentWidget()
     well_log_tab = getattr(ui, "tab_14", None)
-    if well_log_tab is not None and current_widget is well_log_tab:
-        return "well_log"
-
-    try:
-        current_text = str(tab_widget.tabText(tab_widget.currentIndex())).strip().casefold()
-    except Exception:
-        current_text = ""
-    if current_text in {"well log", "well_log", "каротаж"}:
+    if _current_tab_matches(
+        tab_widget,
+        expected_widget=well_log_tab,
+        expected_titles={"well log", "well_log", "каротаж", "скважинный каротаж"},
+    ):
         return "well_log"
 
     return "gpr"
@@ -1442,6 +1459,74 @@ def build_cluster_run_context(*, show_errors: bool = True) -> ClusterRunContext 
         if show_errors:
             _show_cluster_context_error(source_type, str(exc))
         return None
+
+
+def _parse_gpr_profile_trace(value: Any) -> tuple[int | None, int | None]:
+    """Парсит исторический ключ профиля/трассы вида ``profile_id_trace_index``."""
+    text = str(value or "").strip()
+    if "_" not in text:
+        return None, None
+    profile_part, trace_part = text.rsplit("_", 1)
+    try:
+        return int(profile_part), int(trace_part)
+    except (TypeError, ValueError):
+        return None, None
+
+
+def _build_gpr_meta_rows(raw_rows: list[Any]) -> tuple[list[dict[str, Any]], list[list[float]], dict[str, int]]:
+    """
+    Формирует meta/X-представление GPR для общего ClusterRunContext.
+
+    ``raw_rows`` сохраняются в историческом формате для существующего pipeline, а этот
+    адаптер добавляет явную metadata-модель, аналогичную Well Log контексту.
+    """
+    meta_rows: list[dict[str, Any]] = []
+    x_rows: list[list[float]] = []
+    invalid_meta_rows = 0
+    invalid_feature_rows = 0
+
+    for source_idx, row in enumerate(raw_rows):
+        if not isinstance(row, (list, tuple)) or len(row) < 4:
+            invalid_meta_rows += 1
+            continue
+
+        profile_id, trace_index = _parse_gpr_profile_trace(row[0])
+        if profile_id is None or trace_index is None:
+            invalid_meta_rows += 1
+
+        try:
+            x_coord = float(row[1])
+        except (TypeError, ValueError):
+            x_coord = float("nan")
+        try:
+            y_coord = float(row[2])
+        except (TypeError, ValueError):
+            y_coord = float("nan")
+
+        feature_values: list[float] = []
+        for value in row[3:]:
+            try:
+                feature_values.append(float(value))
+            except (TypeError, ValueError):
+                feature_values.append(float("nan"))
+        if not any(np.isfinite(value) for value in feature_values):
+            invalid_feature_rows += 1
+
+        meta_rows.append({
+            "profile_trace_key": str(row[0]),
+            "profile_id": profile_id,
+            "trace_index": trace_index,
+            "x": x_coord,
+            "y": y_coord,
+            "source_row_index": int(source_idx),
+        })
+        x_rows.append(feature_values)
+
+    diagnostics = {
+        "invalid_meta_rows": invalid_meta_rows,
+        "invalid_feature_rows": invalid_feature_rows,
+    }
+    return meta_rows, x_rows, diagnostics
 
 
 def build_gpr_cluster_context() -> ClusterRunContext:
@@ -1477,18 +1562,26 @@ def build_gpr_cluster_context() -> ClusterRunContext:
         feature_names = [f"feature_{idx + 1}" for idx in range(feature_count)]
 
     dataset_title = str(getattr(ui, "comboBox_clust_obj", None).currentText()) if hasattr(ui, "comboBox_clust_obj") else f"ObjectSet id{clust_object_id}"
+    meta_rows, x_rows, meta_diagnostics = _build_gpr_meta_rows(raw_rows)
+    diagnostics = {
+        "invalid_rows": 0,
+        "excluded_wells": [],
+        **meta_diagnostics,
+    }
     return ClusterRunContext(
         source_type="gpr",
         dataset_id=int(clust_object_id),
         dataset_title=dataset_title,
         raw_rows=raw_rows,
         feature_names=[str(name) for name in feature_names],
-        meta_columns=["profile_id_trace", "x", "y"],
+        meta_columns=["profile_trace_key", "profile_id", "trace_index", "x", "y"],
         feature_columns=[str(name) for name in feature_names],
         row_count=len(raw_rows),
         ui_tab_key="cluster_georadar",
         data_hash=_cluster_data_hash(raw_rows),
-        diagnostics={"invalid_rows": 0, "excluded_wells": []},
+        meta=meta_rows,
+        X=x_rows,
+        diagnostics=diagnostics,
     )
 
 
