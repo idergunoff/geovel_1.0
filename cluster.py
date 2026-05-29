@@ -7,7 +7,6 @@ import random
 import gc
 import multiprocessing as mp
 from collections import Counter, OrderedDict
-from datetime import datetime, timezone
 from itertools import product
 from time import monotonic
 from typing import Any, Dict, Literal, Optional, TypedDict
@@ -18,6 +17,7 @@ from scipy.interpolate import griddata
 from sklearn.random_projection import SparseRandomProjection
 from draw import draw_radarogram
 from func import *
+import datetime as dt
 from krige import draw_map
 
 # Runtime-cache результатов кластеризации для быстрой перерисовки по профилям без пересчета.
@@ -4229,7 +4229,7 @@ def _save_auto_tuning_run_state(
     row.raw_results_json = json.dumps((coarse_results or []) + (fine_results or []), ensure_ascii=False)
     row.coarse_count = int(len(coarse_results or []))
     row.fine_count = int(len(fine_results or []))
-    row.updated_at = datetime.utcnow()
+    row.updated_at = dt.datetime.utcnow()
     session.commit()
 
 
@@ -4366,7 +4366,7 @@ def save_cluster_auto_tuning_cache(
             )
             session.add(existing_row)
 
-        existing_row.created_at = datetime.utcnow()
+        existing_row.created_at = dt.datetime.utcnow()
         existing_row.top_results = json.dumps(compact_top_results, ensure_ascii=False)
         session.commit()
     except Exception as exc:
@@ -6098,7 +6098,7 @@ def build_well_log_cluster_visualization_data(
         )
 
     cluster_summary = _build_well_log_cluster_summary(rows)
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at = dt.datetime.now(dt.timezone.utc).isoformat()
     run_id_payload = f"well_log:{run_context['dataset_id']}:{run_context.get('data_hash', '')}:{created_at}"
     run_id = hashlib.sha256(run_id_payload.encode("utf-8")).hexdigest()[:16]
     summary = {
@@ -6605,7 +6605,7 @@ def calculate_cluster():
             "smoothing_method": (smooth_method if smoothing_applied else None),
             "smoothing_window": (int(smooth_window) if smoothing_applied else None),
             "smoothing_changes": int(smoothing_changes),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
             "clust_object_id": int(clust_object_id),
             "clust_analys_id": int(clust_analys_id),
         }
