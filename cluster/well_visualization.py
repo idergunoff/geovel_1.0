@@ -296,22 +296,30 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         self.curve_wells_tab = QtWidgets.QWidget()
         curve_wells_layout = QtWidgets.QVBoxLayout(self.curve_wells_tab)
+        curve_wells_layout.setContentsMargins(4, 4, 4, 4)
+        self.curve_wells_splitter = QtWidgets.QSplitter(Qt.Horizontal)
+
+        curve_wells_side_panel = QtWidgets.QWidget()
+        curve_wells_side_panel.setMinimumWidth(260)
+        curve_wells_side_panel.setMaximumWidth(380)
+        curve_wells_side_layout = QtWidgets.QVBoxLayout(curve_wells_side_panel)
+        curve_wells_side_layout.setContentsMargins(0, 0, 8, 0)
         self.curve_wells_hint = QtWidgets.QLabel(
-            "Выберите кривую и список скважин: small multiples сравнит одну кривую между скважинами "
+            "Выберите кривую и список скважин: графики будут показаны вертикальными треками слева направо, "
             "с одинаковой палитрой кластеров."
         )
         self.curve_wells_hint.setWordWrap(True)
-        curve_wells_layout.addWidget(self.curve_wells_hint)
+        curve_wells_side_layout.addWidget(self.curve_wells_hint)
 
-        curve_wells_controls = QtWidgets.QHBoxLayout()
-        curve_wells_controls.addWidget(QtWidgets.QLabel("Wells:"))
+        curve_wells_side_layout.addWidget(QtWidgets.QLabel("Wells:"))
         self.curve_wells_list = QtWidgets.QListWidget()
         self.curve_wells_list.setToolTip("Выберите одну или несколько скважин для сравнения выбранной кривой.")
         self.curve_wells_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.curve_wells_list.itemSelectionChanged.connect(self._render_curve_across_wells)
-        curve_wells_controls.addWidget(self.curve_wells_list, stretch=1)
+        curve_wells_side_layout.addWidget(self.curve_wells_list, stretch=1)
 
         curve_wells_options = QtWidgets.QFormLayout()
+        curve_wells_options.setContentsMargins(0, 0, 0, 0)
         self.curve_wells_sort_combo = QtWidgets.QComboBox()
         self.curve_wells_sort_combo.setToolTip("Сортировка small multiples по имени, доле кластера или похожести кластерной последовательности.")
         self.curve_wells_sort_combo.addItems([
@@ -339,9 +347,18 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_shared_x.setChecked(True)
         self.curve_wells_shared_x.stateChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Scale:", self.curve_wells_shared_x)
-        curve_wells_controls.addLayout(curve_wells_options)
-        curve_wells_layout.addLayout(curve_wells_controls)
+        curve_wells_side_layout.addLayout(curve_wells_options)
 
+        self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
+        self.curve_wells_summary_table.setHorizontalHeaderLabels(["Well", "Rows", "Dominant cluster", "Selected cluster %", "Clusters summary"])
+        self.curve_wells_summary_table.setSortingEnabled(True)
+        self.curve_wells_summary_table.setMinimumHeight(120)
+        curve_wells_side_layout.addWidget(self.curve_wells_summary_table, stretch=1)
+        self.curve_wells_splitter.addWidget(curve_wells_side_panel)
+
+        curve_wells_graph_panel = QtWidgets.QWidget()
+        curve_wells_graph_layout = QtWidgets.QVBoxLayout(curve_wells_graph_panel)
+        curve_wells_graph_layout.setContentsMargins(0, 0, 0, 0)
         self.curve_wells_figure = Figure(figsize=(12, 7), dpi=110)
         self.curve_wells_canvas = FigureCanvas(self.curve_wells_figure)
         self.curve_wells_canvas.setMinimumSize(900, 560)
@@ -349,14 +366,13 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_scroll = QtWidgets.QScrollArea()
         self.curve_wells_scroll.setWidgetResizable(True)
         self.curve_wells_scroll.setWidget(self.curve_wells_canvas)
-        curve_wells_layout.addWidget(self.curve_wells_toolbar)
-        curve_wells_layout.addWidget(self.curve_wells_scroll, stretch=1)
-
-        self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
-        self.curve_wells_summary_table.setHorizontalHeaderLabels(["Well", "Rows", "Dominant cluster", "Selected cluster %", "Clusters summary"])
-        self.curve_wells_summary_table.setSortingEnabled(True)
-        self.curve_wells_summary_table.setMaximumHeight(180)
-        curve_wells_layout.addWidget(self.curve_wells_summary_table)
+        curve_wells_graph_layout.addWidget(self.curve_wells_toolbar)
+        curve_wells_graph_layout.addWidget(self.curve_wells_scroll, stretch=1)
+        self.curve_wells_splitter.addWidget(curve_wells_graph_panel)
+        self.curve_wells_splitter.setStretchFactor(0, 0)
+        self.curve_wells_splitter.setStretchFactor(1, 1)
+        self.curve_wells_splitter.setSizes([300, 1200])
+        curve_wells_layout.addWidget(self.curve_wells_splitter, stretch=1)
         self.mode_tabs.addTab(self.curve_wells_tab, self.MODE_TITLES[2])
 
         self.cluster_profile_tab = QtWidgets.QWidget()
@@ -399,16 +415,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         cluster_profile_layout.addWidget(self.cluster_profile_toolbar)
         cluster_profile_layout.addWidget(self.cluster_profile_scroll, stretch=1)
         self.mode_tabs.addTab(self.cluster_profile_tab, self.MODE_TITLES[3])
-        center_layout.addWidget(self.mode_tabs)
-        splitter.addWidget(center_widget)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([240, 1200])
-        root_layout.addWidget(splitter, stretch=1)
 
-        self.tables_tabs = QtWidgets.QTabWidget()
-        self.tables_tabs.setMaximumHeight(240)
-        self.tables_tabs.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
         self.interval_table = QtWidgets.QTableWidget(0, 6)
         self.interval_table.setToolTip("Непрерывные глубинные интервалы кластеров для выбранной скважины; клик подсвечивает интервал на графике.")
         self.interval_table.setHorizontalHeaderLabels(["Well", "From MD", "To MD", "Thickness", "Cluster", "Rows"])
@@ -416,14 +423,20 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.interval_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.interval_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.interval_table.itemSelectionChanged.connect(self._handle_interval_selection_changed)
-        self.tables_tabs.addTab(self.interval_table, "Cluster intervals")
+        self.mode_tabs.addTab(self.interval_table, "Cluster intervals")
 
         self.profile_table = QtWidgets.QTableWidget(0, 8)
         self.profile_table.setToolTip("Табличный средний портрет видимых кластеров по выбранным каротажным кривым.")
         self.profile_table.setHorizontalHeaderLabels(["Cluster", "Feature", "Count", "Mean", "Z-mean", "Median", "Std", "P10–P90"])
         self.profile_table.setSortingEnabled(True)
-        self.tables_tabs.addTab(self.profile_table, "Cluster profiles")
-        root_layout.addWidget(self.tables_tabs, stretch=0)
+        self.mode_tabs.addTab(self.profile_table, "Cluster profiles")
+
+        center_layout.addWidget(self.mode_tabs)
+        splitter.addWidget(center_widget)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([240, 1200])
+        root_layout.addWidget(splitter, stretch=1)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -1068,10 +1081,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         global_x_max = max(all_values) if all_values else None
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
-        canvas_height = max(560, int(len(payloads) * 155))
-        self.curve_wells_canvas.setMinimumSize(900, canvas_height)
-        self.curve_wells_figure.set_size_inches(12.0, max(7.0, len(payloads) * 1.55), forward=True)
-        axes = self.curve_wells_figure.subplots(len(payloads), 1, sharex=shared_x)
+        canvas_width = max(900, int(len(payloads) * 180))
+        self.curve_wells_canvas.setMinimumSize(canvas_width, 600)
+        self.curve_wells_figure.set_size_inches(max(12.0, len(payloads) * 1.75), 7.0, forward=True)
+        axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x)
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
             rows = payload["rows"]
@@ -1102,7 +1115,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if shared_x and global_x_min is not None and global_x_max is not None and global_x_min != global_x_max:
                 ax.set_xlim(global_x_min, global_x_max)
             ax.grid(True, alpha=0.25)
-            ax.set_ylabel("Depth MD", fontsize=9)
+            ax.set_xlabel(curve_name, fontsize=9)
+            ax.set_ylabel("Depth MD", fontsize=8)
             ax.tick_params(axis="both", labelsize=8)
             ax.set_title(
                 f"{payload['well_name']} | dominant cluster {payload.get('dominant_label', '—')} "
@@ -1115,7 +1129,6 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             )
             ax.text(0.99, 0.02, cluster_text, transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
                     bbox={"facecolor": "white", "alpha": 0.7, "edgecolor": "none"})
-        axes[-1].set_xlabel(curve_name)
         self.curve_wells_figure.suptitle(f"{curve_name}: одна кривая → разные скважины", fontsize=11)
         self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.96))
         self.curve_wells_canvas.draw_idle()
