@@ -50,6 +50,28 @@ class ClusterRunContext(TypedDict, total=False):
 
 
 
+
+
+class WellLogClusterVisualizationData(TypedDict, total=False):
+    """
+    Runtime-данные последнего ручного CALC Well Log для будущего окна визуализации.
+    """
+    run_id: str
+    source_type: Literal["well_log"]
+    dataset_id: int
+    dataset_title: str
+    created_at: str
+    data_hash: str
+    feature_names: list[str]
+    labels: list[int]
+    rows: list[dict[str, Any]]
+    cluster_summary: list[dict[str, Any]]
+    metrics: dict[str, Any]
+    config: dict[str, Any]
+    diagnostics: dict[str, Any]
+    summary: dict[str, Any]
+
+
 class CandidateConfig(TypedDict):
     """
     Единый контракт кандидата для AUTO-подбора параметров кластеризации.
@@ -96,6 +118,8 @@ class AutoTuningClusterSizeLimits(TypedDict):
 
 
 cluster_auto_results_cache: list[CandidateResult] = []
+well_log_cluster_result_cache: dict[int, dict[str, Any]] = {}
+well_log_cluster_visualization_window = None
 
 
 CLUSTER_DATA_GZIP_PREFIX = "gzjson:"
@@ -1569,7 +1593,7 @@ def build_well_log_cluster_context() -> ClusterRunContext:
         }
         meta_rows.append(meta)
         x_rows.append(feature_values)
-        prepared_rows.append([f"{int(well_id)}_{float(depth_md):g}", int(well_id), float(depth_md)] + row[1:len(feature_names) + 1])
+        prepared_rows.append([int(source_idx), int(well_id), float(depth_md)] + row[1:len(feature_names) + 1])
 
     rows_by_well: dict[int, int] = Counter(int(meta["well_id"]) for meta in meta_rows)
     excluded_wells = [
@@ -4205,7 +4229,7 @@ def _save_auto_tuning_run_state(
     row.raw_results_json = json.dumps((coarse_results or []) + (fine_results or []), ensure_ascii=False)
     row.coarse_count = int(len(coarse_results or []))
     row.fine_count = int(len(fine_results or []))
-    row.updated_at = datetime.datetime.utcnow()
+    row.updated_at = datetime.utcnow()
     session.commit()
 
 
@@ -4342,7 +4366,7 @@ def save_cluster_auto_tuning_cache(
             )
             session.add(existing_row)
 
-        existing_row.created_at = datetime.datetime.utcnow()
+        existing_row.created_at = datetime.utcnow()
         existing_row.top_results = json.dumps(compact_top_results, ensure_ascii=False)
         session.commit()
     except Exception as exc:
@@ -5930,20 +5954,402 @@ def build_clustering_report(
 
 
 
+def _read_manual_cluster_ui_config() -> dict[str, Any]:
+    """
+    Считывает текущие настройки ручного CALC из общей панели кластеризации.
+    """
+    if ui.radioButton_clust_scaler_none.isChecked():
+        preprocess_mode = "none"
+    elif ui.radioButton_clust_scaler_stnd.isChecked():
+        preprocess_mode = "standard"
+    elif ui.radioButton_clust_scaler_rob.isChecked():
+        preprocess_mode = "robust"
+    elif ui.radioButton_clust_scaler_l2.isChecked():
+        preprocess_mode = "l2_norm"
+    else:
+        preprocess_mode = "row_center"
+
+    if ui.radioButton_clust_kmean.isChecked():
+        method = "kmeans"
+    elif ui.radioButton_clust_hdbscan.isChecked():
+        method = "hdbscan"
+    elif ui.radioButton_clust_gaussmix.isChecked():
+        method = "gmm"
+    else:
+        method = "kmeans"
+
+    selected_button = ui.buttonGroup_3.checkedButton()
+    text_method_nan = selected_button.text() if selected_button else "impute"
+    pca_enabled = bool(ui.checkBox_cluster_pca.isChecked())
+    pca_mode = "fixed_components" if ui.radioButton_clust_pca_fix.isChecked() else "variance_ratio"
+    pca_value = ui.spinBox_clust_pca_fix.value() if pca_mode == "fixed_components" else ui.doubleSpinBox_clust_pca_disp.value()
+
+    return {
+        "clean": {
+            "use_non_finite": bool(ui.checkBox_clust_clean_nan.isChecked()),
+            "non_finite_mode": text_method_nan,
+            "use_variance_threshold": bool(ui.checkBox_clust_clear_vartresh.isChecked()),
+            "use_correlation_filter": bool(ui.checkBox_clust_clear_corr.isChecked()),
+        },
+        "preprocess_mode": preprocess_mode,
+        "pca": {
+            "enabled": pca_enabled,
+            "mode": pca_mode if pca_enabled else None,
+            "value": pca_value if pca_enabled else None,
+            "fixed_components": ui.spinBox_clust_pca_fix.value(),
+            "variance_ratio": ui.doubleSpinBox_clust_pca_disp.value(),
+        },
+        "method": method,
+        "method_params": {
+            "kmeans_n_clusters": ui.spinBox_clust_kmeans_n.value(),
+            "kmeans_n_init": ui.spinBox_clust_kmean_ninint.value(),
+            "hdbscan_min_cluster_size": ui.spinBox_clust_hdbsc_minsize.value(),
+            "hdbscan_min_samples": ui.spinBox_clust_hdbsc_minsamp.value(),
+            "hdbscan_metric": ui.comboBox_clust_hdbsc_type.currentText(),
+            "gmm_n_components": ui.spinBox_clust_gmm_n.value(),
+            "gmm_covariance_type": ui.comboBox_clust_gmm_type.currentText(),
+        },
+        "metrics": {
+            "use_silhouette": bool(ui.checkBox_cluster_silhoutte.isChecked()),
+            "use_db": bool(ui.checkBox_cluster_dav_boul.isChecked()),
+            "use_ch": bool(ui.checkBox_cluster_calin_har.isChecked()),
+        },
+        "smoothing": {
+            "enabled": bool(ui.checkBox_cluster_smooth.isChecked()),
+            "method": "maj" if ui.radioButton_cluster_smooth_maj.isChecked() else "med",
+            "window": ui.spinBox_cluster_smooth_window.value(),
+        },
+    }
+
+
+def _build_well_log_cluster_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Агрегирует строки визуализации Well Log по кластерам для summary/stub-окна.
+    """
+    grouped: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        label = int(row["cluster_label"])
+        item = grouped.setdefault(
+            label,
+            {
+                "cluster_label": label,
+                "row_count": 0,
+                "well_ids": set(),
+                "depth_min": None,
+                "depth_max": None,
+            },
+        )
+        item["row_count"] += 1
+        item["well_ids"].add(int(row["well_id"]))
+        depth = float(row["depth_md"])
+        item["depth_min"] = depth if item["depth_min"] is None else min(float(item["depth_min"]), depth)
+        item["depth_max"] = depth if item["depth_max"] is None else max(float(item["depth_max"]), depth)
+
+    summary_rows = []
+    for label, item in sorted(grouped.items(), key=lambda pair: pair[0]):
+        summary_rows.append(
+            {
+                "cluster_label": int(label),
+                "row_count": int(item["row_count"]),
+                "well_count": len(item["well_ids"]),
+                "well_ids": sorted(int(well_id) for well_id in item["well_ids"]),
+                "depth_min": item["depth_min"],
+                "depth_max": item["depth_max"],
+            }
+        )
+    return summary_rows
+
+
+def build_well_log_cluster_visualization_data(
+        *,
+        run_context: ClusterRunContext,
+        labels: list[int],
+        kept_row_indices: list[int],
+        metrics: dict[str, Any],
+        config: dict[str, Any],
+        pca_info: dict[str, Any],
+        cluster_info: dict[str, Any],
+        smoothing_changes: int
+) -> WellLogClusterVisualizationData:
+    """
+    Формирует runtime-структуру WellLogClusterVisualizationData после ручного CALC.
+    """
+    meta_rows = run_context.get("meta", [])
+    feature_names = [str(name) for name in run_context.get("feature_names", [])]
+    rows: list[dict[str, Any]] = []
+    for clean_row_idx, label in enumerate(labels):
+        if clean_row_idx >= len(kept_row_indices):
+            break
+        source_row_idx = int(kept_row_indices[clean_row_idx])
+        if source_row_idx < 0 or source_row_idx >= len(meta_rows):
+            continue
+        meta = dict(meta_rows[source_row_idx])
+        source_values = meta.get("source_curve_values", {}) or {}
+        rows.append(
+            {
+                "cluster_label": int(label),
+                "well_id": int(meta["well_id"]),
+                "well_name": str(meta.get("well_name", f"well_id={meta['well_id']}")),
+                "depth_md": float(meta["depth_md"]),
+                "row_index_in_well": int(meta.get("row_index_in_well", 0)),
+                "source_row_index": int(meta.get("source_row_index", source_row_idx)),
+                "features": {name: source_values.get(name) for name in feature_names},
+            }
+        )
+
+    cluster_summary = _build_well_log_cluster_summary(rows)
+    created_at = datetime.now(timezone.utc).isoformat()
+    run_id_payload = f"well_log:{run_context['dataset_id']}:{run_context.get('data_hash', '')}:{created_at}"
+    run_id = hashlib.sha256(run_id_payload.encode("utf-8")).hexdigest()[:16]
+    summary = {
+        "row_count": len(rows),
+        "label_count": len(labels),
+        "cluster_count": len([item for item in cluster_summary if item["cluster_label"] != -1]),
+        "noise_count": sum(1 for label in labels if int(label) == -1),
+        "well_count": len({int(row["well_id"]) for row in rows}),
+        "smoothing_changes": int(smoothing_changes),
+    }
+    diagnostics = dict(run_context.get("diagnostics", {}) or {})
+    diagnostics.update(
+        {
+            "kept_row_count_after_clean": len(kept_row_indices),
+            "dropped_row_count_after_clean": max(0, int(run_context["row_count"]) - len(kept_row_indices)),
+            "pca_info": pca_info,
+            "cluster_info": cluster_info,
+        }
+    )
+
+    return WellLogClusterVisualizationData(
+        run_id=run_id,
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        dataset_title=str(run_context["dataset_title"]),
+        created_at=created_at,
+        data_hash=str(run_context.get("data_hash", "")),
+        feature_names=feature_names,
+        labels=[int(label) for label in labels],
+        rows=rows,
+        cluster_summary=cluster_summary,
+        metrics=metrics,
+        config=config,
+        diagnostics=diagnostics,
+        summary=summary,
+    )
+
+
+def show_well_log_cluster_visualization_stub(visualization_data: WellLogClusterVisualizationData) -> None:
+    """
+    Открывает MVP/stub-окно визуализации Well Log с summary последнего расчета.
+    """
+    global well_log_cluster_visualization_window
+    try:
+        dialog = QtWidgets.QDialog(MainWindow)
+        dialog.setWindowTitle("Well Log Cluster Visualization — summary")
+        dialog.resize(760, 520)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        title = QtWidgets.QLabel(
+            f"Dataset: {visualization_data['dataset_title']} (id={visualization_data['dataset_id']})"
+        )
+        title.setWordWrap(True)
+        layout.addWidget(title)
+
+        summary = visualization_data.get("summary", {})
+        metrics = visualization_data.get("metrics", {}).get("metrics", {})
+        lines = [
+            f"Run id: {visualization_data.get('run_id')}",
+            f"Created at: {visualization_data.get('created_at')}",
+            f"Rows with labels: {summary.get('row_count', 0)}",
+            f"Wells: {summary.get('well_count', 0)}",
+            f"Clusters: {summary.get('cluster_count', 0)}",
+            f"Noise rows: {summary.get('noise_count', 0)}",
+            f"Smoothing changes: {summary.get('smoothing_changes', 0)}",
+            "",
+            "Metrics:",
+        ]
+        if metrics:
+            lines.extend(f"  {name}: {_safe_num(value, 4)}" for name, value in metrics.items())
+        else:
+            lines.append("  metrics were not requested or unavailable")
+        lines.extend(["", "Cluster summary:"])
+        for item in visualization_data.get("cluster_summary", []):
+            lines.append(
+                f"  cluster {item['cluster_label']}: rows={item['row_count']}, wells={item['well_count']}, "
+                f"depth={_safe_num(item.get('depth_min'), 2)}..{_safe_num(item.get('depth_max'), 2)}"
+            )
+        lines.extend(
+            [
+                "",
+                "Visualization modes will be implemented in the next stages:",
+                "  1) one well → all curves",
+                "  2) one curve → multiple wells",
+                "  3) average cluster portrait",
+            ]
+        )
+        text = QtWidgets.QPlainTextEdit("\n".join(lines))
+        text.setReadOnly(True)
+        layout.addWidget(text)
+        dialog.show()
+        well_log_cluster_visualization_window = dialog
+    except Exception as exc:
+        set_info(f"Не удалось открыть stub-окно визуализации Well Log: {exc}", "brown")
+
+
+def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogClusterVisualizationData | None:
+    """
+    Выполняет ручной CALC для Well Log через общий pipeline clean → scale → PCA → cluster → metrics.
+    """
+    data = run_context["raw_rows"]
+    config = _read_manual_cluster_ui_config()
+    clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
+    if not clear_data:
+        set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
+        return None
+
+    set_info(
+        f"CALC Well Log: очистка данных {len(data)} → {len(clear_data)} строк, "
+        f"признаков после очистки={len(clear_data[0]) if clear_data else 0}.",
+        "blue"
+    )
+    preprocess_data = preprocess_features(clear_data, mode=config["preprocess_mode"])
+
+    pca_info_report: dict[str, Any] = {}
+    if config["pca"]["enabled"]:
+        if config["pca"]["mode"] == "fixed_components":
+            data_pca, pca_info_report = apply_pca(
+                preprocess_data,
+                mode="fixed_components",
+                n_components=config["pca"]["fixed_components"],
+                variance_ratio=config["pca"]["variance_ratio"],
+            )
+        else:
+            data_pca, pca_info_report = apply_pca(
+                preprocess_data,
+                mode="variance_ratio",
+                n_components=config["pca"]["fixed_components"],
+                variance_ratio=config["pca"]["variance_ratio"],
+            )
+    else:
+        data_pca = preprocess_data
+
+    params = config["method_params"]
+    label_list, clust_info = cluster_data(
+        data=data_pca,
+        method=config["method"],
+        kmeans_n_clusters=params["kmeans_n_clusters"],
+        kmeans_n_init=params["kmeans_n_init"],
+        hdbscan_min_cluster_size=params["hdbscan_min_cluster_size"],
+        hdbscan_min_samples=params["hdbscan_min_samples"],
+        hdbscan_metric=params["hdbscan_metric"],
+        gmm_n_components=params["gmm_n_components"],
+        gmm_covariance_type=params["gmm_covariance_type"],
+    )
+    labels_for_output = [int(label) for label in label_list]
+
+    well_trace_rows: dict[int, dict[int, int]] = {}
+    meta_rows = run_context.get("meta", [])
+    for clean_row_idx, _ in enumerate(labels_for_output):
+        if clean_row_idx >= len(kept_row_indices):
+            break
+        source_row_idx = int(kept_row_indices[clean_row_idx])
+        if source_row_idx < 0 or source_row_idx >= len(meta_rows):
+            continue
+        meta = meta_rows[source_row_idx]
+        well_id = int(meta["well_id"])
+        row_index = int(meta.get("row_index_in_well", clean_row_idx))
+        well_trace_rows.setdefault(well_id, {})[row_index] = int(clean_row_idx)
+
+    smoothing_changes = 0
+    smooth_window = _normalize_smoothing_window(config["smoothing"]["window"])
+    smoothing_applied = bool(config["smoothing"]["enabled"] and smooth_window >= 3)
+    if smoothing_applied:
+        labels_for_output, smoothing_changes = _smooth_labels_by_profile_trace(
+            labels_for_output,
+            well_trace_rows,
+            method=config["smoothing"]["method"],
+            window=smooth_window,
+            preserve_noise=True,
+        )
+        set_info(
+            f"CALC Well Log: smoothing применен ({config['smoothing']['method']}, window={smooth_window}), "
+            f"изменено меток: {smoothing_changes}.",
+            "blue"
+        )
+    elif config["smoothing"]["enabled"]:
+        set_info("CALC Well Log: smoothing включен, но окно слишком маленькое. Постобработка пропущена.", "brown")
+
+    result_eval = evaluate_clustering(
+        data_pca,
+        labels_for_output,
+        use_silhouette=config["metrics"]["use_silhouette"],
+        use_db=config["metrics"]["use_db"],
+        use_ch=config["metrics"]["use_ch"],
+    )
+    report_text = build_clustering_report(
+        preprocess_mode=config["preprocess_mode"],
+        pca_mode=config["pca"]["mode"],
+        pca_info=pca_info_report,
+        cluster_info={
+            "method": config["method"],
+            "kmeans_n": params["kmeans_n_clusters"],
+            "kmeans_n_init": params["kmeans_n_init"],
+            "min_size": params["hdbscan_min_cluster_size"],
+            "min_sample": params["hdbscan_min_samples"],
+            "hdbscan_type": params["hdbscan_metric"],
+            "n": params["gmm_n_components"],
+            "gmm_type": params["gmm_covariance_type"],
+            "smoothing": (
+                f"{config['smoothing']['method']}(window={smooth_window})" if smoothing_applied else "off"
+            ),
+        },
+        result_info=clust_info,
+        evaluation=result_eval,
+    )
+    set_info(report_text, "blue")
+
+    visualization_data = build_well_log_cluster_visualization_data(
+        run_context=run_context,
+        labels=labels_for_output,
+        kept_row_indices=kept_row_indices,
+        metrics=result_eval,
+        config=config,
+        pca_info=pca_info_report,
+        cluster_info=clust_info,
+        smoothing_changes=smoothing_changes,
+    )
+    well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
+
+    try:
+        show_cluster_diagnostics(
+            data_for_clustering=data_pca,
+            labels=labels_for_output,
+            method_name=config["method"],
+        )
+        set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
+    except Exception as exc:
+        set_info(f"CALC Well Log: не удалось построить диагностические графики: {exc}", "brown")
+
+    show_well_log_cluster_visualization_stub(visualization_data)
+    set_info(
+        f"CALC Well Log: расчет завершен, labels={len(labels_for_output)}, "
+        f"clusters={visualization_data['summary'].get('cluster_count', 0)}.",
+        "green"
+    )
+    return visualization_data
+
 def calculate_cluster():
     run_context = build_cluster_run_context(show_errors=True)
     if run_context is None:
         return
 
     if run_context["source_type"] == "well_log":
-        diagnostics = run_context.get("diagnostics", {})
-        set_info(
-            f"CALC Well Log: контекст dataset id={run_context['dataset_id']} подготовлен "
-            f"({run_context['row_count']} строк, {len(run_context['feature_names'])} признаков, "
-            f"скважин={diagnostics.get('valid_well_count', '—')}). "
-            "Подключение Well Log к общему pipeline выполняется на этапе 2.",
-            "blue"
-        )
+        try:
+            calculate_well_log_cluster(run_context)
+        except Exception as exc:
+            set_info(f"CALC Well Log: ошибка расчета: {exc}", "red")
+            try:
+                QMessageBox.critical(MainWindow, "WELL LOG CLUSTER", f"Ошибка расчета Well Log: {exc}")
+            except Exception:
+                pass
         return
 
     clust_object_id = int(run_context["dataset_id"])
@@ -6199,7 +6605,7 @@ def calculate_cluster():
             "smoothing_method": (smooth_method if smoothing_applied else None),
             "smoothing_window": (int(smooth_window) if smoothing_applied else None),
             "smoothing_changes": int(smoothing_changes),
-            "timestamp": datetime.datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "clust_object_id": int(clust_object_id),
             "clust_analys_id": int(clust_analys_id),
         }
