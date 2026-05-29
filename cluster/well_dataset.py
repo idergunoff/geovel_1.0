@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from .common import *
+from .models import (
+    AUTO_SILHOUETTE_ADAPTIVE_ALPHA,
+    AUTO_SILHOUETTE_COARSE_MAX_SAMPLES,
+    AUTO_SILHOUETTE_MAX_SAMPLES,
+    AUTO_SILHOUETTE_MIN_SAMPLES,
+    AutoTuningClusterSizeLimits,
+)
 
 def _set_cluster_well_collect_button_state(is_actual: bool) -> None:
     button = getattr(ui, 'pushButton_clust_collect_well_log', None)

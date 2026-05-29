@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .common import *
+from .models import AUTO_SILHOUETTE_MAX_SAMPLES
 
 def cluster_data(
         data,
