@@ -26,6 +26,30 @@ cluster_profile_cache = {}
 is_cluster_redraw_in_progress = False
 
 
+class ClusterContextError(ValueError):
+    """Ошибка построения runtime-контекста кластеризации."""
+
+
+class ClusterRunContext(TypedDict, total=False):
+    """
+    Единый runtime-контракт источника данных для расчета кластеризации.
+    """
+    source_type: Literal["gpr", "well_log"]
+    dataset_id: int
+    dataset_title: str
+    raw_rows: list[list[Any]]
+    feature_names: list[str]
+    meta_columns: list[str]
+    feature_columns: list[str]
+    row_count: int
+    ui_tab_key: str
+    data_hash: str
+    meta: list[dict[str, Any]]
+    X: list[list[float]]
+    diagnostics: dict[str, Any]
+
+
+
 class CandidateConfig(TypedDict):
     """
     Единый контракт кандидата для AUTO-подбора параметров кластеризации.
@@ -1331,6 +1355,270 @@ def _deserialize_cluster_dataset(raw_data: str) -> list[list[Any]]:
         return json.loads(decompressed.decode("utf-8"))
 
     return json.loads(raw_data)
+
+
+WELL_LOG_CLUSTER_REQUIRED_META_COLUMNS = ["well_id", "well_name", "depth_md", "row_index_in_well"]
+WELL_LOG_CLUSTER_MIN_VALID_ROWS_PER_WELL = 2
+WELL_LOG_CLUSTER_MIN_TOTAL_ROWS = 4
+
+
+def _cluster_data_hash(raw_data: Any) -> str:
+    """
+    Возвращает стабильный hash runtime-данных для будущей инвалидации результатов.
+    """
+    payload = json.dumps(raw_data, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def get_active_cluster_source_type() -> Literal["gpr", "well_log"]:
+    """
+    Определяет активный источник кластеризации по вложенной вкладке Cluster.
+
+    Возвращает ``well_log`` только когда активна вкладка Well Log; во всех остальных
+    случаях используется исторический источник ``gpr``.
+    """
+    tab_widget = getattr(ui, "tabWidget", None)
+    if tab_widget is None:
+        return "gpr"
+
+    current_widget = tab_widget.currentWidget()
+    well_log_tab = getattr(ui, "tab_14", None)
+    if well_log_tab is not None and current_widget is well_log_tab:
+        return "well_log"
+
+    try:
+        current_text = str(tab_widget.tabText(tab_widget.currentIndex())).strip().casefold()
+    except Exception:
+        current_text = ""
+    if current_text in {"well log", "well_log", "каротаж"}:
+        return "well_log"
+
+    return "gpr"
+
+
+def _show_cluster_context_error(source_type: str, error_text: str) -> None:
+    title = "WELL LOG CLUSTER" if source_type == "well_log" else "CLUSTER"
+    try:
+        QMessageBox.warning(MainWindow, title, error_text)
+    except Exception:
+        pass
+    set_info(error_text, "brown")
+
+
+def build_cluster_run_context(*, show_errors: bool = True) -> ClusterRunContext | None:
+    """
+    Строит единый контекст расчета для активной вкладки Cluster.
+    """
+    source_type = get_active_cluster_source_type()
+    try:
+        if source_type == "well_log":
+            return build_well_log_cluster_context()
+        return build_gpr_cluster_context()
+    except ClusterContextError as exc:
+        if show_errors:
+            _show_cluster_context_error(source_type, str(exc))
+        return None
+
+
+def build_gpr_cluster_context() -> ClusterRunContext:
+    """
+    Адаптер текущего ObjectSet георадара к единому ClusterRunContext.
+    """
+    clust_object_id = get_curr_clust_object_id()
+    if not clust_object_id:
+        raise ClusterContextError("Выберите/соберите ObjectSet для кластеризации георадара.")
+
+    clust_object = session.query(ObjectSet).filter_by(id=int(clust_object_id)).first()
+    if clust_object is None:
+        raise ClusterContextError(f"ObjectSet id={clust_object_id} не найден. Обновите список наборов.")
+    if not clust_object.data:
+        raise ClusterContextError("В выбранном ObjectSet нет собранных данных. Выполните COLLECT.")
+
+    try:
+        raw_rows = _deserialize_cluster_dataset(clust_object.data)
+    except Exception as exc:
+        raise ClusterContextError(f"Не удалось прочитать данные ObjectSet: {exc}") from exc
+    if not raw_rows:
+        raise ClusterContextError("В выбранном ObjectSet пустой набор данных. Выполните COLLECT.")
+
+    try:
+        analysis = session.query(AnalysisCluster).filter_by(id=int(clust_object.analysis_id)).first()
+        feature_names = json.loads(analysis.parameter) if analysis and analysis.parameter else []
+    except Exception:
+        feature_names = []
+    if not isinstance(feature_names, list):
+        feature_names = []
+    feature_count = max(0, len(raw_rows[0]) - 3) if raw_rows and isinstance(raw_rows[0], (list, tuple)) else 0
+    if not feature_names or len(feature_names) != feature_count:
+        feature_names = [f"feature_{idx + 1}" for idx in range(feature_count)]
+
+    dataset_title = str(getattr(ui, "comboBox_clust_obj", None).currentText()) if hasattr(ui, "comboBox_clust_obj") else f"ObjectSet id{clust_object_id}"
+    return ClusterRunContext(
+        source_type="gpr",
+        dataset_id=int(clust_object_id),
+        dataset_title=dataset_title,
+        raw_rows=raw_rows,
+        feature_names=[str(name) for name in feature_names],
+        meta_columns=["profile_id_trace", "x", "y"],
+        feature_columns=[str(name) for name in feature_names],
+        row_count=len(raw_rows),
+        ui_tab_key="cluster_georadar",
+        data_hash=_cluster_data_hash(raw_rows),
+        diagnostics={"invalid_rows": 0, "excluded_wells": []},
+    )
+
+
+def _coerce_well_log_feature_value(value: Any) -> float:
+    if value is None or value == "":
+        return float("nan")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+
+
+def _parse_well_log_row_key(value: Any) -> tuple[int, float]:
+    text = str(value or "").strip()
+    if "_" not in text:
+        raise ValueError("ожидается формат well_id_depth")
+    well_part, depth_part = text.split("_", 1)
+    return int(well_part), float(depth_part)
+
+
+def build_well_log_cluster_context() -> ClusterRunContext:
+    """
+    Адаптер WellLogClusterDatasetData.data к единому ClusterRunContext.
+    """
+    combo = getattr(ui, "comboBox_cluster_well_set", None)
+    if combo is None:
+        raise ClusterContextError("Не найден comboBox_cluster_well_set для выбора Well Log dataset.")
+
+    dataset_id = combo.currentData()
+    if dataset_id is None:
+        raise ClusterContextError("Выберите Well Log dataset и выполните COLLECT.")
+    dataset_id = int(dataset_id)
+
+    dataset = session.query(WellLogClusterDataset).filter_by(id=dataset_id).first()
+    if dataset is None:
+        raise ClusterContextError(f"Well Log dataset id={dataset_id} не найден. Обновите список наборов.")
+
+    data_row = (
+        session.query(WellLogClusterDatasetData)
+        .filter(WellLogClusterDatasetData.dataset_id == dataset_id)
+        .order_by(WellLogClusterDatasetData.id.desc())
+        .first()
+    )
+    if data_row is None or not data_row.data:
+        raise ClusterContextError(
+            f'Для Well Log dataset "{dataset.name}" нет собранных data. Выполните COLLECT перед CALC/AUTO.'
+        )
+
+    try:
+        stored_rows = _deserialize_cluster_dataset(data_row.data)
+    except Exception as exc:
+        raise ClusterContextError(f"Не удалось прочитать Well Log data. Повторите COLLECT: {exc}") from exc
+    if not stored_rows or len(stored_rows) < 2:
+        raise ClusterContextError(
+            f'Well Log dataset "{dataset.name}" не содержит строк расчета. Выполните COLLECT.'
+        )
+
+    header = stored_rows[0]
+    data_rows = stored_rows[1:]
+    if not isinstance(header, list) or len(header) < 2:
+        raise ClusterContextError("Well Log data имеет некорректный заголовок. Повторите COLLECT.")
+    feature_names = [str(name) for name in header[1:]]
+    if not feature_names:
+        raise ClusterContextError("В Well Log data нет признаков каротажа. Добавьте параметры и выполните COLLECT.")
+
+    well_names = {
+        int(row.id): str(row.name or f"well_id={row.id}")
+        for row in session.query(Well.id, Well.name).all()
+    }
+
+    invalid_rows: list[dict[str, Any]] = []
+    prepared_rows: list[list[Any]] = []
+    meta_rows: list[dict[str, Any]] = []
+    x_rows: list[list[float]] = []
+    row_index_by_well: dict[int, int] = {}
+
+    for source_idx, row in enumerate(data_rows):
+        if not isinstance(row, list) or len(row) < len(feature_names) + 1:
+            invalid_rows.append({"row": source_idx + 1, "reason": "row length/header mismatch"})
+            continue
+        try:
+            well_id, depth_md = _parse_well_log_row_key(row[0])
+        except Exception as exc:
+            invalid_rows.append({"row": source_idx + 1, "reason": f"invalid well_id/depth_md: {exc}"})
+            continue
+
+        feature_values = [_coerce_well_log_feature_value(value) for value in row[1:len(feature_names) + 1]]
+        if not any(np.isfinite(value) for value in feature_values):
+            invalid_rows.append({"row": source_idx + 1, "reason": "all feature values are non-finite"})
+            continue
+
+        row_index = row_index_by_well.get(well_id, 0)
+        row_index_by_well[well_id] = row_index + 1
+        well_name = well_names.get(well_id, f"well_id={well_id}")
+        meta = {
+            "well_id": int(well_id),
+            "well_name": well_name,
+            "depth_md": float(depth_md),
+            "row_index_in_well": int(row_index),
+            "source_row_index": int(source_idx),
+            "source_curve_values": dict(zip(feature_names, row[1:len(feature_names) + 1])),
+        }
+        meta_rows.append(meta)
+        x_rows.append(feature_values)
+        prepared_rows.append([f"{int(well_id)}_{float(depth_md):g}", int(well_id), float(depth_md)] + row[1:len(feature_names) + 1])
+
+    rows_by_well: dict[int, int] = Counter(int(meta["well_id"]) for meta in meta_rows)
+    excluded_wells = [
+        {"well_id": well_id, "well_name": well_names.get(well_id, f"well_id={well_id}"), "valid_rows": count}
+        for well_id, count in rows_by_well.items()
+        if count < WELL_LOG_CLUSTER_MIN_VALID_ROWS_PER_WELL
+    ]
+    excluded_ids = {int(item["well_id"]) for item in excluded_wells}
+    if excluded_ids:
+        keep_mask = [int(meta["well_id"]) not in excluded_ids for meta in meta_rows]
+        prepared_rows = [row for row, keep in zip(prepared_rows, keep_mask) if keep]
+        meta_rows = [meta for meta, keep in zip(meta_rows, keep_mask) if keep]
+        x_rows = [row for row, keep in zip(x_rows, keep_mask) if keep]
+
+    remaining_wells = {int(meta["well_id"]) for meta in meta_rows}
+    if len(remaining_wells) < 2:
+        raise ClusterContextError(
+            "Well Log data недостаточно для кластеризации: после валидации осталось меньше двух скважин. "
+            "Проверьте интервалы/параметры и выполните COLLECT."
+        )
+    if len(prepared_rows) < WELL_LOG_CLUSTER_MIN_TOTAL_ROWS:
+        raise ClusterContextError(
+            "Well Log data содержит слишком мало валидных строк для кластеризации. Выполните COLLECT с большим интервалом."
+        )
+
+    diagnostics = {
+        "invalid_row_count": len(invalid_rows),
+        "invalid_rows_preview": invalid_rows[:10],
+        "excluded_wells": excluded_wells,
+        "valid_well_count": len(remaining_wells),
+        "valid_row_count": len(prepared_rows),
+        "feature_count": len(feature_names),
+    }
+
+    return ClusterRunContext(
+        source_type="well_log",
+        dataset_id=dataset_id,
+        dataset_title=str(dataset.name),
+        raw_rows=prepared_rows,
+        feature_names=feature_names,
+        meta_columns=list(WELL_LOG_CLUSTER_REQUIRED_META_COLUMNS),
+        feature_columns=feature_names,
+        row_count=len(prepared_rows),
+        ui_tab_key="cluster_well_log",
+        data_hash=_cluster_data_hash(stored_rows),
+        meta=meta_rows,
+        X=x_rows,
+        diagnostics=diagnostics,
+    )
 
 
 CLUSTER_MAP_INTERP_RESOLUTION_MIN = 50
@@ -3385,22 +3673,26 @@ def calculate_cluster_auto():
     """
     Запускает AUTO-подбор параметров кластеризации из UI.
     """
-    clust_object_id = get_curr_clust_object_id()
-    if clust_object_id is None:
-        set_info("AUTO: не выбран объект для кластеризации.", "brown")
+    run_context = build_cluster_run_context(show_errors=True)
+    if run_context is None:
         return
 
+    if run_context["source_type"] == "well_log":
+        set_info(
+            f"AUTO Well Log: контекст dataset id={run_context['dataset_id']} подготовлен "
+            f"({run_context['row_count']} строк, {len(run_context['feature_names'])} признаков). "
+            "Подключение Well Log к AUTO pipeline выполняется на этапе 3.",
+            "blue"
+        )
+        return
+
+    clust_object_id = int(run_context["dataset_id"])
     clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
     if clust_object is None:
         set_info(f"AUTO: объект id={clust_object_id} не найден.", "brown")
         return
 
-    try:
-        base_data = _deserialize_cluster_dataset(clust_object.data)
-    except Exception as exc:
-        set_info(f"AUTO: ошибка чтения данных объекта: {exc}", "red")
-        return
-
+    base_data = run_context["raw_rows"]
     if not base_data:
         set_info("AUTO: пустой набор данных для подбора.", "brown")
         return
@@ -5639,10 +5931,25 @@ def build_clustering_report(
 
 
 def calculate_cluster():
-    clust_object_id = get_curr_clust_object_id()
+    run_context = build_cluster_run_context(show_errors=True)
+    if run_context is None:
+        return
+
+    if run_context["source_type"] == "well_log":
+        diagnostics = run_context.get("diagnostics", {})
+        set_info(
+            f"CALC Well Log: контекст dataset id={run_context['dataset_id']} подготовлен "
+            f"({run_context['row_count']} строк, {len(run_context['feature_names'])} признаков, "
+            f"скважин={diagnostics.get('valid_well_count', '—')}). "
+            "Подключение Well Log к общему pipeline выполняется на этапе 2.",
+            "blue"
+        )
+        return
+
+    clust_object_id = int(run_context["dataset_id"])
     clust_analys_id = get_curr_clust_analys_id()
     clust_object = session.query(ObjectSet).filter_by(id=clust_object_id).first()
-    data = _deserialize_cluster_dataset(clust_object.data)
+    data = run_context["raw_rows"]
     raw_meta = np.array(data, dtype=object)[:, 0] if data else np.array([])
     selected_button = ui.buttonGroup_3.checkedButton()
 
