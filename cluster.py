@@ -6521,6 +6521,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         controls_layout.addWidget(QtWidgets.QLabel("Curve:"), 0, 4)
         self.curve_combo = QtWidgets.QComboBox()
+        self.curve_combo.currentIndexChanged.connect(self._render_curve_across_wells)
         controls_layout.addWidget(self.curve_combo, 0, 5)
 
         self.show_noise_checkbox = QtWidgets.QCheckBox("Show noise")
@@ -6534,6 +6535,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.opacity_spin.setSingleStep(0.05)
         self.opacity_spin.setValue(0.35)
         self.opacity_spin.valueChanged.connect(self._render_one_well_curves)
+        self.opacity_spin.valueChanged.connect(self._render_curve_across_wells)
         controls_layout.addWidget(self.opacity_spin, 1, 2)
 
         self.export_button = QtWidgets.QPushButton("Export (next stages)")
@@ -6576,14 +6578,68 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         one_well_layout.addWidget(self.one_well_canvas, stretch=1)
         self.mode_tabs.addTab(self.one_well_tab, self.MODE_TITLES[1])
 
-        for title in self.MODE_TITLES[2:]:
-            placeholder = QtWidgets.QPlainTextEdit()
-            placeholder.setReadOnly(True)
-            placeholder.setPlainText(
-                f"Режим «{title}» будет отрисован на следующих этапах.\n"
-                "Данные, фильтр кластеров, интервалы и профили уже подготовлены в этом окне."
-            )
-            self.mode_tabs.addTab(placeholder, title)
+        self.curve_wells_tab = QtWidgets.QWidget()
+        curve_wells_layout = QtWidgets.QVBoxLayout(self.curve_wells_tab)
+        self.curve_wells_hint = QtWidgets.QLabel(
+            "Выберите кривую и список скважин: small multiples сравнит одну кривую между скважинами "
+            "с одинаковой палитрой кластеров."
+        )
+        self.curve_wells_hint.setWordWrap(True)
+        curve_wells_layout.addWidget(self.curve_wells_hint)
+
+        curve_wells_controls = QtWidgets.QHBoxLayout()
+        curve_wells_controls.addWidget(QtWidgets.QLabel("Wells:"))
+        self.curve_wells_list = QtWidgets.QListWidget()
+        self.curve_wells_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        self.curve_wells_list.itemSelectionChanged.connect(self._render_curve_across_wells)
+        curve_wells_controls.addWidget(self.curve_wells_list, stretch=1)
+
+        curve_wells_options = QtWidgets.QFormLayout()
+        self.curve_wells_sort_combo = QtWidgets.QComboBox()
+        self.curve_wells_sort_combo.addItems([
+            "по имени",
+            "по доле выбранного кластера",
+            "по похожести последовательности кластеров",
+        ])
+        self.curve_wells_sort_combo.currentIndexChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Sort:", self.curve_wells_sort_combo)
+
+        self.curve_wells_cluster_combo = QtWidgets.QComboBox()
+        self.curve_wells_cluster_combo.currentIndexChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Cluster:", self.curve_wells_cluster_combo)
+
+        self.curve_wells_limit_spin = QtWidgets.QSpinBox()
+        self.curve_wells_limit_spin.setRange(1, 50)
+        self.curve_wells_limit_spin.setValue(12)
+        self.curve_wells_limit_spin.valueChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Top wells:", self.curve_wells_limit_spin)
+
+        self.curve_wells_shared_x = QtWidgets.QCheckBox("общая шкала X")
+        self.curve_wells_shared_x.setChecked(True)
+        self.curve_wells_shared_x.stateChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Scale:", self.curve_wells_shared_x)
+        curve_wells_controls.addLayout(curve_wells_options)
+        curve_wells_layout.addLayout(curve_wells_controls)
+
+        self.curve_wells_figure = Figure(figsize=(9, 5))
+        self.curve_wells_canvas = FigureCanvas(self.curve_wells_figure)
+        self.curve_wells_toolbar = NavigationToolbar(self.curve_wells_canvas, self.curve_wells_tab)
+        curve_wells_layout.addWidget(self.curve_wells_toolbar)
+        curve_wells_layout.addWidget(self.curve_wells_canvas, stretch=1)
+
+        self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
+        self.curve_wells_summary_table.setHorizontalHeaderLabels(["Well", "Rows", "Dominant cluster", "Selected cluster %", "Clusters summary"])
+        self.curve_wells_summary_table.setSortingEnabled(True)
+        curve_wells_layout.addWidget(self.curve_wells_summary_table)
+        self.mode_tabs.addTab(self.curve_wells_tab, self.MODE_TITLES[2])
+
+        placeholder = QtWidgets.QPlainTextEdit()
+        placeholder.setReadOnly(True)
+        placeholder.setPlainText(
+            f"Режим «{self.MODE_TITLES[3]}» будет отрисован на следующих этапах.\n"
+            "Данные, фильтр кластеров, интервалы и профили уже подготовлены в этом окне."
+        )
+        self.mode_tabs.addTab(placeholder, self.MODE_TITLES[3])
         center_layout.addWidget(self.mode_tabs)
         splitter.addWidget(center_widget)
         splitter.setStretchFactor(1, 1)
@@ -6614,6 +6670,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._populate_interval_table()
         self._populate_profile_table()
         self._render_one_well_curves()
+        self._render_curve_across_wells()
 
     def _populate_controls(self) -> None:
         data = self.visualization_data or {}
@@ -6627,10 +6684,27 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             self.well_combo.addItem(f"{well_name} (id={well_id})", int(well_id))
         self.well_combo.blockSignals(False)
 
+        self.curve_wells_list.blockSignals(True)
+        self.curve_wells_list.clear()
+        for row_idx, (well_id, well_name) in enumerate(wells.items()):
+            item = QtWidgets.QListWidgetItem(f"{well_name} (id={well_id})")
+            item.setData(Qt.UserRole, int(well_id))
+            self.curve_wells_list.addItem(item)
+            if row_idx < int(self.curve_wells_limit_spin.value()):
+                item.setSelected(True)
+        self.curve_wells_list.blockSignals(False)
+
         self.curve_combo.blockSignals(True)
         self.curve_combo.clear()
         self.curve_combo.addItems([str(name) for name in data.get("feature_names", [])])
         self.curve_combo.blockSignals(False)
+
+        labels = sorted({int(row.get("cluster_label", 0)) for row in rows}, key=_cluster_label_sort_key)
+        self.curve_wells_cluster_combo.blockSignals(True)
+        self.curve_wells_cluster_combo.clear()
+        for label in labels:
+            self.curve_wells_cluster_combo.addItem(f"cluster {label}", int(label))
+        self.curve_wells_cluster_combo.blockSignals(False)
         self._highlight_interval = None
 
         self.title_label.setText(
@@ -6704,6 +6778,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._populate_interval_table()
         self._populate_profile_table()
         self._render_one_well_curves()
+        self._render_curve_across_wells()
 
     def _populate_interval_table(self) -> None:
         well_id = self._current_well_id()
@@ -6869,6 +6944,213 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             ax.set_ylim(depth_max, depth_min)
         self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.95))
         self.one_well_canvas.draw_idle()
+
+    def _current_curve_name(self) -> str | None:
+        value = self.curve_combo.currentText() if hasattr(self, "curve_combo") else ""
+        value = str(value).strip()
+        return value or None
+
+    def _selected_curve_well_ids(self) -> list[int]:
+        if not hasattr(self, "curve_wells_list"):
+            return []
+        selected_ids: list[int] = []
+        for item in self.curve_wells_list.selectedItems():
+            try:
+                selected_ids.append(int(item.data(Qt.UserRole)))
+            except (TypeError, ValueError):
+                continue
+        if selected_ids:
+            return selected_ids
+        fallback_ids: list[int] = []
+        for row_idx in range(self.curve_wells_list.count()):
+            item = self.curve_wells_list.item(row_idx)
+            try:
+                fallback_ids.append(int(item.data(Qt.UserRole)))
+            except (TypeError, ValueError):
+                continue
+        return fallback_ids
+
+    def _selected_curve_cluster_label(self) -> int | None:
+        if not hasattr(self, "curve_wells_cluster_combo"):
+            return None
+        value = self.curve_wells_cluster_combo.currentData()
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _curve_well_payloads(self, curve_name: str) -> list[dict[str, Any]]:
+        selected_well_ids = set(self._selected_curve_well_ids())
+        grouped: dict[int, list[dict[str, Any]]] = {}
+        for row in (self.visualization_data or {}).get("rows", []):
+            well_id = int(row.get("well_id", -1))
+            if selected_well_ids and well_id not in selected_well_ids:
+                continue
+            if not self._is_cluster_visible(int(row.get("cluster_label", 0))):
+                continue
+            value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
+            if value is None:
+                continue
+            grouped.setdefault(well_id, []).append(row)
+
+        selected_cluster = self._selected_curve_cluster_label()
+        payloads: list[dict[str, Any]] = []
+        for well_id, well_rows in grouped.items():
+            sorted_rows = sorted(well_rows, key=lambda item: (float(item.get("depth_md", 0.0)), int(item.get("row_index_in_well", 0))))
+            labels = [int(row.get("cluster_label", 0)) for row in sorted_rows]
+            label_counts = Counter(labels)
+            dominant_label, dominant_count = label_counts.most_common(1)[0] if label_counts else (None, 0)
+            selected_count = label_counts.get(selected_cluster, 0) if selected_cluster is not None else dominant_count
+            payloads.append(
+                {
+                    "well_id": int(well_id),
+                    "well_name": str(sorted_rows[0].get("well_name", f"well_id={well_id}")),
+                    "rows": sorted_rows,
+                    "labels": labels,
+                    "label_counts": label_counts,
+                    "dominant_label": dominant_label,
+                    "dominant_fraction": float(dominant_count / len(sorted_rows)) if sorted_rows else 0.0,
+                    "selected_cluster_fraction": float(selected_count / len(sorted_rows)) if sorted_rows else 0.0,
+                }
+            )
+        return payloads
+
+    @staticmethod
+    def _cluster_sequence_distance(labels: list[int], reference_labels: list[int]) -> float:
+        if not labels or not reference_labels:
+            return 1.0
+        sample_count = min(64, len(labels), len(reference_labels))
+        if sample_count <= 0:
+            return 1.0
+        mismatches = 0
+        for idx in range(sample_count):
+            left_idx = int(round(idx * (len(labels) - 1) / max(1, sample_count - 1)))
+            right_idx = int(round(idx * (len(reference_labels) - 1) / max(1, sample_count - 1)))
+            if int(labels[left_idx]) != int(reference_labels[right_idx]):
+                mismatches += 1
+        return float(mismatches / sample_count)
+
+    def _sort_curve_well_payloads(self, payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        sort_idx = self.curve_wells_sort_combo.currentIndex() if hasattr(self, "curve_wells_sort_combo") else 0
+        if sort_idx == 1:
+            return sorted(payloads, key=lambda item: (-float(item.get("selected_cluster_fraction", 0.0)), str(item.get("well_name", ""))))
+        if sort_idx == 2:
+            reference = min(payloads, key=lambda item: str(item.get("well_name", "")))["labels"] if payloads else []
+            return sorted(
+                payloads,
+                key=lambda item: (self._cluster_sequence_distance(item.get("labels", []), reference), str(item.get("well_name", ""))),
+            )
+        return sorted(payloads, key=lambda item: str(item.get("well_name", "")))
+
+    def _populate_curve_wells_summary_table(self, payloads: list[dict[str, Any]]) -> None:
+        if not hasattr(self, "curve_wells_summary_table"):
+            return
+        self.curve_wells_summary_table.setSortingEnabled(False)
+        self.curve_wells_summary_table.setRowCount(len(payloads))
+        for row_idx, payload in enumerate(payloads):
+            label_counts: Counter = payload.get("label_counts", Counter())
+            cluster_summary = ", ".join(
+                f"{label}:{count} ({count / max(1, len(payload.get('rows', []))):.0%})"
+                for label, count in sorted(label_counts.items(), key=lambda pair: _cluster_label_sort_key(pair[0]))
+            )
+            values = [
+                str(payload.get("well_name", "—")),
+                str(len(payload.get("rows", []))),
+                str(payload.get("dominant_label", "—")),
+                f"{float(payload.get('selected_cluster_fraction', 0.0)) * 100:.1f}%",
+                cluster_summary or "—",
+            ]
+            for col_idx, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                if col_idx == 2 and payload.get("dominant_label") is not None:
+                    item.setForeground(QBrush(QColor(_well_log_cluster_color(int(payload["dominant_label"])))))
+                self.curve_wells_summary_table.setItem(row_idx, col_idx, item)
+        self.curve_wells_summary_table.setSortingEnabled(True)
+        self.curve_wells_summary_table.resizeColumnsToContents()
+
+    def _render_curve_across_wells(self) -> None:
+        if not hasattr(self, "curve_wells_figure"):
+            return
+        self.curve_wells_figure.clear()
+        curve_name = self._current_curve_name()
+        if not curve_name:
+            ax = self.curve_wells_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "Выберите кривую для сравнения", ha="center", va="center")
+            ax.set_axis_off()
+            self.curve_wells_canvas.draw_idle()
+            self._populate_curve_wells_summary_table([])
+            return
+
+        payloads = self._sort_curve_well_payloads(self._curve_well_payloads(curve_name))
+        limit = int(self.curve_wells_limit_spin.value()) if hasattr(self, "curve_wells_limit_spin") else 12
+        payloads = payloads[:max(1, limit)]
+        self._populate_curve_wells_summary_table(payloads)
+        if not payloads:
+            ax = self.curve_wells_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "Нет числовых значений выбранной кривой для выбранных скважин/кластеров", ha="center", va="center")
+            ax.set_axis_off()
+            self.curve_wells_canvas.draw_idle()
+            return
+
+        shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
+        all_values = []
+        if shared_x:
+            for payload in payloads:
+                for row in payload["rows"]:
+                    value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
+                    if value is not None:
+                        all_values.append(value)
+        global_x_min = min(all_values) if all_values else None
+        global_x_max = max(all_values) if all_values else None
+        opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
+
+        axes = self.curve_wells_figure.subplots(len(payloads), 1, sharex=shared_x)
+        axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
+        for ax, payload in zip(axes, payloads):
+            rows = payload["rows"]
+            depths = [float(row.get("depth_md", 0.0)) for row in rows]
+            values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
+            plot_points = [(value, depth) for value, depth in zip(values, depths) if value is not None]
+            if not plot_points:
+                continue
+            plot_x, plot_y = zip(*plot_points)
+            depth_min = min(depths)
+            depth_max = max(depths)
+            if depth_min == depth_max:
+                depth_min -= 0.5
+                depth_max += 0.5
+            ax.set_ylim(depth_max, depth_min)
+            for interval in self.interval_cache.get(int(payload["well_id"]), []):
+                label = int(interval.get("cluster_label", 0))
+                if not self._is_cluster_visible(label):
+                    continue
+                ax.axhspan(
+                    float(interval.get("from_md", depth_min)),
+                    float(interval.get("to_md", depth_max)),
+                    color=_well_log_cluster_color(label),
+                    alpha=max(0.03, opacity * 0.22),
+                    linewidth=0,
+                )
+            ax.plot(plot_x, plot_y, linewidth=1.15, marker=".", markersize=3, color="#1f2933")
+            if shared_x and global_x_min is not None and global_x_max is not None and global_x_min != global_x_max:
+                ax.set_xlim(global_x_min, global_x_max)
+            ax.grid(True, alpha=0.25)
+            ax.set_ylabel("Depth MD")
+            ax.set_title(
+                f"{payload['well_name']} | dominant cluster {payload.get('dominant_label', '—')} "
+                f"({payload.get('dominant_fraction', 0.0) * 100:.0f}%)",
+                fontsize=9,
+            )
+            cluster_text = ", ".join(
+                f"{label}:{count / max(1, len(rows)):.0%}"
+                for label, count in sorted(payload.get("label_counts", Counter()).items(), key=lambda pair: _cluster_label_sort_key(pair[0]))
+            )
+            ax.text(0.99, 0.02, cluster_text, transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
+                    bbox={"facecolor": "white", "alpha": 0.7, "edgecolor": "none"})
+        axes[-1].set_xlabel(curve_name)
+        self.curve_wells_figure.suptitle(f"{curve_name}: одна кривая → разные скважины", fontsize=11)
+        self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.96))
+        self.curve_wells_canvas.draw_idle()
 
     @staticmethod
     def _intervals_match(left: dict[str, Any] | None, right: dict[str, Any] | None) -> bool:
