@@ -13,6 +13,11 @@ from typing import Any, Dict, Literal, Optional, TypedDict
 
 import build_table
 from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from PyQt5.QtCore import Qt
 from scipy.interpolate import griddata
 from sklearn.random_projection import SparseRandomProjection
 from draw import draw_radarogram
@@ -6470,9 +6475,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     """
     MVP-окно визуализации результата Well Log clustering.
 
-    Этап 5 intentionally не рисует полноценные графики режимов 6–8, но уже хранит
-    подготовленные runtime-структуры: список скважин/кривых, легенду, фильтр
-    кластеров, кэш интервалов и статистические профили кластеров.
+    Окно хранит подготовленные runtime-структуры: список скважин/кривых, легенду,
+    фильтр кластеров, кэш интервалов и статистические профили кластеров.
+    Режим «1 скважина → все кривые» рисует выбранную скважину без повторного CALC.
     """
 
     MODE_TITLES = (
@@ -6488,6 +6493,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.interval_cache: dict[int, list[dict[str, Any]]] = {}
         self.profile_cache: dict[int, dict[str, Any]] = {}
         self._cluster_checkboxes: dict[int, Any] = {}
+        self._highlight_interval: dict[str, Any] | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -6510,6 +6516,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         controls_layout.addWidget(QtWidgets.QLabel("Well:"), 0, 2)
         self.well_combo = QtWidgets.QComboBox()
+        self.well_combo.currentIndexChanged.connect(self._handle_well_changed)
         controls_layout.addWidget(self.well_combo, 0, 3)
 
         controls_layout.addWidget(QtWidgets.QLabel("Curve:"), 0, 4)
@@ -6526,6 +6533,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.opacity_spin.setRange(0.05, 1.0)
         self.opacity_spin.setSingleStep(0.05)
         self.opacity_spin.setValue(0.35)
+        self.opacity_spin.valueChanged.connect(self._render_one_well_curves)
         controls_layout.addWidget(self.opacity_spin, 1, 2)
 
         self.export_button = QtWidgets.QPushButton("Export (next stages)")
@@ -6553,7 +6561,22 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.summary_text = QtWidgets.QPlainTextEdit()
         self.summary_text.setReadOnly(True)
         self.mode_tabs.addTab(self.summary_text, "Summary")
-        for title in self.MODE_TITLES[1:]:
+
+        self.one_well_tab = QtWidgets.QWidget()
+        one_well_layout = QtWidgets.QVBoxLayout(self.one_well_tab)
+        self.one_well_hint = QtWidgets.QLabel(
+            "Выберите скважину: будут показаны все кривые выбранной скважины и cluster track."
+        )
+        self.one_well_hint.setWordWrap(True)
+        one_well_layout.addWidget(self.one_well_hint)
+        self.one_well_figure = Figure(figsize=(9, 5))
+        self.one_well_canvas = FigureCanvas(self.one_well_figure)
+        self.one_well_toolbar = NavigationToolbar(self.one_well_canvas, self.one_well_tab)
+        one_well_layout.addWidget(self.one_well_toolbar)
+        one_well_layout.addWidget(self.one_well_canvas, stretch=1)
+        self.mode_tabs.addTab(self.one_well_tab, self.MODE_TITLES[1])
+
+        for title in self.MODE_TITLES[2:]:
             placeholder = QtWidgets.QPlainTextEdit()
             placeholder.setReadOnly(True)
             placeholder.setPlainText(
@@ -6570,6 +6593,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.interval_table = QtWidgets.QTableWidget(0, 6)
         self.interval_table.setHorizontalHeaderLabels(["Well", "From MD", "To MD", "Thickness", "Cluster", "Rows"])
         self.interval_table.setSortingEnabled(True)
+        self.interval_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.interval_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.interval_table.itemSelectionChanged.connect(self._handle_interval_selection_changed)
         tables_splitter.addWidget(self.interval_table)
 
         self.profile_table = QtWidgets.QTableWidget(0, 7)
@@ -6587,6 +6613,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._populate_summary()
         self._populate_interval_table()
         self._populate_profile_table()
+        self._render_one_well_curves()
 
     def _populate_controls(self) -> None:
         data = self.visualization_data or {}
@@ -6604,6 +6631,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_combo.clear()
         self.curve_combo.addItems([str(name) for name in data.get("feature_names", [])])
         self.curve_combo.blockSignals(False)
+        self._highlight_interval = None
 
         self.title_label.setText(
             f"Dataset: {data.get('dataset_title', '—')} (id={data.get('dataset_id', '—')}) | "
@@ -6675,11 +6703,18 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             self._cluster_checkboxes[-1].blockSignals(False)
         self._populate_interval_table()
         self._populate_profile_table()
+        self._render_one_well_curves()
 
     def _populate_interval_table(self) -> None:
-        intervals = []
-        for well_intervals in self.interval_cache.values():
-            intervals.extend(item for item in well_intervals if self._is_cluster_visible(int(item["cluster_label"])))
+        well_id = self._current_well_id()
+        if well_id is None:
+            intervals = []
+        else:
+            intervals = [
+                item for item in self.interval_cache.get(int(well_id), [])
+                if self._is_cluster_visible(int(item["cluster_label"]))
+            ]
+        self.interval_table.blockSignals(True)
         self.interval_table.setSortingEnabled(False)
         self.interval_table.setRowCount(len(intervals))
         for row_idx, interval in enumerate(intervals):
@@ -6693,11 +6728,158 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             ]
             for col_idx, value in enumerate(values):
                 item = QTableWidgetItem(str(value))
+                item.setData(Qt.UserRole, interval)
                 if col_idx == 4:
                     item.setForeground(QBrush(QColor(_well_log_cluster_color(int(interval.get("cluster_label", 0))))))
                 self.interval_table.setItem(row_idx, col_idx, item)
         self.interval_table.setSortingEnabled(True)
+        self.interval_table.blockSignals(False)
         self.interval_table.resizeColumnsToContents()
+
+    def _current_well_id(self) -> int | None:
+        value = self.well_combo.currentData()
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _handle_well_changed(self) -> None:
+        self._highlight_interval = None
+        self._populate_interval_table()
+        self._render_one_well_curves()
+
+    def _handle_interval_selection_changed(self) -> None:
+        selected_items = self.interval_table.selectedItems()
+        self._highlight_interval = None
+        if selected_items:
+            interval = selected_items[0].data(Qt.UserRole)
+            if isinstance(interval, dict):
+                self._highlight_interval = interval
+        self._render_one_well_curves()
+
+    def _rows_for_current_well(self) -> list[dict[str, Any]]:
+        well_id = self._current_well_id()
+        if well_id is None:
+            return []
+        rows = [
+            row for row in (self.visualization_data or {}).get("rows", [])
+            if int(row.get("well_id", -1)) == int(well_id)
+            and self._is_cluster_visible(int(row.get("cluster_label", 0)))
+        ]
+        return sorted(rows, key=lambda item: (float(item.get("depth_md", 0.0)), int(item.get("row_index_in_well", 0))))
+
+    def _render_one_well_curves(self) -> None:
+        if not hasattr(self, "one_well_figure"):
+            return
+        rows = self._rows_for_current_well()
+        feature_names = [str(name) for name in (self.visualization_data or {}).get("feature_names", [])]
+        self.one_well_figure.clear()
+        if not rows:
+            ax = self.one_well_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "Нет строк для выбранной скважины/фильтра кластеров", ha="center", va="center")
+            ax.set_axis_off()
+            self.one_well_canvas.draw_idle()
+            return
+
+        finite_features: list[str] = []
+        for feature_name in feature_names:
+            if any(_to_finite_float((row.get("features", {}) or {}).get(feature_name)) is not None for row in rows):
+                finite_features.append(feature_name)
+        if not finite_features:
+            ax = self.one_well_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "У выбранной скважины нет числовых значений кривых", ha="center", va="center")
+            ax.set_axis_off()
+            self.one_well_canvas.draw_idle()
+            return
+
+        depths = [float(row.get("depth_md", 0.0)) for row in rows]
+        depth_min = min(depths)
+        depth_max = max(depths)
+        if depth_min == depth_max:
+            depth_min -= 0.5
+            depth_max += 0.5
+        track_count = len(finite_features) + 1
+        axes = self.one_well_figure.subplots(1, track_count, sharey=True)
+        if track_count == 1:
+            axes = [axes]
+        else:
+            axes = list(np.ravel(axes))
+        opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
+        well_name = str(rows[0].get("well_name", "—"))
+        intervals = [
+            item for item in self.interval_cache.get(int(rows[0].get("well_id")), [])
+            if self._is_cluster_visible(int(item.get("cluster_label", 0)))
+        ]
+
+        for feature_idx, feature_name in enumerate(finite_features):
+            ax = axes[feature_idx]
+            for interval in intervals:
+                ax.axhspan(
+                    float(interval.get("from_md", depth_min)),
+                    float(interval.get("to_md", depth_max)),
+                    color=_well_log_cluster_color(int(interval.get("cluster_label", 0))),
+                    alpha=max(0.03, opacity * 0.18),
+                    linewidth=0,
+                )
+            values = [_to_finite_float((row.get("features", {}) or {}).get(feature_name)) for row in rows]
+            plot_x = [value for value in values if value is not None]
+            plot_y = [depth for value, depth in zip(values, depths) if value is not None]
+            if plot_x:
+                ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3)
+            ax.set_xlabel(feature_name)
+            ax.grid(True, alpha=0.25)
+            if feature_idx == 0:
+                ax.set_ylabel("Depth MD")
+            else:
+                ax.tick_params(labelleft=False)
+            if self._highlight_interval is not None:
+                ax.axhspan(
+                    float(self._highlight_interval.get("from_md", depth_min)),
+                    float(self._highlight_interval.get("to_md", depth_max)),
+                    color="#ffe680",
+                    alpha=0.35,
+                    linewidth=0,
+                )
+
+        cluster_ax = axes[-1]
+        cluster_ax.set_title("Cluster track")
+        cluster_ax.set_xlim(0.0, 1.0)
+        cluster_ax.set_xticks([])
+        cluster_ax.grid(False)
+        for interval in intervals:
+            label = int(interval.get("cluster_label", 0))
+            from_md = float(interval.get("from_md", depth_min))
+            to_md = float(interval.get("to_md", depth_max))
+            height = max(to_md - from_md, 1e-9)
+            rect = Rectangle(
+                (0.08, from_md),
+                0.84,
+                height,
+                facecolor=_well_log_cluster_color(label),
+                alpha=opacity,
+                edgecolor="black" if self._intervals_match(interval, self._highlight_interval) else "none",
+                linewidth=2.0 if self._intervals_match(interval, self._highlight_interval) else 0.0,
+            )
+            cluster_ax.add_patch(rect)
+            if height > (depth_max - depth_min) * 0.025:
+                cluster_ax.text(0.5, from_md + height / 2.0, str(label), ha="center", va="center", fontsize=8)
+        cluster_ax.tick_params(labelleft=False)
+        self.one_well_figure.suptitle(f"{well_name}: все кривые и cluster track", fontsize=11)
+        for ax in axes:
+            ax.set_ylim(depth_max, depth_min)
+        self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.95))
+        self.one_well_canvas.draw_idle()
+
+    @staticmethod
+    def _intervals_match(left: dict[str, Any] | None, right: dict[str, Any] | None) -> bool:
+        if not left or not right:
+            return False
+        return (
+            int(left.get("well_id", -1)) == int(right.get("well_id", -2))
+            and int(left.get("cluster_label", -999999)) == int(right.get("cluster_label", -999998))
+            and abs(float(left.get("from_md", 0.0)) - float(right.get("from_md", 0.0))) < 1e-9
+            and abs(float(left.get("to_md", 0.0)) - float(right.get("to_md", 0.0))) < 1e-9
+        )
 
     def _populate_profile_table(self) -> None:
         profile_rows = []
@@ -6742,29 +6924,43 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         interval_cache: dict[int, list[dict[str, Any]]] = {}
         for well_id, well_rows in grouped.items():
             sorted_rows = sorted(well_rows, key=lambda item: (float(item.get("depth_md", 0.0)), int(item.get("row_index_in_well", 0))))
+            depths = [float(row.get("depth_md", 0.0)) for row in sorted_rows]
+            diffs = [next_depth - depth for depth, next_depth in zip(depths, depths[1:]) if next_depth > depth]
+            default_step = float(np.median(diffs)) if diffs else 0.0
             intervals: list[dict[str, Any]] = []
             current: dict[str, Any] | None = None
-            for row in sorted_rows:
+
+            def close_current(next_depth: float | None = None) -> None:
+                nonlocal current
+                if current is None:
+                    return
+                last_depth = float(current.pop("last_depth", current["from_md"]))
+                current["to_md"] = float(next_depth) if next_depth is not None and next_depth > last_depth else last_depth + default_step
+                current["thickness"] = max(0.0, float(current["to_md"]) - float(current["from_md"]))
+                intervals.append(current)
+                current = None
+
+            for row_idx, row in enumerate(sorted_rows):
                 label = int(row.get("cluster_label", 0))
                 depth = float(row.get("depth_md", 0.0))
                 if current is None or int(current["cluster_label"]) != label:
-                    if current is not None:
-                        current["thickness"] = max(0.0, float(current["to_md"]) - float(current["from_md"]))
-                        intervals.append(current)
+                    close_current(depth)
                     current = {
                         "well_id": int(well_id),
                         "well_name": str(row.get("well_name", f"well_id={well_id}")),
                         "from_md": depth,
                         "to_md": depth,
+                        "last_depth": depth,
                         "cluster_label": label,
                         "row_count": 1,
+                        "row_index_start": int(row.get("row_index_in_well", row_idx)),
+                        "row_index_end": int(row.get("row_index_in_well", row_idx)),
                     }
                 else:
-                    current["to_md"] = depth
+                    current["last_depth"] = depth
                     current["row_count"] = int(current.get("row_count", 0)) + 1
-            if current is not None:
-                current["thickness"] = max(0.0, float(current["to_md"]) - float(current["from_md"]))
-                intervals.append(current)
+                    current["row_index_end"] = int(row.get("row_index_in_well", row_idx))
+            close_current(None)
             interval_cache[int(well_id)] = intervals
         return interval_cache
 
