@@ -98,6 +98,7 @@ def run_auto_cluster_tuning(
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=coarse_silhouette_samples,
                 min_cluster_samples=min_cluster_samples,
+                max_clusters=max_clusters,
                 hard_timeout_sec=candidate_soft_timeout_sec
             )
         except Exception as exc:
@@ -175,6 +176,7 @@ def run_auto_cluster_tuning(
                     min_pca_components=min_pca_components,
                     max_silhouette_samples=coarse_silhouette_samples,
                     min_cluster_samples=min_cluster_samples,
+                    max_clusters=max_clusters,
                     hard_timeout_sec=candidate_soft_timeout_sec
                 )
             except Exception as exc:
@@ -220,6 +222,7 @@ def run_auto_cluster_tuning(
                         min_pca_components=min_pca_components,
                         max_silhouette_samples=coarse_silhouette_samples,
                         min_cluster_samples=min_cluster_samples,
+                        max_clusters=max_clusters,
                         hard_timeout_sec=candidate_soft_timeout_sec
                     )
                 except Exception as exc:
@@ -250,7 +253,7 @@ def run_auto_cluster_tuning(
 
     if restored_raw_results:
         coarse_results = list(restored_raw_results) + coarse_results
-    ranked_coarse = rank_candidates(coarse_results, weights=weights)
+    ranked_coarse = rank_candidates(coarse_results, weights=weights, max_clusters=max_clusters)
     coarse_best_result = ranked_coarse[0] if ranked_coarse else None
     coarse_top_diverse = select_diverse_top_results(
         ranked_coarse,
@@ -295,7 +298,8 @@ def run_auto_cluster_tuning(
         fine_seed_results,
         top_k=fine_seed_count,
         max_candidates=max_candidates,
-        hdbscan_metrics=hdbscan_metrics
+        hdbscan_metrics=hdbscan_metrics,
+        max_clusters=max_clusters
     )
     fine_results: list[CandidateResult] = []
     for idx, candidate in enumerate(fine_candidates, start=1):
@@ -325,6 +329,7 @@ def run_auto_cluster_tuning(
                 min_pca_components=min_pca_components,
                 max_silhouette_samples=_compute_auto_silhouette_sample_size(len(base_data), stage="fine", estimated_n_clusters=max_clusters),
                 min_cluster_samples=min_cluster_samples,
+                max_clusters=max_clusters,
                 hard_timeout_sec=candidate_soft_timeout_sec
             )
         except Exception as exc:
@@ -384,7 +389,7 @@ def run_auto_cluster_tuning(
     if run_key and object_set_id is not None and (coarse_results or fine_results):
         _save_auto_tuning_run_state(run_key=str(run_key), object_set_id=int(object_set_id), random_seed=int(random_seed or 42), sampled_indices=np.arange(len(base_data), dtype=int), completed_candidate_ids=completed_candidate_ids, coarse_results=coarse_results, fine_results=fine_results)
 
-    combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights)
+    combined_ranked = rank_candidates(coarse_results + fine_results, weights=weights, max_clusters=max_clusters)
     best_result = combined_ranked[0] if combined_ranked else coarse_best_result
     combined_top_diverse = select_diverse_top_results(
         combined_ranked,
@@ -400,7 +405,7 @@ def run_auto_cluster_tuning(
         "top_results": combined_top_diverse,
         "raw_results": coarse_results + fine_results,
         "coarse_results": ranked_coarse,
-        "fine_results": rank_candidates(fine_results, weights=weights),
+        "fine_results": rank_candidates(fine_results, weights=weights, max_clusters=max_clusters),
         "coarse_best_result": coarse_best_result
     }
 
@@ -1177,6 +1182,12 @@ def calculate_cluster_auto():
             source_type=source_type
         )
         if cached_top_results:
+            cached_top_results = select_diverse_top_results(
+                rank_candidates(cached_top_results, weights=metric_weights, max_clusters=max_clusters),
+                top_k=top_k,
+                diversity_key="partition_hash"
+            )
+        if cached_top_results:
             enriched_cached_results = enrich_auto_results_for_context(cached_top_results, run_context, auto_mode=auto_mode)
             remember_auto_results_for_context(run_context, enriched_cached_results)
             render_auto_results_table(enriched_cached_results)
@@ -1417,6 +1428,12 @@ def calculate_cluster_auto_batch() -> None:
                 clust_object_id=object_id,
                 top_k=top_k
             )
+            if cached_top_results:
+                cached_top_results = select_diverse_top_results(
+                    rank_candidates(cached_top_results, weights=metric_weights, max_clusters=max_clusters),
+                    top_k=top_k,
+                    diversity_key="partition_hash"
+                )
             if cached_top_results:
                 skipped_cached += 1
                 best_cached = cached_top_results[0] if cached_top_results else {}
