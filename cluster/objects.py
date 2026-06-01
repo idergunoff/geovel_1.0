@@ -270,23 +270,29 @@ def load_saved_auto_results_for_selected_object() -> None:
     """
     При выборе ObjectSet подгружает последнюю сохраненную таблицу AUTO-кластеризации (если есть).
     """
+    run_context = build_cluster_run_context(show_errors=False)
+    if run_context is not None:
+        load_saved_auto_results_for_context(run_context)
+        return
+
     clust_object_id = get_curr_clust_object_id()
     if not clust_object_id:
         render_auto_results_table([])
         return
 
     try:
-        cache_row = (
+        cache_rows = (
             session.query(ClusterAutoTuningCache)
             .filter_by(object_set_id=int(clust_object_id))
             .order_by(ClusterAutoTuningCache.created_at.desc())
-            .first()
+            .all()
         )
     except Exception as exc:
         render_auto_results_table([])
         set_info(f"AUTO: ошибка чтения сохраненного результата: {exc}", "brown")
         return
 
+    cache_row = next((row for row in cache_rows if _cache_row_matches_source_type(row, "gpr")), None)
     if cache_row is None or not cache_row.top_results:
         render_auto_results_table([])
         return

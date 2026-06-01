@@ -51,6 +51,9 @@ def update_cluster_well_dataset_combobox(select_dataset_id: int | None = None) -
         combo.setCurrentIndex(index_to_select)
     combo.blockSignals(False)
     load_cluster_well_dataset_state_to_form(combo.currentData())
+    refresh_results = globals().get("refresh_cluster_auto_results_for_active_context")
+    if callable(refresh_results):
+        refresh_results()
 
 
 def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> None:
@@ -501,7 +504,7 @@ def remove_cluster_well_dataset() -> None:
         MainWindow,
         'Подтверждение удаления',
         f'Удалить набор "{dataset.name}"?\n\n'
-        'Будут удалены связанные скважины, интервалы, каротажи и собранные данные.',
+        'Будут удалены связанные скважины, интервалы, каротажи, собранные данные и AUTO-результаты.',
         QMessageBox.Yes | QMessageBox.No,
         QMessageBox.No
     )
