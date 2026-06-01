@@ -317,7 +317,8 @@ def run_cluster_candidate(
         metrics_cache: Optional[Dict[str, CandidateMetrics]] = None,
         min_pca_components: int = 2,
         max_silhouette_samples: int = AUTO_SILHOUETTE_MAX_SAMPLES,
-        min_cluster_samples: int = 1
+        min_cluster_samples: int = 1,
+        max_clusters: Optional[int] = None
 ) -> CandidateResult:
     """
     Прогоняет одного кандидата AUTO-подбора без UI-зависимостей.
@@ -568,13 +569,34 @@ def run_cluster_candidate(
         min_cluster_samples_value = max(1, int(min_cluster_samples))
     except (TypeError, ValueError):
         min_cluster_samples_value = 1
+    try:
+        max_clusters_value = max(2, int(max_clusters)) if max_clusters is not None else None
+    except (TypeError, ValueError):
+        max_clusters_value = None
+
+    n_clusters_result = int(cluster_info.get("n_clusters", len(unique_clusters_eval)) or 0)
+
+    if max_clusters_value is not None and n_clusters_result > max_clusters_value:
+        return make_candidate_result(
+            candidate_id=candidate_id,
+            candidate_config=candidate,
+            stats=CandidateStats(
+                n_clusters=n_clusters_result,
+                noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
+                n_samples_eval=n_samples_eval,
+                partition_hash=partition_hash,
+                **pca_stats
+            ),
+            status="invalid",
+            error_text=f"n_clusters {n_clusters_result} > max_clusters {max_clusters_value}"
+        )
 
     if n_samples_eval == 0:
         return make_candidate_result(
             candidate_id=candidate_id,
             candidate_config=candidate,
             stats=CandidateStats(
-                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                n_clusters=n_clusters_result,
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=0,
                 partition_hash=partition_hash,
@@ -590,7 +612,7 @@ def run_cluster_candidate(
             candidate_id=candidate_id,
             candidate_config=candidate,
             stats=CandidateStats(
-                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                n_clusters=n_clusters_result,
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=n_samples_eval,
                 partition_hash=partition_hash,
@@ -607,7 +629,7 @@ def run_cluster_candidate(
             candidate_id=candidate_id,
             candidate_config=candidate,
             stats=CandidateStats(
-                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                n_clusters=n_clusters_result,
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=n_samples_eval,
                 partition_hash=partition_hash,
@@ -629,7 +651,7 @@ def run_cluster_candidate(
                     calinski_harabasz=float(cached_metrics.get("calinski_harabasz"))
                 ),
                 stats=CandidateStats(
-                    n_clusters=int(cluster_info.get("n_clusters", 0)),
+                    n_clusters=n_clusters_result,
                     noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                     n_samples_eval=n_samples_eval,
                     partition_hash=partition_hash,
@@ -662,7 +684,7 @@ def run_cluster_candidate(
             candidate_id=candidate_id,
             candidate_config=candidate,
             stats=CandidateStats(
-                n_clusters=int(cluster_info.get("n_clusters", 0)),
+                n_clusters=n_clusters_result,
                 noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
                 n_samples_eval=n_samples_eval,
                 partition_hash=partition_hash,
@@ -685,7 +707,7 @@ def run_cluster_candidate(
         candidate_config=candidate,
         metrics=metric_payload,
         stats=CandidateStats(
-            n_clusters=int(cluster_info.get("n_clusters", 0)),
+            n_clusters=n_clusters_result,
             noise_fraction=float(cluster_info.get("noise_fraction", 0.0)),
             n_samples_eval=n_samples_eval,
             partition_hash=partition_hash,
@@ -768,7 +790,8 @@ def score_candidate(
 
 def rank_candidates(
         results: list[CandidateResult],
-        weights: Optional[Dict[str, float]] = None
+        weights: Optional[Dict[str, float]] = None,
+        max_clusters: Optional[int] = None
 ) -> list[CandidateResult]:
     """
     Выставляет score и возвращает отсортированный список кандидатов.
@@ -780,6 +803,11 @@ def rank_candidates(
     4) ниже noise_fraction
     """
     ranked: list[CandidateResult] = []
+    try:
+        max_clusters_value = max(2, int(max_clusters)) if max_clusters is not None else None
+    except (TypeError, ValueError):
+        max_clusters_value = None
+
     for result in results:
         result_copy = CandidateResult(
             candidate_id=result["candidate_id"],
@@ -791,6 +819,14 @@ def rank_candidates(
             error_text=result.get("error_text", "")
         )
 
+        stats = result_copy.get("stats", CandidateStats())
+        try:
+            n_clusters_result = int(stats.get("n_clusters", 0) or 0)
+        except (TypeError, ValueError):
+            n_clusters_result = 0
+
+        if max_clusters_value is not None and n_clusters_result > max_clusters_value:
+            continue
         if result_copy["status"] == "ok":
             result_copy["score"] = score_candidate(
                 result_copy.get("metrics", CandidateMetrics()),
@@ -900,13 +936,18 @@ def build_fine_search_space(
         *,
         top_k: int = 5,
         max_candidates: Optional[int] = 200,
-        hdbscan_metrics: Optional[list[str]] = None
+        hdbscan_metrics: Optional[list[str]] = None,
+        max_clusters: Optional[int] = None
 ) -> list[CandidateConfig]:
     """
     Строит локальное fine-пространство вокруг top-K coarse-кандидатов.
     """
     fine_candidates: list[CandidateConfig] = []
     seen_signatures = set()
+    try:
+        max_clusters_value = max(2, int(max_clusters)) if max_clusters is not None else None
+    except (TypeError, ValueError):
+        max_clusters_value = None
 
     for result in top_results[:max(1, int(top_k))]:
         if result.get("status") != "ok":
@@ -955,7 +996,10 @@ def build_fine_search_space(
         if base_method == "kmeans":
             base_k = int(base_method_params.get("kmeans_n_clusters", 4))
             base_n_init = int(base_method_params.get("kmeans_n_init", 10))
-            for k in range(max(2, base_k - 2), base_k + 3):
+            upper_k = base_k + 2
+            if max_clusters_value is not None:
+                upper_k = min(upper_k, max_clusters_value)
+            for k in range(max(2, base_k - 2), upper_k + 1):
                 for n_init in sorted({base_n_init, 20, base_n_init + 10}):
                     method_variants.append({
                         "kmeans_n_clusters": int(k),
@@ -975,7 +1019,10 @@ def build_fine_search_space(
         elif base_method == "gmm":
             base_n = int(base_method_params.get("gmm_n_components", 4))
             base_cov = str(base_method_params.get("gmm_covariance_type", "full"))
-            for n_components in range(max(2, base_n - 2), base_n + 3):
+            upper_n_components = base_n + 2
+            if max_clusters_value is not None:
+                upper_n_components = min(upper_n_components, max_clusters_value)
+            for n_components in range(max(2, base_n - 2), upper_n_components + 1):
                 method_variants.append({
                     "gmm_n_components": int(n_components),
                     "gmm_covariance_type": base_cov
