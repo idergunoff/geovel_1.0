@@ -21,7 +21,8 @@ def build_cluster_auto_tuning_cache_key(
         top_k: int,
         constraints: Optional[Dict[str, Any]],
         weights: Dict[str, float],
-        clean_kwargs: Dict[str, Any]
+        clean_kwargs: Dict[str, Any],
+        source_type: str = "gpr"
 ) -> str:
     """
     Формирует hash-ключ для сохранения/поиска результата AUTO-подбора.
@@ -39,8 +40,28 @@ def build_cluster_auto_tuning_cache_key(
         "constraints": _normalize_cache_payload(constraints or {}),
         "clean_kwargs": _normalize_cache_payload(clean_kwargs or {})
     }
+    source_type_norm = str(source_type or "gpr").strip().lower()
+    if source_type_norm != "gpr":
+        payload["source_type"] = source_type_norm
     payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+
+
+def _format_well_log_auto_diagnostics_for_cache(diagnostics: dict[str, Any]) -> str:
+    if not diagnostics:
+        return "—"
+    valid_wells = diagnostics.get("valid_well_count", "—")
+    valid_rows = diagnostics.get("valid_row_count", "—")
+    excluded = diagnostics.get("excluded_well_count", 0)
+    invalid = diagnostics.get("invalid_row_count", 0)
+    return f"wells={valid_wells}, rows={valid_rows}, excl={excluded}, invalid={invalid}"
+
+
+def _auto_tuning_cache_model(source_type: str = "gpr"):
+    source_type_norm = str(source_type or "gpr").strip().lower()
+    if source_type_norm == "well_log":
+        return WellLogClusterAutoTuningCache
+    return ClusterAutoTuningCache
 
 
 def _ensure_cluster_auto_tuning_run_state_table() -> None:
@@ -102,27 +123,30 @@ def _clear_auto_tuning_run_state(*, run_key: str, object_set_id: int) -> None:
     session.commit()
 
 
-def _ensure_cluster_auto_tuning_cache_table() -> None:
+def _ensure_cluster_auto_tuning_cache_table(source_type: str = "gpr") -> None:
     """
     Создает таблицу cache автоподбора (если ее еще нет).
     """
-    ClusterAutoTuningCache.__table__.create(bind=engine, checkfirst=True)
+    _auto_tuning_cache_model(source_type).__table__.create(bind=engine, checkfirst=True)
 
 
 def load_cluster_auto_tuning_cache(
         *,
         cache_key: str,
         clust_object_id: int,
-        top_k: int = 5
+        top_k: int = 5,
+        source_type: str = "gpr"
 ) -> list[CandidateResult]:
     """
     Загружает top-K настроек AUTO-подбора из persistent-cache.
     """
     try:
-        _ensure_cluster_auto_tuning_cache_table()
+        _ensure_cluster_auto_tuning_cache_table(source_type)
+        cache_model = _auto_tuning_cache_model(source_type)
+        id_filter = {"dataset_id" if cache_model is WellLogClusterAutoTuningCache else "object_set_id": int(clust_object_id)}
         row = (
-            session.query(ClusterAutoTuningCache)
-            .filter_by(cache_key=str(cache_key), object_set_id=int(clust_object_id))
+            session.query(cache_model)
+            .filter_by(cache_key=str(cache_key), **id_filter)
             .first()
         )
         if row is None or not row.top_results:
@@ -141,13 +165,20 @@ def save_cluster_auto_tuning_cache(
         cache_key: str,
         clust_object_id: int,
         top_results: list[CandidateResult],
-        top_k: int = 5
+        top_k: int = 5,
+        source_type: str = "gpr",
+        dataset_title: str = "",
+        data_hash: str = "",
+        auto_mode: str = "",
+        diagnostics: Optional[dict[str, Any]] = None
 ) -> None:
     """
     Сохраняет top-K настроек AUTO-подбора (только конфигурации кандидатов).
     """
     try:
-        _ensure_cluster_auto_tuning_cache_table()
+        _ensure_cluster_auto_tuning_cache_table(source_type)
+        cache_model = _auto_tuning_cache_model(source_type)
+        source_type_norm = str(source_type or "gpr").strip().lower() or "gpr"
         compact_top_results: list[dict] = []
         for idx, result in enumerate((top_results or [])[:max(1, int(top_k))], start=1):
             result_row = result or {}
@@ -174,8 +205,7 @@ def save_cluster_auto_tuning_cache(
                 except Exception:
                     return None
 
-            compact_top_results.append(
-                {
+            compact_row = {
                     "candidate_id": str(result_row.get("candidate_id") or f"T{idx:02d}"),
                     "candidate_config": cfg,
                     "metrics": {
@@ -193,17 +223,29 @@ def save_cluster_auto_tuning_cache(
                     "status": str(result_row.get("status") or "ok"),
                     "error_text": str(result_row.get("error_text") or "")
                 }
-            )
+            if source_type_norm != "gpr":
+                compact_row.update({
+                    "source_type": source_type_norm,
+                    "dataset_id": int(clust_object_id),
+                    "dataset_title": str(dataset_title or ""),
+                    "data_hash": str(data_hash or ""),
+                    "auto_mode": str(auto_mode or "").upper(),
+                    "well_log_diagnostics": dict(diagnostics or {}),
+                    "well_log_diagnostics_text": _format_well_log_auto_diagnostics_for_cache(dict(diagnostics or {})),
+                })
+            compact_top_results.append(compact_row)
         if not compact_top_results:
             return
+        id_field = "dataset_id" if cache_model is WellLogClusterAutoTuningCache else "object_set_id"
+        id_filter = {id_field: int(clust_object_id)}
         existing_row = (
-            session.query(ClusterAutoTuningCache)
-            .filter_by(cache_key=str(cache_key), object_set_id=int(clust_object_id))
+            session.query(cache_model)
+            .filter_by(cache_key=str(cache_key), **id_filter)
             .first()
         )
         if existing_row is None:
-            existing_row = ClusterAutoTuningCache(
-                object_set_id=int(clust_object_id),
+            existing_row = cache_model(
+                **id_filter,
                 cache_key=str(cache_key)
             )
             session.add(existing_row)

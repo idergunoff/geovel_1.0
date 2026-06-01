@@ -39,6 +39,18 @@ class ClusterAutoTuningCache(Base):
     object_set = relationship('ObjectSet', back_populates='auto_tuning_cache')
 
 
+class WellLogClusterAutoTuningCache(Base):
+    __tablename__ = 'well_log_cluster_auto_tuning_cache'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'), nullable=False, index=True)
+    cache_key = Column(String, nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    top_results = Column(Text, nullable=False)
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='auto_tuning_cache')
+
+
 class ClusterAutoTuningRunState(Base):
     __tablename__ = 'cluster_auto_tuning_run_state'
 
@@ -72,6 +84,7 @@ class WellLogClusterDataset(Base):
     cluster_well_log_param = relationship('ClusterWellLogParameter', back_populates='well_cluster_set', cascade='all, delete-orphan')
     cluster_well_log_param_from_calculator = relationship('ClusterWellLogParameterFromCalculator', back_populates='well_cluster_set', cascade='all, delete-orphan')
     data = relationship('WellLogClusterDatasetData', back_populates='well_cluster_set', cascade='all, delete-orphan')
+    auto_tuning_cache = relationship('WellLogClusterAutoTuningCache', back_populates='well_cluster_set', cascade='all, delete-orphan')
 
 
 class WellForCluster(Base):

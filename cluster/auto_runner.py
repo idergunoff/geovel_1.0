@@ -671,8 +671,71 @@ def remember_auto_results_for_context(run_context: ClusterRunContext, results: l
     cluster_auto_results_by_context[_auto_context_cache_key(run_context)] = list(results or [])
 
 
+def _cache_row_matches_source_type(cache_row: Any, source_type: str) -> bool:
+    try:
+        payload = json.loads(cache_row.top_results or "[]")
+    except Exception:
+        return False
+    if not isinstance(payload, list) or not payload:
+        return False
+    row_source_type = str((payload[0] or {}).get("source_type") or "gpr").strip().lower()
+    return row_source_type == str(source_type or "gpr").strip().lower()
+
+
+def load_saved_auto_results_for_context(run_context: ClusterRunContext) -> bool:
+    """Загружает последнюю сохраненную AUTO-таблицу для текущего GPR/Well Log контекста."""
+    source_type = str(run_context.get("source_type") or "gpr").strip().lower()
+    dataset_id = int(run_context.get("dataset_id", 0) or 0)
+    if dataset_id <= 0:
+        render_auto_results_table([])
+        return False
+    try:
+        _ensure_cluster_auto_tuning_cache_table(source_type)
+        cache_model = _auto_tuning_cache_model(source_type)
+        id_filter = {"dataset_id" if cache_model is WellLogClusterAutoTuningCache else "object_set_id": dataset_id}
+        cache_rows = (
+            session.query(cache_model)
+            .filter_by(**id_filter)
+            .order_by(cache_model.created_at.desc())
+            .all()
+        )
+    except Exception as exc:
+        render_auto_results_table([])
+        set_info(f"AUTO: ошибка чтения сохраненного результата: {exc}", "brown")
+        return False
+
+    for cache_row in cache_rows:
+        if not _cache_row_matches_source_type(cache_row, source_type):
+            continue
+        try:
+            cached_results = json.loads(cache_row.top_results or "[]")
+        except Exception as exc:
+            render_auto_results_table([])
+            set_info(f"AUTO: ошибка распаковки сохраненного результата: {exc}", "brown")
+            return False
+        if not isinstance(cached_results, list):
+            continue
+
+        if source_type == "well_log":
+            cached_results = enrich_auto_results_for_context(
+                cached_results,
+                run_context,
+                auto_mode=str((cached_results[0] or {}).get("auto_mode") or "")
+            )
+        render_auto_results_table(cached_results)
+        remember_auto_results_for_context(run_context, cached_results)
+        set_info(
+            f"AUTO: загружены сохраненные top-{len(cached_results)} настройки для выбранного набора.",
+            "green"
+        )
+        return True
+
+    render_auto_results_table([])
+    return False
+
+
 def refresh_cluster_auto_results_for_active_context() -> None:
-    """Перерисовывает общую AUTO-таблицу для текущей вкладки/dataset, если есть runtime-кэш."""
+    """Перерисовывает общую AUTO-таблицу для текущей вкладки/dataset из runtime/persistent cache."""
     run_context = build_cluster_run_context(show_errors=False)
     if run_context is None:
         render_auto_results_table([])
@@ -681,10 +744,7 @@ def refresh_cluster_auto_results_for_active_context() -> None:
     if cached_results is not None:
         render_auto_results_table(cached_results)
         return
-    if run_context.get("source_type") == "gpr":
-        load_saved_auto_results_for_selected_object()
-        return
-    render_auto_results_table([])
+    load_saved_auto_results_for_context(run_context)
 
 
 def render_auto_results_table(results: list[CandidateResult]) -> None:
@@ -795,7 +855,7 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
     reply = QMessageBox.warning(
         MainWindow,
         "Очистка результатов AUTO",
-        "Вы действительно хотите очистить результаты автоподбора?\nЭто действие удалит строки из таблицы и кэш текущей сессии.",
+        "Вы действительно хотите очистить результаты автоподбора?\nЭто действие удалит строки из таблицы, runtime-cache и сохраненный кэш текущего набора.",
         QMessageBox.Yes | QMessageBox.No,
         QMessageBox.No
     )
@@ -811,19 +871,27 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
     table.setRowCount(0)
     table.setColumnCount(0)
 
-    clust_object_id = get_curr_clust_object_id()
-    if clust_object_id:
-        try:
-            (
-                session.query(ClusterAutoTuningCache)
-                .filter_by(object_set_id=int(clust_object_id))
-                .delete(synchronize_session=False)
-            )
-            session.commit()
-        except Exception as exc:
-            session.rollback()
-            set_info(f"AUTO: таблица очищена, но не удалось удалить сохраненный кэш: {exc}", "brown")
-            return
+    if active_context is not None:
+        dataset_id = int(active_context.get("dataset_id", 0) or 0)
+        source_type = str(active_context.get("source_type") or "gpr").strip().lower()
+        if dataset_id > 0:
+            try:
+                _ensure_cluster_auto_tuning_cache_table(source_type)
+                cache_model = _auto_tuning_cache_model(source_type)
+                id_filter = {"dataset_id" if cache_model is WellLogClusterAutoTuningCache else "object_set_id": dataset_id}
+                cache_rows = (
+                    session.query(cache_model)
+                    .filter_by(**id_filter)
+                    .all()
+                )
+                for cache_row in cache_rows:
+                    if _cache_row_matches_source_type(cache_row, source_type):
+                        session.delete(cache_row)
+                session.commit()
+            except Exception as exc:
+                session.rollback()
+                set_info(f"AUTO: таблица очищена, но не удалось удалить сохраненный кэш: {exc}", "brown")
+                return
 
     set_info("AUTO: результаты автоподбора очищены.", "green")
 
@@ -958,11 +1026,16 @@ def calculate_cluster_auto():
 
     source_type = str(run_context["source_type"])
     dataset_id = int(run_context["dataset_id"])
-    use_persistent_auto_cache = source_type == "gpr"
-    if use_persistent_auto_cache:
+    use_persistent_auto_cache = source_type in {"gpr", "well_log"}
+    if source_type == "gpr":
         clust_object = session.query(ObjectSet).filter_by(id=dataset_id).first()
         if clust_object is None:
             set_info(f"AUTO: объект id={dataset_id} не найден.", "brown")
+            return
+    elif source_type == "well_log":
+        dataset = session.query(WellLogClusterDataset).filter_by(id=dataset_id).first()
+        if dataset is None:
+            set_info(f"AUTO: Well Log dataset id={dataset_id} не найден.", "brown")
             return
 
     base_data = run_context["raw_rows"]
@@ -1072,7 +1145,8 @@ def calculate_cluster_auto():
             "non_finite_mode": text_method_nan,
             "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
             "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
-        }
+        },
+        source_type=source_type
     )
 
     render_auto_results_table([])
@@ -1099,7 +1173,8 @@ def calculate_cluster_auto():
         cached_top_results = load_cluster_auto_tuning_cache(
             cache_key=cache_key,
             clust_object_id=dataset_id,
-            top_k=top_k
+            top_k=top_k,
+            source_type=source_type
         )
         if cached_top_results:
             enriched_cached_results = enrich_auto_results_for_context(cached_top_results, run_context, auto_mode=auto_mode)
@@ -1130,8 +1205,8 @@ def calculate_cluster_auto():
         candidate_soft_timeout_sec=candidate_timeout_sec,
         random_seed=auto_random_seed,
         min_cluster_samples=min_cluster_samples,
-        run_key=cache_key,
-        object_set_id=dataset_id if use_persistent_auto_cache else None,
+        run_key=cache_key if source_type == "gpr" else None,
+        object_set_id=dataset_id if source_type == "gpr" else None,
         clean_kwargs={
             "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
             "non_finite_mode": text_method_nan,
@@ -1147,7 +1222,12 @@ def calculate_cluster_auto():
             cache_key=cache_key,
             clust_object_id=dataset_id,
             top_results=top_results,
-            top_k=top_k
+            top_k=top_k,
+            source_type=source_type,
+            dataset_title=str(run_context.get("dataset_title", "")),
+            data_hash=str(run_context.get("data_hash", "")),
+            auto_mode=auto_mode,
+            diagnostics=dict(run_context.get("diagnostics", {}) or {})
         )
     remember_auto_results_for_context(run_context, enriched_top_results)
     render_auto_results_table(enriched_top_results)
