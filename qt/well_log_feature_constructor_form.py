@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Callable
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from cluster.well_feature_calculator import (
     FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY,
@@ -11,7 +11,9 @@ from cluster.well_feature_calculator import (
     FEATURE_CALCULATOR_INVALID_MATH_POLICY,
     FEATURE_CALCULATOR_NORMALIZATION_SCOPES,
     FEATURE_CALCULATOR_UNARY_OPERATIONS,
+    extract_formula_input_names,
     parse_feature_calculator_config,
+    parse_safe_formula,
     validate_feature_calculator_config,
     validate_feature_calculator_for_dataset,
 )
@@ -77,6 +79,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self._fill_input_curves()
         self._refresh_global_features()
         self._update_operation_fields()
+        self._update_mode_fields()
 
     def _setup_ui(self) -> None:
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -109,7 +112,8 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         context_layout.addWidget(self.tree_dataset_context)
         left_layout.addWidget(context_group, stretch=1)
 
-        create_group = QtWidgets.QGroupBox("Create operation feature", left_widget)
+        self.create_group = QtWidgets.QGroupBox("Create calculated feature", left_widget)
+        create_group = self.create_group
         create_layout = QtWidgets.QFormLayout(create_group)
 
         self.lineEdit_feature_name = QtWidgets.QLineEdit(create_group)
@@ -119,8 +123,39 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.comboBox_mode = QtWidgets.QComboBox(create_group)
         self.comboBox_mode.setObjectName("comboBox_well_log_constructor_mode")
         self.comboBox_mode.addItem("Operation", "operation")
-        self.comboBox_mode.setEnabled(False)
+        self.comboBox_mode.addItem("Formula", "formula")
+        self.comboBox_mode.currentIndexChanged.connect(self._update_mode_fields)
         create_layout.addRow("Mode", self.comboBox_mode)
+
+        self.textEdit_formula_expression = QtWidgets.QPlainTextEdit(create_group)
+        self.textEdit_formula_expression.setObjectName("plainTextEdit_well_log_constructor_formula_expression")
+        self.textEdit_formula_expression.setPlaceholderText("Example: (GR - RHOB) / (GR + RHOB)")
+        self.textEdit_formula_expression.setMaximumHeight(74)
+        create_layout.addRow("Expression", self.textEdit_formula_expression)
+
+        self.listWidget_formula_curves = QtWidgets.QListWidget(create_group)
+        self.listWidget_formula_curves.setObjectName("listWidget_well_log_constructor_formula_curves")
+        self.listWidget_formula_curves.setMaximumHeight(95)
+        self.listWidget_formula_curves.itemDoubleClicked.connect(lambda item: self._insert_formula_token(item.text()))
+        create_layout.addRow("Available curves", self.listWidget_formula_curves)
+
+        self.widget_formula_tokens = QtWidgets.QWidget(create_group)
+        self.widget_formula_tokens.setObjectName("widget_well_log_constructor_formula_tokens")
+        formula_buttons_layout = QtWidgets.QGridLayout(self.widget_formula_tokens)
+        formula_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self._formula_token_buttons: list[QtWidgets.QPushButton] = []
+        for index, token in enumerate(["+", "-", "*", "/", "(", ")", "log", "abs", "sqrt"]):
+            button = QtWidgets.QPushButton(token, self.widget_formula_tokens)
+            button.setObjectName(f"pushButton_well_log_constructor_formula_token_{token.replace('/', 'div')}")
+            button.clicked.connect(lambda _checked=False, value=token: self._insert_formula_token(value))
+            self._formula_token_buttons.append(button)
+            formula_buttons_layout.addWidget(button, index // 5, index % 5)
+        create_layout.addRow("Formula tokens", self.widget_formula_tokens)
+
+        self.label_formula_inputs = QtWidgets.QLabel(create_group)
+        self.label_formula_inputs.setObjectName("label_well_log_constructor_formula_inputs")
+        self.label_formula_inputs.setWordWrap(True)
+        create_layout.addRow("Used curves", self.label_formula_inputs)
 
         self.comboBox_input_curve = QtWidgets.QComboBox(create_group)
         self.comboBox_input_curve.setObjectName("comboBox_well_log_constructor_input_curve")
@@ -260,10 +295,15 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
     def _fill_input_curves(self) -> None:
         self.comboBox_input_curve.clear()
         self.comboBox_input_curve.addItem("", None)
+        self.listWidget_formula_curves.clear()
         for curve in self.all_canonical_parameters:
             canonical_id = curve.get("canonical_id")
             canonical_name = curve.get("canonical_name") or f"canonical_id={canonical_id}"
-            self.comboBox_input_curve.addItem(str(canonical_name), {"canonical_id": canonical_id, "canonical_name": canonical_name})
+            curve_payload = {"canonical_id": canonical_id, "canonical_name": canonical_name}
+            self.comboBox_input_curve.addItem(str(canonical_name), curve_payload)
+            item = QtWidgets.QListWidgetItem(str(canonical_name))
+            item.setData(QtCore.Qt.UserRole, curve_payload)
+            self.listWidget_formula_curves.addItem(item)
 
     def _refresh_global_features(self, select_feature_id: int | None = None) -> None:
         rows = session.query(FeatureCalculator).order_by(FeatureCalculator.feature_name, FeatureCalculator.id).all()
@@ -333,13 +373,131 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             return ", ".join(name for name in names if name)
         return str(raw_inputs or "")
 
+    def _current_mode(self) -> str:
+        return str(self.comboBox_mode.currentData() or "operation")
+
+    def _set_form_row_visible(self, widget: QtWidgets.QWidget, visible: bool) -> None:
+        label = self.create_group.layout().labelForField(widget)
+        if label is not None:
+            label.setVisible(visible)
+        widget.setVisible(visible)
+
+    def _update_mode_fields(self) -> None:
+        is_formula = self._current_mode() == "formula"
+        self.create_group.setTitle("Create formula feature" if is_formula else "Create operation feature")
+        for widget in (self.textEdit_formula_expression, self.listWidget_formula_curves, self.label_formula_inputs):
+            self._set_form_row_visible(widget, is_formula)
+        self._set_form_row_visible(self.widget_formula_tokens, is_formula)
+        for button in self._formula_token_buttons:
+            button.setVisible(is_formula)
+        for widget in (
+            self.comboBox_input_curve,
+            self.comboBox_operation,
+            self.spinBox_rolling_window,
+            self.spinBox_min_periods,
+            self.comboBox_normalization_scope,
+        ):
+            self._set_form_row_visible(widget, not is_formula)
+        self._update_operation_fields()
+
+    def _insert_formula_token(self, token: str) -> None:
+        cursor = self.textEdit_formula_expression.textCursor()
+        if token in {"log", "abs", "sqrt"}:
+            cursor.insertText(f"{token}()")
+            cursor.movePosition(QtGui.QTextCursor.Left)
+        elif token in {"+", "-", "*", "/"}:
+            cursor.insertText(f" {token} ")
+        else:
+            cursor.insertText(token)
+        self.textEdit_formula_expression.setTextCursor(cursor)
+        self.textEdit_formula_expression.setFocus()
+
+    def _canonical_by_formula_name(self) -> dict[str, dict[str, Any]]:
+        mapping: dict[str, dict[str, Any]] = {}
+        for curve in self.all_canonical_parameters:
+            name = str(curve.get("canonical_name") or "").strip()
+            if name:
+                mapping[name] = curve
+        return mapping
+
+    def _resolve_formula_inputs(self, expression: str) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+        names, parse_errors = extract_formula_input_names(expression)
+        errors = [error.message for error in parse_errors]
+        canonical_by_name = self._canonical_by_formula_name()
+        inputs: list[dict[str, Any]] = []
+        for name in names:
+            canonical = canonical_by_name.get(name)
+            if canonical is None:
+                errors.append(f"Unknown canonical curve '{name}'. Use names from Available curves.")
+                continue
+            inputs.append(
+                {
+                    "canonical_id": int(canonical["canonical_id"]) if canonical.get("canonical_id") is not None else None,
+                    "canonical_name": canonical.get("canonical_name"),
+                }
+            )
+        return inputs, names, errors
+
+    def _build_formula_config(self) -> tuple[dict[str, Any] | None, list[str]]:
+        errors: list[str] = []
+        feature_name = self.lineEdit_feature_name.text().strip()
+        if not feature_name:
+            errors.append("Feature name is required.")
+        elif feature_name.casefold() in self._existing_feature_names():
+            errors.append(f"Feature name '{feature_name}' already exists in feature_calculator.")
+        elif feature_name.casefold() in self._canonical_names():
+            errors.append(f"Feature name '{feature_name}' matches a canonical curve name.")
+
+        expression = self.textEdit_formula_expression.toPlainText().strip()
+        if not expression:
+            errors.append("Expression is required for formula mode.")
+
+        inputs, names, input_errors = self._resolve_formula_inputs(expression)
+        errors.extend(input_errors)
+        if expression and not names:
+            errors.append("Formula must reference at least one canonical curve.")
+        if names and len(inputs) == len(names):
+            formula, formula_errors = parse_safe_formula(expression, set(names))
+            if formula_errors or formula is None:
+                errors.extend(error.message for error in formula_errors)
+
+        outlier_policy = self.comboBox_outlier_policy.currentData() or FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY
+        if outlier_policy != FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY:
+            errors.append("Only outlier_policy=none is supported in MVP.")
+
+        self.label_formula_inputs.setText(", ".join(entry.get("canonical_name", "") for entry in inputs) or "—")
+        if errors:
+            return None, errors
+
+        config: dict[str, Any] = {
+            "version": 1,
+            "mode": "formula",
+            "expression": expression,
+            "inputs": inputs,
+            "depth_grid_policy": FEATURE_CALCULATOR_DEPTH_GRID_POLICY,
+            "invalid_math_policy": FEATURE_CALCULATOR_INVALID_MATH_POLICY,
+            "outlier_policy": outlier_policy,
+        }
+        parsed_config, parse_errors = parse_feature_calculator_config({"feature_name": feature_name, "params_json": config})
+        if parse_errors:
+            errors.extend(error.message for error in parse_errors)
+        if parsed_config is not None:
+            errors.extend(error.message for error in validate_feature_calculator_config(parsed_config))
+        return (None, errors) if errors else (config, [])
+
+    def _build_current_config(self) -> tuple[dict[str, Any] | None, list[str]]:
+        if self._current_mode() == "formula":
+            return self._build_formula_config()
+        return self._build_operation_config()
+
     def _update_operation_fields(self) -> None:
         operation = self.comboBox_operation.currentData()
         is_rolling = operation in ROLLING_OPERATIONS
         is_normalization = operation in NORMALIZATION_OPERATIONS
-        self.spinBox_rolling_window.setEnabled(is_rolling)
-        self.spinBox_min_periods.setEnabled(is_rolling)
-        self.comboBox_normalization_scope.setEnabled(is_normalization)
+        operation_mode = self._current_mode() == "operation"
+        self.spinBox_rolling_window.setEnabled(operation_mode and is_rolling)
+        self.spinBox_min_periods.setEnabled(operation_mode and is_rolling)
+        self.comboBox_normalization_scope.setEnabled(operation_mode and is_normalization)
 
     def _existing_feature_names(self) -> set[str]:
         return {str(name).strip().casefold() for (name,) in session.query(FeatureCalculator.feature_name).all() if name}
@@ -416,13 +574,13 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         return config, errors
 
     def _validate_form_clicked(self) -> None:
-        _config, errors = self._build_operation_config()
+        _config, errors = self._build_current_config()
         if errors:
             self.textEdit_validation.setPlainText("\n".join(errors))
-            QtWidgets.QMessageBox.warning(self, "Validate operation feature", "Исправьте ошибки формы перед сохранением.")
+            QtWidgets.QMessageBox.warning(self, "Validate calculated feature", "Исправьте ошибки формы перед сохранением.")
             return
         self.textEdit_validation.setPlainText("Validation OK.")
-        QtWidgets.QMessageBox.information(self, "Validate operation feature", "Operation feature definition is valid.")
+        QtWidgets.QMessageBox.information(self, "Validate calculated feature", "Calculated feature definition is valid.")
 
     def _expression_for_config(self, config: dict[str, Any]) -> str:
         operation = str(config.get("operation") or "")
@@ -432,7 +590,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         return f"{operation}({input_name})"
 
     def _save_feature_clicked(self) -> None:
-        config, errors = self._build_operation_config()
+        config, errors = self._build_current_config()
         if errors or config is None:
             self.textEdit_validation.setPlainText("\n".join(errors))
             QtWidgets.QMessageBox.warning(self, "SAVE feature", "Невозможно сохранить признак: форма содержит ошибки.")
@@ -440,12 +598,12 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         feature_name = self.lineEdit_feature_name.text().strip()
         inputs_json = json.dumps(config["inputs"], ensure_ascii=False)
         params_json = json.dumps(config, ensure_ascii=False, sort_keys=True)
-        expression = self._expression_for_config(config)
+        expression = str(config.get("expression") or self._expression_for_config(config))
         feature = FeatureCalculator(
             feature_name=feature_name,
             expression=expression,
             used_canonical_well_log=inputs_json,
-            transform_type=str(config["operation"]),
+            transform_type=str(config.get("operation") or config.get("mode")),
             params_json=params_json,
         )
         try:
@@ -456,9 +614,12 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, "SAVE feature", f"Не удалось сохранить FeatureCalculator: {exc}")
             return
         self.lineEdit_feature_name.clear()
+        if self._current_mode() == "formula":
+            self.textEdit_formula_expression.clear()
+            self.label_formula_inputs.setText("—")
         self.textEdit_validation.setPlainText(f"Saved feature '{feature_name}'.")
         self._refresh_global_features(select_feature_id=int(feature.id))
-        self._set_info(f"WELL LOG CONSTR: сохранён operation-признак {feature_name}.", "green")
+        self._set_info(f"WELL LOG CONSTR: сохранён {config.get('mode')}-признак {feature_name}.", "green")
         QtWidgets.QMessageBox.information(self, "SAVE feature", f"Feature '{feature_name}' saved.")
 
     def _feature_selection_changed(self) -> None:

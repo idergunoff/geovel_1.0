@@ -17,6 +17,7 @@ from well_feature_calculator_formula import (
     WellLogCurveSeries,
     evaluate_feature_calculator_for_well,
     evaluate_formula_series,
+    extract_formula_input_names,
     parse_safe_formula,
     validate_depth_grid_compatibility,
 )
@@ -46,6 +47,12 @@ def assert_close_list(actual, expected, *, abs_tol=1e-9):
     for actual_value, expected_value in zip(actual, expected):
         assert math.isclose(actual_value, expected_value, abs_tol=abs_tol)
 
+
+def test_extract_formula_input_names_ignores_allowed_functions():
+    names, errors = extract_formula_input_names("log(GR) + sqrt(RHOB) - abs(GR)")
+
+    assert errors == []
+    assert names == ["GR", "RHOB"]
 
 def test_formula_adds_two_curves():
     values, errors = evaluate_formula_series("A + B", [series("A", [1.0, 2.0]), series("B", [3.0, 4.0])])

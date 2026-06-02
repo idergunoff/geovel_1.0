@@ -580,6 +580,20 @@ class SafeFormulaExpression:
     allowed_names: set[str]
 
 
+def extract_formula_input_names(expression: str) -> tuple[list[str], list[FeatureCalculatorError]]:
+    """Return unique curve names referenced by a formula, excluding allowed function names."""
+    if not str(expression or "").strip():
+        return [], [_error("formula_parse_error", "Формула пуста.")]
+    try:
+        tree = ast.parse(str(expression), mode="eval")
+    except SyntaxError as exc:
+        return [], [_error("formula_parse_error", f"Синтаксическая ошибка формулы: {exc.msg}.")]
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id not in FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS and node.id not in names:
+            names.append(node.id)
+    return names, []
+
 def parse_safe_formula(expression: str, allowed_names: set[str]) -> tuple[SafeFormulaExpression | None, list[FeatureCalculatorError]]:
     """Parse and validate formula expression using AST only, never eval."""
     if not str(expression or "").strip():
