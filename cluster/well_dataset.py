@@ -920,7 +920,50 @@ def clear_all_wells_from_cluster_dataset() -> None:
 
 
 
+def _format_feature_calculator_error(error: Any) -> str:
+    feature_name = getattr(error, 'feature_name', None) or (
+        f"calculator_id={getattr(error, 'calculator_id', None)}" if getattr(error, 'calculator_id', None) is not None else 'calculator'
+    )
+    well_label = getattr(error, 'well_name', None) or (
+        f"well_id={getattr(error, 'well_id', None)}" if getattr(error, 'well_id', None) is not None else 'dataset'
+    )
+    canonical_name = getattr(error, 'canonical_name', None)
+    code = getattr(error, 'code', 'error')
+    message = getattr(error, 'message', str(error))
+    canonical_part = f" / {canonical_name}" if canonical_name else ''
+    return f"{feature_name} / {well_label}{canonical_part}: [{code}] {message}"
+
+
+def _show_calculator_collect_errors(errors: list[Any], *, title: str = 'COLLECT WELL LOG') -> None:
+    preview_limit = 10
+    preview_lines = [_format_feature_calculator_error(error) for error in errors[:preview_limit]]
+    suffix = ''
+    if len(errors) > preview_limit:
+        suffix = f"\n… ещё {len(errors) - preview_limit} ошибок; полный список записан в окно информации."
+    message = (
+        f"COLLECT WELL LOG заблокирован: {len(errors)} ошибки расчёта признаков.\n"
+        + "\n".join(f"{index}) {line}" for index, line in enumerate(preview_lines, start=1))
+        + suffix
+    )
+    full_log = (
+        f"COLLECT WELL LOG заблокирован: {len(errors)} ошибки расчёта признаков.\n"
+        + "\n".join(
+            f"{index}) {_format_feature_calculator_error(error)}"
+            for index, error in enumerate(errors, start=1)
+        )
+    )
+    QMessageBox.critical(MainWindow, title, message)
+    set_info(full_log.replace('\n', '<br>'), 'red')
+
+
 def collect_cluster_well_log_dataset_data() -> None:
+    from .well_feature_calculator import (
+        FeatureCalculatorError,
+        evaluate_feature_calculator_for_well,
+        parse_feature_calculator_config,
+        validate_calculators_for_dataset,
+    )
+
     combo = getattr(ui, 'comboBox_cluster_well_set', None)
     if combo is None:
         return
@@ -936,15 +979,22 @@ def collect_cluster_well_log_dataset_data() -> None:
         QMessageBox.critical(MainWindow, 'COLLECT WELL LOG', 'В наборе нет скважин для сборки data.')
         return
 
-    params = (
+    canonical_params = (
         session.query(ClusterWellLogParameter)
         .join(CanonicalWellLog, CanonicalWellLog.id == ClusterWellLogParameter.canonical_id)
         .filter(ClusterWellLogParameter.dataset_id == dataset_id)
         .order_by(CanonicalWellLog.canonical_name)
         .all()
     )
-    if not params:
-        QMessageBox.critical(MainWindow, 'COLLECT WELL LOG', 'В наборе нет выбранных параметров каротажа.')
+    calculator_params = (
+        session.query(ClusterWellLogParameterFromCalculator)
+        .filter(ClusterWellLogParameterFromCalculator.dataset_id == dataset_id)
+        .join(FeatureCalculator, FeatureCalculator.id == ClusterWellLogParameterFromCalculator.calculator_id)
+        .order_by(FeatureCalculator.feature_name, FeatureCalculator.id)
+        .all()
+    )
+    if not canonical_params and not calculator_params:
+        QMessageBox.critical(MainWindow, 'COLLECT WELL LOG', 'В наборе нет выбранных canonical или calculator параметров каротажа.')
         return
 
     wells_without_interval = [row.well.name if row.well else str(row.well_id) for row in wells if row.top_md >= row.bottom_md]
@@ -952,18 +1002,37 @@ def collect_cluster_well_log_dataset_data() -> None:
         QMessageBox.warning(MainWindow, 'COLLECT WELL LOG', 'У части скважин некорректные интервалы. Исправьте интервалы и повторите.')
         return
 
+    preflight_errors = validate_calculators_for_dataset(dataset_id, db_session=session)
+    if preflight_errors:
+        _show_calculator_collect_errors(preflight_errors)
+        _set_cluster_well_collect_button_state(False)
+        return
+
+    calculator_configs = []
+    for row in calculator_params:
+        if row.calculator is None:
+            continue
+        config, parse_errors = parse_feature_calculator_config(row.calculator)
+        if parse_errors:
+            _show_calculator_collect_errors(parse_errors)
+            _set_cluster_well_collect_button_state(False)
+            return
+        if config is not None:
+            calculator_configs.append((row.calculator, config))
+
     aliases = session.query(AliasWellLog.alias_name_norm, AliasWellLog.canonical_id).all()
     alias_to_canonical = {str(name): int(cid) for name, cid in aliases}
 
-    log_feature_columns = [row.canonical_name.canonical_name for row in params if row.canonical_name]
-    columns = ['well_id_depth', WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME] + log_feature_columns
+    canonical_feature_columns = [row.canonical_name.canonical_name for row in canonical_params if row.canonical_name]
+    calculator_feature_columns = [row.calculator.feature_name for row in calculator_params if row.calculator]
+    columns = ['well_id_depth', WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME] + canonical_feature_columns + calculator_feature_columns
     rows = [columns]
+    collect_errors: list[Any] = []
 
     for wf in wells:
         top_md = float(wf.top_md)
         bottom_md = float(wf.bottom_md)
-        # сбор по глубине
-        depth_map = {}
+        depth_map: dict[float, dict[int, Any]] = {}
         for wl in session.query(WellLog).filter(WellLog.well_id == wf.well_id).all():
             if wl.curve_data is None or wl.step in (None, 0):
                 continue
@@ -985,25 +1054,76 @@ def collect_cluster_well_log_dataset_data() -> None:
                 if depth < top_md or depth > bottom_md:
                     continue
                 rounded_depth = round(depth, 6)
-                key = (rounded_depth)
-                if key not in depth_map:
-                    depth_map[key] = {}
-                depth_map[key][canonical_id] = value
+                depth_map.setdefault(rounded_depth, {})[canonical_id] = value
 
-        for sample_index, depth in enumerate(sorted(depth_map.keys())):
+        calculator_value_map: dict[float, dict[int, Any]] = {}
+        for calculator, config in calculator_configs:
+            result = evaluate_feature_calculator_for_well(
+                config,
+                well_id=int(wf.well_id),
+                top_md=top_md,
+                bottom_md=bottom_md,
+                db_session=session,
+            )
+            if result.errors:
+                collect_errors.extend(result.errors)
+                continue
+            for depth, value in zip(result.depths, result.values):
+                calculator_value_map.setdefault(round(float(depth), 6), {})[int(calculator.id)] = value
+
+        combined_depths = sorted(set(depth_map.keys()) | set(calculator_value_map.keys()))
+        for depth in combined_depths:
+            calculator_values = calculator_value_map.get(depth, {})
+            missing_calculators = [
+                calculator.feature_name
+                for calculator, _config in calculator_configs
+                if int(calculator.id) not in calculator_values
+            ]
+            if missing_calculators:
+                well_name = wf.well.name if wf.well and wf.well.name else f'well_id={wf.well_id}'
+                collect_errors.append(
+                    FeatureCalculatorError(
+                        code='missing_calculator_value_at_depth',
+                        message=(
+                            f"Нет значения calculator-признаков {', '.join(missing_calculators)} "
+                            f"на глубине {depth:g}; строки с неполным набором выбранных calculator-признаков запрещены."
+                        ),
+                        feature_name=', '.join(missing_calculators),
+                        well_id=int(wf.well_id),
+                        well_name=well_name,
+                    )
+                )
+
+        if collect_errors:
+            continue
+
+        for sample_index, depth in enumerate(combined_depths):
             line = [f"{int(wf.well_id)}_{depth:g}", sample_index]
-            values_by_canonical = depth_map[depth]
-            for param in params:
+            values_by_canonical = depth_map.get(depth, {})
+            for param in canonical_params:
                 line.append(values_by_canonical.get(param.canonical_id, None))
+            values_by_calculator = calculator_value_map.get(depth, {})
+            for calculator, _config in calculator_configs:
+                line.append(values_by_calculator.get(int(calculator.id)))
             rows.append(line)
+
+    if collect_errors:
+        _show_calculator_collect_errors(collect_errors)
+        _set_cluster_well_collect_button_state(False)
+        return
 
     _invalidate_cluster_well_dataset_data(dataset_id)
     session.add(WellLogClusterDatasetData(dataset_id=dataset_id, data=_serialize_cluster_dataset(rows)))
     session.commit()
     _set_cluster_well_collect_button_state(True)
+    row_count = max(0, len(rows) - 1)
+    canonical_count = len(canonical_feature_columns)
+    calculator_count = len(calculator_feature_columns)
+    total_feature_count = len(columns) - 1
     set_info(
-        f'COLLECT WELL LOG: собрано строк {max(0, len(rows)-1)} и признаков {len(columns)-1} '
-        f'(включая {WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME}).',
+        f'COLLECT WELL LOG: собрано строк {row_count}, canonical признаков {canonical_count}, '
+        f'calculator признаков {calculator_count}, всего признаков {total_feature_count} '
+        f'включая {WELL_LOG_CLUSTER_SAMPLE_INDEX_FEATURE_NAME}.',
         'green'
     )
 
