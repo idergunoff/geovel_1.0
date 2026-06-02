@@ -15,8 +15,29 @@ def _set_cluster_well_collect_button_state(is_actual: bool) -> None:
         return
     if is_actual:
         button.setStyleSheet('background-color: rgb(143, 240, 164);')
+        button.setToolTip(
+            'COLLECT WELL LOG: data текущего набора актуальны. Повторный запуск пересоберёт canonical curves и calculator features.'
+        )
     else:
         button.setStyleSheet('background-color: rgb(255, 166, 166);')
+        button.setToolTip(
+            'COLLECT WELL LOG: набор не собран или был изменён. Расчётный признак может заблокировать сборку, '
+            'если есть depth grid mismatch / несовместимая глубинная сетка или недопустимая математика.'
+        )
+
+
+def _set_cluster_well_constructor_button_state(has_dataset: bool) -> None:
+    button = getattr(ui, 'pushButton_cluster_well_log_constructor', None)
+    if button is None:
+        return
+    button.setEnabled(bool(has_dataset))
+    button.setToolTip(
+        'CONSTR: открыть конструктор расчётных признаков Well Log для текущего набора. '
+        'Глобальные признаки можно добавить в dataset как [calc]; interpolation не используется, '
+        'поэтому входные canonical curves должны иметь совместимую глубинную сетку.'
+        if has_dataset else
+        'CONSTR недоступен: сначала создайте или выберите текущий набор Well Log.'
+    )
 
 
 def _invalidate_cluster_well_dataset_data(dataset_id: int) -> int:
@@ -70,6 +91,7 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
 
     list_well.clear()
     list_log.clear()
+    _set_cluster_well_constructor_button_state(dataset_id is not None)
     if dataset_id is None:
         _set_cluster_well_collect_button_state(False)
         return
@@ -131,6 +153,7 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
 
         label_text = f'{canonical_name} ({int(covered_well_count)}/{int(dataset_well_count)})'
         item = QListWidgetItem(label_text)
+        item.setToolTip('canonical curve / каноническая кривая selected for the current dataset.')
         item.setData(Qt.UserRole, ('canonical', row.canonical_id))
         list_log.addItem(item)
 
@@ -144,6 +167,10 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
     for row in calculator_params:
         feature_name = row.calculator.feature_name if row.calculator else f'calculator_id={row.calculator_id}'
         item = QListWidgetItem(f'{feature_name} [calc]')
+        item.setToolTip(
+            '[calc] means calculator feature / расчётный признак from the global feature library. '
+            'It is calculated during COLLECT and can block COLLECT if validation fails.'
+        )
         item.setData(Qt.UserRole, ('calculator', row.calculator_id))
         list_log.addItem(item)
 
