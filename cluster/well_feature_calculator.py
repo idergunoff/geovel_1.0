@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 import json
 import math
+import operator
 import statistics
 from dataclasses import dataclass, field
 from typing import Any, Sequence
@@ -13,6 +15,10 @@ FEATURE_CALCULATOR_INVALID_MATH_POLICY = "block"
 FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY = "none"
 FEATURE_CALCULATOR_DEFAULT_NORMALIZATION_SCOPE = "whole_well"
 FEATURE_CALCULATOR_NORMALIZATION_SCOPES = {"whole_well", "interval"}
+FEATURE_CALCULATOR_DEPTH_PRECISION = 6
+FEATURE_CALCULATOR_STEP_TOLERANCE = 1e-9
+FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS = {"log", "abs", "sqrt"}
+
 FEATURE_CALCULATOR_UNARY_OPERATIONS = {
     "log",
     "abs",
@@ -497,6 +503,243 @@ def apply_unary_operation(
     return result_values, []
 
 
+_FORMULA_BINARY_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+}
+_FORMULA_UNARY_OPERATORS = {
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
+}
+
+
+class _FormulaCalculationError(Exception):
+    """Expected point-level formula calculation error with a stable error code."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+class _SafeFormulaValidator(ast.NodeVisitor):
+    """Validate a formula AST against the stage-3 formula whitelist."""
+
+    def __init__(self, allowed_names: set[str]) -> None:
+        self.allowed_names = allowed_names
+        self.errors: list[FeatureCalculatorError] = []
+
+    def _add_validation_error(self, message: str) -> None:
+        self.errors.append(_error("formula_validation_error", message))
+
+    def generic_visit(self, node: ast.AST) -> None:
+        self._add_validation_error(f"Недопустимый элемент формулы: {type(node).__name__}.")
+
+    def visit_Expression(self, node: ast.Expression) -> None:
+        self.visit(node.body)
+
+    def visit_Constant(self, node: ast.Constant) -> None:
+        if not isinstance(node.value, (int, float)) or isinstance(node.value, bool):
+            self._add_validation_error("В формулах разрешены только числовые константы.")
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if node.id not in self.allowed_names:
+            self._add_validation_error(f"Имя '{node.id}' не входит в список inputs расчётного признака.")
+
+    def visit_BinOp(self, node: ast.BinOp) -> None:
+        if type(node.op) not in _FORMULA_BINARY_OPERATORS and not isinstance(node.op, ast.Div):
+            self._add_validation_error(f"Оператор {type(node.op).__name__} не разрешён; доступны только +, -, *, /.")
+        self.visit(node.left)
+        self.visit(node.right)
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+        if type(node.op) not in _FORMULA_UNARY_OPERATORS:
+            self._add_validation_error("Разрешены только unary + и unary -.")
+        self.visit(node.operand)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if not isinstance(node.func, ast.Name):
+            self._add_validation_error("Вызовы атрибутов и выражений запрещены; доступны только log, abs, sqrt.")
+        elif node.func.id not in FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS:
+            self._add_validation_error(f"Функция '{node.func.id}' не разрешена; доступны только log, abs, sqrt.")
+        if node.keywords:
+            self._add_validation_error("Именованные аргументы функций в формулах не поддерживаются.")
+        if len(node.args) != 1:
+            self._add_validation_error("Функции log/abs/sqrt принимают ровно один аргумент.")
+        for arg in node.args:
+            self.visit(arg)
+
+
+@dataclass(slots=True)
+class SafeFormulaExpression:
+    """Parsed and validated expression that can be evaluated without eval/builtins."""
+
+    expression: str
+    tree: ast.Expression
+    allowed_names: set[str]
+
+
+def parse_safe_formula(expression: str, allowed_names: set[str]) -> tuple[SafeFormulaExpression | None, list[FeatureCalculatorError]]:
+    """Parse and validate formula expression using AST only, never eval."""
+    if not str(expression or "").strip():
+        return None, [_error("formula_parse_error", "Формула пуста.")]
+    try:
+        tree = ast.parse(str(expression), mode="eval")
+    except SyntaxError as exc:
+        return None, [_error("formula_parse_error", f"Синтаксическая ошибка формулы: {exc.msg}.")]
+    validator = _SafeFormulaValidator(allowed_names)
+    validator.visit(tree)
+    if validator.errors:
+        return None, validator.errors
+    return SafeFormulaExpression(expression=str(expression), tree=tree, allowed_names=set(allowed_names)), []
+
+
+def _evaluate_safe_formula_node(node: ast.AST, values_by_name: dict[str, float]) -> float:
+    if isinstance(node, ast.Expression):
+        return _evaluate_safe_formula_node(node.body, values_by_name)
+    if isinstance(node, ast.Constant):
+        value = float(node.value)
+    elif isinstance(node, ast.Name):
+        if node.id not in values_by_name:
+            raise _FormulaCalculationError("missing_value_at_depth", f"Нет значения входной кривой '{node.id}' на текущей глубине.")
+        value = values_by_name[node.id]
+    elif isinstance(node, ast.BinOp):
+        left = _evaluate_safe_formula_node(node.left, values_by_name)
+        right = _evaluate_safe_formula_node(node.right, values_by_name)
+        if isinstance(node.op, ast.Div):
+            if right == 0:
+                raise _FormulaCalculationError("division_by_zero", "Деление на ноль в формуле расчётного признака.")
+            value = left / right
+        else:
+            value = _FORMULA_BINARY_OPERATORS[type(node.op)](left, right)
+    elif isinstance(node, ast.UnaryOp):
+        operand = _evaluate_safe_formula_node(node.operand, values_by_name)
+        value = _FORMULA_UNARY_OPERATORS[type(node.op)](operand)
+    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        argument = _evaluate_safe_formula_node(node.args[0], values_by_name)
+        if node.func.id == "log":
+            if argument <= 0:
+                raise _FormulaCalculationError("invalid_log_domain", "log(x) определён только для x > 0.")
+            value = math.log(argument)
+        elif node.func.id == "sqrt":
+            if argument < 0:
+                raise _FormulaCalculationError("invalid_sqrt_domain", "sqrt(x) определён только для x >= 0.")
+            value = math.sqrt(argument)
+        elif node.func.id == "abs":
+            value = abs(argument)
+        else:
+            raise _FormulaCalculationError("formula_validation_error", f"Функция '{node.func.id}' не разрешена.")
+    else:
+        raise _FormulaCalculationError("formula_validation_error", f"Недопустимый элемент формулы: {type(node).__name__}.")
+
+    if not math.isfinite(value):
+        raise _FormulaCalculationError("non_finite_result", "Результат формулы содержит NaN/inf; расчёт признака заблокирован.")
+    return value
+
+
+def evaluate_safe_formula_point(
+    formula: SafeFormulaExpression,
+    values_by_name: dict[str, float | None],
+) -> tuple[float | None, FeatureCalculatorError | None]:
+    """Evaluate a parsed formula for one depth point and return a blocking error on failure."""
+    finite_values: dict[str, float] = {}
+    for name in formula.allowed_names:
+        value = values_by_name.get(name)
+        if value is None or not math.isfinite(value):
+            return None, _error("missing_value_at_depth", f"На текущей глубине отсутствует конечное значение входной кривой '{name}'.")
+        finite_values[name] = float(value)
+    try:
+        return _evaluate_safe_formula_node(formula.tree, finite_values), None
+    except _FormulaCalculationError as exc:
+        return None, _error(exc.code, exc.message)
+
+
+def evaluate_formula_series(
+    expression: str,
+    series_list: Sequence[WellLogCurveSeries],
+) -> tuple[list[float | None], list[FeatureCalculatorError]]:
+    """Evaluate formula for aligned input series; any point error blocks the whole feature."""
+    if not series_list:
+        return [], [_error("missing_inputs", "Для расчёта формулы нужны входные canonical-кривые.")]
+    names = [series.canonical_name for series in series_list]
+    if len(names) != len(set(names)):
+        return [], [_error("formula_validation_error", "Имена входных canonical-кривых формулы должны быть уникальными.")]
+    formula, errors = parse_safe_formula(expression, set(names))
+    if errors or formula is None:
+        return [], errors
+
+    result_values: list[float | None] = []
+    for index in range(len(series_list[0].depths)):
+        values_by_name = {series.canonical_name: series.values[index] for series in series_list}
+        value, point_error = evaluate_safe_formula_point(formula, values_by_name)
+        if point_error:
+            depth = series_list[0].depths[index]
+            point_error.message = f"{point_error.message} Глубина: {depth:g}."
+            return [], [point_error]
+        result_values.append(value)
+    non_finite_error = _non_finite_result_error(result_values)
+    if non_finite_error:
+        return [], [non_finite_error]
+    return result_values, []
+
+
+def _rounded_depths(depths: Sequence[float], precision: int = FEATURE_CALCULATOR_DEPTH_PRECISION) -> list[float]:
+    return [round(float(depth), precision) for depth in depths]
+
+
+def validate_depth_grid_compatibility(
+    series_list: Sequence[WellLogCurveSeries],
+    *,
+    config: FeatureCalculatorConfig | None = None,
+    precision: int = FEATURE_CALCULATOR_DEPTH_PRECISION,
+    step_tolerance: float = FEATURE_CALCULATOR_STEP_TOLERANCE,
+) -> list[FeatureCalculatorError]:
+    """Strictly verify that formula inputs share one depth grid; no interpolation is used."""
+    if len(series_list) <= 1:
+        return []
+    feature_name = config.feature_name if config else None
+    well_id = series_list[0].well_id if series_list else None
+    input_names = [series.canonical_name for series in series_list]
+    details = []
+    for series in series_list:
+        first = f"{series.depths[0]:g}" if series.depths else "n/a"
+        last = f"{series.depths[-1]:g}" if series.depths else "n/a"
+        details.append(f"{series.canonical_name}: step={series.step:g}, range=[{first}, {last}], points={len(series.depths)}")
+
+    def mismatch(reason: str) -> list[FeatureCalculatorError]:
+        feature_label = feature_name or "без имени"
+        message = (
+            f"Расчётный признак '{feature_label}' для скважины id={well_id} заблокирован: {reason}. "
+            f"Входные кривые: {', '.join(input_names)}. Детали: {'; '.join(details)}. "
+            "Интерполяция в текущей версии не используется; выберите кривые с полностью совпадающей глубинной сеткой."
+        )
+        return [_error("depth_grid_mismatch", message, config.calculator_id if config else None, feature_name, well_id=well_id)]
+
+    for series in series_list:
+        if not series.depths or series.step <= 0 or not math.isfinite(series.step):
+            return mismatch("не все входные кривые имеют валидный step и непустой интервал")
+
+    reference = series_list[0]
+    reference_step = float(reference.step)
+    reference_depths = _rounded_depths(reference.depths, precision)
+    reference_count = len(reference_depths)
+    reference_first = reference_depths[0]
+    reference_last = reference_depths[-1]
+
+    for series in series_list[1:]:
+        if not math.isclose(float(series.step), reference_step, rel_tol=step_tolerance, abs_tol=step_tolerance):
+            return mismatch("различаются шаги глубинной сетки")
+        candidate_depths = _rounded_depths(series.depths, precision)
+        if len(candidate_depths) != reference_count:
+            return mismatch("различается количество точек в расчётном интервале")
+        if candidate_depths[0] != reference_first or candidate_depths[-1] != reference_last:
+            return mismatch("различаются первая или последняя глубина расчётного интервала")
+        if candidate_depths != reference_depths:
+            return mismatch(f"списки глубин после округления до {precision} знаков не совпадают")
+    return []
+
+
 def _resolve_canonical(input_curve: FeatureCalculatorInput, db_session: Any) -> tuple[Any | None, FeatureCalculatorError | None]:
     from models_db.model_cluster import CanonicalWellLog
 
@@ -626,6 +869,37 @@ def load_well_log_curve_series(
     return None, candidate_errors or [_error("missing_curve", f"Не удалось загрузить кривая canonical '{canonical.canonical_name}'.", well_id=int(well_id), canonical_name=canonical.canonical_name)]
 
 
+def load_input_series_for_calculator(
+    config: FeatureCalculatorConfig,
+    well_id: int,
+    top_md: float,
+    bottom_md: float,
+    *,
+    db_session: Any = None,
+) -> tuple[list[WellLogCurveSeries], list[FeatureCalculatorError]]:
+    """Load all canonical input curves for one well/calculator interval."""
+    series_list: list[WellLogCurveSeries] = []
+    errors: list[FeatureCalculatorError] = []
+    for input_curve in config.inputs:
+        series, load_errors = load_well_log_curve_series(
+            well_id=int(well_id),
+            canonical_id=input_curve.canonical_id,
+            canonical_name=input_curve.canonical_name,
+            top_md=float(top_md),
+            bottom_md=float(bottom_md),
+            normalization_scope=config.normalization_scope,
+            db_session=db_session,
+        )
+        if load_errors or series is None:
+            errors.extend(
+                _copy_error_context(error, config=config, well_id=int(well_id), canonical_name=input_curve.canonical_name)
+                for error in load_errors
+            )
+            continue
+        series_list.append(series)
+    return series_list, errors
+
+
 def validate_feature_calculator_for_dataset(dataset_id: int, calculator_id: int) -> list[FeatureCalculatorError]:
     """Stage-1 dataset applicability placeholder; real checks are implemented later."""
     return [
@@ -649,21 +923,29 @@ def evaluate_feature_calculator_for_well(
     *,
     db_session: Any = None,
 ) -> FeatureCalculatorEvaluationResult:
-    """Evaluate a stage-2 unary operation for one well and one interval."""
+    """Evaluate a unary operation or strict formula for one well and one interval."""
     config_errors = validate_feature_calculator_config(config)
     if config_errors:
         return FeatureCalculatorEvaluationResult(errors=config_errors)
-    if config.mode != "operation":
+
+    if config.mode == "formula":
+        series_list, load_errors = load_input_series_for_calculator(
+            config,
+            well_id=int(well_id),
+            top_md=float(top_md),
+            bottom_md=float(bottom_md),
+            db_session=db_session,
+        )
+        if load_errors:
+            return FeatureCalculatorEvaluationResult(errors=load_errors)
+        grid_errors = validate_depth_grid_compatibility(series_list, config=config)
+        if grid_errors:
+            return FeatureCalculatorEvaluationResult(errors=grid_errors)
+        values, formula_errors = evaluate_formula_series(str(config.expression), series_list)
         return FeatureCalculatorEvaluationResult(
-            errors=[
-                _error(
-                    "unsupported_operation",
-                    "Formula mode будет реализован на следующем этапе; этап 2 поддерживает только mode=operation.",
-                    config.calculator_id,
-                    config.feature_name,
-                    well_id=int(well_id),
-                )
-            ]
+            values=values,
+            depths=series_list[0].depths if not formula_errors and series_list else [],
+            errors=[_copy_error_context(error, config=config, well_id=int(well_id)) for error in formula_errors],
         )
 
     input_curve = config.inputs[0]
