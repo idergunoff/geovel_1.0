@@ -155,6 +155,111 @@ def load_cluster_well_dataset_state_to_form(dataset_id: int | None = None) -> No
     _set_cluster_well_collect_button_state(has_data)
 
 
+
+def _get_active_cluster_well_dataset_id() -> int | None:
+    combo = getattr(ui, 'comboBox_cluster_well_set', None)
+    if combo is None:
+        return None
+    dataset_id = combo.currentData()
+    try:
+        return int(dataset_id) if dataset_id is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def open_cluster_well_log_constructor() -> None:
+    """
+    Opens the stage-1 Well Log calculated-feature constructor placeholder.
+
+    The constructor receives the current Well Log dataset context but does not
+    modify dataset parameters and does not start COLLECT/calculation.
+    """
+    dataset_id = _get_active_cluster_well_dataset_id()
+    if dataset_id is None:
+        QMessageBox.warning(MainWindow, 'CONSTR WELL LOG', 'Сначала создайте или выберите Well Log dataset.')
+        return
+
+    dataset = session.query(WellLogClusterDataset).filter(WellLogClusterDataset.id == dataset_id).first()
+    if dataset is None:
+        QMessageBox.warning(MainWindow, 'CONSTR WELL LOG', f'Well Log dataset id={dataset_id} не найден.')
+        return
+
+    wells = []
+    well_rows = (
+        session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == dataset_id)
+        .join(Well, Well.id == WellForCluster.well_id)
+        .order_by(Well.name, Well.id)
+        .all()
+    )
+    for row in well_rows:
+        wells.append({
+            'id': int(row.well_id),
+            'name': row.well.name if row.well and row.well.name else f'well_id={row.well_id}',
+            'top_md': float(row.top_md),
+            'bottom_md': float(row.bottom_md),
+        })
+
+    canonical_parameters = []
+    canonical_rows = (
+        session.query(ClusterWellLogParameter)
+        .filter(ClusterWellLogParameter.dataset_id == dataset_id)
+        .join(CanonicalWellLog, CanonicalWellLog.id == ClusterWellLogParameter.canonical_id)
+        .order_by(CanonicalWellLog.canonical_name)
+        .all()
+    )
+    for row in canonical_rows:
+        canonical_parameters.append({
+            'canonical_id': int(row.canonical_id),
+            'canonical_name': row.canonical_name.canonical_name if row.canonical_name else f'canonical_id={row.canonical_id}',
+        })
+
+    calculator_parameters = []
+    calculator_rows = (
+        session.query(ClusterWellLogParameterFromCalculator)
+        .filter(ClusterWellLogParameterFromCalculator.dataset_id == dataset_id)
+        .join(FeatureCalculator, FeatureCalculator.id == ClusterWellLogParameterFromCalculator.calculator_id)
+        .order_by(FeatureCalculator.feature_name)
+        .all()
+    )
+    for row in calculator_rows:
+        calculator_parameters.append({
+            'calculator_id': int(row.calculator_id),
+            'feature_name': row.calculator.feature_name if row.calculator else f'calculator_id={row.calculator_id}',
+        })
+
+    global_features = []
+    feature_rows = session.query(FeatureCalculator).order_by(FeatureCalculator.feature_name, FeatureCalculator.id).all()
+    for feature in feature_rows:
+        global_features.append({
+            'id': int(feature.id),
+            'feature_name': feature.feature_name,
+            'transform_type': feature.transform_type,
+            'used_canonical_well_log': feature.used_canonical_well_log,
+            'params_json': feature.params_json,
+        })
+
+    from qt.well_log_feature_constructor_form import WellLogFeatureConstructorDialog
+
+    dialog = WellLogFeatureConstructorDialog(
+        dataset_id=dataset_id,
+        dataset_name=dataset.name or f'dataset_id={dataset_id}',
+        wells=wells,
+        canonical_parameters=canonical_parameters,
+        calculator_parameters=calculator_parameters,
+        global_features=global_features,
+        parent=MainWindow,
+    )
+    dialog.setModal(False)
+    dialog.show()
+    dialog.raise_()
+    dialog.activateWindow()
+    if not hasattr(MainWindow, '_well_log_feature_constructor_dialogs'):
+        MainWindow._well_log_feature_constructor_dialogs = []
+    MainWindow._well_log_feature_constructor_dialogs.append(dialog)
+    dialog.finished.connect(lambda _=0, dlg=dialog: MainWindow._well_log_feature_constructor_dialogs.remove(dlg) if dlg in MainWindow._well_log_feature_constructor_dialogs else None)
+
+
 def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None:
     """
     Этап 2.4:

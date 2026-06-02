@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WellLogFeatureConstructorDialog</class>
+ <widget class="QDialog" name="WellLogFeatureConstructorDialog">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>820</width><height>560</height></rect>
+  </property>
+  <property name="windowTitle"><string>Well Log Feature Constructor</string></property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QLabel" name="label_well_log_constructor_dataset_title"><property name="text"><string>Dataset</string></property></widget></item>
+   <item><widget class="QLabel" name="label_well_log_constructor_description"><property name="wordWrap"><bool>true</bool></property><property name="text"><string>Конструктор расчётных признаков Well Log находится в разработке.</string></property></widget></item>
+   <item><widget class="QTreeWidget" name="treeWidget_well_log_constructor_dataset_context"/></item>
+   <item><widget class="QTableWidget" name="tableWidget_well_log_constructor_global_features"/></item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_buttons">
+     <item><spacer name="horizontalSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+     <item><widget class="QPushButton" name="pushButton_well_log_constructor_validate"><property name="enabled"><bool>false</bool></property><property name="text"><string>Validate</string></property></widget></item>
+     <item><widget class="QPushButton" name="pushButton_well_log_constructor_save"><property name="enabled"><bool>false</bool></property><property name="text"><string>Save</string></property></widget></item>
+     <item><widget class="QPushButton" name="pushButton_well_log_constructor_add_to_dataset"><property name="enabled"><bool>false</bool></property><property name="text"><string>Add to dataset</string></property></widget></item>
+     <item><widget class="QPushButton" name="pushButton_well_log_constructor_close"><property name="text"><string>Close</string></property></widget></item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
