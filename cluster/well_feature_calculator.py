@@ -900,19 +900,103 @@ def load_input_series_for_calculator(
     return series_list, errors
 
 
-def validate_feature_calculator_for_dataset(dataset_id: int, calculator_id: int) -> list[FeatureCalculatorError]:
-    """Stage-1 dataset applicability placeholder; real checks are implemented later."""
-    return [
-        FeatureCalculatorError(
-            code="not_implemented",
-            message=(
-                "Проверка применимости расчётного признака к Well Log dataset "
-                f"id={dataset_id} ещё не реализована."
-            ),
-            calculator_id=int(calculator_id),
-            severity="warning",
+def _attach_well_context(error: FeatureCalculatorError, well_row: Any) -> FeatureCalculatorError:
+    well_id = getattr(well_row, "well_id", None)
+    well = getattr(well_row, "well", None)
+    well_name = getattr(well, "name", None) if well is not None else None
+    return FeatureCalculatorError(
+        code=error.code,
+        message=error.message,
+        calculator_id=error.calculator_id,
+        feature_name=error.feature_name,
+        well_id=int(well_id) if well_id is not None else error.well_id,
+        well_name=str(well_name) if well_name else error.well_name,
+        canonical_name=error.canonical_name,
+        severity=error.severity,
+    )
+
+
+def validate_calculators_for_dataset(
+    dataset_id: int,
+    *,
+    calculator_ids: Sequence[int] | None = None,
+    db_session: Any = None,
+) -> list[FeatureCalculatorError]:
+    """Fully validate selected calculated features for every well/interval in a dataset.
+
+    The validation intentionally performs a real evaluation pass for each selected
+    calculator and each dataset well interval.  This preflight is used by COLLECT
+    so calculation errors are reported before any previous dataset ``data`` row is
+    deleted or replaced.
+    """
+    from models_db.model import session
+    from models_db.model_cluster import (
+        ClusterWellLogParameterFromCalculator,
+        FeatureCalculator,
+        WellForCluster,
+    )
+
+    if db_session is None:
+        db_session = session
+
+    well_rows = (
+        db_session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == int(dataset_id))
+        .order_by(WellForCluster.well_id)
+        .all()
+    )
+    if not well_rows:
+        return [
+            _error(
+                "empty_dataset_wells",
+                f"В Well Log dataset id={int(dataset_id)} нет скважин для проверки calculator-признаков.",
+            )
+        ]
+
+    query = (
+        db_session.query(FeatureCalculator)
+        .join(
+            ClusterWellLogParameterFromCalculator,
+            ClusterWellLogParameterFromCalculator.calculator_id == FeatureCalculator.id,
         )
-    ]
+        .filter(ClusterWellLogParameterFromCalculator.dataset_id == int(dataset_id))
+    )
+    if calculator_ids is not None:
+        normalized_ids = [int(calculator_id) for calculator_id in calculator_ids]
+        if not normalized_ids:
+            return []
+        query = query.filter(FeatureCalculator.id.in_(normalized_ids))
+    calculators = query.order_by(FeatureCalculator.feature_name, FeatureCalculator.id).all()
+    if not calculators:
+        return []
+
+    errors: list[FeatureCalculatorError] = []
+    for calculator in calculators:
+        config, parse_errors = parse_feature_calculator_config(calculator)
+        if parse_errors:
+            errors.extend(parse_errors)
+        if config is None:
+            continue
+        config_errors = validate_feature_calculator_config(config)
+        if config_errors:
+            errors.extend(config_errors)
+            continue
+        for well_row in well_rows:
+            result = evaluate_feature_calculator_for_well(
+                config,
+                well_id=int(well_row.well_id),
+                top_md=float(well_row.top_md),
+                bottom_md=float(well_row.bottom_md),
+                db_session=db_session,
+            )
+            if result.errors:
+                errors.extend(_attach_well_context(error, well_row) for error in result.errors)
+    return errors
+
+
+def validate_feature_calculator_for_dataset(dataset_id: int, calculator_id: int) -> list[FeatureCalculatorError]:
+    """Validate one calculated feature against all wells/intervals of a dataset."""
+    return validate_calculators_for_dataset(int(dataset_id), calculator_ids=[int(calculator_id)])
 
 
 def evaluate_feature_calculator_for_well(
