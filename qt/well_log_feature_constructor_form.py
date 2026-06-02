@@ -85,7 +85,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self._coverage_rows: list[Any] = []
 
         self.setObjectName("WellLogFeatureConstructorDialog")
-        self.setWindowTitle("Well Log Feature Constructor")
+        self.setWindowTitle("Конструктор признаков Well Log")
         self.resize(1280, 860)
         self._setup_ui()
         self._fill_dataset_context()
@@ -119,41 +119,41 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         left_widget = QtWidgets.QWidget(splitter)
         left_layout = QtWidgets.QVBoxLayout(left_widget)
 
-        context_group = QtWidgets.QGroupBox("Dataset context", left_widget)
+        context_group = QtWidgets.QGroupBox("Контекст набора данных", left_widget)
         context_layout = QtWidgets.QVBoxLayout(context_group)
         self.tree_dataset_context = QtWidgets.QTreeWidget(context_group)
         self.tree_dataset_context.setObjectName("treeWidget_well_log_constructor_dataset_context")
-        self.tree_dataset_context.setHeaderLabels(["Dataset context", "Value"])
+        self.tree_dataset_context.setHeaderLabels(["Контекст набора", "Значение"])
         self.tree_dataset_context.header().setStretchLastSection(True)
         context_layout.addWidget(self.tree_dataset_context)
         left_layout.addWidget(context_group, stretch=1)
 
-        self.create_group = QtWidgets.QGroupBox("Create calculated feature", left_widget)
+        self.create_group = QtWidgets.QGroupBox("Создать расчётный признак", left_widget)
         create_group = self.create_group
         create_layout = QtWidgets.QFormLayout(create_group)
 
         self.lineEdit_feature_name = QtWidgets.QLineEdit(create_group)
         self.lineEdit_feature_name.setObjectName("lineEdit_well_log_constructor_feature_name")
-        create_layout.addRow("Feature name", self.lineEdit_feature_name)
+        create_layout.addRow("Имя признака", self.lineEdit_feature_name)
 
         self.comboBox_mode = QtWidgets.QComboBox(create_group)
         self.comboBox_mode.setObjectName("comboBox_well_log_constructor_mode")
         self.comboBox_mode.addItem("Operation", "operation")
         self.comboBox_mode.addItem("Formula", "formula")
         self.comboBox_mode.currentIndexChanged.connect(self._update_mode_fields)
-        create_layout.addRow("Mode", self.comboBox_mode)
+        create_layout.addRow("Режим", self.comboBox_mode)
 
         self.textEdit_formula_expression = QtWidgets.QPlainTextEdit(create_group)
         self.textEdit_formula_expression.setObjectName("plainTextEdit_well_log_constructor_formula_expression")
         self.textEdit_formula_expression.setPlaceholderText("Example: (GR - RHOB) / (GR + RHOB)")
         self.textEdit_formula_expression.setMaximumHeight(74)
-        create_layout.addRow("Expression", self.textEdit_formula_expression)
+        create_layout.addRow("Выражение", self.textEdit_formula_expression)
 
         self.listWidget_formula_curves = QtWidgets.QListWidget(create_group)
         self.listWidget_formula_curves.setObjectName("listWidget_well_log_constructor_formula_curves")
         self.listWidget_formula_curves.setMaximumHeight(95)
         self.listWidget_formula_curves.itemDoubleClicked.connect(lambda item: self._insert_formula_token(item.text()))
-        create_layout.addRow("Available curves", self.listWidget_formula_curves)
+        create_layout.addRow("Доступные кривые", self.listWidget_formula_curves)
 
         self.widget_formula_tokens = QtWidgets.QWidget(create_group)
         self.widget_formula_tokens.setObjectName("widget_well_log_constructor_formula_tokens")
@@ -166,16 +166,16 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             button.clicked.connect(lambda _checked=False, value=token: self._insert_formula_token(value))
             self._formula_token_buttons.append(button)
             formula_buttons_layout.addWidget(button, index // 5, index % 5)
-        create_layout.addRow("Formula tokens", self.widget_formula_tokens)
+        create_layout.addRow("Операторы формулы", self.widget_formula_tokens)
 
         self.label_formula_inputs = QtWidgets.QLabel(create_group)
         self.label_formula_inputs.setObjectName("label_well_log_constructor_formula_inputs")
         self.label_formula_inputs.setWordWrap(True)
-        create_layout.addRow("Used curves", self.label_formula_inputs)
+        create_layout.addRow("Использованные кривые", self.label_formula_inputs)
 
         self.comboBox_input_curve = QtWidgets.QComboBox(create_group)
         self.comboBox_input_curve.setObjectName("comboBox_well_log_constructor_input_curve")
-        create_layout.addRow("Input curve", self.comboBox_input_curve)
+        create_layout.addRow("Входная кривая", self.comboBox_input_curve)
 
         self.comboBox_operation = QtWidgets.QComboBox(create_group)
         self.comboBox_operation.setObjectName("comboBox_well_log_constructor_operation")
@@ -183,7 +183,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         for operation in UNARY_OPERATION_LABELS:
             self.comboBox_operation.addItem(operation, operation)
         self.comboBox_operation.currentIndexChanged.connect(self._update_operation_fields)
-        create_layout.addRow("Operation", self.comboBox_operation)
+        create_layout.addRow("Операция", self.comboBox_operation)
 
         self.comboBox_normalization_scope = QtWidgets.QComboBox(create_group)
         self.comboBox_normalization_scope.setObjectName("comboBox_well_log_constructor_normalization_scope")
@@ -192,35 +192,35 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         default_scope_index = self.comboBox_normalization_scope.findData("whole_well")
         if default_scope_index >= 0:
             self.comboBox_normalization_scope.setCurrentIndex(default_scope_index)
-        create_layout.addRow("Normalization scope", self.comboBox_normalization_scope)
+        create_layout.addRow("Область нормировки", self.comboBox_normalization_scope)
 
         self.spinBox_rolling_window = QtWidgets.QSpinBox(create_group)
         self.spinBox_rolling_window.setObjectName("spinBox_well_log_constructor_rolling_window")
         self.spinBox_rolling_window.setRange(1, 1000000)
         self.spinBox_rolling_window.setValue(3)
-        create_layout.addRow("Rolling window", self.spinBox_rolling_window)
+        create_layout.addRow("Скользящее окно", self.spinBox_rolling_window)
 
         self.spinBox_min_periods = QtWidgets.QSpinBox(create_group)
         self.spinBox_min_periods.setObjectName("spinBox_well_log_constructor_min_periods")
         self.spinBox_min_periods.setRange(1, 1000000)
         self.spinBox_min_periods.setValue(1)
-        create_layout.addRow("Min periods", self.spinBox_min_periods)
+        create_layout.addRow("Мин. периодов", self.spinBox_min_periods)
 
         self.comboBox_outlier_policy = QtWidgets.QComboBox(create_group)
         self.comboBox_outlier_policy.setObjectName("comboBox_well_log_constructor_outlier_policy")
         self.comboBox_outlier_policy.addItem("none", "none")
-        create_layout.addRow("Outlier policy", self.comboBox_outlier_policy)
+        create_layout.addRow("Политика выбросов", self.comboBox_outlier_policy)
 
         validation_buttons_layout = QtWidgets.QHBoxLayout()
-        self.pushButton_validate = QtWidgets.QPushButton("Validate", create_group)
+        self.pushButton_validate = QtWidgets.QPushButton("Проверить", create_group)
         self.pushButton_validate.setObjectName("pushButton_well_log_constructor_validate")
         self.pushButton_validate.clicked.connect(self._validate_form_clicked)
         validation_buttons_layout.addWidget(self.pushButton_validate)
-        self.pushButton_save = QtWidgets.QPushButton("Save", create_group)
+        self.pushButton_save = QtWidgets.QPushButton("Сохранить", create_group)
         self.pushButton_save.setObjectName("pushButton_well_log_constructor_save")
         self.pushButton_save.clicked.connect(self._save_feature_clicked)
         validation_buttons_layout.addWidget(self.pushButton_save)
-        self.pushButton_preview = QtWidgets.QPushButton("Preview", create_group)
+        self.pushButton_preview = QtWidgets.QPushButton("Предпросмотр", create_group)
         self.pushButton_preview.setObjectName("pushButton_well_log_constructor_preview")
         self.pushButton_preview.clicked.connect(self._preview_current_definition)
         validation_buttons_layout.addWidget(self.pushButton_preview)
@@ -230,24 +230,24 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.textEdit_validation.setObjectName("textEdit_well_log_constructor_validation")
         self.textEdit_validation.setReadOnly(True)
         self.textEdit_validation.setMaximumHeight(90)
-        create_layout.addRow("Validation errors", self.textEdit_validation)
+        create_layout.addRow("Ошибки проверки", self.textEdit_validation)
         left_layout.addWidget(create_group)
 
         right_widget = QtWidgets.QWidget(splitter)
         right_layout = QtWidgets.QVBoxLayout(right_widget)
 
-        features_group = QtWidgets.QGroupBox("Global calculator features", right_widget)
+        features_group = QtWidgets.QGroupBox("Глобальные расчётные признаки", right_widget)
         features_layout = QtWidgets.QVBoxLayout(features_group)
 
         filters_layout = QtWidgets.QGridLayout()
-        filters_layout.addWidget(QtWidgets.QLabel("Search", features_group), 0, 0)
+        filters_layout.addWidget(QtWidgets.QLabel("Поиск", features_group), 0, 0)
         self.lineEdit_library_search = QtWidgets.QLineEdit(features_group)
         self.lineEdit_library_search.setObjectName("lineEdit_well_log_constructor_library_search")
         self.lineEdit_library_search.setPlaceholderText("Feature name or expression")
         self.lineEdit_library_search.textChanged.connect(self._apply_feature_library_filters)
         filters_layout.addWidget(self.lineEdit_library_search, 0, 1)
 
-        filters_layout.addWidget(QtWidgets.QLabel("Type", features_group), 0, 2)
+        filters_layout.addWidget(QtWidgets.QLabel("Тип", features_group), 0, 2)
         self.comboBox_library_type_filter = QtWidgets.QComboBox(features_group)
         self.comboBox_library_type_filter.setObjectName("comboBox_well_log_constructor_library_type_filter")
         self.comboBox_library_type_filter.addItem("All", "all")
@@ -256,13 +256,13 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.comboBox_library_type_filter.currentIndexChanged.connect(self._apply_feature_library_filters)
         filters_layout.addWidget(self.comboBox_library_type_filter, 0, 3)
 
-        filters_layout.addWidget(QtWidgets.QLabel("Input curve", features_group), 1, 0)
+        filters_layout.addWidget(QtWidgets.QLabel("Входная кривая", features_group), 1, 0)
         self.comboBox_library_canonical_filter = QtWidgets.QComboBox(features_group)
         self.comboBox_library_canonical_filter.setObjectName("comboBox_well_log_constructor_library_canonical_filter")
         self.comboBox_library_canonical_filter.currentIndexChanged.connect(self._apply_feature_library_filters)
         filters_layout.addWidget(self.comboBox_library_canonical_filter, 1, 1)
 
-        self.checkBox_library_used_current_dataset = QtWidgets.QCheckBox("Used in current dataset", features_group)
+        self.checkBox_library_used_current_dataset = QtWidgets.QCheckBox("Используется в текущем наборе", features_group)
         self.checkBox_library_used_current_dataset.setObjectName("checkBox_well_log_constructor_library_used_current_dataset")
         self.checkBox_library_used_current_dataset.stateChanged.connect(self._apply_feature_library_filters)
         filters_layout.addWidget(self.checkBox_library_used_current_dataset, 1, 2, 1, 2)
@@ -279,7 +279,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         features_layout.addWidget(self.table_global_features)
         right_layout.addWidget(features_group, stretch=2)
 
-        definition_group = QtWidgets.QGroupBox("Selected feature definition", right_widget)
+        definition_group = QtWidgets.QGroupBox("Определение выбранного признака", right_widget)
         definition_layout = QtWidgets.QVBoxLayout(definition_group)
         self.textEdit_definition = QtWidgets.QTextEdit(definition_group)
         self.textEdit_definition.setObjectName("textEdit_well_log_constructor_definition")
@@ -305,7 +305,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         definition_layout.addLayout(actions_layout)
         right_layout.addWidget(definition_group, stretch=1)
 
-        diagnostics_group = QtWidgets.QGroupBox("Coverage, diagnostics and preview", right_widget)
+        diagnostics_group = QtWidgets.QGroupBox("Покрытие, диагностика и предпросмотр", right_widget)
         diagnostics_layout = QtWidgets.QVBoxLayout(diagnostics_group)
         self.label_coverage_summary = QtWidgets.QLabel(diagnostics_group)
         self.label_coverage_summary.setObjectName("label_well_log_constructor_coverage_summary")
@@ -328,12 +328,12 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         diagnostics_layout.addWidget(self.textEdit_error_detail)
 
         preview_controls = QtWidgets.QHBoxLayout()
-        preview_controls.addWidget(QtWidgets.QLabel("Preview well", diagnostics_group))
+        preview_controls.addWidget(QtWidgets.QLabel("Скважина для предпросмотра", diagnostics_group))
         self.comboBox_preview_well = QtWidgets.QComboBox(diagnostics_group)
         self.comboBox_preview_well.setObjectName("comboBox_well_log_constructor_preview_well")
         self.comboBox_preview_well.currentIndexChanged.connect(self._preview_selected_feature)
         preview_controls.addWidget(self.comboBox_preview_well, stretch=1)
-        self.pushButton_preview_selected = QtWidgets.QPushButton("Preview selected", diagnostics_group)
+        self.pushButton_preview_selected = QtWidgets.QPushButton("Предпросмотр выбранного", diagnostics_group)
         self.pushButton_preview_selected.setObjectName("pushButton_well_log_constructor_preview_selected")
         self.pushButton_preview_selected.clicked.connect(self._preview_selected_feature)
         preview_controls.addWidget(self.pushButton_preview_selected)
@@ -351,7 +351,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
         buttons_layout = QtWidgets.QHBoxLayout()
         buttons_layout.addStretch(1)
-        self.pushButton_close = QtWidgets.QPushButton("Close", self)
+        self.pushButton_close = QtWidgets.QPushButton("Закрыть", self)
         self.pushButton_close.setObjectName("pushButton_well_log_constructor_close")
         self.pushButton_close.clicked.connect(self.close)
         buttons_layout.addWidget(self.pushButton_close)
@@ -359,45 +359,45 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
     def _setup_tooltips(self) -> None:
         constructor_tip = (
-            "CONSTR opens the Well Log calculator feature constructor for the current dataset. "
-            "Global features can be reused across datasets; adding/removing one resets COLLECT data."
+            "CONSTR открывает конструктор расчётных признаков Well Log для текущего набора. "
+            "Глобальные признаки можно переиспользовать в разных наборах; добавление или удаление признака сбрасывает данные COLLECT."
         )
         self.setToolTip(constructor_tip)
         tooltip_by_widget = {
-            self.label_dataset_title: "Current dataset / текущий набор, whose wells and parameters are used for coverage validation.",
-            self.tree_dataset_context: "Current dataset context: wells, canonical curves and calculator features already linked to this dataset.",
-            self.lineEdit_feature_name: "Global feature name. It must not duplicate a canonical curve, another calculator feature or a system data column.",
-            self.comboBox_mode: "Choose operation for one canonical curve or formula for several canonical curves.",
-            self.textEdit_formula_expression: "Formula mode supports canonical curve names, numbers, + - * /, parentheses and log/abs/sqrt. No eval, imports or attributes are allowed.",
-            self.listWidget_formula_curves: "Canonical curve names available in formulas. Double-click a curve to insert it into the expression.",
-            self.comboBox_input_curve: "Canonical curve used as the input for an operation-mode calculator feature.",
-            self.comboBox_operation: "Calculator operation. Interpolation is not used: input curves must keep their existing measured depth grid.",
-            self.comboBox_normalization_scope: "Normalization scope / область нормировки: whole_well uses the full well curve; interval uses only the current dataset interval for that well.",
-            self.spinBox_rolling_window: "Rolling window size in depth samples for rolling_mean and rolling_median.",
-            self.spinBox_min_periods: "Minimum number of available samples required inside the rolling window.",
-            self.comboBox_outlier_policy: "Outlier policy is reserved for future extensions; MVP uses none and never clips values.",
-            self.pushButton_validate: "VALIDATE checks the current unsaved calculator feature definition before saving or previewing.",
-            self.pushButton_save: "SAVE creates a new global feature in feature_calculator. Existing global features are immutable in MVP.",
-            self.pushButton_preview: "PREVIEW calculates the unsaved definition for the selected well without saving or changing the dataset.",
-            self.lineEdit_library_search: "Filter global features by name or expression.",
-            self.comboBox_library_type_filter: "Filter the global feature library by operation/formula mode.",
-            self.comboBox_library_canonical_filter: "Filter global features by the canonical curve used as an input.",
-            self.checkBox_library_used_current_dataset: "Show only global features already linked to the current dataset / текущий набор.",
-            self.table_global_features: "Global feature library. A global feature can be reused across multiple Well Log datasets.",
-            self.textEdit_definition: "Definition of the selected global calculator feature and its dataset usage state.",
-            self.pushButton_add_to_dataset: "ADD TO DATASET validates depth grids and math for the current dataset; if valid, the feature appears as [calc] in the parameter list and COLLECT data is reset.",
-            self.pushButton_remove_from_dataset: "REMOVE FROM DATASET unlinks the selected calculator feature from the current dataset and forces COLLECT to be run again.",
-            self.pushButton_duplicate_as_new: "Copy the selected immutable global feature into the create form so it can be saved under a new name.",
-            self.pushButton_delete_global: "DELETE GLOBAL FEATURE removes a global feature only when no dataset uses it.",
-            self.label_coverage_summary: "Coverage report explains whether the selected calculator feature can be added without blocking COLLECT.",
-            self.table_coverage: "Per-well applicability: depth grid mismatch / несовместимая глубинная сетка or invalid math blocks ADD TO DATASET and COLLECT.",
-            self.textEdit_error_detail: "Details for the selected coverage or preview error, including recommendation.",
-            self.comboBox_preview_well: "Well used for preview; preview does not save features and has no side effects.",
-            self.pushButton_preview_selected: "Preview the selected saved global feature for one well.",
+            self.label_dataset_title: "Текущий набор данных, скважины и параметры которого используются для проверки покрытия.",
+            self.tree_dataset_context: "Контекст текущего набора: скважины, канонические кривые и расчётные признаки, уже привязанные к набору.",
+            self.lineEdit_feature_name: "Имя глобального признака. Оно не должно совпадать с канонической кривой, другим расчётным признаком или системным столбцом данных.",
+            self.comboBox_mode: "Выберите операцию для одной канонической кривой или формулу для нескольких канонических кривых.",
+            self.textEdit_formula_expression: "Режим формулы поддерживает имена канонических кривых, числа, + - * /, скобки и функции log/abs/sqrt. eval, импорты и обращение к атрибутам запрещены.",
+            self.listWidget_formula_curves: "Имена канонических кривых, доступные в формулах. Дважды щёлкните по кривой, чтобы вставить её в выражение.",
+            self.comboBox_input_curve: "Каноническая кривая, которая используется как вход для расчётного признака в режиме операции.",
+            self.comboBox_operation: "Операция расчёта. Интерполяция не используется: входные кривые должны сохранять исходную сетку измеренных глубин.",
+            self.comboBox_normalization_scope: "Область нормировки: whole_well использует всю кривую скважины, а interval — только интервал текущего набора для этой скважины.",
+            self.spinBox_rolling_window: "Размер скользящего окна в отсчётах по глубине для операций rolling_mean и rolling_median.",
+            self.spinBox_min_periods: "Минимальное число доступных отсчётов, необходимое внутри скользящего окна.",
+            self.comboBox_outlier_policy: "Политика выбросов зарезервирована для будущих расширений; в MVP используется none, значения не обрезаются.",
+            self.pushButton_validate: "VALIDATE проверяет текущее несохранённое определение расчётного признака перед сохранением или предпросмотром.",
+            self.pushButton_save: "SAVE создаёт новый глобальный признак в feature_calculator. Существующие глобальные признаки в MVP не редактируются.",
+            self.pushButton_preview: "PREVIEW рассчитывает несохранённое определение для выбранной скважины без сохранения и без изменения набора данных.",
+            self.lineEdit_library_search: "Фильтрует глобальные признаки по имени или выражению.",
+            self.comboBox_library_type_filter: "Фильтрует библиотеку глобальных признаков по режиму: операция или формула.",
+            self.comboBox_library_canonical_filter: "Фильтрует глобальные признаки по канонической кривой, использованной как вход.",
+            self.checkBox_library_used_current_dataset: "Показывает только глобальные признаки, уже привязанные к текущему набору данных.",
+            self.table_global_features: "Библиотека глобальных признаков. Один глобальный признак можно переиспользовать в нескольких наборах Well Log.",
+            self.textEdit_definition: "Определение выбранного глобального расчётного признака и состояние его использования в наборах данных.",
+            self.pushButton_add_to_dataset: "ADD TO DATASET проверяет глубинные сетки и математику для текущего набора. Если проверка успешна, признак появляется в списке параметров как [calc], а данные COLLECT сбрасываются.",
+            self.pushButton_remove_from_dataset: "REMOVE FROM DATASET отвязывает выбранный расчётный признак от текущего набора и требует повторно выполнить COLLECT.",
+            self.pushButton_duplicate_as_new: "Копирует выбранный неизменяемый глобальный признак в форму создания, чтобы сохранить его под новым именем.",
+            self.pushButton_delete_global: "DELETE GLOBAL FEATURE удаляет глобальный признак только если он не используется ни в одном наборе данных.",
+            self.label_coverage_summary: "Отчёт покрытия показывает, можно ли добавить выбранный расчётный признак без блокировки COLLECT.",
+            self.table_coverage: "Применимость по скважинам: несовместимая глубинная сетка или некорректная математика блокируют ADD TO DATASET и COLLECT.",
+            self.textEdit_error_detail: "Подробности выбранной ошибки покрытия или предпросмотра, включая рекомендацию.",
+            self.comboBox_preview_well: "Скважина для предпросмотра. Предпросмотр не сохраняет признаки и не имеет побочных эффектов.",
+            self.pushButton_preview_selected: "Строит предпросмотр выбранного сохранённого глобального признака для одной скважины.",
         }
         for widget, tooltip in tooltip_by_widget.items():
             widget.setToolTip(tooltip)
-        self.pushButton_close.setToolTip("Close the constructor without side effects; unsaved form edits are discarded.")
+        self.pushButton_close.setToolTip("Закрывает конструктор без побочных эффектов; несохранённые правки формы отбрасываются.")
 
     def _wire_state_signals(self) -> None:
         self.lineEdit_feature_name.textChanged.connect(self._refresh_action_states)
@@ -961,15 +961,15 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
     def _coverage_summary_text(self, report: Any | None) -> str:
         if report is None:
-            return "Select a saved feature to calculate coverage report. Preview can also be built for the unsaved form definition."
+            return "Выберите сохранённый признак, чтобы рассчитать отчёт покрытия. Предпросмотр также можно построить для несохранённого определения из формы."
         summary = report.summary
         points = "—" if summary.min_points is None else f"{summary.min_points} / {summary.max_points}"
         inputs = ", ".join(summary.input_curves) or "—"
-        can_add = "YES" if summary.can_be_added else "NO"
+        can_add = "ДА" if summary.can_be_added else "НЕТ"
         return (
-            f"Wells: {summary.wells_total}; OK: {summary.wells_ok}; Errors: {summary.error_count}; "
-            f"Min/Max points: {points}; Inputs: {inputs}; Mode: {summary.mode}; "
-            f"Normalization: {summary.normalization_scope}; Can be added to dataset: {can_add}"
+            f"Скважин: {summary.wells_total}; OK: {summary.wells_ok}; Ошибок: {summary.error_count}; "
+            f"Мин./макс. точек: {points}; Входы: {inputs}; Режим: {summary.mode}; "
+            f"Нормировка: {summary.normalization_scope}; Можно добавить в набор: {can_add}"
         )
 
     def _refresh_selected_feature_diagnostics(self, feature: FeatureCalculator, config: Any | None, parse_errors: list[Any]) -> None:
@@ -977,13 +977,13 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.table_coverage.setRowCount(0)
         self.textEdit_error_detail.clear()
         if parse_errors or config is None:
-            self.label_coverage_summary.setText("Coverage unavailable: selected feature definition has parse errors.")
+            self.label_coverage_summary.setText("Покрытие недоступно: в определении выбранного признака есть ошибки разбора.")
             self.pushButton_add_to_dataset.setEnabled(False)
             return
         use_busy_cursor = len(self.wells) >= 50
         if use_busy_cursor:
             self.label_coverage_summary.setText(
-                f"Calculating coverage for {len(self.wells)} wells. Large datasets may take a few seconds..."
+                f"Рассчитывается покрытие для {len(self.wells)} скважин. Большие наборы могут обрабатываться несколько секунд..."
             )
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -1038,22 +1038,22 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             self.textEdit_error_detail.clear()
             return
         lines = [
-            f"Well: {row.well_name or '—'} (id={row.well_id})",
-            f"Depth interval: {row.top_md:g} - {row.bottom_md:g}",
-            f"Status: {row.status}",
-            f"Points: {row.points}",
+            f"Скважина: {row.well_name or '—'} (id={row.well_id})",
+            f"Интервал глубин: {row.top_md:g} - {row.bottom_md:g}",
+            f"Статус: {row.status}",
+            f"Точек: {row.points}",
         ]
         if row.errors:
             error = row.errors[0]
             lines.extend([
-                f"Feature: {getattr(error, 'feature_name', None) or 'calculator'}",
-                f"Input curve: {getattr(error, 'canonical_name', None) or '—'}",
-                f"Error code: {getattr(error, 'code', 'error')}",
-                f"Message: {getattr(error, 'message', str(error))}",
-                f"Recommendation: {feature_calculator_recommendation(error)}",
+                f"Признак: {getattr(error, 'feature_name', None) or 'calculator'}",
+                f"Входная кривая: {getattr(error, 'canonical_name', None) or '—'}",
+                f"Код ошибки: {getattr(error, 'code', 'error')}",
+                f"Сообщение: {getattr(error, 'message', str(error))}",
+                f"Рекомендация: {feature_calculator_recommendation(error)}",
             ])
         else:
-            lines.append(f"Recommendation: {feature_calculator_recommendation(None)}")
+            lines.append(f"Рекомендация: {feature_calculator_recommendation(None)}")
         self.textEdit_error_detail.setPlainText("\n".join(lines))
 
     def _well_context_by_id(self, well_id: int | None) -> dict[str, Any] | None:
@@ -1070,7 +1070,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.preview_figure.clear()
         ax = self.preview_figure.add_subplot(111)
         if well is None:
-            ax.text(0.5, 0.5, "Select well for preview", ha="center", va="center")
+            ax.text(0.5, 0.5, "Выберите скважину для предпросмотра", ha="center", va="center")
             self.preview_canvas.draw_idle()
             return
         result = evaluate_feature_calculator_for_well(
@@ -1081,16 +1081,16 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         )
         if result.errors:
             error = result.errors[0]
-            ax.text(0.5, 0.5, f"Preview error:\n[{error.code}] {error.message}", ha="center", va="center", wrap=True)
+            ax.text(0.5, 0.5, f"Ошибка предпросмотра:\n[{error.code}] {error.message}", ha="center", va="center", wrap=True)
             ax.set_axis_off()
             self.textEdit_error_detail.setPlainText(
-                f"Preview error for {well.get('name', well.get('id'))}:\n"
-                f"Feature: {config.feature_name or title}\n"
-                f"Operation/formula: {config.operation or config.expression}\n"
-                f"Depth interval: {float(well.get('top_md')):g} - {float(well.get('bottom_md')):g}\n"
-                f"Error code: {error.code}\n"
-                f"Message: {error.message}\n"
-                f"Recommendation: {feature_calculator_recommendation(error)}"
+                f"Ошибка предпросмотра для {well.get('name', well.get('id'))}:\n"
+                f"Признак: {config.feature_name or title}\n"
+                f"Операция/формула: {config.operation or config.expression}\n"
+                f"Интервал глубин: {float(well.get('top_md')):g} - {float(well.get('bottom_md')):g}\n"
+                f"Код ошибки: {error.code}\n"
+                f"Сообщение: {error.message}\n"
+                f"Рекомендация: {feature_calculator_recommendation(error)}"
             )
         else:
             points = [(value, depth) for value, depth in zip(result.values, result.depths) if value is not None]
@@ -1100,10 +1100,10 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 ax.invert_yaxis()
                 ax.grid(True, alpha=0.25)
                 ax.set_xlabel(config.feature_name or title)
-                ax.set_ylabel("Depth MD")
+                ax.set_ylabel("Глубина MD")
                 ax.set_title(f"{title}: {well.get('name', well.get('id'))}")
             else:
-                ax.text(0.5, 0.5, "Preview returned no points", ha="center", va="center")
+                ax.text(0.5, 0.5, "Предпросмотр не вернул точек", ha="center", va="center")
         self.preview_figure.tight_layout()
         self.preview_canvas.draw_idle()
 
@@ -1115,7 +1115,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         if parse_errors or config is None:
             self.preview_figure.clear()
             ax = self.preview_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Selected feature has parse errors", ha="center", va="center")
+            ax.text(0.5, 0.5, "В выбранном признаке есть ошибки разбора", ha="center", va="center")
             ax.set_axis_off()
             self.preview_canvas.draw_idle()
             return
@@ -1125,14 +1125,14 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         config_dict, errors = self._build_current_config()
         if errors or config_dict is None:
             self.textEdit_validation.setPlainText("\n".join(errors))
-            QtWidgets.QMessageBox.warning(self, "Preview calculated feature", "Исправьте ошибки формы перед preview.")
+            QtWidgets.QMessageBox.warning(self, "Preview calculated feature", "Исправьте ошибки формы перед предпросмотром.")
             return
-        feature_name = self.lineEdit_feature_name.text().strip() or "Preview feature"
+        feature_name = self.lineEdit_feature_name.text().strip() or "Признак предпросмотра"
         config, parse_errors = parse_feature_calculator_config({"feature_name": feature_name, "params_json": config_dict})
         if parse_errors or config is None:
             self.textEdit_validation.setPlainText("\n".join(error.message for error in parse_errors))
             return
-        self.textEdit_validation.setPlainText("Preview calculated without saving feature definition.")
+        self.textEdit_validation.setPlainText("Предпросмотр рассчитан без сохранения определения признака.")
         self._preview_config(config, title=feature_name)
 
     def _format_errors(self, errors: list[Any], limit: int = 10) -> str:
@@ -1144,7 +1144,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             message = getattr(error, "message", str(error))
             lines.append(f"{feature_name} / {well_name}: [{code}] {message}")
         if len(errors) > limit:
-            lines.append(f"… plus {len(errors) - limit} more errors.")
+            lines.append(f"… ещё ошибок: {len(errors) - limit}.")
         return "\n".join(lines)
 
     def _add_selected_feature_to_dataset(self) -> None:
@@ -1311,8 +1311,8 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 self.spinBox_min_periods.setValue(int(raw_params.get("min_periods") or self.spinBox_min_periods.value()))
             self._update_operation_fields()
         self.textEdit_validation.setPlainText(
-            f"Duplicated '{feature.feature_name}' into the form as '{new_name}'. "
-            "Review parameters and press Save to create a new global feature. The original feature and datasets were not changed."
+            f"Признак '{feature.feature_name}' скопирован в форму как '{new_name}'. "
+            "Проверьте параметры и нажмите Save, чтобы создать новый глобальный признак. Исходный признак и наборы данных не изменены."
         )
         self.lineEdit_feature_name.setFocus()
 
