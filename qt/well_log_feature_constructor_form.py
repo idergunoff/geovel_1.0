@@ -90,9 +90,12 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self._setup_ui()
         self._fill_dataset_context()
         self._fill_input_curves()
+        self._setup_tooltips()
+        self._wire_state_signals()
         self._refresh_global_features()
         self._update_operation_fields()
         self._update_mode_fields()
+        self._refresh_action_states()
 
     def _setup_ui(self) -> None:
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -354,6 +357,103 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         buttons_layout.addWidget(self.pushButton_close)
         main_layout.addLayout(buttons_layout)
 
+    def _setup_tooltips(self) -> None:
+        constructor_tip = (
+            "CONSTR opens the Well Log calculator feature constructor for the current dataset. "
+            "Global features can be reused across datasets; adding/removing one resets COLLECT data."
+        )
+        self.setToolTip(constructor_tip)
+        tooltip_by_widget = {
+            self.label_dataset_title: "Current dataset / текущий набор, whose wells and parameters are used for coverage validation.",
+            self.tree_dataset_context: "Current dataset context: wells, canonical curves and calculator features already linked to this dataset.",
+            self.lineEdit_feature_name: "Global feature name. It must not duplicate a canonical curve, another calculator feature or a system data column.",
+            self.comboBox_mode: "Choose operation for one canonical curve or formula for several canonical curves.",
+            self.textEdit_formula_expression: "Formula mode supports canonical curve names, numbers, + - * /, parentheses and log/abs/sqrt. No eval, imports or attributes are allowed.",
+            self.listWidget_formula_curves: "Canonical curve names available in formulas. Double-click a curve to insert it into the expression.",
+            self.comboBox_input_curve: "Canonical curve used as the input for an operation-mode calculator feature.",
+            self.comboBox_operation: "Calculator operation. Interpolation is not used: input curves must keep their existing measured depth grid.",
+            self.comboBox_normalization_scope: "Normalization scope / область нормировки: whole_well uses the full well curve; interval uses only the current dataset interval for that well.",
+            self.spinBox_rolling_window: "Rolling window size in depth samples for rolling_mean and rolling_median.",
+            self.spinBox_min_periods: "Minimum number of available samples required inside the rolling window.",
+            self.comboBox_outlier_policy: "Outlier policy is reserved for future extensions; MVP uses none and never clips values.",
+            self.pushButton_validate: "VALIDATE checks the current unsaved calculator feature definition before saving or previewing.",
+            self.pushButton_save: "SAVE creates a new global feature in feature_calculator. Existing global features are immutable in MVP.",
+            self.pushButton_preview: "PREVIEW calculates the unsaved definition for the selected well without saving or changing the dataset.",
+            self.lineEdit_library_search: "Filter global features by name or expression.",
+            self.comboBox_library_type_filter: "Filter the global feature library by operation/formula mode.",
+            self.comboBox_library_canonical_filter: "Filter global features by the canonical curve used as an input.",
+            self.checkBox_library_used_current_dataset: "Show only global features already linked to the current dataset / текущий набор.",
+            self.table_global_features: "Global feature library. A global feature can be reused across multiple Well Log datasets.",
+            self.textEdit_definition: "Definition of the selected global calculator feature and its dataset usage state.",
+            self.pushButton_add_to_dataset: "ADD TO DATASET validates depth grids and math for the current dataset; if valid, the feature appears as [calc] in the parameter list and COLLECT data is reset.",
+            self.pushButton_remove_from_dataset: "REMOVE FROM DATASET unlinks the selected calculator feature from the current dataset and forces COLLECT to be run again.",
+            self.pushButton_duplicate_as_new: "Copy the selected immutable global feature into the create form so it can be saved under a new name.",
+            self.pushButton_delete_global: "DELETE GLOBAL FEATURE removes a global feature only when no dataset uses it.",
+            self.label_coverage_summary: "Coverage report explains whether the selected calculator feature can be added without blocking COLLECT.",
+            self.table_coverage: "Per-well applicability: depth grid mismatch / несовместимая глубинная сетка or invalid math blocks ADD TO DATASET and COLLECT.",
+            self.textEdit_error_detail: "Details for the selected coverage or preview error, including recommendation.",
+            self.comboBox_preview_well: "Well used for preview; preview does not save features and has no side effects.",
+            self.pushButton_preview_selected: "Preview the selected saved global feature for one well.",
+        }
+        for widget, tooltip in tooltip_by_widget.items():
+            widget.setToolTip(tooltip)
+        self.pushButton_close.setToolTip("Close the constructor without side effects; unsaved form edits are discarded.")
+
+    def _wire_state_signals(self) -> None:
+        self.lineEdit_feature_name.textChanged.connect(self._refresh_action_states)
+        self.textEdit_formula_expression.textChanged.connect(self._refresh_action_states)
+        self.comboBox_mode.currentIndexChanged.connect(self._refresh_action_states)
+        self.comboBox_input_curve.currentIndexChanged.connect(self._refresh_action_states)
+        self.comboBox_operation.currentIndexChanged.connect(self._refresh_action_states)
+        self.comboBox_normalization_scope.currentIndexChanged.connect(self._refresh_action_states)
+        self.spinBox_rolling_window.valueChanged.connect(self._refresh_action_states)
+        self.spinBox_min_periods.valueChanged.connect(self._refresh_action_states)
+
+    def _form_has_minimum_definition(self) -> bool:
+        if not self.lineEdit_feature_name.text().strip():
+            return False
+        if self._current_mode() == "formula":
+            return bool(self.textEdit_formula_expression.toPlainText().strip())
+        return bool(self.comboBox_input_curve.currentData()) and bool(self.comboBox_operation.currentData())
+
+    def _selected_feature_linked_to_dataset(self) -> bool:
+        if self._selected_feature_id is None:
+            return False
+        return (
+            session.query(ClusterWellLogParameterFromCalculator.id)
+            .filter(
+                ClusterWellLogParameterFromCalculator.dataset_id == self.dataset_id,
+                ClusterWellLogParameterFromCalculator.calculator_id == int(self._selected_feature_id),
+            )
+            .first()
+            is not None
+        )
+
+    def _refresh_action_states(self, *_args: Any) -> None:
+        has_minimum_definition = self._form_has_minimum_definition()
+        has_preview_well = self.comboBox_preview_well.count() > 0 if hasattr(self, "comboBox_preview_well") else bool(self.wells)
+        self.pushButton_validate.setEnabled(has_minimum_definition)
+        self.pushButton_save.setEnabled(has_minimum_definition)
+        self.pushButton_preview.setEnabled(has_minimum_definition and has_preview_well)
+
+        selected_feature = self._selected_feature()
+        has_selected_feature = selected_feature is not None
+        linked = self._selected_feature_linked_to_dataset() if has_selected_feature else False
+        usage_count = self._selected_feature_usage_count(int(selected_feature.id)) if selected_feature is not None else 0
+        if hasattr(self, "pushButton_add_to_dataset") and not self.pushButton_add_to_dataset.isEnabled():
+            # Coverage diagnostics may keep this disabled for an incompatible selected feature.
+            pass
+        elif hasattr(self, "pushButton_add_to_dataset"):
+            self.pushButton_add_to_dataset.setEnabled(has_selected_feature and not linked)
+        if hasattr(self, "pushButton_remove_from_dataset"):
+            self.pushButton_remove_from_dataset.setEnabled(has_selected_feature and linked)
+        if hasattr(self, "pushButton_delete_global"):
+            self.pushButton_delete_global.setEnabled(has_selected_feature and usage_count == 0)
+        if hasattr(self, "pushButton_duplicate_as_new"):
+            self.pushButton_duplicate_as_new.setEnabled(has_selected_feature)
+        if hasattr(self, "pushButton_preview_selected"):
+            self.pushButton_preview_selected.setEnabled(has_selected_feature and has_preview_well)
+
     def _load_all_canonical_parameters(self) -> list[dict[str, Any]]:
         rows = session.query(CanonicalWellLog).order_by(CanonicalWellLog.canonical_name, CanonicalWellLog.id).all()
         return [
@@ -509,6 +609,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 self.table_coverage.setRowCount(0)
                 self.label_coverage_summary.setText(self._coverage_summary_text(None))
                 self.textEdit_error_detail.clear()
+            self._refresh_action_states()
 
     def _format_inputs(self, raw_inputs: Any) -> str:
         try:
@@ -786,6 +887,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 self.table_coverage.setRowCount(0)
                 self.label_coverage_summary.setText(self._coverage_summary_text(None))
                 self.textEdit_error_detail.clear()
+            self._refresh_action_states()
             return
         row = selected[0].row()
         id_item = self.table_global_features.item(row, 0)
@@ -809,6 +911,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             self.pushButton_remove_from_dataset.setEnabled(False)
             self.pushButton_delete_global.setEnabled(False)
             self.pushButton_duplicate_as_new.setEnabled(False)
+            self.pushButton_preview_selected.setEnabled(False)
             return
         config, parse_errors = parse_feature_calculator_config(feature)
         linked = (
@@ -877,7 +980,18 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             self.label_coverage_summary.setText("Coverage unavailable: selected feature definition has parse errors.")
             self.pushButton_add_to_dataset.setEnabled(False)
             return
-        report = build_feature_calculator_coverage_report(self.dataset_id, config)
+        use_busy_cursor = len(self.wells) >= 50
+        if use_busy_cursor:
+            self.label_coverage_summary.setText(
+                f"Calculating coverage for {len(self.wells)} wells. Large datasets may take a few seconds..."
+            )
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        try:
+            report = build_feature_calculator_coverage_report(self.dataset_id, config)
+        finally:
+            if use_busy_cursor:
+                QtWidgets.QApplication.restoreOverrideCursor()
         self._coverage_rows = report.rows
         self.label_coverage_summary.setText(self._coverage_summary_text(report))
         self.pushButton_add_to_dataset.setEnabled(report.summary.can_be_added)
@@ -897,6 +1011,16 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 elif column == 1:
                     item.setForeground(QtGui.QBrush(QtGui.QColor("#0a7f22")))
                 self.table_coverage.setItem(row_index, column, item)
+        linked = (
+            session.query(ClusterWellLogParameterFromCalculator.id)
+            .filter(
+                ClusterWellLogParameterFromCalculator.dataset_id == self.dataset_id,
+                ClusterWellLogParameterFromCalculator.calculator_id == int(feature.id),
+            )
+            .first()
+            is not None
+        )
+        self.pushButton_add_to_dataset.setEnabled(report.summary.can_be_added and not linked)
         self.table_coverage.resizeColumnsToContents()
         if report.rows:
             self.table_coverage.selectRow(0)
