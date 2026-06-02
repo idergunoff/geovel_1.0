@@ -20,6 +20,7 @@ _MODULE_NAMES = (
     "well_visualization",
     "actions",
     "canonical_preparation",
+    "well_feature_calculator",
 )
 
 _modules = [import_module(f"{__name__}.{module_name}") for module_name in _MODULE_NAMES]
