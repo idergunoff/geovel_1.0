@@ -160,3 +160,37 @@ def test_validate_calculators_for_dataset_reports_preflight_math_error(monkeypat
     assert {error.code for error in errors} == {"invalid_math_domain"}
     assert errors[0].feature_name == "LOG_GR"
     assert errors[0].well_name == "Well-1"
+
+
+def test_build_feature_calculator_coverage_report_summarizes_ok_and_blocks_errors(monkeypatch):
+    fake_session = FakeSession(values=[1.0, 2.0, 3.0])
+    install_fake_model_modules(fake_session, monkeypatch)
+    config, errors = well_feature_calculator.parse_feature_calculator_config(fake_session.calculator)
+
+    assert errors == []
+    report = well_feature_calculator.build_feature_calculator_coverage_report(3, config, db_session=fake_session)
+
+    assert report.summary.wells_total == 1
+    assert report.summary.wells_ok == 1
+    assert report.summary.error_count == 0
+    assert report.summary.min_points == 3
+    assert report.summary.max_points == 3
+    assert report.summary.input_curves == ["GR"]
+    assert report.summary.can_be_added is True
+    assert report.rows[0].status == "OK"
+    assert report.rows[0].points == 3
+
+    failing_session = FakeSession(values=[1.0, 0.0, 3.0])
+    install_fake_model_modules(failing_session, monkeypatch)
+    failing_config, errors = well_feature_calculator.parse_feature_calculator_config(failing_session.calculator)
+
+    assert errors == []
+    failing_report = well_feature_calculator.build_feature_calculator_coverage_report(3, failing_config, db_session=failing_session)
+
+    assert failing_report.summary.wells_total == 1
+    assert failing_report.summary.wells_ok == 0
+    assert failing_report.summary.error_count == 1
+    assert failing_report.summary.can_be_added is False
+    assert failing_report.rows[0].status == "Invalid math domain"
+    assert failing_report.rows[0].points == 0
+    assert failing_report.rows[0].errors[0].well_name == "Well-1"

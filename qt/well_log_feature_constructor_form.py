@@ -4,6 +4,8 @@ import json
 from typing import Any, Callable
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 from cluster.well_feature_calculator import (
     FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY,
@@ -11,7 +13,10 @@ from cluster.well_feature_calculator import (
     FEATURE_CALCULATOR_INVALID_MATH_POLICY,
     FEATURE_CALCULATOR_NORMALIZATION_SCOPES,
     FEATURE_CALCULATOR_UNARY_OPERATIONS,
+    build_feature_calculator_coverage_report,
+    evaluate_feature_calculator_for_well,
     extract_formula_input_names,
+    feature_calculator_recommendation,
     parse_feature_calculator_config,
     parse_safe_formula,
     validate_feature_calculator_config,
@@ -70,10 +75,11 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.collect_state_callback = collect_state_callback
         self.info_callback = info_callback
         self._selected_feature_id: int | None = None
+        self._coverage_rows: list[Any] = []
 
         self.setObjectName("WellLogFeatureConstructorDialog")
         self.setWindowTitle("Well Log Feature Constructor")
-        self.resize(1100, 720)
+        self.resize(1280, 860)
         self._setup_ui()
         self._fill_dataset_context()
         self._fill_input_curves()
@@ -204,6 +210,10 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.pushButton_save.setObjectName("pushButton_well_log_constructor_save")
         self.pushButton_save.clicked.connect(self._save_feature_clicked)
         validation_buttons_layout.addWidget(self.pushButton_save)
+        self.pushButton_preview = QtWidgets.QPushButton("Preview", create_group)
+        self.pushButton_preview.setObjectName("pushButton_well_log_constructor_preview")
+        self.pushButton_preview.clicked.connect(self._preview_current_definition)
+        validation_buttons_layout.addWidget(self.pushButton_preview)
         create_layout.addRow(validation_buttons_layout)
 
         self.textEdit_validation = QtWidgets.QTextEdit(create_group)
@@ -246,6 +256,46 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         actions_layout.addWidget(self.pushButton_remove_from_dataset)
         definition_layout.addLayout(actions_layout)
         right_layout.addWidget(definition_group, stretch=1)
+
+        diagnostics_group = QtWidgets.QGroupBox("Coverage, diagnostics and preview", right_widget)
+        diagnostics_layout = QtWidgets.QVBoxLayout(diagnostics_group)
+        self.label_coverage_summary = QtWidgets.QLabel(diagnostics_group)
+        self.label_coverage_summary.setObjectName("label_well_log_constructor_coverage_summary")
+        self.label_coverage_summary.setWordWrap(True)
+        diagnostics_layout.addWidget(self.label_coverage_summary)
+
+        self.table_coverage = QtWidgets.QTableWidget(diagnostics_group)
+        self.table_coverage.setObjectName("tableWidget_well_log_constructor_coverage")
+        self.table_coverage.setColumnCount(4)
+        self.table_coverage.setHorizontalHeaderLabels(["Well", "Status", "Points", "Errors"])
+        self.table_coverage.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.table_coverage.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_coverage.itemSelectionChanged.connect(self._coverage_selection_changed)
+        diagnostics_layout.addWidget(self.table_coverage, stretch=1)
+
+        self.textEdit_error_detail = QtWidgets.QTextEdit(diagnostics_group)
+        self.textEdit_error_detail.setObjectName("textEdit_well_log_constructor_error_detail")
+        self.textEdit_error_detail.setReadOnly(True)
+        self.textEdit_error_detail.setMaximumHeight(115)
+        diagnostics_layout.addWidget(self.textEdit_error_detail)
+
+        preview_controls = QtWidgets.QHBoxLayout()
+        preview_controls.addWidget(QtWidgets.QLabel("Preview well", diagnostics_group))
+        self.comboBox_preview_well = QtWidgets.QComboBox(diagnostics_group)
+        self.comboBox_preview_well.setObjectName("comboBox_well_log_constructor_preview_well")
+        self.comboBox_preview_well.currentIndexChanged.connect(self._preview_selected_feature)
+        preview_controls.addWidget(self.comboBox_preview_well, stretch=1)
+        self.pushButton_preview_selected = QtWidgets.QPushButton("Preview selected", diagnostics_group)
+        self.pushButton_preview_selected.setObjectName("pushButton_well_log_constructor_preview_selected")
+        self.pushButton_preview_selected.clicked.connect(self._preview_selected_feature)
+        preview_controls.addWidget(self.pushButton_preview_selected)
+        diagnostics_layout.addLayout(preview_controls)
+
+        self.preview_figure = Figure(figsize=(4.8, 3.2))
+        self.preview_canvas = FigureCanvas(self.preview_figure)
+        self.preview_canvas.setObjectName("canvas_well_log_constructor_preview")
+        diagnostics_layout.addWidget(self.preview_canvas, stretch=1)
+        right_layout.addWidget(diagnostics_group, stretch=3)
 
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
@@ -291,6 +341,18 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             QtWidgets.QTreeWidgetItem(calculators_item, [str(feature.get("feature_name")), str(feature.get("calculator_id"))])
         self.tree_dataset_context.addTopLevelItem(calculators_item)
         self.tree_dataset_context.expandAll()
+        if hasattr(self, "comboBox_preview_well"):
+            current_well_id = self.comboBox_preview_well.currentData()
+            self.comboBox_preview_well.blockSignals(True)
+            self.comboBox_preview_well.clear()
+            for well in self.wells:
+                label = f"{well.get('name', well.get('id'))} [{well.get('top_md', '')} - {well.get('bottom_md', '')}]"
+                self.comboBox_preview_well.addItem(str(label), int(well.get("id")))
+            if current_well_id is not None:
+                index = self.comboBox_preview_well.findData(current_well_id)
+                if index >= 0:
+                    self.comboBox_preview_well.setCurrentIndex(index)
+            self.comboBox_preview_well.blockSignals(False)
 
     def _fill_input_curves(self) -> None:
         self.comboBox_input_curve.clear()
@@ -627,6 +689,11 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         if not selected:
             self._selected_feature_id = None
             self.textEdit_definition.clear()
+            self._coverage_rows = []
+            if hasattr(self, "table_coverage"):
+                self.table_coverage.setRowCount(0)
+                self.label_coverage_summary.setText(self._coverage_summary_text(None))
+                self.textEdit_error_detail.clear()
             return
         row = selected[0].row()
         id_item = self.table_global_features.item(row, 0)
@@ -681,6 +748,167 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             lines.append("Errors:")
             lines.extend(f"- [{error.code}] {error.message}" for error in parse_errors)
         self.textEdit_definition.setPlainText("\n".join(lines))
+        self._refresh_selected_feature_diagnostics(feature, config, parse_errors)
+
+    def _status_error_count_text(self, errors: list[Any]) -> str:
+        if not errors:
+            return ""
+        return "; ".join(f"[{getattr(error, 'code', 'error')}] {getattr(error, 'message', str(error))}" for error in errors[:2])
+
+    def _coverage_summary_text(self, report: Any | None) -> str:
+        if report is None:
+            return "Select a saved feature to calculate coverage report. Preview can also be built for the unsaved form definition."
+        summary = report.summary
+        points = "—" if summary.min_points is None else f"{summary.min_points} / {summary.max_points}"
+        inputs = ", ".join(summary.input_curves) or "—"
+        can_add = "YES" if summary.can_be_added else "NO"
+        return (
+            f"Wells: {summary.wells_total}; OK: {summary.wells_ok}; Errors: {summary.error_count}; "
+            f"Min/Max points: {points}; Inputs: {inputs}; Mode: {summary.mode}; "
+            f"Normalization: {summary.normalization_scope}; Can be added to dataset: {can_add}"
+        )
+
+    def _refresh_selected_feature_diagnostics(self, feature: FeatureCalculator, config: Any | None, parse_errors: list[Any]) -> None:
+        self._coverage_rows = []
+        self.table_coverage.setRowCount(0)
+        self.textEdit_error_detail.clear()
+        if parse_errors or config is None:
+            self.label_coverage_summary.setText("Coverage unavailable: selected feature definition has parse errors.")
+            self.pushButton_add_to_dataset.setEnabled(False)
+            return
+        report = build_feature_calculator_coverage_report(self.dataset_id, config)
+        self._coverage_rows = report.rows
+        self.label_coverage_summary.setText(self._coverage_summary_text(report))
+        self.pushButton_add_to_dataset.setEnabled(report.summary.can_be_added)
+        self.table_coverage.setRowCount(len(report.rows))
+        for row_index, row in enumerate(report.rows):
+            values = [
+                row.well_name or f"well_id={row.well_id}",
+                row.status,
+                row.points,
+                self._status_error_count_text(row.errors),
+            ]
+            for column, value in enumerate(values):
+                item = QtWidgets.QTableWidgetItem(str(value))
+                item.setData(QtCore.Qt.UserRole, row_index)
+                if row.errors:
+                    item.setForeground(QtGui.QBrush(QtGui.QColor("#b00020")))
+                elif column == 1:
+                    item.setForeground(QtGui.QBrush(QtGui.QColor("#0a7f22")))
+                self.table_coverage.setItem(row_index, column, item)
+        self.table_coverage.resizeColumnsToContents()
+        if report.rows:
+            self.table_coverage.selectRow(0)
+        self._preview_selected_feature()
+
+    def _coverage_selection_changed(self) -> None:
+        selected = self.table_coverage.selectedItems()
+        if not selected:
+            self.textEdit_error_detail.clear()
+            return
+        row_index = selected[0].data(QtCore.Qt.UserRole)
+        try:
+            row = self._coverage_rows[int(row_index)]
+        except (TypeError, ValueError, IndexError):
+            self.textEdit_error_detail.clear()
+            return
+        lines = [
+            f"Well: {row.well_name or '—'} (id={row.well_id})",
+            f"Depth interval: {row.top_md:g} - {row.bottom_md:g}",
+            f"Status: {row.status}",
+            f"Points: {row.points}",
+        ]
+        if row.errors:
+            error = row.errors[0]
+            lines.extend([
+                f"Feature: {getattr(error, 'feature_name', None) or 'calculator'}",
+                f"Input curve: {getattr(error, 'canonical_name', None) or '—'}",
+                f"Error code: {getattr(error, 'code', 'error')}",
+                f"Message: {getattr(error, 'message', str(error))}",
+                f"Recommendation: {feature_calculator_recommendation(error)}",
+            ])
+        else:
+            lines.append(f"Recommendation: {feature_calculator_recommendation(None)}")
+        self.textEdit_error_detail.setPlainText("\n".join(lines))
+
+    def _well_context_by_id(self, well_id: int | None) -> dict[str, Any] | None:
+        if well_id is None:
+            return None
+        for well in self.wells:
+            if int(well.get("id")) == int(well_id):
+                return well
+        return None
+
+    def _preview_config(self, config: Any, *, title: str) -> None:
+        well_id = self.comboBox_preview_well.currentData()
+        well = self._well_context_by_id(well_id)
+        self.preview_figure.clear()
+        ax = self.preview_figure.add_subplot(111)
+        if well is None:
+            ax.text(0.5, 0.5, "Select well for preview", ha="center", va="center")
+            self.preview_canvas.draw_idle()
+            return
+        result = evaluate_feature_calculator_for_well(
+            config,
+            well_id=int(well["id"]),
+            top_md=float(well.get("top_md")),
+            bottom_md=float(well.get("bottom_md")),
+        )
+        if result.errors:
+            error = result.errors[0]
+            ax.text(0.5, 0.5, f"Preview error:\n[{error.code}] {error.message}", ha="center", va="center", wrap=True)
+            ax.set_axis_off()
+            self.textEdit_error_detail.setPlainText(
+                f"Preview error for {well.get('name', well.get('id'))}:\n"
+                f"Feature: {config.feature_name or title}\n"
+                f"Operation/formula: {config.operation or config.expression}\n"
+                f"Depth interval: {float(well.get('top_md')):g} - {float(well.get('bottom_md')):g}\n"
+                f"Error code: {error.code}\n"
+                f"Message: {error.message}\n"
+                f"Recommendation: {feature_calculator_recommendation(error)}"
+            )
+        else:
+            points = [(value, depth) for value, depth in zip(result.values, result.depths) if value is not None]
+            if points:
+                x_values, y_depths = zip(*points)
+                ax.plot(x_values, y_depths, linewidth=1.1, marker=".", markersize=3, color="#1f77b4")
+                ax.invert_yaxis()
+                ax.grid(True, alpha=0.25)
+                ax.set_xlabel(config.feature_name or title)
+                ax.set_ylabel("Depth MD")
+                ax.set_title(f"{title}: {well.get('name', well.get('id'))}")
+            else:
+                ax.text(0.5, 0.5, "Preview returned no points", ha="center", va="center")
+        self.preview_figure.tight_layout()
+        self.preview_canvas.draw_idle()
+
+    def _preview_selected_feature(self, *_args: Any) -> None:
+        feature = self._selected_feature()
+        if feature is None or not hasattr(self, "preview_canvas"):
+            return
+        config, parse_errors = parse_feature_calculator_config(feature)
+        if parse_errors or config is None:
+            self.preview_figure.clear()
+            ax = self.preview_figure.add_subplot(111)
+            ax.text(0.5, 0.5, "Selected feature has parse errors", ha="center", va="center")
+            ax.set_axis_off()
+            self.preview_canvas.draw_idle()
+            return
+        self._preview_config(config, title=str(feature.feature_name))
+
+    def _preview_current_definition(self) -> None:
+        config_dict, errors = self._build_current_config()
+        if errors or config_dict is None:
+            self.textEdit_validation.setPlainText("\n".join(errors))
+            QtWidgets.QMessageBox.warning(self, "Preview calculated feature", "Исправьте ошибки формы перед preview.")
+            return
+        feature_name = self.lineEdit_feature_name.text().strip() or "Preview feature"
+        config, parse_errors = parse_feature_calculator_config({"feature_name": feature_name, "params_json": config_dict})
+        if parse_errors or config is None:
+            self.textEdit_validation.setPlainText("\n".join(error.message for error in parse_errors))
+            return
+        self.textEdit_validation.setPlainText("Preview calculated without saving feature definition.")
+        self._preview_config(config, title=feature_name)
 
     def _format_errors(self, errors: list[Any], limit: int = 10) -> str:
         lines = []

@@ -19,6 +19,29 @@ FEATURE_CALCULATOR_DEPTH_PRECISION = 6
 FEATURE_CALCULATOR_STEP_TOLERANCE = 1e-9
 FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS = {"log", "abs", "sqrt"}
 
+
+
+FEATURE_CALCULATOR_STATUS_LABELS = {
+    "missing_curve": "Missing curve",
+    "depth_grid_mismatch": "Depth grid mismatch",
+    "invalid_math_domain": "Invalid math domain",
+    "invalid_log_domain": "Invalid math domain",
+    "invalid_sqrt_domain": "Invalid math domain",
+    "not_enough_points": "Not enough points",
+    "non_finite_result": "Non-finite result",
+}
+
+FEATURE_CALCULATOR_RECOMMENDATIONS = {
+    "missing_curve": "Проверьте, что нужная canonical-кривая или её alias загружены во всех скважинах текущего dataset.",
+    "depth_grid_mismatch": "Проверьте, что входные кривые загружены с одинаковым шагом и одинаковой глубинной сеткой. Интерполяция в текущей версии калькулятора не выполняется.",
+    "invalid_math_domain": "Проверьте область определения операции: log требует X > 0, sqrt требует X >= 0.",
+    "invalid_log_domain": "Проверьте область определения log: все значения должны быть больше нуля.",
+    "invalid_sqrt_domain": "Проверьте область определения sqrt: все значения должны быть неотрицательными.",
+    "division_by_zero": "Измените формулу или входные кривые так, чтобы знаменатель не обращался в ноль на выбранном интервале.",
+    "not_enough_points": "Расширьте интервал или выберите кривую, где достаточно точек для операции.",
+    "non_finite_result": "Проверьте входные значения и параметры операции: результат не должен содержать NaN или inf.",
+}
+
 FEATURE_CALCULATOR_UNARY_OPERATIONS = {
     "log",
     "abs",
@@ -115,6 +138,52 @@ class WellLogCurveSeries:
     source_curve_name: str
     stats_depths: list[float] = field(default_factory=list)
     stats_values: list[float | None] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class FeatureCalculatorCoverageRow:
+    """Dataset coverage diagnostics for one well and one calculator feature."""
+
+    well_id: int
+    well_name: str | None
+    top_md: float
+    bottom_md: float
+    status: str
+    points: int = 0
+    errors: list[FeatureCalculatorError] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors and self.status == "OK"
+
+
+@dataclass(slots=True)
+class FeatureCalculatorCoverageSummary:
+    """Aggregated applicability summary for a calculator feature in one dataset."""
+
+    dataset_id: int
+    calculator_id: int | None
+    feature_name: str | None
+    wells_total: int
+    wells_ok: int
+    error_count: int
+    min_points: int | None
+    max_points: int | None
+    input_curves: list[str]
+    mode: str
+    normalization_scope: str
+
+    @property
+    def can_be_added(self) -> bool:
+        return self.wells_total > 0 and self.error_count == 0 and self.wells_ok == self.wells_total
+
+
+@dataclass(slots=True)
+class FeatureCalculatorCoverageReport:
+    """Full dataset-level diagnostics report for one calculator feature."""
+
+    summary: FeatureCalculatorCoverageSummary
+    rows: list[FeatureCalculatorCoverageRow] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -928,6 +997,96 @@ def _attach_well_context(error: FeatureCalculatorError, well_row: Any) -> Featur
         canonical_name=error.canonical_name,
         severity=error.severity,
     )
+
+
+def feature_calculator_status_for_errors(errors: Sequence[FeatureCalculatorError]) -> str:
+    """Return a concise user-facing coverage status for calculator errors."""
+    if not errors:
+        return "OK"
+    code = errors[0].code
+    return FEATURE_CALCULATOR_STATUS_LABELS.get(code, str(code).replace("_", " ").title())
+
+
+def feature_calculator_recommendation(error: FeatureCalculatorError | None) -> str:
+    """Return a short operator recommendation for a detailed diagnostic error."""
+    if error is None:
+        return "Расчётный признак успешно рассчитывается для выбранной скважины."
+    return FEATURE_CALCULATOR_RECOMMENDATIONS.get(
+        error.code,
+        "Проверьте параметры признака, входные canonical-кривые и выбранный интервал скважины.",
+    )
+
+
+def _config_input_names(config: FeatureCalculatorConfig) -> list[str]:
+    names: list[str] = []
+    for input_curve in config.inputs:
+        label = input_curve.canonical_name or (f"canonical_id={input_curve.canonical_id}" if input_curve.canonical_id is not None else "unknown")
+        names.append(str(label))
+    return names
+
+
+def build_feature_calculator_coverage_report(
+    dataset_id: int,
+    config: FeatureCalculatorConfig,
+    *,
+    db_session: Any = None,
+) -> FeatureCalculatorCoverageReport:
+    """Evaluate one calculator feature against every dataset well and summarize coverage.
+
+    This helper is intentionally read-only: it performs the same strict backend
+    evaluation as COLLECT preflight but returns per-well rows suitable for the
+    constructor UI coverage report and preview diagnostics.
+    """
+    from models_db.model import session
+    from models_db.model_cluster import WellForCluster
+
+    if db_session is None:
+        db_session = session
+
+    well_rows = (
+        db_session.query(WellForCluster)
+        .filter(WellForCluster.dataset_id == int(dataset_id))
+        .order_by(WellForCluster.well_id)
+        .all()
+    )
+    rows: list[FeatureCalculatorCoverageRow] = []
+    for well_row in well_rows:
+        result = evaluate_feature_calculator_for_well(
+            config,
+            well_id=int(well_row.well_id),
+            top_md=float(well_row.top_md),
+            bottom_md=float(well_row.bottom_md),
+            db_session=db_session,
+        )
+        attached_errors = [_attach_well_context(error, well_row) for error in result.errors]
+        rows.append(
+            FeatureCalculatorCoverageRow(
+                well_id=int(well_row.well_id),
+                well_name=getattr(getattr(well_row, "well", None), "name", None),
+                top_md=float(well_row.top_md),
+                bottom_md=float(well_row.bottom_md),
+                status=feature_calculator_status_for_errors(attached_errors),
+                points=len(result.depths) if result.ok else 0,
+                errors=attached_errors,
+            )
+        )
+
+    ok_points = [row.points for row in rows if row.ok]
+    error_count = sum(len(row.errors) for row in rows)
+    summary = FeatureCalculatorCoverageSummary(
+        dataset_id=int(dataset_id),
+        calculator_id=config.calculator_id,
+        feature_name=config.feature_name,
+        wells_total=len(rows),
+        wells_ok=sum(1 for row in rows if row.ok),
+        error_count=error_count,
+        min_points=min(ok_points) if ok_points else None,
+        max_points=max(ok_points) if ok_points else None,
+        input_curves=_config_input_names(config),
+        mode=config.mode,
+        normalization_scope=config.normalization_scope,
+    )
+    return FeatureCalculatorCoverageReport(summary=summary, rows=rows)
 
 
 def validate_calculators_for_dataset(
