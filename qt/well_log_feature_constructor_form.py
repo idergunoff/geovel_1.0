@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from typing import Any, Callable
 
@@ -7,6 +8,12 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from cluster.well_feature_library import (
+    feature_library_entry_mode,
+    feature_name_conflict_message,
+    filter_feature_library_features,
+    normalized_feature_name,
+)
 from cluster.well_feature_calculator import (
     FEATURE_CALCULATOR_DEFAULT_OUTLIER_POLICY,
     FEATURE_CALCULATOR_DEPTH_GRID_POLICY,
@@ -228,10 +235,40 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
         features_group = QtWidgets.QGroupBox("Global calculator features", right_widget)
         features_layout = QtWidgets.QVBoxLayout(features_group)
+
+        filters_layout = QtWidgets.QGridLayout()
+        filters_layout.addWidget(QtWidgets.QLabel("Search", features_group), 0, 0)
+        self.lineEdit_library_search = QtWidgets.QLineEdit(features_group)
+        self.lineEdit_library_search.setObjectName("lineEdit_well_log_constructor_library_search")
+        self.lineEdit_library_search.setPlaceholderText("Feature name or expression")
+        self.lineEdit_library_search.textChanged.connect(self._apply_feature_library_filters)
+        filters_layout.addWidget(self.lineEdit_library_search, 0, 1)
+
+        filters_layout.addWidget(QtWidgets.QLabel("Type", features_group), 0, 2)
+        self.comboBox_library_type_filter = QtWidgets.QComboBox(features_group)
+        self.comboBox_library_type_filter.setObjectName("comboBox_well_log_constructor_library_type_filter")
+        self.comboBox_library_type_filter.addItem("All", "all")
+        self.comboBox_library_type_filter.addItem("Operation", "operation")
+        self.comboBox_library_type_filter.addItem("Formula", "formula")
+        self.comboBox_library_type_filter.currentIndexChanged.connect(self._apply_feature_library_filters)
+        filters_layout.addWidget(self.comboBox_library_type_filter, 0, 3)
+
+        filters_layout.addWidget(QtWidgets.QLabel("Input curve", features_group), 1, 0)
+        self.comboBox_library_canonical_filter = QtWidgets.QComboBox(features_group)
+        self.comboBox_library_canonical_filter.setObjectName("comboBox_well_log_constructor_library_canonical_filter")
+        self.comboBox_library_canonical_filter.currentIndexChanged.connect(self._apply_feature_library_filters)
+        filters_layout.addWidget(self.comboBox_library_canonical_filter, 1, 1)
+
+        self.checkBox_library_used_current_dataset = QtWidgets.QCheckBox("Used in current dataset", features_group)
+        self.checkBox_library_used_current_dataset.setObjectName("checkBox_well_log_constructor_library_used_current_dataset")
+        self.checkBox_library_used_current_dataset.stateChanged.connect(self._apply_feature_library_filters)
+        filters_layout.addWidget(self.checkBox_library_used_current_dataset, 1, 2, 1, 2)
+        features_layout.addLayout(filters_layout)
+
         self.table_global_features = QtWidgets.QTableWidget(features_group)
         self.table_global_features.setObjectName("tableWidget_well_log_constructor_global_features")
-        self.table_global_features.setColumnCount(6)
-        self.table_global_features.setHorizontalHeaderLabels(["ID", "Feature", "Transform", "Expression", "Inputs", "In dataset"])
+        self.table_global_features.setColumnCount(7)
+        self.table_global_features.setHorizontalHeaderLabels(["ID", "Feature", "Type", "Expression", "Inputs", "In dataset", "Used count"])
         self.table_global_features.horizontalHeader().setStretchLastSection(True)
         self.table_global_features.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table_global_features.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -254,6 +291,14 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.pushButton_remove_from_dataset.setObjectName("pushButton_well_log_constructor_remove_from_dataset")
         self.pushButton_remove_from_dataset.clicked.connect(self._remove_selected_feature_from_dataset)
         actions_layout.addWidget(self.pushButton_remove_from_dataset)
+        self.pushButton_duplicate_as_new = QtWidgets.QPushButton("DUPLICATE AS NEW", definition_group)
+        self.pushButton_duplicate_as_new.setObjectName("pushButton_well_log_constructor_duplicate_as_new")
+        self.pushButton_duplicate_as_new.clicked.connect(self._duplicate_selected_feature_as_new)
+        actions_layout.addWidget(self.pushButton_duplicate_as_new)
+        self.pushButton_delete_global = QtWidgets.QPushButton("DELETE GLOBAL FEATURE", definition_group)
+        self.pushButton_delete_global.setObjectName("pushButton_well_log_constructor_delete_global_feature")
+        self.pushButton_delete_global.clicked.connect(self._delete_selected_global_feature)
+        actions_layout.addWidget(self.pushButton_delete_global)
         definition_layout.addLayout(actions_layout)
         right_layout.addWidget(definition_group, stretch=1)
 
@@ -358,6 +403,11 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.comboBox_input_curve.clear()
         self.comboBox_input_curve.addItem("", None)
         self.listWidget_formula_curves.clear()
+        if hasattr(self, "comboBox_library_canonical_filter"):
+            self.comboBox_library_canonical_filter.blockSignals(True)
+            current_filter = self.comboBox_library_canonical_filter.currentData()
+            self.comboBox_library_canonical_filter.clear()
+            self.comboBox_library_canonical_filter.addItem("All", "all")
         for curve in self.all_canonical_parameters:
             canonical_id = curve.get("canonical_id")
             canonical_name = curve.get("canonical_name") or f"canonical_id={canonical_id}"
@@ -366,42 +416,76 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             item = QtWidgets.QListWidgetItem(str(canonical_name))
             item.setData(QtCore.Qt.UserRole, curve_payload)
             self.listWidget_formula_curves.addItem(item)
+            if hasattr(self, "comboBox_library_canonical_filter"):
+                self.comboBox_library_canonical_filter.addItem(str(canonical_name), str(canonical_name))
+        if hasattr(self, "comboBox_library_canonical_filter"):
+            if current_filter is not None:
+                index = self.comboBox_library_canonical_filter.findData(current_filter)
+                if index >= 0:
+                    self.comboBox_library_canonical_filter.setCurrentIndex(index)
+            self.comboBox_library_canonical_filter.blockSignals(False)
 
     def _refresh_global_features(self, select_feature_id: int | None = None) -> None:
         rows = session.query(FeatureCalculator).order_by(FeatureCalculator.feature_name, FeatureCalculator.id).all()
+        links = session.query(ClusterWellLogParameterFromCalculator).all()
         linked_ids = {
             int(row.calculator_id)
-            for row in session.query(ClusterWellLogParameterFromCalculator)
-            .filter(ClusterWellLogParameterFromCalculator.dataset_id == self.dataset_id)
-            .all()
+            for row in links
+            if int(row.dataset_id) == self.dataset_id
         }
+        usage_counts: dict[int, int] = {}
+        for link in links:
+            usage_counts[int(link.calculator_id)] = usage_counts.get(int(link.calculator_id), 0) + 1
+
         self.global_features = []
         self.calculator_parameters = []
         for row in rows:
+            inputs_text = self._format_inputs(row.used_canonical_well_log)
             feature = {
                 "id": int(row.id),
                 "feature_name": row.feature_name,
                 "transform_type": row.transform_type,
                 "expression": row.expression,
                 "used_canonical_well_log": row.used_canonical_well_log,
+                "inputs_text": inputs_text,
                 "params_json": row.params_json,
                 "created_at": row.created_at,
                 "in_dataset": int(row.id) in linked_ids,
+                "usage_count": usage_counts.get(int(row.id), 0),
             }
             self.global_features.append(feature)
             if int(row.id) in linked_ids:
                 self.calculator_parameters.append({"calculator_id": int(row.id), "feature_name": row.feature_name})
 
-        self.table_global_features.setRowCount(len(self.global_features))
+        self._apply_feature_library_filters(select_feature_id=select_feature_id)
+        self._fill_dataset_context()
+
+    def _apply_feature_library_filters(self, *_args: Any, select_feature_id: int | None = None) -> None:
+        if not hasattr(self, "table_global_features"):
+            return
+        mode_filter = self.comboBox_library_type_filter.currentData() if hasattr(self, "comboBox_library_type_filter") else "all"
+        canonical_filter = self.comboBox_library_canonical_filter.currentData() if hasattr(self, "comboBox_library_canonical_filter") else "all"
+        used_current = bool(self.checkBox_library_used_current_dataset.isChecked()) if hasattr(self, "checkBox_library_used_current_dataset") else False
+        search_text = self.lineEdit_library_search.text() if hasattr(self, "lineEdit_library_search") else ""
+        filtered_features = filter_feature_library_features(
+            self.global_features,
+            search_text=search_text,
+            mode_filter=str(mode_filter or "all"),
+            canonical_filter=str(canonical_filter or "all"),
+            used_in_current_dataset=used_current,
+        )
+        self.table_global_features.setRowCount(len(filtered_features))
         selected_row = -1
-        for row_index, feature in enumerate(self.global_features):
+        for row_index, feature in enumerate(filtered_features):
+            feature_mode = feature_library_entry_mode(feature)
             values = [
                 feature.get("id"),
                 feature.get("feature_name"),
-                feature.get("transform_type"),
+                feature_mode,
                 feature.get("expression"),
-                self._format_inputs(feature.get("used_canonical_well_log")),
+                feature.get("inputs_text") or self._format_inputs(feature.get("used_canonical_well_log")),
                 "yes" if feature.get("in_dataset") else "no",
+                int(feature.get("usage_count") or 0),
             ]
             for column, value in enumerate(values):
                 item = QtWidgets.QTableWidgetItem("" if value is None else str(value))
@@ -410,15 +494,21 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
                 self.table_global_features.setItem(row_index, column, item)
             if select_feature_id is not None and int(feature["id"]) == int(select_feature_id):
                 selected_row = row_index
+            elif select_feature_id is None and self._selected_feature_id is not None and int(feature["id"]) == int(self._selected_feature_id):
+                selected_row = row_index
         self.table_global_features.resizeColumnsToContents()
         if selected_row >= 0:
             self.table_global_features.selectRow(selected_row)
-        elif self.global_features:
+        elif filtered_features:
             self.table_global_features.selectRow(0)
         else:
             self._selected_feature_id = None
             self.textEdit_definition.clear()
-        self._fill_dataset_context()
+            self._coverage_rows = []
+            if hasattr(self, "table_coverage"):
+                self.table_coverage.setRowCount(0)
+                self.label_coverage_summary.setText(self._coverage_summary_text(None))
+                self.textEdit_error_detail.clear()
 
     def _format_inputs(self, raw_inputs: Any) -> str:
         try:
@@ -503,12 +593,13 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
     def _build_formula_config(self) -> tuple[dict[str, Any] | None, list[str]]:
         errors: list[str] = []
         feature_name = self.lineEdit_feature_name.text().strip()
-        if not feature_name:
-            errors.append("Feature name is required.")
-        elif feature_name.casefold() in self._existing_feature_names():
-            errors.append(f"Feature name '{feature_name}' already exists in feature_calculator.")
-        elif feature_name.casefold() in self._canonical_names():
-            errors.append(f"Feature name '{feature_name}' matches a canonical curve name.")
+        conflict_message = feature_name_conflict_message(
+            feature_name,
+            existing_feature_names=self._existing_feature_names(),
+            canonical_names=self._canonical_names(),
+        )
+        if conflict_message:
+            errors.append(conflict_message)
 
         expression = self.textEdit_formula_expression.toPlainText().strip()
         if not expression:
@@ -570,12 +661,13 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
     def _build_operation_config(self) -> tuple[dict[str, Any] | None, list[str]]:
         errors: list[str] = []
         feature_name = self.lineEdit_feature_name.text().strip()
-        if not feature_name:
-            errors.append("Feature name is required.")
-        elif feature_name.casefold() in self._existing_feature_names():
-            errors.append(f"Feature name '{feature_name}' already exists in feature_calculator.")
-        elif feature_name.casefold() in self._canonical_names():
-            errors.append(f"Feature name '{feature_name}' matches a canonical curve name.")
+        conflict_message = feature_name_conflict_message(
+            feature_name,
+            existing_feature_names=self._existing_feature_names(),
+            canonical_names=self._canonical_names(),
+        )
+        if conflict_message:
+            errors.append(conflict_message)
 
         input_curve = self.comboBox_input_curve.currentData()
         if not input_curve:
@@ -713,6 +805,10 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         feature = self._selected_feature()
         if feature is None:
             self.textEdit_definition.clear()
+            self.pushButton_add_to_dataset.setEnabled(False)
+            self.pushButton_remove_from_dataset.setEnabled(False)
+            self.pushButton_delete_global.setEnabled(False)
+            self.pushButton_duplicate_as_new.setEnabled(False)
             return
         config, parse_errors = parse_feature_calculator_config(feature)
         linked = (
@@ -724,6 +820,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             .first()
             is not None
         )
+        usage_count = self._selected_feature_usage_count(int(feature.id))
         lines = [
             f"ID: {feature.id}",
             f"Name: {feature.feature_name}",
@@ -732,6 +829,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             f"Inputs: {self._format_inputs(feature.used_canonical_well_log)}",
             f"Created at: {feature.created_at}",
             f"Used in current dataset: {'yes' if linked else 'no'}",
+            f"Used in any dataset links: {usage_count}",
         ]
         if config is not None:
             lines.extend(
@@ -748,6 +846,9 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             lines.append("Errors:")
             lines.extend(f"- [{error.code}] {error.message}" for error in parse_errors)
         self.textEdit_definition.setPlainText("\n".join(lines))
+        self.pushButton_remove_from_dataset.setEnabled(linked)
+        self.pushButton_delete_global.setEnabled(usage_count == 0)
+        self.pushButton_duplicate_as_new.setEnabled(True)
         self._refresh_selected_feature_diagnostics(feature, config, parse_errors)
 
     def _status_error_count_text(self, errors: list[Any]) -> str:
@@ -984,6 +1085,112 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             "green",
         )
         QtWidgets.QMessageBox.information(self, "REMOVE FROM DATASET", f"Feature '{feature.feature_name}' removed from dataset.")
+
+    def _selected_feature_usage_count(self, feature_id: int) -> int:
+        return int(
+            session.query(ClusterWellLogParameterFromCalculator)
+            .filter(ClusterWellLogParameterFromCalculator.calculator_id == int(feature_id))
+            .count()
+            or 0
+        )
+
+    def _delete_selected_global_feature(self) -> None:
+        feature = self._selected_feature()
+        if feature is None:
+            QtWidgets.QMessageBox.warning(self, "DELETE GLOBAL FEATURE", "Выберите глобальный calculator-признак.")
+            return
+        usage_count = self._selected_feature_usage_count(int(feature.id))
+        if usage_count:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "DELETE GLOBAL FEATURE",
+                "Глобальный признак нельзя удалить, потому что он используется "
+                f"в {usage_count} dataset connection(s). Сначала удалите привязки из datasets.",
+            )
+            return
+        confirmation_text = (
+            "Удаление глобального признака необратимо.\n\n"
+            f"Name: {feature.feature_name}\n"
+            f"Expression: {feature.expression or ''}\n"
+            f"Created at: {feature.created_at}\n\n"
+            "Удалить этот FeatureCalculator?"
+        )
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            "DELETE GLOBAL FEATURE",
+            confirmation_text,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if answer != QtWidgets.QMessageBox.Yes:
+            return
+        feature_id = int(feature.id)
+        feature_name = str(feature.feature_name)
+        try:
+            session.delete(feature)
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            QtWidgets.QMessageBox.critical(self, "DELETE GLOBAL FEATURE", f"Не удалось удалить FeatureCalculator: {exc}")
+            return
+        self._selected_feature_id = None
+        self._refresh_global_features()
+        self._set_info(f"WELL LOG CONSTR: удалён глобальный признак {feature_name} (id={feature_id}).", "green")
+        QtWidgets.QMessageBox.information(self, "DELETE GLOBAL FEATURE", f"Feature '{feature_name}' deleted permanently.")
+
+    def _duplicate_selected_feature_as_new(self) -> None:
+        feature = self._selected_feature()
+        if feature is None:
+            QtWidgets.QMessageBox.warning(self, "DUPLICATE AS NEW", "Выберите глобальный calculator-признак.")
+            return
+        config, parse_errors = parse_feature_calculator_config(feature)
+        if parse_errors or config is None:
+            self.textEdit_validation.setPlainText("\n".join(error.message for error in parse_errors))
+            QtWidgets.QMessageBox.warning(self, "DUPLICATE AS NEW", "Нельзя дублировать признак с ошибками params_json.")
+            return
+
+        existing_names = self._existing_feature_names()
+        base_name = f"{feature.feature_name}_copy"
+        new_name = base_name
+        suffix = 2
+        while normalized_feature_name(new_name) in existing_names:
+            new_name = f"{base_name}_{suffix}"
+            suffix += 1
+
+        self.lineEdit_feature_name.setText(new_name)
+        if config.mode == "formula":
+            index = self.comboBox_mode.findData("formula")
+            if index >= 0:
+                self.comboBox_mode.setCurrentIndex(index)
+            self.textEdit_formula_expression.setPlainText(config.expression or str(feature.expression or ""))
+            self.label_formula_inputs.setText(", ".join(inp.canonical_name or str(inp.canonical_id) for inp in config.inputs) or "—")
+        else:
+            index = self.comboBox_mode.findData("operation")
+            if index >= 0:
+                self.comboBox_mode.setCurrentIndex(index)
+            input_name = config.inputs[0].canonical_name if config.inputs else None
+            for combo_index in range(self.comboBox_input_curve.count()):
+                payload = self.comboBox_input_curve.itemData(combo_index)
+                if isinstance(payload, dict) and str(payload.get("canonical_name")) == str(input_name):
+                    self.comboBox_input_curve.setCurrentIndex(combo_index)
+                    break
+            operation_index = self.comboBox_operation.findData(config.operation)
+            if operation_index >= 0:
+                self.comboBox_operation.setCurrentIndex(operation_index)
+            scope_index = self.comboBox_normalization_scope.findData(config.normalization_scope)
+            if scope_index >= 0:
+                self.comboBox_normalization_scope.setCurrentIndex(scope_index)
+            raw_params = copy.deepcopy(config.raw_params) if isinstance(config.raw_params, dict) else {}
+            if "window" in raw_params:
+                self.spinBox_rolling_window.setValue(int(raw_params.get("window") or self.spinBox_rolling_window.value()))
+            if "min_periods" in raw_params:
+                self.spinBox_min_periods.setValue(int(raw_params.get("min_periods") or self.spinBox_min_periods.value()))
+            self._update_operation_fields()
+        self.textEdit_validation.setPlainText(
+            f"Duplicated '{feature.feature_name}' into the form as '{new_name}'. "
+            "Review parameters and press Save to create a new global feature. The original feature and datasets were not changed."
+        )
+        self.lineEdit_feature_name.setFocus()
 
     def _invalidate_dataset_data(self) -> int:
         removed_rows = (
