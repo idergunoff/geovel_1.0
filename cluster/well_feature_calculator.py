@@ -953,19 +953,20 @@ def validate_calculators_for_dataset(
             )
         ]
 
-    query = (
-        db_session.query(FeatureCalculator)
-        .join(
-            ClusterWellLogParameterFromCalculator,
-            ClusterWellLogParameterFromCalculator.calculator_id == FeatureCalculator.id,
-        )
-        .filter(ClusterWellLogParameterFromCalculator.dataset_id == int(dataset_id))
-    )
     if calculator_ids is not None:
         normalized_ids = [int(calculator_id) for calculator_id in calculator_ids]
         if not normalized_ids:
             return []
-        query = query.filter(FeatureCalculator.id.in_(normalized_ids))
+        query = db_session.query(FeatureCalculator).filter(FeatureCalculator.id.in_(normalized_ids))
+    else:
+        query = (
+            db_session.query(FeatureCalculator)
+            .join(
+                ClusterWellLogParameterFromCalculator,
+                ClusterWellLogParameterFromCalculator.calculator_id == FeatureCalculator.id,
+            )
+            .filter(ClusterWellLogParameterFromCalculator.dataset_id == int(dataset_id))
+        )
     calculators = query.order_by(FeatureCalculator.feature_name, FeatureCalculator.id).all()
     if not calculators:
         return []
