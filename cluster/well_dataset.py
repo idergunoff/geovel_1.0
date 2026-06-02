@@ -235,8 +235,17 @@ def open_cluster_well_log_constructor() -> None:
             'id': int(feature.id),
             'feature_name': feature.feature_name,
             'transform_type': feature.transform_type,
+            'expression': feature.expression,
             'used_canonical_well_log': feature.used_canonical_well_log,
             'params_json': feature.params_json,
+            'created_at': feature.created_at,
+        })
+
+    all_canonical_parameters = []
+    for row in session.query(CanonicalWellLog).order_by(CanonicalWellLog.canonical_name, CanonicalWellLog.id).all():
+        all_canonical_parameters.append({
+            'canonical_id': int(row.id),
+            'canonical_name': row.canonical_name or f'canonical_id={row.id}',
         })
 
     from qt.well_log_feature_constructor_form import WellLogFeatureConstructorDialog
@@ -248,6 +257,10 @@ def open_cluster_well_log_constructor() -> None:
         canonical_parameters=canonical_parameters,
         calculator_parameters=calculator_parameters,
         global_features=global_features,
+        all_canonical_parameters=all_canonical_parameters,
+        refresh_dataset_callback=load_cluster_well_dataset_state_to_form,
+        collect_state_callback=_set_cluster_well_collect_button_state,
+        info_callback=set_info,
         parent=MainWindow,
     )
     dialog.setModal(False)
