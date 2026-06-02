@@ -1316,8 +1316,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>676</width>
-                       <height>200</height>
+                       <width>46</width>
+                       <height>26</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -6092,13 +6092,23 @@ Therm</string>
                     </item>
                     <item row="0" column="1">
                      <layout class="QGridLayout" name="gridLayout_167">
-                      <item row="2" column="0">
+                      <item row="3" column="0">
                        <widget class="QPushButton" name="pushButton_cluster_remove_well_log">
                         <property name="styleSheet">
                          <string notr="true">background-color: rgb(255, 166, 166);</string>
                         </property>
                         <property name="text">
                          <string>REMOVE</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QPushButton" name="pushButton_cluster_clear_list_log">
+                        <property name="styleSheet">
+                         <string notr="true">background-color: rgb(255, 138, 162);</string>
+                        </property>
+                        <property name="text">
+                         <string>CLEAR</string>
                         </property>
                        </widget>
                       </item>
@@ -6112,13 +6122,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="3" column="0">
-                       <widget class="QPushButton" name="pushButton_cluster_clear_list_log">
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_clust_collect_well_log">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(255, 138, 162);</string>
+                         <string notr="true">background-color: rgb(226, 255, 165);</string>
                         </property>
                         <property name="text">
-                         <string>CLEAR</string>
+                         <string>COLLECT</string>
                         </property>
                        </widget>
                       </item>
@@ -6132,13 +6142,13 @@ Therm</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="1">
-                       <widget class="QPushButton" name="pushButton_clust_collect_well_log">
+                      <item row="2" column="0">
+                       <widget class="QPushButton" name="pushButton_cluster_well_log_constructor">
                         <property name="styleSheet">
-                         <string notr="true">background-color: rgb(226, 255, 165);</string>
+                         <string notr="true">background-color: rgb(252, 204, 165);</string>
                         </property>
                         <property name="text">
-                         <string>COLLECT</string>
+                         <string>CONSTR</string>
                         </property>
                        </widget>
                       </item>
@@ -6965,9 +6975,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_4"/>
+  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>
