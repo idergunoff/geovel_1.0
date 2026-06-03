@@ -161,6 +161,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         "Средний портрет кластера",
     )
 
+    _TRACK_WIDTH_PX = 190
+    _CLUSTER_TRACK_WIDTH_PX = 125
+    _GRAPH_HEIGHT_PX = 600
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.visualization_data: WellLogClusterVisualizationData | None = None
@@ -168,7 +172,170 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.profile_cache: dict[int, dict[str, Any]] = {}
         self._cluster_checkboxes: dict[int, Any] = {}
         self._highlight_interval: dict[str, Any] | None = None
+        self._well_altitude_cache: dict[int, float | None] = {}
+        self._source_feature_names_cache: dict[int, set[str]] = {}
+        self._source_curve_alias_cache: dict[tuple[int, str], set[str]] = {}
+        self._full_source_curve_cache: dict[tuple[int, str], list[tuple[float, float | None]]] = {}
         self._build_ui()
+
+    def _prepare_scrollable_canvas(
+            self,
+            *,
+            figure: Figure,
+            canvas: FigureCanvas,
+            scroll_area: QtWidgets.QScrollArea,
+            width_px: int,
+            height_px: int | None = None,
+    ) -> None:
+        """Resizes a Matplotlib canvas to exact content size and clears stale Qt paint artefacts."""
+        height_px = int(height_px or self._GRAPH_HEIGHT_PX)
+        width_px = max(320, int(width_px))
+        figure.clear()
+        figure.set_size_inches(width_px / float(figure.dpi), height_px / float(figure.dpi), forward=True)
+        canvas.setMinimumSize(width_px, height_px)
+        canvas.setMaximumSize(width_px, height_px)
+        canvas.resize(width_px, height_px)
+        canvas.updateGeometry()
+        if scroll_area.widget() is canvas:
+            scroll_area.horizontalScrollBar().setValue(0)
+            scroll_area.verticalScrollBar().setValue(0)
+            scroll_area.viewport().update()
+
+    @staticmethod
+    def _draw_empty_graph(figure: Figure, canvas: FigureCanvas, message: str) -> None:
+        ax = figure.add_subplot(111)
+        ax.text(0.5, 0.5, message, ha="center", va="center")
+        ax.set_axis_off()
+        canvas.draw()
+
+    def _well_altitude(self, well_id: int) -> float | None:
+        """Returns wellhead altitude from DB; missing/invalid values are cached as None."""
+        well_id = int(well_id)
+        if well_id in self._well_altitude_cache:
+            return self._well_altitude_cache[well_id]
+        altitude: float | None = None
+        try:
+            value = session.query(Well.alt).filter(Well.id == well_id).scalar()
+            if value is not None:
+                altitude = float(value)
+        except Exception:
+            altitude = None
+        self._well_altitude_cache[well_id] = altitude
+        return altitude
+
+    def _absolute_depth(self, well_id: int, depth_md: Any) -> float | None:
+        """Converts measured depth to absolute depth/elevation: wellhead altitude minus MD."""
+        depth_value = _to_finite_float(depth_md)
+        if depth_value is None:
+            return None
+        altitude = self._well_altitude(int(well_id))
+        if altitude is None:
+            return None
+        return float(altitude) - float(depth_value)
+
+    def _source_feature_names(self) -> set[str]:
+        """Returns source canonical feature names selected in the current dataset."""
+        data = self.visualization_data or {}
+        try:
+            dataset_id = int(data.get("dataset_id"))
+        except (TypeError, ValueError):
+            return set()
+        if dataset_id in self._source_feature_names_cache:
+            return self._source_feature_names_cache[dataset_id]
+        names: set[str] = set()
+        try:
+            rows = (
+                session.query(CanonicalWellLog.canonical_name)
+                .join(ClusterWellLogParameter, ClusterWellLogParameter.canonical_id == CanonicalWellLog.id)
+                .filter(ClusterWellLogParameter.dataset_id == dataset_id)
+                .all()
+            )
+            names = {str(row[0]) for row in rows if row and row[0]}
+        except Exception:
+            names = set()
+        self._source_feature_names_cache[dataset_id] = names
+        return names
+
+    def _is_source_curve_feature(self, curve_name: str | None) -> bool:
+        curve_name = str(curve_name or "").strip()
+        if not curve_name:
+            return False
+        return curve_name in self._source_feature_names()
+
+    def _source_curve_alias_names(self, curve_name: str) -> set[str]:
+        """Returns DB curve-name aliases for a source canonical feature in the current dataset."""
+        data = self.visualization_data or {}
+        try:
+            dataset_id = int(data.get("dataset_id"))
+        except (TypeError, ValueError):
+            return set()
+        cache_key = (dataset_id, str(curve_name))
+        if cache_key in self._source_curve_alias_cache:
+            return self._source_curve_alias_cache[cache_key]
+        aliases: set[str] = set()
+        try:
+            canonical = (
+                session.query(CanonicalWellLog)
+                .join(ClusterWellLogParameter, ClusterWellLogParameter.canonical_id == CanonicalWellLog.id)
+                .filter(
+                    ClusterWellLogParameter.dataset_id == dataset_id,
+                    CanonicalWellLog.canonical_name == str(curve_name),
+                )
+                .first()
+            )
+            if canonical is not None:
+                aliases.add(str(canonical.canonical_name).strip().casefold())
+                alias_rows = session.query(AliasWellLog.alias_name_norm).filter(AliasWellLog.canonical_id == int(canonical.id)).all()
+                aliases.update(str(row[0]).strip().casefold() for row in alias_rows if row and row[0])
+        except Exception:
+            aliases = set()
+        self._source_curve_alias_cache[cache_key] = aliases
+        return aliases
+
+    def _load_full_source_curve(self, well_id: int, curve_name: str) -> list[tuple[float, float | None]]:
+        """Loads the whole source WellLog curve for display without recalculating calculator/formula features."""
+        cache_key = (int(well_id), str(curve_name))
+        if cache_key in self._full_source_curve_cache:
+            return self._full_source_curve_cache[cache_key]
+        alias_names = self._source_curve_alias_names(str(curve_name))
+        if not alias_names:
+            self._full_source_curve_cache[cache_key] = []
+            return []
+        points: list[tuple[float, float | None]] = []
+        try:
+            candidates = session.query(WellLog).filter(WellLog.well_id == int(well_id)).all()
+            for well_log in candidates:
+                curve_key = str(well_log.curve_name or "").strip().casefold()
+                if curve_key not in alias_names or well_log.curve_data is None:
+                    continue
+                try:
+                    begin = float(well_log.begin)
+                    step = float(well_log.step)
+                    values = json.loads(well_log.curve_data)
+                except Exception:
+                    continue
+                if step <= 0 or not isinstance(values, list):
+                    continue
+                points = [(begin + idx * step, _to_finite_float(value)) for idx, value in enumerate(values)]
+                break
+        except Exception:
+            points = []
+        self._full_source_curve_cache[cache_key] = points
+        return points
+
+    def _sync_full_source_curve_checkbox(self, curve_name: str | None, shared_depth: bool) -> bool:
+        """Enables full-curve plotting only for source curves in shared-depth mode and returns effective state."""
+        checkbox = getattr(self, "curve_wells_full_source_curve", None)
+        if checkbox is None:
+            return False
+        can_use = bool(shared_depth and self._is_source_curve_feature(curve_name))
+        checkbox.blockSignals(True)
+        checkbox.setEnabled(can_use)
+        if not can_use:
+            checkbox.setChecked(False)
+        effective = bool(can_use and checkbox.isChecked())
+        checkbox.blockSignals(False)
+        return effective
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Well Log Cluster Visualization")
@@ -220,8 +387,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         controls_layout.addWidget(QtWidgets.QLabel("Cluster opacity:"), 1, 1)
         self.opacity_spin = QtWidgets.QDoubleSpinBox()
-        self.opacity_spin.setToolTip("Прозрачность цветной подложки кластерных интервалов на графиках.")
-        self.opacity_spin.setRange(0.05, 1.0)
+        self.opacity_spin.setToolTip("Прозрачность кластерной раскраски: 0.00 — полностью прозрачная, 1.00 — полностью непрозрачная.")
+        self.opacity_spin.setRange(0.0, 1.0)
         self.opacity_spin.setSingleStep(0.05)
         self.opacity_spin.setValue(0.35)
         self.opacity_spin.valueChanged.connect(self._render_one_well_curves)
@@ -288,7 +455,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.one_well_canvas.setMinimumSize(900, 520)
         self.one_well_toolbar = NavigationToolbar(self.one_well_canvas, self.one_well_tab)
         self.one_well_scroll = QtWidgets.QScrollArea()
-        self.one_well_scroll.setWidgetResizable(True)
+        self.one_well_scroll.setWidgetResizable(False)
+        self.one_well_scroll.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.one_well_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.one_well_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.one_well_scroll.setWidget(self.one_well_canvas)
         one_well_layout.addWidget(self.one_well_toolbar)
         one_well_layout.addWidget(self.one_well_scroll, stretch=1)
@@ -347,6 +517,26 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_shared_x.setChecked(True)
         self.curve_wells_shared_x.stateChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Scale:", self.curve_wells_shared_x)
+
+        self.curve_wells_shared_depth = QtWidgets.QCheckBox("общая глубина")
+        self.curve_wells_shared_depth.setToolTip(
+            "Включено: MD пересчитывается в абсолютную глубину/отметку через альтитуду устья из БД "
+            "и все скважины показаны в общей вертикальной шкале. "
+            "Выключено: каждый трек растянут по своей MD-шкале."
+        )
+        self.curve_wells_shared_depth.setChecked(False)
+        self.curve_wells_shared_depth.stateChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Depth:", self.curve_wells_shared_depth)
+
+        self.curve_wells_full_source_curve = QtWidgets.QCheckBox("вся исходная кривая")
+        self.curve_wells_full_source_curve.setToolTip(
+            "Только для исходных canonical-кривых и только при общей глубине: "
+            "показывает всю кривую скважины, а кластеры раскрашивает только в выбранном интервале анализа."
+        )
+        self.curve_wells_full_source_curve.setChecked(False)
+        self.curve_wells_full_source_curve.setEnabled(False)
+        self.curve_wells_full_source_curve.stateChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Full curve:", self.curve_wells_full_source_curve)
         curve_wells_side_layout.addLayout(curve_wells_options)
 
         self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
@@ -364,7 +554,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_canvas.setMinimumSize(900, 560)
         self.curve_wells_toolbar = NavigationToolbar(self.curve_wells_canvas, self.curve_wells_tab)
         self.curve_wells_scroll = QtWidgets.QScrollArea()
-        self.curve_wells_scroll.setWidgetResizable(True)
+        self.curve_wells_scroll.setWidgetResizable(False)
+        self.curve_wells_scroll.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.curve_wells_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.curve_wells_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.curve_wells_scroll.setWidget(self.curve_wells_canvas)
         curve_wells_graph_layout.addWidget(self.curve_wells_toolbar)
         curve_wells_graph_layout.addWidget(self.curve_wells_scroll, stretch=1)
@@ -621,6 +814,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
     def load_visualization_data(self, visualization_data: WellLogClusterVisualizationData) -> None:
         self.visualization_data = visualization_data
+        self._well_altitude_cache.clear()
+        self._source_feature_names_cache.clear()
+        self._source_curve_alias_cache.clear()
+        self._full_source_curve_cache.clear()
         self.interval_cache = self._build_interval_cache(visualization_data.get("rows", []))
         self.profile_cache = self._build_profile_cache(visualization_data.get("rows", []), visualization_data.get("feature_names", []))
         self._populate_controls()
@@ -821,12 +1018,15 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             return
         rows = self._rows_for_current_well()
         feature_names = [str(name) for name in (self.visualization_data or {}).get("feature_names", [])]
-        self.one_well_figure.clear()
         if not rows:
-            ax = self.one_well_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Нет строк для выбранной скважины/фильтра кластеров", ha="center", va="center")
-            ax.set_axis_off()
-            self.one_well_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.one_well_figure,
+                canvas=self.one_well_canvas,
+                scroll_area=self.one_well_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=560,
+            )
+            self._draw_empty_graph(self.one_well_figure, self.one_well_canvas, "Нет строк для выбранной скважины/фильтра кластеров")
             return
 
         finite_features: list[str] = []
@@ -834,10 +1034,14 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if any(_to_finite_float((row.get("features", {}) or {}).get(feature_name)) is not None for row in rows):
                 finite_features.append(feature_name)
         if not finite_features:
-            ax = self.one_well_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "У выбранной скважины нет числовых значений кривых", ha="center", va="center")
-            ax.set_axis_off()
-            self.one_well_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.one_well_figure,
+                canvas=self.one_well_canvas,
+                scroll_area=self.one_well_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=560,
+            )
+            self._draw_empty_graph(self.one_well_figure, self.one_well_canvas, "У выбранной скважины нет числовых значений кривых")
             return
 
         depths = [float(row.get("depth_md", 0.0)) for row in rows]
@@ -847,16 +1051,23 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             depth_min -= 0.5
             depth_max += 0.5
         track_count = len(finite_features) + 1
-        canvas_width = max(900, int(track_count * 170))
-        self.one_well_canvas.setMinimumSize(canvas_width, 560)
-        self.one_well_figure.set_size_inches(max(12.0, track_count * 1.65), 6.7, forward=True)
+        canvas_width = int(len(finite_features) * self._TRACK_WIDTH_PX + self._CLUSTER_TRACK_WIDTH_PX)
+        self._prepare_scrollable_canvas(
+            figure=self.one_well_figure,
+            canvas=self.one_well_canvas,
+            scroll_area=self.one_well_scroll,
+            width_px=canvas_width,
+            height_px=560,
+        )
         axes = self.one_well_figure.subplots(1, track_count, sharey=True)
         if track_count == 1:
             axes = [axes]
         else:
             axes = list(np.ravel(axes))
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
+        well_id = int(rows[0].get("well_id", 0))
         well_name = str(rows[0].get("well_name", "—"))
+        well_title = f"{well_name} (id={well_id})"
         intervals = [
             item for item in self.interval_cache.get(int(rows[0].get("well_id")), [])
             if self._is_cluster_visible(int(item.get("cluster_label", 0)))
@@ -869,7 +1080,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                     float(interval.get("from_md", depth_min)),
                     float(interval.get("to_md", depth_max)),
                     color=_well_log_cluster_color(int(interval.get("cluster_label", 0))),
-                    alpha=max(0.03, opacity * 0.18),
+                    alpha=opacity,
                     linewidth=0,
                 )
             values = [_to_finite_float((row.get("features", {}) or {}).get(feature_name)) for row in rows]
@@ -877,8 +1088,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             plot_y = [depth for value, depth in zip(values, depths) if value is not None]
             if plot_x:
                 ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3)
-            ax.set_xlabel(feature_name, fontsize=9)
-            ax.tick_params(axis="x", labelsize=8)
+            ax.set_title(feature_name, fontsize=8, pad=3)
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelsize=7, pad=1)
             ax.grid(True, alpha=0.25)
             if feature_idx == 0:
                 ax.set_ylabel("Depth MD")
@@ -894,7 +1106,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 )
 
         cluster_ax = axes[-1]
-        cluster_ax.set_title("Cluster track")
+        cluster_ax.set_title("Cl", fontsize=8, pad=3)
         cluster_ax.set_xlim(0.0, 1.0)
         cluster_ax.set_xticks([])
         cluster_ax.grid(False)
@@ -916,11 +1128,11 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if height > (depth_max - depth_min) * 0.025:
                 cluster_ax.text(0.5, from_md + height / 2.0, str(label), ha="center", va="center", fontsize=8)
         cluster_ax.tick_params(labelleft=False)
-        self.one_well_figure.suptitle(f"{well_name}: все кривые и cluster track", fontsize=11)
+        self.one_well_figure.suptitle(well_title, fontsize=11)
         for ax in axes:
             ax.set_ylim(depth_max, depth_min)
-        self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.95))
-        self.one_well_canvas.draw_idle()
+        self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
+        self.one_well_canvas.draw()
 
     def _current_curve_name(self) -> str | None:
         value = self.curve_combo.currentText() if hasattr(self, "curve_combo") else ""
@@ -1048,90 +1260,157 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     def _render_curve_across_wells(self) -> None:
         if not hasattr(self, "curve_wells_figure"):
             return
-        self.curve_wells_figure.clear()
         curve_name = self._current_curve_name()
         if not curve_name:
-            ax = self.curve_wells_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Выберите кривую для сравнения", ha="center", va="center")
-            ax.set_axis_off()
-            self.curve_wells_canvas.draw_idle()
+            self._sync_full_source_curve_checkbox(None, False)
+            self._prepare_scrollable_canvas(
+                figure=self.curve_wells_figure,
+                canvas=self.curve_wells_canvas,
+                scroll_area=self.curve_wells_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=600,
+            )
+            self._draw_empty_graph(self.curve_wells_figure, self.curve_wells_canvas, "Выберите кривую для сравнения")
             self._populate_curve_wells_summary_table([])
             return
+
+        shared_depth = bool(self.curve_wells_shared_depth.isChecked()) if hasattr(self, "curve_wells_shared_depth") else False
+        show_full_source_curve = self._sync_full_source_curve_checkbox(curve_name, shared_depth)
 
         payloads = self._sort_curve_well_payloads(self._curve_well_payloads(curve_name))
         limit = int(self.curve_wells_limit_spin.value()) if hasattr(self, "curve_wells_limit_spin") else 12
         payloads = payloads[:max(1, limit)]
         self._populate_curve_wells_summary_table(payloads)
         if not payloads:
-            ax = self.curve_wells_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Нет числовых значений выбранной кривой для выбранных скважин/кластеров", ha="center", va="center")
-            ax.set_axis_off()
-            self.curve_wells_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.curve_wells_figure,
+                canvas=self.curve_wells_canvas,
+                scroll_area=self.curve_wells_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=600,
+            )
+            self._draw_empty_graph(
+                self.curve_wells_figure,
+                self.curve_wells_canvas,
+                "Нет числовых значений выбранной кривой для выбранных скважин/кластеров",
+            )
             return
 
         shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
         all_values = []
-        if shared_x:
-            for payload in payloads:
-                for row in payload["rows"]:
-                    value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
-                    if value is not None:
+        all_y_values = []
+        for payload in payloads:
+            well_id = int(payload["well_id"])
+            altitude = self._well_altitude(well_id)
+            if altitude is None:
+                altitude = 0.0
+            payload["well_altitude"] = float(altitude)
+            if show_full_source_curve:
+                full_curve_points = self._load_full_source_curve(well_id, curve_name)
+            else:
+                full_curve_points = []
+            payload["full_source_curve_points"] = full_curve_points
+            payload_y_values = []
+            if full_curve_points:
+                for depth_md, value in full_curve_points:
+                    y_value = float(altitude) - float(depth_md)
+                    payload_y_values.append(y_value)
+                    if shared_x and value is not None:
                         all_values.append(value)
+            else:
+                for row in payload["rows"]:
+                    depth_md = float(row.get("depth_md", 0.0))
+                    y_value = float(altitude) - depth_md if shared_depth else depth_md
+                    payload_y_values.append(y_value)
+                    if shared_x:
+                        value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
+                        if value is not None:
+                            all_values.append(value)
+            payload["plot_y_min"] = min(payload_y_values) if payload_y_values else None
+            payload["plot_y_max"] = max(payload_y_values) if payload_y_values else None
+            all_y_values.extend(payload_y_values)
         global_x_min = min(all_values) if all_values else None
         global_x_max = max(all_values) if all_values else None
+        global_y_min = min(all_y_values) if all_y_values else None
+        global_y_max = max(all_y_values) if all_y_values else None
+        if global_y_min is not None and global_y_max is not None and global_y_min == global_y_max:
+            global_y_min -= 0.5
+            global_y_max += 0.5
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
-        canvas_width = max(900, int(len(payloads) * 180))
-        self.curve_wells_canvas.setMinimumSize(canvas_width, 600)
-        self.curve_wells_figure.set_size_inches(max(12.0, len(payloads) * 1.75), 7.0, forward=True)
-        axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x)
+        canvas_width = int(len(payloads) * self._TRACK_WIDTH_PX)
+        self._prepare_scrollable_canvas(
+            figure=self.curve_wells_figure,
+            canvas=self.curve_wells_canvas,
+            scroll_area=self.curve_wells_scroll,
+            width_px=canvas_width,
+            height_px=600,
+        )
+        axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x, sharey=shared_depth)
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
             rows = payload["rows"]
+            altitude = float(payload.get("well_altitude", 0.0))
             depths = [float(row.get("depth_md", 0.0)) for row in rows]
-            values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
-            plot_points = [(value, depth) for value, depth in zip(values, depths) if value is not None]
+            full_curve_points = payload.get("full_source_curve_points") or []
+            if show_full_source_curve and full_curve_points:
+                values = [value for _depth, value in full_curve_points]
+                y_values = [altitude - float(depth) for depth, _value in full_curve_points]
+            else:
+                y_values = [altitude - depth if shared_depth else depth for depth in depths]
+                values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
+            plot_points = [(value, y_value) for value, y_value in zip(values, y_values) if value is not None]
             if not plot_points:
                 continue
             plot_x, plot_y = zip(*plot_points)
-            depth_min = min(depths)
-            depth_max = max(depths)
-            if depth_min == depth_max:
-                depth_min -= 0.5
-                depth_max += 0.5
-            ax.set_ylim(depth_max, depth_min)
+            y_min = float(payload.get("plot_y_min") if payload.get("plot_y_min") is not None else min(y_values))
+            y_max = float(payload.get("plot_y_max") if payload.get("plot_y_max") is not None else max(y_values))
+            if shared_depth and global_y_min is not None and global_y_max is not None:
+                y_min = float(global_y_min)
+                y_max = float(global_y_max)
+            elif y_min == y_max:
+                y_min -= 0.5
+                y_max += 0.5
+            if shared_depth:
+                ax.set_ylim(y_min, y_max)
+            else:
+                ax.set_ylim(y_max, y_min)
             for interval in self.interval_cache.get(int(payload["well_id"]), []):
                 label = int(interval.get("cluster_label", 0))
                 if not self._is_cluster_visible(label):
                     continue
+                from_md = float(interval.get("from_md", min(depths) if depths else 0.0))
+                to_md = float(interval.get("to_md", max(depths) if depths else from_md))
+                if shared_depth:
+                    span_from = altitude - from_md
+                    span_to = altitude - to_md
+                else:
+                    span_from = from_md
+                    span_to = to_md
                 ax.axhspan(
-                    float(interval.get("from_md", depth_min)),
-                    float(interval.get("to_md", depth_max)),
+                    min(span_from, span_to),
+                    max(span_from, span_to),
                     color=_well_log_cluster_color(label),
-                    alpha=max(0.03, opacity * 0.22),
+                    alpha=opacity,
                     linewidth=0,
                 )
             ax.plot(plot_x, plot_y, linewidth=1.15, marker=".", markersize=3, color="#1f2933")
             if shared_x and global_x_min is not None and global_x_max is not None and global_x_min != global_x_max:
                 ax.set_xlim(global_x_min, global_x_max)
             ax.grid(True, alpha=0.25)
-            ax.set_xlabel(curve_name, fontsize=9)
-            ax.set_ylabel("Depth MD", fontsize=8)
-            ax.tick_params(axis="both", labelsize=8)
-            ax.set_title(
-                f"{payload['well_name']} | dominant cluster {payload.get('dominant_label', '—')} "
-                f"({payload.get('dominant_fraction', 0.0) * 100:.0f}%)",
-                fontsize=9,
-            )
-            cluster_text = ", ".join(
-                f"{label}:{count / max(1, len(rows)):.0%}"
-                for label, count in sorted(payload.get("label_counts", Counter()).items(), key=lambda pair: _cluster_label_sort_key(pair[0]))
-            )
-            ax.text(0.99, 0.02, cluster_text, transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
-                    bbox={"facecolor": "white", "alpha": 0.7, "edgecolor": "none"})
-        self.curve_wells_figure.suptitle(f"{curve_name}: одна кривая → разные скважины", fontsize=11)
-        self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.96))
-        self.curve_wells_canvas.draw_idle()
+            ax.set_xlabel("")
+            ax.set_ylabel("Abs depth" if shared_depth else "Depth MD", fontsize=8)
+            ax.tick_params(axis="both", labelsize=7, pad=1)
+            if shared_depth and ax is not axes[0]:
+                ax.tick_params(labelleft=False)
+                ax.set_ylabel("")
+            ax.set_title(f"{payload['well_name']} (id={payload['well_id']})", fontsize=8, pad=3)
+        depth_mode = "общая абсолютная глубина" if shared_depth else "своя MD-шкала"
+        if show_full_source_curve:
+            depth_mode = f"{depth_mode}, вся исходная кривая"
+        self.curve_wells_figure.suptitle(f"{curve_name} · {depth_mode}", fontsize=11)
+        self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
+        self.curve_wells_canvas.draw()
 
     def _current_profile_cluster_label(self) -> int | None:
         if not hasattr(self, "profile_cluster_combo"):
@@ -1302,6 +1581,12 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     def _sync_mode_combo(self, index: int) -> None:
         if 0 <= int(index) < self.mode_combo.count() and self.mode_combo.currentIndex() != int(index):
             self.mode_combo.setCurrentIndex(int(index))
+        if int(index) == 1:
+            self._render_one_well_curves()
+        elif int(index) == 2:
+            self._render_curve_across_wells()
+        elif int(index) == 3:
+            self._render_cluster_profile_view()
 
     @staticmethod
     def _build_interval_cache(rows: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
