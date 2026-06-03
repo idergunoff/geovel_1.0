@@ -139,3 +139,17 @@ def test_formula_evaluation_uses_loaded_series_and_strict_grid(monkeypatch):
     assert result.ok
     assert_close_list(result.values, [4.0, 6.0])
     assert_close_list(result.depths, [100.0, 100.1])
+
+
+def test_complete_calculator_depths_uses_calculator_intersection_not_canonical_union():
+    complete = well_feature_calculator.complete_calculator_depths(
+        {
+            100.0: {1: 10.0},
+            100.1: {1: 11.0, 2: 21.0},
+            100.2: {1: 12.0, 2: 22.0},
+            100.3: {2: 23.0},
+        },
+        [1, 2],
+    )
+
+    assert complete == [100.1, 100.2]

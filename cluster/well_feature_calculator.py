@@ -29,6 +29,7 @@ FEATURE_CALCULATOR_STATUS_LABELS = {
     "invalid_sqrt_domain": "Invalid math domain",
     "not_enough_points": "Not enough points",
     "non_finite_result": "Non-finite result",
+    "no_common_calculator_depths": "No common calculator depths",
 }
 
 FEATURE_CALCULATOR_RECOMMENDATIONS = {
@@ -40,6 +41,7 @@ FEATURE_CALCULATOR_RECOMMENDATIONS = {
     "division_by_zero": "Измените формулу или входные кривые так, чтобы знаменатель не обращался в ноль на выбранном интервале.",
     "not_enough_points": "Расширьте интервал или выберите кривую, где достаточно точек для операции.",
     "non_finite_result": "Проверьте входные значения и параметры операции: результат не должен содержать NaN или inf.",
+    "no_common_calculator_depths": "Проверьте выбранные интервалы и глубинные сетки calculator-признаков: для COLLECT нужна хотя бы одна глубина, где рассчитаны все выбранные calculator-признаки.",
 }
 
 FEATURE_CALCULATOR_UNARY_OPERATIONS = {
@@ -765,6 +767,27 @@ def evaluate_formula_series(
     if non_finite_error:
         return [], [non_finite_error]
     return result_values, []
+
+
+def complete_calculator_depths(
+    calculator_value_map: dict[float, dict[int, Any]],
+    calculator_ids: Sequence[int],
+) -> list[float]:
+    """Return depths where every selected calculator has a computed value.
+
+    COLLECT builds rows on a depth grid. Canonical curves may have extra edge
+    depths or slightly different grids, so calculator-backed features should not
+    be required on the union of all canonical depths.  A calculator row is
+    complete only where all selected calculator ids are present.
+    """
+    normalized_ids = [int(calculator_id) for calculator_id in calculator_ids]
+    if not normalized_ids:
+        return []
+    return sorted(
+        float(depth)
+        for depth, values_by_calculator in calculator_value_map.items()
+        if all(calculator_id in values_by_calculator for calculator_id in normalized_ids)
+    )
 
 
 def _rounded_depths(depths: Sequence[float], precision: int = FEATURE_CALCULATOR_DEPTH_PRECISION) -> list[float]:
