@@ -999,6 +999,7 @@ def _show_calculator_collect_errors(errors: list[Any], *, title: str = 'COLLECT 
 def collect_cluster_well_log_dataset_data() -> None:
     from .well_feature_calculator import (
         FeatureCalculatorError,
+        complete_calculator_depths,
         evaluate_feature_calculator_for_well,
         parse_feature_calculator_config,
         validate_calculators_for_dataset,
@@ -1111,28 +1112,25 @@ def collect_cluster_well_log_dataset_data() -> None:
             for depth, value in zip(result.depths, result.values):
                 calculator_value_map.setdefault(round(float(depth), 6), {})[int(calculator.id)] = value
 
-        combined_depths = sorted(set(depth_map.keys()) | set(calculator_value_map.keys()))
-        for depth in combined_depths:
-            calculator_values = calculator_value_map.get(depth, {})
-            missing_calculators = [
-                calculator.feature_name
-                for calculator, _config in calculator_configs
-                if int(calculator.id) not in calculator_values
-            ]
-            if missing_calculators:
+        if calculator_configs:
+            calculator_ids = [int(calculator.id) for calculator, _config in calculator_configs]
+            combined_depths = complete_calculator_depths(calculator_value_map, calculator_ids)
+            if not combined_depths:
                 well_name = wf.well.name if wf.well and wf.well.name else f'well_id={wf.well_id}'
                 collect_errors.append(
                     FeatureCalculatorError(
-                        code='missing_calculator_value_at_depth',
+                        code='no_common_calculator_depths',
                         message=(
-                            f"Нет значения calculator-признаков {', '.join(missing_calculators)} "
-                            f"на глубине {depth:g}; строки с неполным набором выбранных calculator-признаков запрещены."
+                            'Нет глубин, на которых рассчитаны все выбранные calculator-признаки; '
+                            'проверьте интервалы скважины и глубинные сетки calculator-признаков.'
                         ),
-                        feature_name=', '.join(missing_calculators),
+                        feature_name=', '.join(calculator.feature_name for calculator, _config in calculator_configs),
                         well_id=int(wf.well_id),
                         well_name=well_name,
                     )
                 )
+        else:
+            combined_depths = sorted(depth_map.keys())
 
         if collect_errors:
             continue
