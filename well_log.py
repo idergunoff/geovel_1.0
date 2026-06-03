@@ -5,6 +5,7 @@ from canonical_well_log_service import (
     add_alias_to_canonical,
     create_canonical_well_log,
     delete_canonical_well_log,
+    export_curve_names_to_text_file,
     get_aliases_for_canonical,
     get_all_curve_names_from_db,
     get_canonical_well_logs_stats,
@@ -69,6 +70,11 @@ def show_canonical_aliases_manager():
     curves_layout.addWidget(curves_search)
     curves_unassigned_only = QtWidgets.QCheckBox('Только нераспределенные')
     curves_layout.addWidget(curves_unassigned_only)
+    btn_export_curve_names = QtWidgets.QPushButton('Выгрузить названия в TXT')
+    btn_export_curve_names.setToolTip(
+        'Сохранить все уникальные названия кривых каротажа из БД, по одному названию на строку'
+    )
+    curves_layout.addWidget(btn_export_curve_names)
     curves_list = QtWidgets.QListWidget()
     curves_layout.addWidget(curves_list)
 
@@ -134,6 +140,35 @@ def show_canonical_aliases_manager():
             if not is_assigned:
                 item.setBackground(QtGui.QColor(255, 228, 196))
             curves_list.addItem(item)
+
+
+    def export_curve_names():
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            dialog,
+            'Выгрузить названия кривых каротажа',
+            'well_log_curve_names.txt',
+            'Text files (*.txt);;All files (*)'
+        )
+        if not file_path:
+            return
+
+        if not file_path.lower().endswith('.txt'):
+            file_path = f'{file_path}.txt'
+
+        try:
+            curve_count = export_curve_names_to_text_file(file_path)
+        except CanonicalWellLogServiceError as exc:
+            handle_error(exc)
+            return
+        except OSError as exc:
+            QMessageBox.critical(dialog, 'Выгрузка названий кривых', f'Не удалось сохранить файл:\n{exc}')
+            return
+
+        QMessageBox.information(
+            dialog,
+            'Выгрузка названий кривых',
+            f'Сохранено названий кривых: {curve_count}\n{file_path}'
+        )
 
 
     def get_wells_for_curve(curve_name):
@@ -291,6 +326,7 @@ def show_canonical_aliases_manager():
     canonical_list.itemSelectionChanged.connect(refresh_aliases)
     curves_search.textChanged.connect(refresh_curves)
     curves_unassigned_only.toggled.connect(refresh_curves)
+    btn_export_curve_names.clicked.connect(export_curve_names)
     curves_list.itemDoubleClicked.connect(on_curve_double_click)
     curves_list.itemSelectionChanged.connect(refresh_wells_for_selected_curve)
     btn_open_well_log.clicked.connect(open_selected_well_log)

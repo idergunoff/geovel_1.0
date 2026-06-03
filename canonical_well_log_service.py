@@ -202,6 +202,20 @@ def get_all_curve_names_from_db() -> List[Dict[str, object]]:
     ]
 
 
+def export_curve_names_to_text_file(file_path: str) -> int:
+    """Export all unique well-log curve names to a UTF-8 text file."""
+    if file_path is None or not str(file_path).strip():
+        raise CanonicalWellLogServiceError('File path cannot be empty')
+
+    curve_names = [str(row['curve_name']).strip() for row in get_all_curve_names_from_db()]
+    with open(str(file_path), 'w', encoding='utf-8') as file:
+        file.write('\n'.join(curve_names))
+        if curve_names:
+            file.write('\n')
+
+    return len(curve_names)
+
+
 def get_unassigned_curve_names() -> List[Dict[str, object]]:
     alias_norm_subquery = session.query(AliasWellLog.alias_name_norm)
 
