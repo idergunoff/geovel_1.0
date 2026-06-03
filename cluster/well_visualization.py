@@ -1297,6 +1297,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             return
 
         shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
+        shared_depth = bool(self.curve_wells_shared_depth.isChecked()) if hasattr(self, "curve_wells_shared_depth") else False
         all_values = []
         all_y_values = []
         for payload in payloads:
