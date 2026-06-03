@@ -160,7 +160,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         formula_buttons_layout = QtWidgets.QGridLayout(self.widget_formula_tokens)
         formula_buttons_layout.setContentsMargins(0, 0, 0, 0)
         self._formula_token_buttons: list[QtWidgets.QPushButton] = []
-        for index, token in enumerate(["+", "-", "*", "/", "(", ")", "log", "abs", "sqrt"]):
+        for index, token in enumerate(["+", "-", "*", "/", "(", ")", "log", "abs", "sqrt", "norm", "zscore", "minmax", "robust"]):
             button = QtWidgets.QPushButton(token, self.widget_formula_tokens)
             button.setObjectName(f"pushButton_well_log_constructor_formula_token_{token.replace('/', 'div')}")
             button.clicked.connect(lambda _checked=False, value=token: self._insert_formula_token(value))
@@ -381,7 +381,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             self.tree_dataset_context: "Контекст текущего набора: скважины, канонические кривые и расчётные признаки, уже привязанные к набору.",
             self.lineEdit_feature_name: "Имя глобального признака. Оно не должно совпадать с канонической кривой, другим расчётным признаком или системным столбцом данных.",
             self.comboBox_mode: "Выберите операцию для одной канонической кривой или формулу для нескольких канонических кривых.",
-            self.textEdit_formula_expression: "Режим формулы поддерживает имена канонических кривых, числа, + - * /, скобки и функции log/abs/sqrt. eval, импорты и обращение к атрибутам запрещены.",
+            self.textEdit_formula_expression: "Режим формулы поддерживает имена канонических кривых, числа, + - * /, скобки и функции log/abs/sqrt/norm/zscore/minmax/robust. norm является z-score нормировкой. eval, импорты и обращение к атрибутам запрещены.",
             self.listWidget_formula_curves: "Имена канонических кривых, доступные в формулах. Дважды щёлкните по кривой, чтобы вставить её в выражение.",
             self.comboBox_input_curve: "Каноническая кривая, которая используется как вход для расчётного признака в режиме операции.",
             self.comboBox_operation: "Операция расчёта. Интерполяция не используется: входные кривые должны сохранять исходную сетку измеренных глубин.",
@@ -669,7 +669,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
     def _insert_formula_token(self, token: str) -> None:
         cursor = self.textEdit_formula_expression.textCursor()
-        if token in {"log", "abs", "sqrt"}:
+        if token in {"log", "abs", "sqrt", "norm", "zscore", "minmax", "robust"}:
             cursor.insertText(f"{token}()")
             cursor.movePosition(QtGui.QTextCursor.Left)
         elif token in {"+", "-", "*", "/"}:

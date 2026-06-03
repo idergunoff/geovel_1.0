@@ -49,10 +49,11 @@ def assert_close_list(actual, expected, *, abs_tol=1e-9):
 
 
 def test_extract_formula_input_names_ignores_allowed_functions():
-    names, errors = extract_formula_input_names("log(GR) + sqrt(RHOB) - abs(GR)")
+    names, errors = extract_formula_input_names("log(GR) + sqrt(RHOB) - abs(GR) + norm(NPHI)")
 
     assert errors == []
-    assert names == ["GR", "RHOB"]
+    assert names == ["GR", "RHOB", "NPHI"]
+
 
 def test_formula_adds_two_curves():
     values, errors = evaluate_formula_series("A + B", [series("A", [1.0, 2.0]), series("B", [3.0, 4.0])])
@@ -69,6 +70,24 @@ def test_formula_normalized_difference():
 
     assert errors == []
     assert_close_list(values, [0.5, 0.5])
+
+
+def test_formula_normalizes_curve_before_arithmetic():
+    values, errors = evaluate_formula_series(
+        "norm(A) + norm(B)",
+        [series("A", [10.0, 20.0, 30.0]), series("B", [100.0, 200.0, 300.0])],
+    )
+
+    assert errors == []
+    expected = [-2.449489742783178, 0.0, 2.449489742783178]
+    assert_close_list(values, expected)
+
+
+def test_formula_supports_minmax_normalization_function():
+    values, errors = evaluate_formula_series("minmax(A) / 2", [series("A", [10.0, 20.0, 30.0])])
+
+    assert errors == []
+    assert_close_list(values, [0.0, 0.25, 0.5])
 
 
 def test_formula_blocks_division_by_zero():
