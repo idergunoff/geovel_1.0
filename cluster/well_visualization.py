@@ -161,6 +161,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         "Средний портрет кластера",
     )
 
+    _TRACK_WIDTH_PX = 190
+    _CLUSTER_TRACK_WIDTH_PX = 125
+    _GRAPH_HEIGHT_PX = 600
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.visualization_data: WellLogClusterVisualizationData | None = None
@@ -169,6 +173,36 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._cluster_checkboxes: dict[int, Any] = {}
         self._highlight_interval: dict[str, Any] | None = None
         self._build_ui()
+
+    def _prepare_scrollable_canvas(
+            self,
+            *,
+            figure: Figure,
+            canvas: FigureCanvas,
+            scroll_area: QtWidgets.QScrollArea,
+            width_px: int,
+            height_px: int | None = None,
+    ) -> None:
+        """Resizes a Matplotlib canvas to exact content size and clears stale Qt paint artefacts."""
+        height_px = int(height_px or self._GRAPH_HEIGHT_PX)
+        width_px = max(320, int(width_px))
+        figure.clear()
+        figure.set_size_inches(width_px / float(figure.dpi), height_px / float(figure.dpi), forward=True)
+        canvas.setMinimumSize(width_px, height_px)
+        canvas.setMaximumSize(width_px, height_px)
+        canvas.resize(width_px, height_px)
+        canvas.updateGeometry()
+        if scroll_area.widget() is canvas:
+            scroll_area.horizontalScrollBar().setValue(0)
+            scroll_area.verticalScrollBar().setValue(0)
+            scroll_area.viewport().update()
+
+    @staticmethod
+    def _draw_empty_graph(figure: Figure, canvas: FigureCanvas, message: str) -> None:
+        ax = figure.add_subplot(111)
+        ax.text(0.5, 0.5, message, ha="center", va="center")
+        ax.set_axis_off()
+        canvas.draw()
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Well Log Cluster Visualization")
@@ -288,7 +322,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.one_well_canvas.setMinimumSize(900, 520)
         self.one_well_toolbar = NavigationToolbar(self.one_well_canvas, self.one_well_tab)
         self.one_well_scroll = QtWidgets.QScrollArea()
-        self.one_well_scroll.setWidgetResizable(True)
+        self.one_well_scroll.setWidgetResizable(False)
+        self.one_well_scroll.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.one_well_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.one_well_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.one_well_scroll.setWidget(self.one_well_canvas)
         one_well_layout.addWidget(self.one_well_toolbar)
         one_well_layout.addWidget(self.one_well_scroll, stretch=1)
@@ -364,7 +401,10 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_canvas.setMinimumSize(900, 560)
         self.curve_wells_toolbar = NavigationToolbar(self.curve_wells_canvas, self.curve_wells_tab)
         self.curve_wells_scroll = QtWidgets.QScrollArea()
-        self.curve_wells_scroll.setWidgetResizable(True)
+        self.curve_wells_scroll.setWidgetResizable(False)
+        self.curve_wells_scroll.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.curve_wells_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.curve_wells_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.curve_wells_scroll.setWidget(self.curve_wells_canvas)
         curve_wells_graph_layout.addWidget(self.curve_wells_toolbar)
         curve_wells_graph_layout.addWidget(self.curve_wells_scroll, stretch=1)
@@ -821,12 +861,15 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             return
         rows = self._rows_for_current_well()
         feature_names = [str(name) for name in (self.visualization_data or {}).get("feature_names", [])]
-        self.one_well_figure.clear()
         if not rows:
-            ax = self.one_well_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Нет строк для выбранной скважины/фильтра кластеров", ha="center", va="center")
-            ax.set_axis_off()
-            self.one_well_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.one_well_figure,
+                canvas=self.one_well_canvas,
+                scroll_area=self.one_well_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=560,
+            )
+            self._draw_empty_graph(self.one_well_figure, self.one_well_canvas, "Нет строк для выбранной скважины/фильтра кластеров")
             return
 
         finite_features: list[str] = []
@@ -834,10 +877,14 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if any(_to_finite_float((row.get("features", {}) or {}).get(feature_name)) is not None for row in rows):
                 finite_features.append(feature_name)
         if not finite_features:
-            ax = self.one_well_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "У выбранной скважины нет числовых значений кривых", ha="center", va="center")
-            ax.set_axis_off()
-            self.one_well_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.one_well_figure,
+                canvas=self.one_well_canvas,
+                scroll_area=self.one_well_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=560,
+            )
+            self._draw_empty_graph(self.one_well_figure, self.one_well_canvas, "У выбранной скважины нет числовых значений кривых")
             return
 
         depths = [float(row.get("depth_md", 0.0)) for row in rows]
@@ -847,16 +894,23 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             depth_min -= 0.5
             depth_max += 0.5
         track_count = len(finite_features) + 1
-        canvas_width = max(900, int(track_count * 170))
-        self.one_well_canvas.setMinimumSize(canvas_width, 560)
-        self.one_well_figure.set_size_inches(max(12.0, track_count * 1.65), 6.7, forward=True)
+        canvas_width = int(len(finite_features) * self._TRACK_WIDTH_PX + self._CLUSTER_TRACK_WIDTH_PX)
+        self._prepare_scrollable_canvas(
+            figure=self.one_well_figure,
+            canvas=self.one_well_canvas,
+            scroll_area=self.one_well_scroll,
+            width_px=canvas_width,
+            height_px=560,
+        )
         axes = self.one_well_figure.subplots(1, track_count, sharey=True)
         if track_count == 1:
             axes = [axes]
         else:
             axes = list(np.ravel(axes))
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
+        well_id = int(rows[0].get("well_id", 0))
         well_name = str(rows[0].get("well_name", "—"))
+        well_title = f"{well_name} (id={well_id})"
         intervals = [
             item for item in self.interval_cache.get(int(rows[0].get("well_id")), [])
             if self._is_cluster_visible(int(item.get("cluster_label", 0)))
@@ -877,8 +931,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             plot_y = [depth for value, depth in zip(values, depths) if value is not None]
             if plot_x:
                 ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3)
-            ax.set_xlabel(feature_name, fontsize=9)
-            ax.tick_params(axis="x", labelsize=8)
+            ax.set_title(feature_name, fontsize=8, pad=3)
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelsize=7, pad=1)
             ax.grid(True, alpha=0.25)
             if feature_idx == 0:
                 ax.set_ylabel("Depth MD")
@@ -894,7 +949,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 )
 
         cluster_ax = axes[-1]
-        cluster_ax.set_title("Cluster track")
+        cluster_ax.set_title("Cl", fontsize=8, pad=3)
         cluster_ax.set_xlim(0.0, 1.0)
         cluster_ax.set_xticks([])
         cluster_ax.grid(False)
@@ -916,11 +971,11 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if height > (depth_max - depth_min) * 0.025:
                 cluster_ax.text(0.5, from_md + height / 2.0, str(label), ha="center", va="center", fontsize=8)
         cluster_ax.tick_params(labelleft=False)
-        self.one_well_figure.suptitle(f"{well_name}: все кривые и cluster track", fontsize=11)
+        self.one_well_figure.suptitle(well_title, fontsize=11)
         for ax in axes:
             ax.set_ylim(depth_max, depth_min)
-        self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.95))
-        self.one_well_canvas.draw_idle()
+        self.one_well_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
+        self.one_well_canvas.draw()
 
     def _current_curve_name(self) -> str | None:
         value = self.curve_combo.currentText() if hasattr(self, "curve_combo") else ""
@@ -1048,13 +1103,16 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     def _render_curve_across_wells(self) -> None:
         if not hasattr(self, "curve_wells_figure"):
             return
-        self.curve_wells_figure.clear()
         curve_name = self._current_curve_name()
         if not curve_name:
-            ax = self.curve_wells_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Выберите кривую для сравнения", ha="center", va="center")
-            ax.set_axis_off()
-            self.curve_wells_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.curve_wells_figure,
+                canvas=self.curve_wells_canvas,
+                scroll_area=self.curve_wells_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=600,
+            )
+            self._draw_empty_graph(self.curve_wells_figure, self.curve_wells_canvas, "Выберите кривую для сравнения")
             self._populate_curve_wells_summary_table([])
             return
 
@@ -1063,10 +1121,18 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         payloads = payloads[:max(1, limit)]
         self._populate_curve_wells_summary_table(payloads)
         if not payloads:
-            ax = self.curve_wells_figure.add_subplot(111)
-            ax.text(0.5, 0.5, "Нет числовых значений выбранной кривой для выбранных скважин/кластеров", ha="center", va="center")
-            ax.set_axis_off()
-            self.curve_wells_canvas.draw_idle()
+            self._prepare_scrollable_canvas(
+                figure=self.curve_wells_figure,
+                canvas=self.curve_wells_canvas,
+                scroll_area=self.curve_wells_scroll,
+                width_px=self._TRACK_WIDTH_PX * 3,
+                height_px=600,
+            )
+            self._draw_empty_graph(
+                self.curve_wells_figure,
+                self.curve_wells_canvas,
+                "Нет числовых значений выбранной кривой для выбранных скважин/кластеров",
+            )
             return
 
         shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
@@ -1081,9 +1147,14 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         global_x_max = max(all_values) if all_values else None
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
-        canvas_width = max(900, int(len(payloads) * 180))
-        self.curve_wells_canvas.setMinimumSize(canvas_width, 600)
-        self.curve_wells_figure.set_size_inches(max(12.0, len(payloads) * 1.75), 7.0, forward=True)
+        canvas_width = int(len(payloads) * self._TRACK_WIDTH_PX)
+        self._prepare_scrollable_canvas(
+            figure=self.curve_wells_figure,
+            canvas=self.curve_wells_canvas,
+            scroll_area=self.curve_wells_scroll,
+            width_px=canvas_width,
+            height_px=600,
+        )
         axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x)
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
@@ -1115,23 +1186,15 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if shared_x and global_x_min is not None and global_x_max is not None and global_x_min != global_x_max:
                 ax.set_xlim(global_x_min, global_x_max)
             ax.grid(True, alpha=0.25)
-            ax.set_xlabel(curve_name, fontsize=9)
-            ax.set_ylabel("Depth MD", fontsize=8)
-            ax.tick_params(axis="both", labelsize=8)
-            ax.set_title(
-                f"{payload['well_name']} | dominant cluster {payload.get('dominant_label', '—')} "
-                f"({payload.get('dominant_fraction', 0.0) * 100:.0f}%)",
-                fontsize=9,
-            )
-            cluster_text = ", ".join(
-                f"{label}:{count / max(1, len(rows)):.0%}"
-                for label, count in sorted(payload.get("label_counts", Counter()).items(), key=lambda pair: _cluster_label_sort_key(pair[0]))
-            )
-            ax.text(0.99, 0.02, cluster_text, transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
-                    bbox={"facecolor": "white", "alpha": 0.7, "edgecolor": "none"})
-        self.curve_wells_figure.suptitle(f"{curve_name}: одна кривая → разные скважины", fontsize=11)
-        self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.96))
-        self.curve_wells_canvas.draw_idle()
+            ax.set_xlabel("")
+            ax.set_ylabel("Depth MD" if ax is axes[0] else "", fontsize=8)
+            ax.tick_params(axis="both", labelsize=7, pad=1)
+            if ax is not axes[0]:
+                ax.tick_params(labelleft=False)
+            ax.set_title(f"{payload['well_name']} (id={payload['well_id']})", fontsize=8, pad=3)
+        self.curve_wells_figure.suptitle(str(curve_name), fontsize=11)
+        self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
+        self.curve_wells_canvas.draw()
 
     def _current_profile_cluster_label(self) -> int | None:
         if not hasattr(self, "profile_cluster_combo"):
@@ -1302,6 +1365,12 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     def _sync_mode_combo(self, index: int) -> None:
         if 0 <= int(index) < self.mode_combo.count() and self.mode_combo.currentIndex() != int(index):
             self.mode_combo.setCurrentIndex(int(index))
+        if int(index) == 1:
+            self._render_one_well_curves()
+        elif int(index) == 2:
+            self._render_curve_across_wells()
+        elif int(index) == 3:
+            self._render_cluster_profile_view()
 
     @staticmethod
     def _build_interval_cache(rows: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
