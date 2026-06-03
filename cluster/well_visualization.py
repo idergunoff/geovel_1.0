@@ -1087,7 +1087,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             plot_x = [value for value in values if value is not None]
             plot_y = [depth for value, depth in zip(values, depths) if value is not None]
             if plot_x:
-                ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3)
+                ax.plot(plot_x, plot_y, linewidth=1.1, marker=".", markersize=3, color="#1f2933")
             ax.set_title(feature_name, fontsize=8, pad=3)
             ax.set_xlabel("")
             ax.tick_params(axis="x", labelsize=7, pad=1)
