@@ -86,7 +86,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
 
         self.setObjectName("WellLogFeatureConstructorDialog")
         self.setWindowTitle("Конструктор признаков Well Log")
-        self.resize(1280, 860)
+        self.resize(1440, 900)
         self._setup_ui()
         self._fill_dataset_context()
         self._fill_input_curves()
@@ -233,10 +233,10 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         create_layout.addRow("Ошибки проверки", self.textEdit_validation)
         left_layout.addWidget(create_group)
 
-        right_widget = QtWidgets.QWidget(splitter)
-        right_layout = QtWidgets.QVBoxLayout(right_widget)
+        center_widget = QtWidgets.QWidget(splitter)
+        center_layout = QtWidgets.QVBoxLayout(center_widget)
 
-        features_group = QtWidgets.QGroupBox("Глобальные расчётные признаки", right_widget)
+        features_group = QtWidgets.QGroupBox("Глобальные расчётные признаки", center_widget)
         features_layout = QtWidgets.QVBoxLayout(features_group)
 
         filters_layout = QtWidgets.QGridLayout()
@@ -277,9 +277,9 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.table_global_features.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table_global_features.itemSelectionChanged.connect(self._feature_selection_changed)
         features_layout.addWidget(self.table_global_features)
-        right_layout.addWidget(features_group, stretch=2)
+        center_layout.addWidget(features_group, stretch=2)
 
-        definition_group = QtWidgets.QGroupBox("Определение выбранного признака", right_widget)
+        definition_group = QtWidgets.QGroupBox("Определение выбранного признака", center_widget)
         definition_layout = QtWidgets.QVBoxLayout(definition_group)
         self.textEdit_definition = QtWidgets.QTextEdit(definition_group)
         self.textEdit_definition.setObjectName("textEdit_well_log_constructor_definition")
@@ -303,9 +303,9 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.pushButton_delete_global.clicked.connect(self._delete_selected_global_feature)
         actions_layout.addWidget(self.pushButton_delete_global)
         definition_layout.addLayout(actions_layout)
-        right_layout.addWidget(definition_group, stretch=1)
+        center_layout.addWidget(definition_group, stretch=1)
 
-        diagnostics_group = QtWidgets.QGroupBox("Покрытие, диагностика и предпросмотр", right_widget)
+        diagnostics_group = QtWidgets.QGroupBox("Покрытие и диагностика", center_widget)
         diagnostics_layout = QtWidgets.QVBoxLayout(diagnostics_group)
         self.label_coverage_summary = QtWidgets.QLabel(diagnostics_group)
         self.label_coverage_summary.setObjectName("label_well_log_constructor_coverage_summary")
@@ -326,28 +326,41 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
         self.textEdit_error_detail.setReadOnly(True)
         self.textEdit_error_detail.setMaximumHeight(115)
         diagnostics_layout.addWidget(self.textEdit_error_detail)
+        center_layout.addWidget(diagnostics_group, stretch=2)
+
+        preview_widget = QtWidgets.QWidget(splitter)
+        preview_layout = QtWidgets.QVBoxLayout(preview_widget)
+        preview_group = QtWidgets.QGroupBox("Вертикальный предпросмотр каротажной кривой", preview_widget)
+        preview_group_layout = QtWidgets.QVBoxLayout(preview_group)
 
         preview_controls = QtWidgets.QHBoxLayout()
-        preview_controls.addWidget(QtWidgets.QLabel("Скважина для предпросмотра", diagnostics_group))
-        self.comboBox_preview_well = QtWidgets.QComboBox(diagnostics_group)
+        preview_controls.addWidget(QtWidgets.QLabel("Скважина", preview_group))
+        self.comboBox_preview_well = QtWidgets.QComboBox(preview_group)
         self.comboBox_preview_well.setObjectName("comboBox_well_log_constructor_preview_well")
         self.comboBox_preview_well.currentIndexChanged.connect(self._preview_selected_feature)
         preview_controls.addWidget(self.comboBox_preview_well, stretch=1)
-        self.pushButton_preview_selected = QtWidgets.QPushButton("Предпросмотр выбранного", diagnostics_group)
+        self.pushButton_preview_selected = QtWidgets.QPushButton("Предпросмотр выбранного", preview_group)
         self.pushButton_preview_selected.setObjectName("pushButton_well_log_constructor_preview_selected")
         self.pushButton_preview_selected.clicked.connect(self._preview_selected_feature)
         preview_controls.addWidget(self.pushButton_preview_selected)
-        diagnostics_layout.addLayout(preview_controls)
+        preview_group_layout.addLayout(preview_controls)
 
-        self.preview_figure = Figure(figsize=(4.8, 3.2))
+        self.preview_figure = Figure(figsize=(3.8, 8.0))
         self.preview_canvas = FigureCanvas(self.preview_figure)
         self.preview_canvas.setObjectName("canvas_well_log_constructor_preview")
-        diagnostics_layout.addWidget(self.preview_canvas, stretch=1)
-        right_layout.addWidget(diagnostics_group, stretch=3)
+        self.preview_canvas.setMinimumWidth(360)
+        self.preview_canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        preview_group_layout.addWidget(self.preview_canvas, stretch=1)
+        preview_layout.addWidget(preview_group, stretch=1)
 
         splitter.addWidget(left_widget)
-        splitter.addWidget(right_widget)
-        splitter.setSizes([470, 630])
+        splitter.addWidget(center_widget)
+        splitter.addWidget(preview_widget)
+        splitter.setChildrenCollapsible(False)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 1)
+        splitter.setSizes([420, 560, 420])
 
         buttons_layout = QtWidgets.QHBoxLayout()
         buttons_layout.addStretch(1)
@@ -394,6 +407,7 @@ class WellLogFeatureConstructorDialog(QtWidgets.QDialog):
             self.textEdit_error_detail: "Подробности выбранной ошибки покрытия или предпросмотра, включая рекомендацию.",
             self.comboBox_preview_well: "Скважина для предпросмотра. Предпросмотр не сохраняет признаки и не имеет побочных эффектов.",
             self.pushButton_preview_selected: "Строит предпросмотр выбранного сохранённого глобального признака для одной скважины.",
+            self.preview_canvas: "Вертикальный график предпросмотра: значение кривой по X, глубина MD по Y. Панель занимает правую часть окна на всю высоту.",
         }
         for widget, tooltip in tooltip_by_widget.items():
             widget.setToolTip(tooltip)
