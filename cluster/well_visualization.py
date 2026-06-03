@@ -384,6 +384,15 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_shared_x.setChecked(True)
         self.curve_wells_shared_x.stateChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Scale:", self.curve_wells_shared_x)
+
+        self.curve_wells_shared_depth = QtWidgets.QCheckBox("общая глубина")
+        self.curve_wells_shared_depth.setToolTip(
+            "Включено: все скважины показаны в общей глубинной шкале для корреляции. "
+            "Выключено: каждый трек растянут по своей глубине."
+        )
+        self.curve_wells_shared_depth.setChecked(False)
+        self.curve_wells_shared_depth.stateChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Depth:", self.curve_wells_shared_depth)
         curve_wells_side_layout.addLayout(curve_wells_options)
 
         self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
@@ -1136,15 +1145,26 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             return
 
         shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
+        shared_depth = bool(self.curve_wells_shared_depth.isChecked()) if hasattr(self, "curve_wells_shared_depth") else False
         all_values = []
-        if shared_x:
-            for payload in payloads:
+        all_depths = []
+        for payload in payloads:
+            payload_depths = [float(row.get("depth_md", 0.0)) for row in payload["rows"]]
+            payload["depth_min"] = min(payload_depths) if payload_depths else None
+            payload["depth_max"] = max(payload_depths) if payload_depths else None
+            all_depths.extend(payload_depths)
+            if shared_x:
                 for row in payload["rows"]:
                     value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
                     if value is not None:
                         all_values.append(value)
         global_x_min = min(all_values) if all_values else None
         global_x_max = max(all_values) if all_values else None
+        global_depth_min = min(all_depths) if all_depths else None
+        global_depth_max = max(all_depths) if all_depths else None
+        if global_depth_min is not None and global_depth_max is not None and global_depth_min == global_depth_max:
+            global_depth_min -= 0.5
+            global_depth_max += 0.5
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
         canvas_width = int(len(payloads) * self._TRACK_WIDTH_PX)
@@ -1155,7 +1175,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             width_px=canvas_width,
             height_px=600,
         )
-        axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x)
+        axes = self.curve_wells_figure.subplots(1, len(payloads), sharex=shared_x, sharey=shared_depth)
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
             rows = payload["rows"]
@@ -1165,9 +1185,12 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if not plot_points:
                 continue
             plot_x, plot_y = zip(*plot_points)
-            depth_min = min(depths)
-            depth_max = max(depths)
-            if depth_min == depth_max:
+            depth_min = float(payload.get("depth_min") if payload.get("depth_min") is not None else min(depths))
+            depth_max = float(payload.get("depth_max") if payload.get("depth_max") is not None else max(depths))
+            if shared_depth and global_depth_min is not None and global_depth_max is not None:
+                depth_min = float(global_depth_min)
+                depth_max = float(global_depth_max)
+            elif depth_min == depth_max:
                 depth_min -= 0.5
                 depth_max += 0.5
             ax.set_ylim(depth_max, depth_min)
@@ -1192,7 +1215,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if ax is not axes[0]:
                 ax.tick_params(labelleft=False)
             ax.set_title(f"{payload['well_name']} (id={payload['well_id']})", fontsize=8, pad=3)
-        self.curve_wells_figure.suptitle(str(curve_name), fontsize=11)
+        depth_mode = "общая глубина" if shared_depth else "своя глубина"
+        self.curve_wells_figure.suptitle(f"{curve_name} · {depth_mode}", fontsize=11)
         self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
         self.curve_wells_canvas.draw()
 
