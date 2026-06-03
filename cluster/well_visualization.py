@@ -173,6 +173,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self._cluster_checkboxes: dict[int, Any] = {}
         self._highlight_interval: dict[str, Any] | None = None
         self._well_altitude_cache: dict[int, float | None] = {}
+        self._source_feature_names_cache: dict[int, set[str]] = {}
+        self._source_curve_alias_cache: dict[tuple[int, str], set[str]] = {}
+        self._full_source_curve_cache: dict[tuple[int, str], list[tuple[float, float | None]]] = {}
         self._build_ui()
 
     def _prepare_scrollable_canvas(
@@ -229,6 +232,110 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         if altitude is None:
             return None
         return float(altitude) - float(depth_value)
+
+    def _source_feature_names(self) -> set[str]:
+        """Returns source canonical feature names selected in the current dataset."""
+        data = self.visualization_data or {}
+        try:
+            dataset_id = int(data.get("dataset_id"))
+        except (TypeError, ValueError):
+            return set()
+        if dataset_id in self._source_feature_names_cache:
+            return self._source_feature_names_cache[dataset_id]
+        names: set[str] = set()
+        try:
+            rows = (
+                session.query(CanonicalWellLog.canonical_name)
+                .join(ClusterWellLogParameter, ClusterWellLogParameter.canonical_id == CanonicalWellLog.id)
+                .filter(ClusterWellLogParameter.dataset_id == dataset_id)
+                .all()
+            )
+            names = {str(row[0]) for row in rows if row and row[0]}
+        except Exception:
+            names = set()
+        self._source_feature_names_cache[dataset_id] = names
+        return names
+
+    def _is_source_curve_feature(self, curve_name: str | None) -> bool:
+        curve_name = str(curve_name or "").strip()
+        if not curve_name:
+            return False
+        return curve_name in self._source_feature_names()
+
+    def _source_curve_alias_names(self, curve_name: str) -> set[str]:
+        """Returns DB curve-name aliases for a source canonical feature in the current dataset."""
+        data = self.visualization_data or {}
+        try:
+            dataset_id = int(data.get("dataset_id"))
+        except (TypeError, ValueError):
+            return set()
+        cache_key = (dataset_id, str(curve_name))
+        if cache_key in self._source_curve_alias_cache:
+            return self._source_curve_alias_cache[cache_key]
+        aliases: set[str] = set()
+        try:
+            canonical = (
+                session.query(CanonicalWellLog)
+                .join(ClusterWellLogParameter, ClusterWellLogParameter.canonical_id == CanonicalWellLog.id)
+                .filter(
+                    ClusterWellLogParameter.dataset_id == dataset_id,
+                    CanonicalWellLog.canonical_name == str(curve_name),
+                )
+                .first()
+            )
+            if canonical is not None:
+                aliases.add(str(canonical.canonical_name).strip().casefold())
+                alias_rows = session.query(AliasWellLog.alias_name_norm).filter(AliasWellLog.canonical_id == int(canonical.id)).all()
+                aliases.update(str(row[0]).strip().casefold() for row in alias_rows if row and row[0])
+        except Exception:
+            aliases = set()
+        self._source_curve_alias_cache[cache_key] = aliases
+        return aliases
+
+    def _load_full_source_curve(self, well_id: int, curve_name: str) -> list[tuple[float, float | None]]:
+        """Loads the whole source WellLog curve for display without recalculating calculator/formula features."""
+        cache_key = (int(well_id), str(curve_name))
+        if cache_key in self._full_source_curve_cache:
+            return self._full_source_curve_cache[cache_key]
+        alias_names = self._source_curve_alias_names(str(curve_name))
+        if not alias_names:
+            self._full_source_curve_cache[cache_key] = []
+            return []
+        points: list[tuple[float, float | None]] = []
+        try:
+            candidates = session.query(WellLog).filter(WellLog.well_id == int(well_id)).all()
+            for well_log in candidates:
+                curve_key = str(well_log.curve_name or "").strip().casefold()
+                if curve_key not in alias_names or well_log.curve_data is None:
+                    continue
+                try:
+                    begin = float(well_log.begin)
+                    step = float(well_log.step)
+                    values = json.loads(well_log.curve_data)
+                except Exception:
+                    continue
+                if step <= 0 or not isinstance(values, list):
+                    continue
+                points = [(begin + idx * step, _to_finite_float(value)) for idx, value in enumerate(values)]
+                break
+        except Exception:
+            points = []
+        self._full_source_curve_cache[cache_key] = points
+        return points
+
+    def _sync_full_source_curve_checkbox(self, curve_name: str | None, shared_depth: bool) -> bool:
+        """Enables full-curve plotting only for source curves in shared-depth mode and returns effective state."""
+        checkbox = getattr(self, "curve_wells_full_source_curve", None)
+        if checkbox is None:
+            return False
+        can_use = bool(shared_depth and self._is_source_curve_feature(curve_name))
+        checkbox.blockSignals(True)
+        checkbox.setEnabled(can_use)
+        if not can_use:
+            checkbox.setChecked(False)
+        effective = bool(can_use and checkbox.isChecked())
+        checkbox.blockSignals(False)
+        return effective
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Well Log Cluster Visualization")
@@ -420,6 +527,16 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.curve_wells_shared_depth.setChecked(False)
         self.curve_wells_shared_depth.stateChanged.connect(self._render_curve_across_wells)
         curve_wells_options.addRow("Depth:", self.curve_wells_shared_depth)
+
+        self.curve_wells_full_source_curve = QtWidgets.QCheckBox("вся исходная кривая")
+        self.curve_wells_full_source_curve.setToolTip(
+            "Только для исходных canonical-кривых и только при общей глубине: "
+            "показывает всю кривую скважины, а кластеры раскрашивает только в выбранном интервале анализа."
+        )
+        self.curve_wells_full_source_curve.setChecked(False)
+        self.curve_wells_full_source_curve.setEnabled(False)
+        self.curve_wells_full_source_curve.stateChanged.connect(self._render_curve_across_wells)
+        curve_wells_options.addRow("Full curve:", self.curve_wells_full_source_curve)
         curve_wells_side_layout.addLayout(curve_wells_options)
 
         self.curve_wells_summary_table = QtWidgets.QTableWidget(0, 5)
@@ -698,6 +815,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
     def load_visualization_data(self, visualization_data: WellLogClusterVisualizationData) -> None:
         self.visualization_data = visualization_data
         self._well_altitude_cache.clear()
+        self._source_feature_names_cache.clear()
+        self._source_curve_alias_cache.clear()
+        self._full_source_curve_cache.clear()
         self.interval_cache = self._build_interval_cache(visualization_data.get("rows", []))
         self.profile_cache = self._build_profile_cache(visualization_data.get("rows", []), visualization_data.get("feature_names", []))
         self._populate_controls()
@@ -1142,6 +1262,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             return
         curve_name = self._current_curve_name()
         if not curve_name:
+            self._sync_full_source_curve_checkbox(None, False)
             self._prepare_scrollable_canvas(
                 figure=self.curve_wells_figure,
                 canvas=self.curve_wells_canvas,
@@ -1152,6 +1273,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             self._draw_empty_graph(self.curve_wells_figure, self.curve_wells_canvas, "Выберите кривую для сравнения")
             self._populate_curve_wells_summary_table([])
             return
+
+        shared_depth = bool(self.curve_wells_shared_depth.isChecked()) if hasattr(self, "curve_wells_shared_depth") else False
+        show_full_source_curve = self._sync_full_source_curve_checkbox(curve_name, shared_depth)
 
         payloads = self._sort_curve_well_payloads(self._curve_well_payloads(curve_name))
         limit = int(self.curve_wells_limit_spin.value()) if hasattr(self, "curve_wells_limit_spin") else 12
@@ -1182,15 +1306,27 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             if altitude is None:
                 altitude = 0.0
             payload["well_altitude"] = float(altitude)
+            if show_full_source_curve:
+                full_curve_points = self._load_full_source_curve(well_id, curve_name)
+            else:
+                full_curve_points = []
+            payload["full_source_curve_points"] = full_curve_points
             payload_y_values = []
-            for row in payload["rows"]:
-                depth_md = float(row.get("depth_md", 0.0))
-                y_value = float(altitude) - depth_md if shared_depth else depth_md
-                payload_y_values.append(y_value)
-                if shared_x:
-                    value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
-                    if value is not None:
+            if full_curve_points:
+                for depth_md, value in full_curve_points:
+                    y_value = float(altitude) - float(depth_md)
+                    payload_y_values.append(y_value)
+                    if shared_x and value is not None:
                         all_values.append(value)
+            else:
+                for row in payload["rows"]:
+                    depth_md = float(row.get("depth_md", 0.0))
+                    y_value = float(altitude) - depth_md if shared_depth else depth_md
+                    payload_y_values.append(y_value)
+                    if shared_x:
+                        value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
+                        if value is not None:
+                            all_values.append(value)
             payload["plot_y_min"] = min(payload_y_values) if payload_y_values else None
             payload["plot_y_max"] = max(payload_y_values) if payload_y_values else None
             all_y_values.extend(payload_y_values)
@@ -1217,8 +1353,13 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
             rows = payload["rows"]
             altitude = float(payload.get("well_altitude", 0.0))
             depths = [float(row.get("depth_md", 0.0)) for row in rows]
-            y_values = [altitude - depth if shared_depth else depth for depth in depths]
-            values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
+            full_curve_points = payload.get("full_source_curve_points") or []
+            if show_full_source_curve and full_curve_points:
+                values = [value for _depth, value in full_curve_points]
+                y_values = [altitude - float(depth) for depth, _value in full_curve_points]
+            else:
+                y_values = [altitude - depth if shared_depth else depth for depth in depths]
+                values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
             plot_points = [(value, y_value) for value, y_value in zip(values, y_values) if value is not None]
             if not plot_points:
                 continue
@@ -1266,6 +1407,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 ax.set_ylabel("")
             ax.set_title(f"{payload['well_name']} (id={payload['well_id']})", fontsize=8, pad=3)
         depth_mode = "общая абсолютная глубина" if shared_depth else "своя MD-шкала"
+        if show_full_source_curve:
+            depth_mode = f"{depth_mode}, вся исходная кривая"
         self.curve_wells_figure.suptitle(f"{curve_name} · {depth_mode}", fontsize=11)
         self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
         self.curve_wells_canvas.draw()
