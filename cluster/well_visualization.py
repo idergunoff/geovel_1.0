@@ -387,8 +387,8 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         controls_layout.addWidget(QtWidgets.QLabel("Cluster opacity:"), 1, 1)
         self.opacity_spin = QtWidgets.QDoubleSpinBox()
-        self.opacity_spin.setToolTip("Прозрачность цветной подложки кластерных интервалов на графиках.")
-        self.opacity_spin.setRange(0.05, 1.0)
+        self.opacity_spin.setToolTip("Прозрачность кластерной раскраски: 0.00 — полностью прозрачная, 1.00 — полностью непрозрачная.")
+        self.opacity_spin.setRange(0.0, 1.0)
         self.opacity_spin.setSingleStep(0.05)
         self.opacity_spin.setValue(0.35)
         self.opacity_spin.valueChanged.connect(self._render_one_well_curves)
@@ -1080,7 +1080,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                     float(interval.get("from_md", depth_min)),
                     float(interval.get("to_md", depth_max)),
                     color=_well_log_cluster_color(int(interval.get("cluster_label", 0))),
-                    alpha=max(0.03, opacity * 0.18),
+                    alpha=opacity,
                     linewidth=0,
                 )
             values = [_to_finite_float((row.get("features", {}) or {}).get(feature_name)) for row in rows]
@@ -1392,7 +1392,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                     min(span_from, span_to),
                     max(span_from, span_to),
                     color=_well_log_cluster_color(label),
-                    alpha=max(0.03, opacity * 0.22),
+                    alpha=opacity,
                     linewidth=0,
                 )
             ax.plot(plot_x, plot_y, linewidth=1.15, marker=".", markersize=3, color="#1f2933")
