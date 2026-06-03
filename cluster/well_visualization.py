@@ -172,6 +172,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         self.profile_cache: dict[int, dict[str, Any]] = {}
         self._cluster_checkboxes: dict[int, Any] = {}
         self._highlight_interval: dict[str, Any] | None = None
+        self._well_altitude_cache: dict[int, float | None] = {}
         self._build_ui()
 
     def _prepare_scrollable_canvas(
@@ -203,6 +204,31 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         ax.text(0.5, 0.5, message, ha="center", va="center")
         ax.set_axis_off()
         canvas.draw()
+
+    def _well_altitude(self, well_id: int) -> float | None:
+        """Returns wellhead altitude from DB; missing/invalid values are cached as None."""
+        well_id = int(well_id)
+        if well_id in self._well_altitude_cache:
+            return self._well_altitude_cache[well_id]
+        altitude: float | None = None
+        try:
+            value = session.query(Well.alt).filter(Well.id == well_id).scalar()
+            if value is not None:
+                altitude = float(value)
+        except Exception:
+            altitude = None
+        self._well_altitude_cache[well_id] = altitude
+        return altitude
+
+    def _absolute_depth(self, well_id: int, depth_md: Any) -> float | None:
+        """Converts measured depth to absolute depth/elevation: wellhead altitude minus MD."""
+        depth_value = _to_finite_float(depth_md)
+        if depth_value is None:
+            return None
+        altitude = self._well_altitude(int(well_id))
+        if altitude is None:
+            return None
+        return float(altitude) - float(depth_value)
 
     def _build_ui(self) -> None:
         self.setWindowTitle("Well Log Cluster Visualization")
@@ -387,8 +413,9 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
         self.curve_wells_shared_depth = QtWidgets.QCheckBox("общая глубина")
         self.curve_wells_shared_depth.setToolTip(
-            "Включено: все скважины показаны в общей глубинной шкале для корреляции. "
-            "Выключено: каждый трек растянут по своей глубине."
+            "Включено: MD пересчитывается в абсолютную глубину/отметку через альтитуду устья из БД "
+            "и все скважины показаны в общей вертикальной шкале. "
+            "Выключено: каждый трек растянут по своей MD-шкале."
         )
         self.curve_wells_shared_depth.setChecked(False)
         self.curve_wells_shared_depth.stateChanged.connect(self._render_curve_across_wells)
@@ -670,6 +697,7 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
 
     def load_visualization_data(self, visualization_data: WellLogClusterVisualizationData) -> None:
         self.visualization_data = visualization_data
+        self._well_altitude_cache.clear()
         self.interval_cache = self._build_interval_cache(visualization_data.get("rows", []))
         self.profile_cache = self._build_profile_cache(visualization_data.get("rows", []), visualization_data.get("feature_names", []))
         self._populate_controls()
@@ -1147,24 +1175,32 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         shared_x = bool(self.curve_wells_shared_x.isChecked()) if hasattr(self, "curve_wells_shared_x") else True
         shared_depth = bool(self.curve_wells_shared_depth.isChecked()) if hasattr(self, "curve_wells_shared_depth") else False
         all_values = []
-        all_depths = []
+        all_y_values = []
         for payload in payloads:
-            payload_depths = [float(row.get("depth_md", 0.0)) for row in payload["rows"]]
-            payload["depth_min"] = min(payload_depths) if payload_depths else None
-            payload["depth_max"] = max(payload_depths) if payload_depths else None
-            all_depths.extend(payload_depths)
-            if shared_x:
-                for row in payload["rows"]:
+            well_id = int(payload["well_id"])
+            altitude = self._well_altitude(well_id)
+            if altitude is None:
+                altitude = 0.0
+            payload["well_altitude"] = float(altitude)
+            payload_y_values = []
+            for row in payload["rows"]:
+                depth_md = float(row.get("depth_md", 0.0))
+                y_value = float(altitude) - depth_md if shared_depth else depth_md
+                payload_y_values.append(y_value)
+                if shared_x:
                     value = _to_finite_float((row.get("features", {}) or {}).get(curve_name))
                     if value is not None:
                         all_values.append(value)
+            payload["plot_y_min"] = min(payload_y_values) if payload_y_values else None
+            payload["plot_y_max"] = max(payload_y_values) if payload_y_values else None
+            all_y_values.extend(payload_y_values)
         global_x_min = min(all_values) if all_values else None
         global_x_max = max(all_values) if all_values else None
-        global_depth_min = min(all_depths) if all_depths else None
-        global_depth_max = max(all_depths) if all_depths else None
-        if global_depth_min is not None and global_depth_max is not None and global_depth_min == global_depth_max:
-            global_depth_min -= 0.5
-            global_depth_max += 0.5
+        global_y_min = min(all_y_values) if all_y_values else None
+        global_y_max = max(all_y_values) if all_y_values else None
+        if global_y_min is not None and global_y_max is not None and global_y_min == global_y_max:
+            global_y_min -= 0.5
+            global_y_max += 0.5
         opacity = float(self.opacity_spin.value()) if hasattr(self, "opacity_spin") else 0.35
 
         canvas_width = int(len(payloads) * self._TRACK_WIDTH_PX)
@@ -1179,28 +1215,41 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
         axes = [axes] if len(payloads) == 1 else list(np.ravel(axes))
         for ax, payload in zip(axes, payloads):
             rows = payload["rows"]
+            altitude = float(payload.get("well_altitude", 0.0))
             depths = [float(row.get("depth_md", 0.0)) for row in rows]
+            y_values = [altitude - depth if shared_depth else depth for depth in depths]
             values = [_to_finite_float((row.get("features", {}) or {}).get(curve_name)) for row in rows]
-            plot_points = [(value, depth) for value, depth in zip(values, depths) if value is not None]
+            plot_points = [(value, y_value) for value, y_value in zip(values, y_values) if value is not None]
             if not plot_points:
                 continue
             plot_x, plot_y = zip(*plot_points)
-            depth_min = float(payload.get("depth_min") if payload.get("depth_min") is not None else min(depths))
-            depth_max = float(payload.get("depth_max") if payload.get("depth_max") is not None else max(depths))
-            if shared_depth and global_depth_min is not None and global_depth_max is not None:
-                depth_min = float(global_depth_min)
-                depth_max = float(global_depth_max)
-            elif depth_min == depth_max:
-                depth_min -= 0.5
-                depth_max += 0.5
-            ax.set_ylim(depth_max, depth_min)
+            y_min = float(payload.get("plot_y_min") if payload.get("plot_y_min") is not None else min(y_values))
+            y_max = float(payload.get("plot_y_max") if payload.get("plot_y_max") is not None else max(y_values))
+            if shared_depth and global_y_min is not None and global_y_max is not None:
+                y_min = float(global_y_min)
+                y_max = float(global_y_max)
+            elif y_min == y_max:
+                y_min -= 0.5
+                y_max += 0.5
+            if shared_depth:
+                ax.set_ylim(y_min, y_max)
+            else:
+                ax.set_ylim(y_max, y_min)
             for interval in self.interval_cache.get(int(payload["well_id"]), []):
                 label = int(interval.get("cluster_label", 0))
                 if not self._is_cluster_visible(label):
                     continue
+                from_md = float(interval.get("from_md", min(depths) if depths else 0.0))
+                to_md = float(interval.get("to_md", max(depths) if depths else from_md))
+                if shared_depth:
+                    span_from = altitude - from_md
+                    span_to = altitude - to_md
+                else:
+                    span_from = from_md
+                    span_to = to_md
                 ax.axhspan(
-                    float(interval.get("from_md", depth_min)),
-                    float(interval.get("to_md", depth_max)),
+                    min(span_from, span_to),
+                    max(span_from, span_to),
                     color=_well_log_cluster_color(label),
                     alpha=max(0.03, opacity * 0.22),
                     linewidth=0,
@@ -1210,12 +1259,13 @@ class WellLogClusterVisualizationWindow(QtWidgets.QDialog):
                 ax.set_xlim(global_x_min, global_x_max)
             ax.grid(True, alpha=0.25)
             ax.set_xlabel("")
-            ax.set_ylabel("Depth MD" if ax is axes[0] else "", fontsize=8)
+            ax.set_ylabel("Abs depth" if shared_depth else "Depth MD", fontsize=8)
             ax.tick_params(axis="both", labelsize=7, pad=1)
-            if ax is not axes[0]:
+            if shared_depth and ax is not axes[0]:
                 ax.tick_params(labelleft=False)
+                ax.set_ylabel("")
             ax.set_title(f"{payload['well_name']} (id={payload['well_id']})", fontsize=8, pad=3)
-        depth_mode = "общая глубина" if shared_depth else "своя глубина"
+        depth_mode = "общая абсолютная глубина" if shared_depth else "своя MD-шкала"
         self.curve_wells_figure.suptitle(f"{curve_name} · {depth_mode}", fontsize=11)
         self.curve_wells_figure.tight_layout(rect=(0, 0, 1, 0.94), pad=0.35, w_pad=0.35)
         self.curve_wells_canvas.draw()
