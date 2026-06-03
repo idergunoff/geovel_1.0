@@ -115,11 +115,25 @@ def test_zscore_can_use_separate_whole_well_stats():
     assert_close_list(values, [0.0, math.sqrt(1.5)])
 
 
+def test_zscore_ignores_non_finite_values_outside_interval_stats():
+    values, errors = apply_zscore([2.0, 3.0], stats_values=[None, 1.0, 2.0, float("nan"), 3.0])
+
+    assert errors == []
+    assert_close_list(values, [0.0, math.sqrt(1.5)])
+
+
 def test_robust_median_iqr_normalization():
     values, errors = apply_robust([1.0, 2.0, 3.0, 4.0])
 
     assert errors == []
     assert_close_list(values, [-1.0, -1.0 / 3.0, 1.0 / 3.0, 1.0])
+
+
+def test_robust_ignores_non_finite_values_outside_interval_stats():
+    values, errors = apply_robust([2.0, 3.0], stats_values=[None, 1.0, 2.0, float("inf"), 3.0, 4.0])
+
+    assert errors == []
+    assert_close_list(values, [-1.0 / 3.0, 1.0 / 3.0])
 
 
 def test_minmax_normalization():

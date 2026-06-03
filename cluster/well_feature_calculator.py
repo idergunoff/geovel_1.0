@@ -30,6 +30,7 @@ FEATURE_CALCULATOR_STATUS_LABELS = {
     "not_enough_points": "Not enough points",
     "non_finite_result": "Non-finite result",
     "no_common_calculator_depths": "No common calculator depths",
+    "no_common_formula_depths": "No common formula depths",
 }
 
 FEATURE_CALCULATOR_RECOMMENDATIONS = {
@@ -42,6 +43,7 @@ FEATURE_CALCULATOR_RECOMMENDATIONS = {
     "not_enough_points": "Расширьте интервал или выберите кривую, где достаточно точек для операции.",
     "non_finite_result": "Проверьте входные значения и параметры операции: результат не должен содержать NaN или inf.",
     "no_common_calculator_depths": "Проверьте выбранные интервалы и глубинные сетки calculator-признаков: для COLLECT нужна хотя бы одна глубина, где рассчитаны все выбранные calculator-признаки.",
+    "no_common_formula_depths": "Проверьте выбранные интервалы и глубинные сетки входных кривых формулы: нужна хотя бы одна общая глубина без интерполяции.",
 }
 
 FEATURE_CALCULATOR_UNARY_OPERATIONS = {
@@ -487,16 +489,20 @@ def apply_rolling_median(values: Sequence[float | None], window: int = 3) -> tup
     return result, []
 
 
+def _finite_values(values: Sequence[float | None]) -> list[float]:
+    """Return finite values, silently ignoring gaps outside the calculation interval."""
+    return [float(value) for value in values if value is not None and math.isfinite(value)]
+
+
 def apply_zscore(values: Sequence[float | None], stats_values: Sequence[float | None] | None = None) -> tuple[list[float | None], list[FeatureCalculatorError]]:
-    source = list(values if stats_values is None else stats_values)
+    source = _finite_values(values if stats_values is None else stats_values)
     source_error = _blocking_if_any_missing(values, "non_finite_result", "zscore требует конечные значения расчётного интервала.")
-    stats_error = _blocking_if_any_missing(source, "non_finite_result", "zscore требует конечные значения области нормировки.")
-    if source_error or stats_error:
-        return [], [error for error in (source_error, stats_error) if error]
+    if source_error:
+        return [], [source_error]
     if len(source) < 2:
-        return [], [_error("not_enough_points", "Для zscore требуется минимум две точки.")]
-    mean = sum(float(value) for value in source) / len(source)
-    variance = sum((float(value) - mean) ** 2 for value in source) / len(source)
+        return [], [_error("not_enough_points", "Для zscore требуется минимум две конечные точки в области нормировки.")]
+    mean = sum(source) / len(source)
+    variance = sum((value - mean) ** 2 for value in source) / len(source)
     std = math.sqrt(variance)
     if std == 0:
         return [], [_error("zero_std", "Стандартное отклонение равно нулю; zscore невозможен.")]
@@ -504,16 +510,14 @@ def apply_zscore(values: Sequence[float | None], stats_values: Sequence[float | 
 
 
 def apply_robust(values: Sequence[float | None], stats_values: Sequence[float | None] | None = None) -> tuple[list[float | None], list[FeatureCalculatorError]]:
-    source = list(values if stats_values is None else stats_values)
+    source = _finite_values(values if stats_values is None else stats_values)
     source_error = _blocking_if_any_missing(values, "non_finite_result", "robust требует конечные значения расчётного интервала.")
-    stats_error = _blocking_if_any_missing(source, "non_finite_result", "robust требует конечные значения области нормировки.")
-    if source_error or stats_error:
-        return [], [error for error in (source_error, stats_error) if error]
+    if source_error:
+        return [], [source_error]
     if len(source) < 2:
-        return [], [_error("not_enough_points", "Для robust-нормировки требуется минимум две точки.")]
-    numeric_source = [float(value) for value in source]
-    median_value = statistics.median(numeric_source)
-    q1, q3 = _quartiles(numeric_source)
+        return [], [_error("not_enough_points", "Для robust-нормировки требуется минимум две конечные точки в области нормировки.")]
+    median_value = statistics.median(source)
+    q1, q3 = _quartiles(source)
     iqr = q3 - q1
     if iqr == 0:
         return [], [_error("zero_iqr", "IQR равен нулю; robust-нормировка невозможна.")]
@@ -521,13 +525,14 @@ def apply_robust(values: Sequence[float | None], stats_values: Sequence[float | 
 
 
 def apply_minmax(values: Sequence[float | None], stats_values: Sequence[float | None] | None = None) -> tuple[list[float | None], list[FeatureCalculatorError]]:
-    source = list(values if stats_values is None else stats_values)
+    source = _finite_values(values if stats_values is None else stats_values)
     source_error = _blocking_if_any_missing(values, "non_finite_result", "minmax требует конечные значения расчётного интервала.")
-    stats_error = _blocking_if_any_missing(source, "non_finite_result", "minmax требует конечные значения области нормировки.")
-    if source_error or stats_error:
-        return [], [error for error in (source_error, stats_error) if error]
-    min_value = min(float(value) for value in source)
-    max_value = max(float(value) for value in source)
+    if source_error:
+        return [], [source_error]
+    if len(source) < 2:
+        return [], [_error("not_enough_points", "Для minmax требуется минимум две конечные точки в области нормировки.")]
+    min_value = min(source)
+    max_value = max(source)
     value_range = max_value - min_value
     if value_range == 0:
         return [], [_error("zero_range", "Диапазон значений равен нулю; minmax невозможен.")]
@@ -768,6 +773,69 @@ def evaluate_formula_series(
         return [], [non_finite_error]
     return result_values, []
 
+
+
+def align_formula_series_on_common_depths(
+    series_list: Sequence[WellLogCurveSeries],
+    *,
+    precision: int = FEATURE_CALCULATOR_DEPTH_PRECISION,
+) -> tuple[list[WellLogCurveSeries], list[FeatureCalculatorError]]:
+    """Align formula inputs by common rounded depths without interpolation.
+
+    Clean canonical curves are collected by rounded depth, so formula features should
+    be calculated on the same common-depth principle instead of failing when input
+    curves have harmless extra edge points or different start/end depths.
+    """
+    if not series_list:
+        return [], [_error("missing_inputs", "Для расчёта формулы нужны входные canonical-кривые.")]
+
+    depth_maps: list[dict[float, tuple[float, float | None]]] = []
+    for series in series_list:
+        depth_map: dict[float, tuple[float, float | None]] = {}
+        for depth, value in zip(series.depths, series.values):
+            rounded_depth = round(float(depth), precision)
+            depth_map.setdefault(rounded_depth, (float(depth), value))
+        if not depth_map:
+            return [], [
+                _error(
+                    "no_common_formula_depths",
+                    f"У входной кривой '{series.canonical_name}' нет точек в расчётном интервале.",
+                    well_id=series.well_id,
+                    canonical_name=series.canonical_name,
+                )
+            ]
+        depth_maps.append(depth_map)
+
+    common_depths = sorted(set.intersection(*(set(depth_map) for depth_map in depth_maps)))
+    if not common_depths:
+        input_names = ", ".join(series.canonical_name for series in series_list)
+        return [], [
+            _error(
+                "no_common_formula_depths",
+                f"Нет общих глубин для входных кривых формулы: {input_names}. Формула рассчитывается только на совпадающих глубинах без интерполяции.",
+                well_id=series_list[0].well_id,
+            )
+        ]
+
+    aligned: list[WellLogCurveSeries] = []
+    for series, depth_map in zip(series_list, depth_maps):
+        aligned_values = [depth_map[depth][1] for depth in common_depths]
+        aligned.append(
+            WellLogCurveSeries(
+                well_id=series.well_id,
+                canonical_id=series.canonical_id,
+                canonical_name=series.canonical_name,
+                depths=[float(depth) for depth in common_depths],
+                values=aligned_values,
+                step=series.step,
+                begin=float(common_depths[0]),
+                end=float(common_depths[-1]),
+                source_curve_name=series.source_curve_name,
+                stats_depths=list(series.stats_depths),
+                stats_values=list(series.stats_values),
+            )
+        )
+    return aligned, []
 
 def complete_calculator_depths(
     calculator_value_map: dict[float, dict[int, Any]],
@@ -1219,13 +1287,15 @@ def evaluate_feature_calculator_for_well(
         )
         if load_errors:
             return FeatureCalculatorEvaluationResult(errors=load_errors)
-        grid_errors = validate_depth_grid_compatibility(series_list, config=config)
-        if grid_errors:
-            return FeatureCalculatorEvaluationResult(errors=grid_errors)
-        values, formula_errors = evaluate_formula_series(str(config.expression), series_list)
+        aligned_series, alignment_errors = align_formula_series_on_common_depths(series_list)
+        if alignment_errors:
+            return FeatureCalculatorEvaluationResult(
+                errors=[_copy_error_context(error, config=config, well_id=int(well_id)) for error in alignment_errors]
+            )
+        values, formula_errors = evaluate_formula_series(str(config.expression), aligned_series)
         return FeatureCalculatorEvaluationResult(
             values=values,
-            depths=series_list[0].depths if not formula_errors and series_list else [],
+            depths=aligned_series[0].depths if not formula_errors and aligned_series else [],
             errors=[_copy_error_context(error, config=config, well_id=int(well_id)) for error in formula_errors],
         )
 

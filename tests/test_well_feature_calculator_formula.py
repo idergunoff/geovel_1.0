@@ -153,3 +153,24 @@ def test_complete_calculator_depths_uses_calculator_intersection_not_canonical_u
     )
 
     assert complete == [100.1, 100.2]
+
+
+def test_formula_evaluation_aligns_on_common_depths(monkeypatch):
+    config = FeatureCalculatorConfig(
+        mode="formula",
+        expression="A + B",
+        inputs=[FeatureCalculatorInput(canonical_name="A"), FeatureCalculatorInput(canonical_name="B")],
+    )
+
+    def fake_loader(config, well_id, top_md, bottom_md, *, db_session=None):
+        return [
+            series("A", [1.0, 2.0, 3.0], depths=[100.0, 100.1, 100.2]),
+            series("B", [10.0, 20.0, 30.0], depths=[100.1, 100.2, 100.3]),
+        ], []
+
+    monkeypatch.setattr(well_feature_calculator, "load_input_series_for_calculator", fake_loader)
+    result = evaluate_feature_calculator_for_well(config, well_id=7, top_md=100.0, bottom_md=100.3)
+
+    assert result.ok
+    assert_close_list(result.depths, [100.1, 100.2])
+    assert_close_list(result.values, [12.0, 23.0])
