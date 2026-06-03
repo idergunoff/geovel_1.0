@@ -17,7 +17,7 @@ FEATURE_CALCULATOR_DEFAULT_NORMALIZATION_SCOPE = "whole_well"
 FEATURE_CALCULATOR_NORMALIZATION_SCOPES = {"whole_well", "interval"}
 FEATURE_CALCULATOR_DEPTH_PRECISION = 6
 FEATURE_CALCULATOR_STEP_TOLERANCE = 1e-9
-FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS = {"log", "abs", "sqrt"}
+FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS = {"log", "abs", "sqrt", "norm", "zscore", "robust", "minmax"}
 
 
 
@@ -636,13 +636,13 @@ class _SafeFormulaValidator(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         if not isinstance(node.func, ast.Name):
-            self._add_validation_error("Вызовы атрибутов и выражений запрещены; доступны только log, abs, sqrt.")
+            self._add_validation_error("Вызовы атрибутов и выражений запрещены; доступны только log, abs, sqrt, norm, zscore, robust, minmax.")
         elif node.func.id not in FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS:
-            self._add_validation_error(f"Функция '{node.func.id}' не разрешена; доступны только log, abs, sqrt.")
+            self._add_validation_error(f"Функция '{node.func.id}' не разрешена; доступны только log, abs, sqrt, norm, zscore, robust, minmax.")
         if node.keywords:
             self._add_validation_error("Именованные аргументы функций в формулах не поддерживаются.")
         if len(node.args) != 1:
-            self._add_validation_error("Функции log/abs/sqrt принимают ровно один аргумент.")
+            self._add_validation_error("Функции log/abs/sqrt/norm/zscore/robust/minmax принимают ровно один аргумент.")
         for arg in node.args:
             self.visit(arg)
 
@@ -665,8 +665,12 @@ def extract_formula_input_names(expression: str) -> tuple[list[str], list[Featur
     except SyntaxError as exc:
         return [], [_error("formula_parse_error", f"Синтаксическая ошибка формулы: {exc.msg}.")]
     names: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and node.id not in FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS and node.id not in names:
+    name_nodes = sorted(
+        (node for node in ast.walk(tree) if isinstance(node, ast.Name)),
+        key=lambda node: (getattr(node, "lineno", 0), getattr(node, "col_offset", 0)),
+    )
+    for node in name_nodes:
+        if node.id not in FEATURE_CALCULATOR_ALLOWED_FORMULA_FUNCTIONS and node.id not in names:
             names.append(node.id)
     return names, []
 
@@ -745,11 +749,115 @@ def evaluate_safe_formula_point(
         return None, _error(exc.code, exc.message)
 
 
+def _depth_context_error(error: FeatureCalculatorError, depths: Sequence[float], index: int) -> FeatureCalculatorError:
+    if 0 <= index < len(depths):
+        error.message = f"{error.message} Глубина: {float(depths[index]):g}."
+    return error
+
+
+def _apply_formula_function(
+    function_name: str,
+    values: Sequence[float | None],
+    depths: Sequence[float],
+) -> tuple[list[float | None], list[FeatureCalculatorError]]:
+    result_values: list[float | None] = []
+    for index, value in enumerate(values):
+        if value is None or not math.isfinite(float(value)):
+            return [], [_depth_context_error(_error("missing_value_at_depth", "На текущей глубине отсутствует конечное значение входной формулы."), depths, index)]
+        argument = float(value)
+        if function_name == "log":
+            if argument <= 0:
+                return [], [_depth_context_error(_error("invalid_log_domain", "log(x) определён только для x > 0."), depths, index)]
+            result = math.log(argument)
+        elif function_name == "sqrt":
+            if argument < 0:
+                return [], [_depth_context_error(_error("invalid_sqrt_domain", "sqrt(x) определён только для x >= 0."), depths, index)]
+            result = math.sqrt(argument)
+        elif function_name == "abs":
+            result = abs(argument)
+        else:
+            return [], [_error("formula_validation_error", f"Функция '{function_name}' не разрешена.")]
+        if not math.isfinite(result):
+            return [], [_depth_context_error(_error("non_finite_result", "Результат формулы содержит NaN/inf; расчёт признака заблокирован."), depths, index)]
+        result_values.append(result)
+    return result_values, []
+
+
+def _evaluate_formula_series_node(
+    node: ast.AST,
+    values_by_name: dict[str, list[float | None]],
+    depths: Sequence[float],
+    stats_by_name: dict[str, list[float | None]] | None = None,
+) -> tuple[list[float | None], list[FeatureCalculatorError]]:
+    if isinstance(node, ast.Expression):
+        return _evaluate_formula_series_node(node.body, values_by_name, depths, stats_by_name)
+    if isinstance(node, ast.Constant):
+        value = float(node.value)
+        return [value for _depth in depths], []
+    if isinstance(node, ast.Name):
+        if node.id not in values_by_name:
+            return [], [_error("missing_value_at_depth", f"Нет значения входной кривой '{node.id}' на текущей глубине.")]
+        return list(values_by_name[node.id]), []
+    if isinstance(node, ast.UnaryOp):
+        operand_values, operand_errors = _evaluate_formula_series_node(node.operand, values_by_name, depths, stats_by_name)
+        if operand_errors:
+            return [], operand_errors
+        operator_func = _FORMULA_UNARY_OPERATORS[type(node.op)]
+        result_values: list[float | None] = []
+        for index, value in enumerate(operand_values):
+            if value is None or not math.isfinite(float(value)):
+                return [], [_depth_context_error(_error("missing_value_at_depth", "На текущей глубине отсутствует конечное значение входной формулы."), depths, index)]
+            result_values.append(operator_func(float(value)))
+        return result_values, []
+    if isinstance(node, ast.BinOp):
+        left_values, left_errors = _evaluate_formula_series_node(node.left, values_by_name, depths, stats_by_name)
+        if left_errors:
+            return [], left_errors
+        right_values, right_errors = _evaluate_formula_series_node(node.right, values_by_name, depths, stats_by_name)
+        if right_errors:
+            return [], right_errors
+        result_values: list[float | None] = []
+        for index, (left, right) in enumerate(zip(left_values, right_values)):
+            if left is None or not math.isfinite(float(left)) or right is None or not math.isfinite(float(right)):
+                return [], [_depth_context_error(_error("missing_value_at_depth", "На текущей глубине отсутствует конечное значение входной формулы."), depths, index)]
+            if isinstance(node.op, ast.Div):
+                if float(right) == 0:
+                    return [], [_depth_context_error(_error("division_by_zero", "Деление на ноль в формуле расчётного признака."), depths, index)]
+                value = float(left) / float(right)
+            else:
+                value = _FORMULA_BINARY_OPERATORS[type(node.op)](float(left), float(right))
+            if not math.isfinite(value):
+                return [], [_depth_context_error(_error("non_finite_result", "Результат формулы содержит NaN/inf; расчёт признака заблокирован."), depths, index)]
+            result_values.append(value)
+        return result_values, []
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        argument_values, argument_errors = _evaluate_formula_series_node(node.args[0], values_by_name, depths, stats_by_name)
+        if argument_errors:
+            return [], argument_errors
+        function_name = node.func.id
+        if function_name in {"log", "sqrt", "abs"}:
+            result_values, errors = _apply_formula_function(function_name, argument_values, depths)
+        elif function_name in {"norm", "zscore", "robust", "minmax"}:
+            stats_values = None
+            if isinstance(node.args[0], ast.Name) and stats_by_name is not None:
+                stats_values = stats_by_name.get(node.args[0].id)
+            if function_name in {"norm", "zscore"}:
+                result_values, errors = apply_zscore(argument_values, stats_values=stats_values)
+            elif function_name == "robust":
+                result_values, errors = apply_robust(argument_values, stats_values=stats_values)
+            else:
+                result_values, errors = apply_minmax(argument_values, stats_values=stats_values)
+        else:
+            return [], [_error("formula_validation_error", f"Функция '{function_name}' не разрешена.")]
+        return result_values, errors
+    return [], [_error("formula_validation_error", f"Недопустимый элемент формулы: {type(node).__name__}.")]
+
+
 def evaluate_formula_series(
     expression: str,
     series_list: Sequence[WellLogCurveSeries],
 ) -> tuple[list[float | None], list[FeatureCalculatorError]]:
-    """Evaluate formula for aligned input series; any point error blocks the whole feature."""
+    """Evaluate formula for aligned input series; any point or normalization error blocks the whole feature."""
     if not series_list:
         return [], [_error("missing_inputs", "Для расчёта формулы нужны входные canonical-кривые.")]
     names = [series.canonical_name for series in series_list]
@@ -759,20 +867,16 @@ def evaluate_formula_series(
     if errors or formula is None:
         return [], errors
 
-    result_values: list[float | None] = []
-    for index in range(len(series_list[0].depths)):
-        values_by_name = {series.canonical_name: series.values[index] for series in series_list}
-        value, point_error = evaluate_safe_formula_point(formula, values_by_name)
-        if point_error:
-            depth = series_list[0].depths[index]
-            point_error.message = f"{point_error.message} Глубина: {depth:g}."
-            return [], [point_error]
-        result_values.append(value)
+    depths = series_list[0].depths
+    values_by_name = {series.canonical_name: list(series.values) for series in series_list}
+    stats_by_name = {series.canonical_name: list(series.stats_values or series.values) for series in series_list}
+    result_values, evaluation_errors = _evaluate_formula_series_node(formula.tree, values_by_name, depths, stats_by_name)
+    if evaluation_errors:
+        return [], evaluation_errors
     non_finite_error = _non_finite_result_error(result_values)
     if non_finite_error:
         return [], [non_finite_error]
     return result_values, []
-
 
 
 def align_formula_series_on_common_depths(
