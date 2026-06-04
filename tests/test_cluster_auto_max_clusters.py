@@ -179,3 +179,54 @@ def test_build_fine_search_space_clamps_kmeans_and_gmm_to_max_clusters(auto_cand
         params = candidate["method_params"]
         assert params.get("kmeans_n_clusters", 0) <= 4
         assert params.get("gmm_n_components", 0) <= 4
+
+
+def test_candidate_worker_uses_only_fork_to_avoid_second_gui_window(auto_candidates, monkeypatch):
+    class MpStub:
+        @staticmethod
+        def get_all_start_methods():
+            return ["fork", "forkserver", "spawn"]
+
+    monkeypatch.setattr(auto_candidates, "mp", MpStub, raising=False)
+
+    assert auto_candidates._get_candidate_worker_start_methods() == ["fork"]
+    assert auto_candidates._select_candidate_worker_start_method() == "fork"
+
+
+def test_isolated_candidate_payload_drops_runtime_caches(auto_candidates):
+    payload = auto_candidates._build_isolated_candidate_payload({
+        "candidate_id": "C001",
+        "transform_cache": {"old": "value"},
+        "preprocess_cache": {"old": "value"},
+        "preprocess_rank_cache": {"old": "value"},
+        "metrics_cache": {"old": "value"},
+        "base_data": [[1.0]],
+    })
+
+    assert payload["transform_cache"] is None
+    assert payload["preprocess_cache"] is None
+    assert payload["preprocess_rank_cache"] is None
+    assert payload["metrics_cache"] is None
+    assert payload["base_data"] == [[1.0]]
+
+
+def test_candidate_without_ui_timeout_runs_inline(auto_candidates, monkeypatch):
+    called = {}
+
+    def run_cluster_candidate(**kwargs):
+        called["kwargs"] = kwargs
+        return {"status": "ok", "candidate_id": kwargs.get("candidate_id")}
+
+    class MpStub:
+        @staticmethod
+        def get_all_start_methods():
+            raise AssertionError("multiprocessing must not be used without explicit UI timeout")
+
+    monkeypatch.setattr(auto_candidates, "run_cluster_candidate", run_cluster_candidate, raising=False)
+    monkeypatch.setattr(auto_candidates, "mp", MpStub, raising=False)
+
+    result = auto_candidates.run_cluster_candidate_isolated(candidate_id="C001", hard_timeout_sec=None)
+
+    assert result == {"status": "ok", "candidate_id": "C001"}
+    assert called["kwargs"]["candidate_id"] == "C001"
+    assert auto_candidates._resolve_candidate_hard_timeout(None) is None
