@@ -63,6 +63,7 @@ def load_auto_candidates_module():
             "CandidateStats": dict,
             "GMM_COVARIANCE_TYPES": ("full", "diag", "tied", "spherical"),
             "AUTO_CANDIDATE_HARD_TIMEOUT_SEC": 1,
+            "AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC": 300,
             "AUTO_PCA_PILOT_ENABLED": False,
             "AUTO_PCA_PILOT_MAX_ROWS": 10,
             "AUTO_SILHOUETTE_MAX_SAMPLES": 100,

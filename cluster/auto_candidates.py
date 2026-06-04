@@ -3,6 +3,7 @@ from __future__ import annotations
 from .common import *
 from .models import (
     AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
+    AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC,
     AUTO_PCA_PILOT_ENABLED,
     AUTO_PCA_PILOT_MAX_ROWS,
     AUTO_SILHOUETTE_MAX_SAMPLES,

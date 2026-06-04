@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>605</width>
-    <height>741</height>
+    <height>780</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -266,6 +266,9 @@
            <widget class="QDoubleSpinBox" name="doubleSpinBox_interval">
             <property name="decimals">
              <number>1</number>
+            </property>
+            <property name="maximum">
+             <double>1000.000000000000000</double>
             </property>
             <property name="singleStep">
              <double>0.500000000000000</double>
