@@ -3,6 +3,7 @@ from __future__ import annotations
 from .common import *
 from .models import (
     AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
+    AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC,
     AUTO_PCA_PILOT_ENABLED,
     AUTO_PCA_PILOT_MAX_ROWS,
     AUTO_SILHOUETTE_MAX_SAMPLES,
@@ -1053,12 +1054,70 @@ def build_fine_search_space(
     )
 
 
-def _cluster_candidate_worker(payload: dict, out_queue) -> None:
+def _cluster_candidate_worker(payload: dict, out_conn) -> None:
     try:
         result = run_cluster_candidate(**payload)
-        out_queue.put({"ok": True, "result": result})
+        out_conn.send({"ok": True, "result": result})
     except Exception as exc:
-        out_queue.put({"ok": False, "error": f"subprocess exception: {exc}"})
+        out_conn.send({"ok": False, "error": f"subprocess exception: {exc}"})
+    finally:
+        try:
+            out_conn.close()
+        except Exception:
+            pass
+
+
+def _get_candidate_worker_start_methods() -> list[str]:
+    """
+    Возвращает безопасный порядок запуска isolated-worker для AUTO-кандидата.
+
+    В GUI-приложении нельзя использовать spawn/forkserver: свежий интерпретатор
+    повторно импортирует стартовый модуль приложения и может открыть второе окно.
+    Поэтому isolated AUTO-кандидат запускается только через fork, а зависания
+    ограничиваются аварийным watchdog.
+    """
+    available_methods = set(mp.get_all_start_methods())
+    return ["fork"] if "fork" in available_methods else []
+
+
+def _select_candidate_worker_start_method() -> Optional[str]:
+    """
+    Возвращает предпочтительный start_method для обратной совместимости тестов/кода.
+    """
+    methods = _get_candidate_worker_start_methods()
+    return methods[0] if methods else None
+
+
+def _resolve_candidate_hard_timeout(hard_timeout_sec: Optional[float]) -> Optional[float]:
+    """
+    Возвращает timeout worker'а: явный UI-лимит или аварийный watchdog.
+    """
+    timeout_value = hard_timeout_sec
+    if timeout_value is None:
+        timeout_value = AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC
+    if timeout_value is None:
+        return None
+    try:
+        timeout_float = float(timeout_value)
+    except (TypeError, ValueError):
+        return None
+    if timeout_float <= 0:
+        return None
+    return max(1.0, timeout_float)
+
+
+def _build_isolated_candidate_payload(kwargs: dict) -> dict:
+    """
+    Готовит payload для subprocess. Runtime-cache в isolated режиме не возвращает
+    изменения в parent-процесс, поэтому его безопаснее не передавать повторному
+    worker'у: так мы не сериализуем/не наследуем большие numpy-массивы и старое
+    состояние предыдущего расчета.
+    """
+    payload = dict(kwargs)
+    for cache_key in ("transform_cache", "preprocess_cache", "preprocess_rank_cache", "metrics_cache"):
+        if cache_key in payload:
+            payload[cache_key] = None
+    return payload
 
 
 def run_cluster_candidate_isolated(
@@ -1066,32 +1125,73 @@ def run_cluster_candidate_isolated(
         hard_timeout_sec: Optional[float] = AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
         **kwargs
 ) -> CandidateResult:
-    start_methods = mp.get_all_start_methods()
-    if "fork" not in start_methods:
+    start_methods = _get_candidate_worker_start_methods()
+    if not start_methods:
         # Windows fallback: избегаем spawn, чтобы дочерний процесс не инициализировал GUI.
         return run_cluster_candidate(**kwargs)
-    ctx = mp.get_context("fork")
-    q = ctx.Queue(maxsize=1)
-    proc = ctx.Process(target=_cluster_candidate_worker, args=(kwargs, q), daemon=True)
-    proc.start()
-    if hard_timeout_sec is None:
-        proc.join()
-    else:
-        proc.join(timeout=max(1.0, float(hard_timeout_sec)))
+
     candidate_id = str(kwargs.get("candidate_id") or "")
     candidate = kwargs.get("candidate")
-    if proc.is_alive():
-        proc.kill()
-        proc.join(timeout=1.0)
-        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="invalid", error_text=f"hard-timeout>{hard_timeout_sec:.1f}s (isolated worker killed)")
-    if proc.exitcode not in (0, None):
-        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=f"isolated worker exitcode={proc.exitcode}")
-    try:
-        msg = q.get_nowait()
-    except Exception:
-        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text="isolated worker: empty result")
-    if not msg.get("ok"):
-        return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=str(msg.get("error") or "isolated worker unknown error"))
-    return msg.get("result")
+    payload = _build_isolated_candidate_payload(kwargs)
+    effective_timeout_sec = _resolve_candidate_hard_timeout(hard_timeout_sec)
+    start_errors: list[str] = []
+
+    for method_idx, start_method in enumerate(start_methods):
+        is_last_method = method_idx == len(start_methods) - 1
+        parent_conn = None
+        child_conn = None
+        proc = None
+        try:
+            ctx = mp.get_context(start_method)
+            parent_conn, child_conn = ctx.Pipe(duplex=False)
+            proc = ctx.Process(target=_cluster_candidate_worker, args=(payload, child_conn), daemon=True)
+            proc.start()
+            child_conn.close()
+            child_conn = None
+        except Exception as exc:
+            start_errors.append(f"{start_method}: {exc}")
+            for conn in (child_conn, parent_conn):
+                try:
+                    if conn is not None:
+                        conn.close()
+                except Exception:
+                    pass
+            continue
+
+        if effective_timeout_sec is None:
+            proc.join()
+        else:
+            proc.join(timeout=effective_timeout_sec)
+
+        if proc.is_alive():
+            proc.kill()
+            proc.join(timeout=1.0)
+            parent_conn.close()
+            timeout_label = f"{effective_timeout_sec:.1f}" if effective_timeout_sec is not None else "unknown"
+            return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="invalid", error_text=f"hard-timeout>{timeout_label}s (isolated worker killed, start_method={start_method})")
+        if proc.exitcode not in (0, None):
+            parent_conn.close()
+            error_text = f"isolated worker exitcode={proc.exitcode} (start_method={start_method})"
+            if not is_last_method:
+                start_errors.append(error_text)
+                continue
+            return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=error_text)
+        try:
+            msg = parent_conn.recv() if parent_conn.poll(1.0) else None
+        except Exception:
+            msg = None
+        finally:
+            parent_conn.close()
+        if not msg:
+            error_text = f"isolated worker: empty result (start_method={start_method})"
+            if not is_last_method:
+                start_errors.append(error_text)
+                continue
+            return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=error_text)
+        if not msg.get("ok"):
+            return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=str(msg.get("error") or "isolated worker unknown error"))
+        return msg.get("result")
+
+    return make_candidate_result(candidate_id=candidate_id, candidate_config=candidate, status="error", error_text=f"isolated worker start failed ({'; '.join(start_errors)})")
 
 
