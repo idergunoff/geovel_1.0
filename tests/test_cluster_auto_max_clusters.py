@@ -182,15 +182,16 @@ def test_build_fine_search_space_clamps_kmeans_and_gmm_to_max_clusters(auto_cand
         assert params.get("gmm_n_components", 0) <= 4
 
 
-def test_candidate_worker_prefers_forkserver(auto_candidates, monkeypatch):
+def test_candidate_worker_uses_only_fork_to_avoid_second_gui_window(auto_candidates, monkeypatch):
     class MpStub:
         @staticmethod
         def get_all_start_methods():
-            return ["fork", "forkserver"]
+            return ["fork", "forkserver", "spawn"]
 
     monkeypatch.setattr(auto_candidates, "mp", MpStub, raising=False)
 
-    assert auto_candidates._select_candidate_worker_start_method() == "forkserver"
+    assert auto_candidates._get_candidate_worker_start_methods() == ["fork"]
+    assert auto_candidates._select_candidate_worker_start_method() == "fork"
 
 
 def test_isolated_candidate_payload_drops_runtime_caches(auto_candidates):

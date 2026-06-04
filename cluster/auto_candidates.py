@@ -1071,20 +1071,13 @@ def _get_candidate_worker_start_methods() -> list[str]:
     """
     Возвращает безопасный порядок запуска isolated-worker для AUTO-кандидата.
 
-    forkserver предпочтительнее fork: при повторных Well Log расчетах родительский
-    GUI-процесс уже мог создать BLAS/OpenMP/Qt-потоки, и обычный fork способен
-    унаследовать заблокированные mutex'ы, что проявляется как зависание на первых
-    итерациях повторного AUTO/retune. forkserver форкает отдельный однопоточный
-    серверный процесс и существенно снижает риск такого deadlock. Если forkserver
-    недоступен или не стартует в конкретном окружении, ниже остается fallback на fork.
+    В GUI-приложении нельзя использовать spawn/forkserver: свежий интерпретатор
+    повторно импортирует стартовый модуль приложения и может открыть второе окно.
+    Поэтому isolated AUTO-кандидат запускается только через fork, а зависания
+    ограничиваются аварийным watchdog.
     """
     available_methods = set(mp.get_all_start_methods())
-    ordered_methods: list[str] = []
-    if "forkserver" in available_methods:
-        ordered_methods.append("forkserver")
-    if "fork" in available_methods:
-        ordered_methods.append("fork")
-    return ordered_methods
+    return ["fork"] if "fork" in available_methods else []
 
 
 def _select_candidate_worker_start_method() -> Optional[str]:
