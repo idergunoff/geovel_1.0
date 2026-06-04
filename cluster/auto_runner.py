@@ -1284,27 +1284,23 @@ def calculate_cluster_auto():
 
 def calculate_cluster_auto_batch() -> None:
     """
-    Запускает AUTO-подбор последовательно для всех ObjectSet в текущем анализе.
-    В batch-режиме:
-    - min_cluster_samples принудительно = 5% от N для каждого объекта;
-    - apply_auto_best отключен;
-    - если retune выключен и есть cache, объект пропускается.
+    Запускает AUTO-подбор в batch-режиме для активного источника Cluster.
+
+    Как CALC/AUTO, сначала определяет активную вкладку Cluster:
+    - GPR/георадар: обрабатывает все ObjectSet текущего анализа;
+    - Well Log/каротаж: обрабатывает все WellLogClusterDataset с собранными data.
     """
-    clust_analys_id = get_curr_clust_analys_id()
-    if not str(clust_analys_id).isdigit():
-        set_info("AUTO BATCH: не выбран набор кластерного анализа.", "brown")
+    source_type = get_active_cluster_source_type()
+    if source_type == "well_log":
+        _calculate_cluster_auto_batch_well_log()
         return
+    _calculate_cluster_auto_batch_gpr()
 
-    clust_objects = (
-        session.query(ObjectSet.id, ObjectSet.research_id, ObjectSet.data)
-        .filter_by(analysis_id=int(clust_analys_id))
-        .order_by(ObjectSet.id.asc())
-        .all()
-    )
-    if not clust_objects:
-        set_info("AUTO BATCH: нет добавленных наборов объектов для обработки.", "brown")
-        return
 
+def _read_auto_batch_settings() -> dict[str, Any]:
+    """
+    Считывает общие настройки AUTO BATCH из UI.
+    """
     auto_mode = "COARSE" if ui.radioButton_cluster_coarse_auto.isChecked() else "FINE"
     selected_button = ui.buttonGroup_3.checkedButton()
     text_method_nan = selected_button.text() if selected_button else "impute"
@@ -1350,31 +1346,167 @@ def calculate_cluster_auto_batch() -> None:
         "davies_bouldin": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_db", fallback=0.3),
         "calinski_harabasz": _read_auto_float_setting("doubleSpinBox_cluster_auto_w_ch", fallback=0.3)
     }
+    clean_kwargs = {
+        "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
+        "non_finite_mode": text_method_nan,
+        "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
+        "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
+    }
+    return {
+        "auto_mode": auto_mode,
+        "text_method_nan": text_method_nan,
+        "force_recompute": force_recompute,
+        "use_total_timeout": use_total_timeout,
+        "use_candidate_timeout": use_candidate_timeout,
+        "total_timeout_sec": total_timeout_sec,
+        "candidate_timeout_sec": candidate_timeout_sec,
+        "use_candidates_limit": use_candidates_limit,
+        "max_candidates_value": max_candidates_value,
+        "max_candidates": max_candidates,
+        "top_k": top_k,
+        "max_clusters": max_clusters,
+        "min_pca_components": min_pca_components,
+        "hdbscan_metric": hdbscan_metric,
+        "hdbscan_metrics": hdbscan_metrics,
+        "scaler_only": scaler_only,
+        "pca_only": pca_only,
+        "metric_weights": metric_weights,
+        "clean_kwargs": clean_kwargs,
+    }
 
-    total_objects = len(clust_objects)
+
+def _build_auto_batch_cache_key(
+        *,
+        dataset_id: int,
+        settings: dict[str, Any],
+        min_cluster_samples: int,
+        sample_limits: dict[str, int],
+        source_type: str,
+) -> str:
+    return build_cluster_auto_tuning_cache_key(
+        clust_object_id=dataset_id,
+        auto_mode=settings["auto_mode"],
+        max_candidates=settings["max_candidates_value"] if settings["use_candidates_limit"] else 0,
+        top_k=settings["top_k"],
+        constraints={
+            "use_candidates_limit": bool(settings["use_candidates_limit"]),
+            "max_candidates_value": settings["max_candidates_value"],
+            "max_clusters": settings["max_clusters"],
+            "hdbscan_metric": settings["hdbscan_metric"],
+            "hdbscan_metrics": settings["hdbscan_metrics"],
+            "min_pca_components": settings["min_pca_components"],
+            "scaler_only": settings["scaler_only"],
+            "pca_only": settings["pca_only"],
+            "use_total_timeout": bool(settings["use_total_timeout"]),
+            "use_candidate_timeout": bool(settings["use_candidate_timeout"]),
+            "total_timeout_sec": settings["total_timeout_sec"],
+            "candidate_timeout_sec": settings["candidate_timeout_sec"],
+            "min_cluster_samples": min_cluster_samples,
+            "recommended_min_cluster_samples": sample_limits["recommended_default_value"],
+            "max_min_cluster_samples": sample_limits["max_spinbox_value"]
+        },
+        weights=settings["metric_weights"],
+        clean_kwargs=settings["clean_kwargs"],
+        source_type=source_type
+    )
+
+
+def _calculate_cluster_auto_batch_gpr() -> None:
+    """
+    Запускает AUTO-подбор последовательно для всех ObjectSet в текущем анализе.
+    """
+    clust_analys_id = get_curr_clust_analys_id()
+    if not str(clust_analys_id).isdigit():
+        set_info("AUTO BATCH: не выбран набор кластерного анализа.", "brown")
+        return
+
+    clust_objects = (
+        session.query(ObjectSet)
+        .filter_by(analysis_id=int(clust_analys_id))
+        .order_by(ObjectSet.id)
+        .all()
+    )
+    if not clust_objects:
+        set_info("AUTO BATCH: нет добавленных наборов объектов для обработки.", "brown")
+        return
+
+    settings = _read_auto_batch_settings()
+    _run_auto_batch_for_contexts(
+        source_type="gpr",
+        items=[(int(clust_obj.id), f"object_set_id={int(clust_obj.id)}", clust_obj) for clust_obj in clust_objects],
+        settings=settings,
+        context_loader=lambda clust_obj: {
+            "dataset_id": int(clust_obj.id),
+            "dataset_title": f"object_set_id={int(clust_obj.id)}",
+            "raw_rows": _deserialize_cluster_dataset(clust_obj.data),
+            "data_hash": "",
+            "diagnostics": {},
+        },
+        empty_message="пустой набор данных",
+        use_checkpoint=True,
+    )
+
+
+def _calculate_cluster_auto_batch_well_log() -> None:
+    """
+    Запускает AUTO-подбор последовательно для всех Well Log datasets.
+    """
+    datasets = (
+        session.query(WellLogClusterDataset)
+        .order_by(WellLogClusterDataset.created_at, WellLogClusterDataset.id)
+        .all()
+    )
+    if not datasets:
+        set_info("AUTO BATCH Well Log: нет наборов каротажа для обработки.", "brown")
+        return
+
+    settings = _read_auto_batch_settings()
+    _run_auto_batch_for_contexts(
+        source_type="well_log",
+        items=[(int(dataset.id), str(dataset.name or f"dataset_id={int(dataset.id)}"), dataset) for dataset in datasets],
+        settings=settings,
+        context_loader=lambda dataset: build_well_log_cluster_context(int(dataset.id)),
+        empty_message="пустой Well Log data",
+        use_checkpoint=False,
+    )
+
+
+def _run_auto_batch_for_contexts(
+        *,
+        source_type: str,
+        items: list[tuple[int, str, Any]],
+        settings: dict[str, Any],
+        context_loader,
+        empty_message: str,
+        use_checkpoint: bool,
+) -> None:
+    total_objects = len(items)
     started_at = monotonic()
     skipped_cached = 0
     calculated = 0
     failed = 0
+    auto_mode = settings["auto_mode"]
+    source_label = "Well Log" if source_type == "well_log" else "GPR"
 
     set_info(
-        f"AUTO BATCH {auto_mode}: старт по {total_objects} объектам | retune={force_recompute} | apply_auto_best=OFF.",
+        f"AUTO BATCH {source_label} {auto_mode}: старт по {total_objects} datasets | "
+        f"retune={settings['force_recompute']} | apply_auto_best=OFF.",
         "blue"
     )
 
-    for idx, clust_obj in enumerate(clust_objects, start=1):
-        object_id = int(clust_obj.id)
-        object_name = f"object_set_id={object_id}"
+    for idx, (dataset_id, dataset_name, payload) in enumerate(items, start=1):
+        object_name = f"{dataset_name} (id={dataset_id})"
         try:
-            base_data = _deserialize_cluster_dataset(clust_obj.data)
+            run_context = context_loader(payload)
+            base_data = run_context.get("raw_rows", []) if isinstance(run_context, dict) else []
         except Exception as exc:
             failed += 1
-            set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (чтение данных: {exc}).", "red")
+            set_info(f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (чтение данных: {exc}).", "red")
             continue
 
         if not base_data:
             failed += 1
-            set_info(f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED (пустой набор данных).", "brown")
+            set_info(f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED ({empty_message}).", "brown")
             continue
 
         auto_random_seed = random.SystemRandom().randrange(1, 2_147_483_647)
@@ -1384,61 +1516,39 @@ def calculate_cluster_auto_batch() -> None:
         sampled_rows_count = len(base_data) if base_data is not None else 0
         if sampled_rows_count < original_rows_count:
             set_info(
-                f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: "
+                f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: "
                 f"использована подвыборка {sampled_rows_count}/{original_rows_count} строк.",
                 "brown"
             )
 
         sample_limits = calculate_auto_min_cluster_sample_limits(len(base_data), min_value=1)
         min_cluster_samples = int(sample_limits["recommended_default_value"])
-        cache_key = build_cluster_auto_tuning_cache_key(
-            clust_object_id=object_id,
-            auto_mode=auto_mode,
-            max_candidates=max_candidates_value if use_candidates_limit else 0,
-            top_k=top_k,
-            constraints={
-                "use_candidates_limit": bool(use_candidates_limit),
-                "max_candidates_value": max_candidates_value,
-                "max_clusters": max_clusters,
-                "hdbscan_metric": hdbscan_metric,
-                "hdbscan_metrics": hdbscan_metrics,
-                "min_pca_components": min_pca_components,
-                "scaler_only": scaler_only,
-                "pca_only": pca_only,
-                "use_total_timeout": bool(use_total_timeout),
-                "use_candidate_timeout": bool(use_candidate_timeout),
-                "total_timeout_sec": total_timeout_sec,
-                "candidate_timeout_sec": candidate_timeout_sec,
-                "min_cluster_samples": min_cluster_samples,
-                "recommended_min_cluster_samples": sample_limits["recommended_default_value"],
-                "max_min_cluster_samples": sample_limits["max_spinbox_value"]
-            },
-            weights=metric_weights,
-            clean_kwargs={
-                "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
-                "non_finite_mode": text_method_nan,
-                "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
-                "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
-            }
+        cache_key = _build_auto_batch_cache_key(
+            dataset_id=dataset_id,
+            settings=settings,
+            min_cluster_samples=min_cluster_samples,
+            sample_limits=sample_limits,
+            source_type=source_type,
         )
 
-        if not force_recompute:
+        if not settings["force_recompute"]:
             cached_top_results = load_cluster_auto_tuning_cache(
                 cache_key=cache_key,
-                clust_object_id=object_id,
-                top_k=top_k
+                clust_object_id=dataset_id,
+                top_k=settings["top_k"],
+                source_type=source_type,
             )
             if cached_top_results:
                 cached_top_results = select_diverse_top_results(
-                    rank_candidates(cached_top_results, weights=metric_weights, max_clusters=max_clusters),
-                    top_k=top_k,
+                    rank_candidates(cached_top_results, weights=settings["metric_weights"], max_clusters=settings["max_clusters"]),
+                    top_k=settings["top_k"],
                     diversity_key="partition_hash"
                 )
             if cached_top_results:
                 skipped_cached += 1
                 best_cached = cached_top_results[0] if cached_top_results else {}
                 set_info(
-                    f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: "
+                    f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: "
                     f"SKIPPED_CACHED top={len(cached_top_results)} score={_safe_num(best_cached.get('score'), 4)} "
                     f"min_cluster_samples={min_cluster_samples}.",
                     "green"
@@ -1448,41 +1558,41 @@ def calculate_cluster_auto_batch() -> None:
         tuning_result = run_auto_cluster_tuning(
             base_data=base_data,
             auto_mode=auto_mode,
-            max_candidates=max_candidates,
-            top_k=top_k,
-            max_clusters=max_clusters,
-            hdbscan_metric=hdbscan_metric,
-            hdbscan_metrics=hdbscan_metrics,
-            scaler_only=scaler_only,
-            pca_only=pca_only,
-            min_pca_components=min_pca_components,
-            weights=metric_weights,
-            soft_timeout_sec=total_timeout_sec,
-            candidate_soft_timeout_sec=candidate_timeout_sec,
+            max_candidates=settings["max_candidates"],
+            top_k=settings["top_k"],
+            max_clusters=settings["max_clusters"],
+            hdbscan_metric=settings["hdbscan_metric"],
+            hdbscan_metrics=settings["hdbscan_metrics"],
+            scaler_only=settings["scaler_only"],
+            pca_only=settings["pca_only"],
+            min_pca_components=settings["min_pca_components"],
+            weights=settings["metric_weights"],
+            soft_timeout_sec=settings["total_timeout_sec"],
+            candidate_soft_timeout_sec=settings["candidate_timeout_sec"],
             random_seed=auto_random_seed,
             min_cluster_samples=min_cluster_samples,
-            run_key=cache_key,
-            object_set_id=int(object_id),
-            clean_kwargs={
-                "use_non_finite": ui.checkBox_clust_clean_nan.isChecked(),
-                "non_finite_mode": text_method_nan,
-                "use_variance_threshold": ui.checkBox_clust_clear_vartresh.isChecked(),
-                "use_correlation_filter": ui.checkBox_clust_clear_corr.isChecked()
-            }
+            run_key=cache_key if use_checkpoint else None,
+            object_set_id=dataset_id if use_checkpoint else None,
+            clean_kwargs=settings["clean_kwargs"]
         )
         top_results = tuning_result.get("top_results", [])
         save_cluster_auto_tuning_cache(
             cache_key=cache_key,
-            clust_object_id=object_id,
+            clust_object_id=dataset_id,
             top_results=top_results,
-            top_k=top_k
+            top_k=settings["top_k"],
+            source_type=source_type,
+            dataset_title=str(run_context.get("dataset_title", object_name)) if isinstance(run_context, dict) else object_name,
+            data_hash=str(run_context.get("data_hash", "")) if isinstance(run_context, dict) else "",
+            auto_mode=auto_mode,
+            diagnostics=dict(run_context.get("diagnostics", {}) or {}) if isinstance(run_context, dict) else {},
         )
 
         best_result = tuning_result.get("best_result")
         if not best_result or best_result.get("status") != "ok":
             failed += 1
             set_info(
-                f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED "
+                f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: FAILED "
                 f"(нет валидных конфигураций) min_cluster_samples={min_cluster_samples}.",
                 "brown"
             )
@@ -1492,7 +1602,7 @@ def calculate_cluster_auto_batch() -> None:
         best_metrics = best_result.get("metrics", {})
         best_cfg = best_result.get("candidate_config", {})
         set_info(
-            f"AUTO BATCH {auto_mode} [{idx}/{total_objects}] {object_name}: CALCULATED "
+            f"AUTO BATCH {source_label} {auto_mode} [{idx}/{total_objects}] {object_name}: CALCULATED "
             f"score={_safe_num(best_result.get('score'), 4)} "
             f"method={_candidate_method_short(best_cfg)} "
             f"sil={_safe_num(best_metrics.get('silhouette'), 3)} "
@@ -1505,7 +1615,7 @@ def calculate_cluster_auto_batch() -> None:
 
     elapsed_sec = monotonic() - started_at
     set_info(
-        f"AUTO BATCH {auto_mode}: завершено за {elapsed_sec:.1f} сек | total={total_objects}, "
+        f"AUTO BATCH {source_label} {auto_mode}: завершено за {elapsed_sec:.1f} сек | total={total_objects}, "
         f"calculated={calculated}, skipped_cached={skipped_cached}, failed={failed}.",
         "green" if failed == 0 else "brown"
     )
