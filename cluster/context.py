@@ -515,17 +515,22 @@ def _normalize_well_log_runtime_rows(stored_rows: Any) -> tuple[list[str], list[
     }
 
 
-def build_well_log_cluster_context() -> ClusterRunContext:
+def build_well_log_cluster_context(dataset_id: Optional[int] = None) -> ClusterRunContext:
     """
     Адаптер WellLogClusterDatasetData.data к единому ClusterRunContext.
-    """
-    combo = getattr(ui, "comboBox_cluster_well_set", None)
-    if combo is None:
-        raise ClusterContextError("Не найден comboBox_cluster_well_set для выбора Well Log dataset.")
 
-    dataset_id = combo.currentData()
+    Если ``dataset_id`` не передан, dataset берется из активного comboBox вкладки
+    Well Log. Явный ``dataset_id`` используется batch-режимом, чтобы обрабатывать
+    наборы каротажа независимо от текущего выбора в UI.
+    """
     if dataset_id is None:
-        raise ClusterContextError("Выберите Well Log dataset и выполните COLLECT.")
+        combo = getattr(ui, "comboBox_cluster_well_set", None)
+        if combo is None:
+            raise ClusterContextError("Не найден comboBox_cluster_well_set для выбора Well Log dataset.")
+
+        dataset_id = combo.currentData()
+        if dataset_id is None:
+            raise ClusterContextError("Выберите Well Log dataset и выполните COLLECT.")
     dataset_id = int(dataset_id)
 
     dataset = session.query(WellLogClusterDataset).filter_by(id=dataset_id).first()
