@@ -122,6 +122,10 @@ AUTO_TUNING_MAX_FEATURES = 512
 AUTO_TUNING_REDUCE_FEATURES_THRESHOLD = 10000
 AUTO_TUNING_FEATURE_REDUCTION_MODE = "auto"
 AUTO_CANDIDATE_HARD_TIMEOUT_SEC: Optional[float] = None
+# Аварийный watchdog применяется даже когда UI-лимит кандидата отключен.
+# Он нужен не для штатного ограничения подбора, а чтобы зависший worker
+# не блокировал повторный AUTO/retune-расчет бесконечно.
+AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC: Optional[float] = 300.0
 AUTO_CHECKPOINT_SAVE_EVERY = 10
 
 
