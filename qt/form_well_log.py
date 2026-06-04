@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form_well_log(object):
     def setupUi(self, Form_well_log):
         Form_well_log.setObjectName("Form_well_log")
-        Form_well_log.resize(605, 741)
+        Form_well_log.resize(605, 780)
         self.gridLayout_3 = QtWidgets.QGridLayout(Form_well_log)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.label = QtWidgets.QLabel(Form_well_log)
@@ -125,6 +125,7 @@ class Ui_Form_well_log(object):
         self.gridLayout_5.addWidget(self.label_5, 4, 0, 1, 1)
         self.doubleSpinBox_interval = QtWidgets.QDoubleSpinBox(self.groupBox)
         self.doubleSpinBox_interval.setDecimals(1)
+        self.doubleSpinBox_interval.setMaximum(1000.0)
         self.doubleSpinBox_interval.setSingleStep(0.5)
         self.doubleSpinBox_interval.setProperty("value", 10.0)
         self.doubleSpinBox_interval.setObjectName("doubleSpinBox_interval")

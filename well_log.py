@@ -824,7 +824,11 @@ def show_well_log():
             median_value = get_median_value_from_interval(well_log_id, value_dep, value_int)
             median_value_top = get_median_value_from_interval(well_log_id, value_dep-value_int, value_int)
             ui_wl.label_value.setText(str(median_value))
-            ui_wl.label_mr_value.setText(str(round(median_value_top/median_value, 4)))
+            try:
+                ui_wl.label_mr_value.setText(str(round(median_value_top/median_value, 4)))
+            except TypeError:
+                pass
+            
 
 
         def add_well_log_markup_reg(analysis_id, well_id, profile_id, formation_id, target_value):
