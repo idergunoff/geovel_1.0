@@ -355,11 +355,51 @@ def show_well_log():
         WellLogForm.resize(int(m_width/4), m_height - 200)
 
         ui_wl.label.setText(f'Каротажные кривые скважины {get_well_name()}')
+
+        def set_spinbox_value_expanding_range(spinbox, value):
+            value = float(value)
+            if value < spinbox.minimum():
+                spinbox.setMinimum(value)
+            if value > spinbox.maximum():
+                spinbox.setMaximum(value)
+            spinbox.setValue(value)
+
+        def load_selected_cluster_interval_to_spinboxes():
+            cluster_combo = getattr(ui, 'comboBox_cluster_well_set', None)
+            if cluster_combo is None:
+                return False
+
+            dataset_id = cluster_combo.currentData()
+            well_id = get_well_id()
+            if dataset_id is None or not well_id:
+                return False
+
+            row = (
+                session.query(WellForCluster)
+                .filter(WellForCluster.dataset_id == int(dataset_id), WellForCluster.well_id == int(well_id))
+                .first()
+            )
+            if row is None or row.top_md is None or row.bottom_md is None:
+                return False
+
+            top_md = float(row.top_md)
+            bottom_md = float(row.bottom_md)
+            if bottom_md < top_md:
+                top_md, bottom_md = bottom_md, top_md
+            interval = bottom_md - top_md
+            if interval <= 0:
+                return False
+
+            set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_depth, top_md)
+            set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_interval, interval)
+            return True
+
         boundaries = session.query(Boundary).filter_by(well_id=get_well_id()).all()
         for b in boundaries:
             if 'uf' in b.title or 'уф' in b.title or 'ss' in b.title:
                 ui_wl.doubleSpinBox_depth.setValue(b.depth)
                 break
+        load_selected_cluster_interval_to_spinboxes()
 
         def update_list_well_log():
             well_log = session.query(WellLog).filter(WellLog.well_id == get_well_id()).all()
