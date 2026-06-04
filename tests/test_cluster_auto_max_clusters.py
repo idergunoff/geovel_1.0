@@ -211,7 +211,23 @@ def test_isolated_candidate_payload_drops_runtime_caches(auto_candidates):
     assert payload["base_data"] == [[1.0]]
 
 
-def test_candidate_watchdog_used_when_ui_timeout_disabled(auto_candidates):
-    auto_candidates.AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC = 123
+def test_candidate_without_ui_timeout_runs_inline(auto_candidates, monkeypatch):
+    called = {}
 
-    assert auto_candidates._resolve_candidate_hard_timeout(None) == 123.0
+    def run_cluster_candidate(**kwargs):
+        called["kwargs"] = kwargs
+        return {"status": "ok", "candidate_id": kwargs.get("candidate_id")}
+
+    class MpStub:
+        @staticmethod
+        def get_all_start_methods():
+            raise AssertionError("multiprocessing must not be used without explicit UI timeout")
+
+    monkeypatch.setattr(auto_candidates, "run_cluster_candidate", run_cluster_candidate, raising=False)
+    monkeypatch.setattr(auto_candidates, "mp", MpStub, raising=False)
+
+    result = auto_candidates.run_cluster_candidate_isolated(candidate_id="C001", hard_timeout_sec=None)
+
+    assert result == {"status": "ok", "candidate_id": "C001"}
+    assert called["kwargs"]["candidate_id"] == "C001"
+    assert auto_candidates._resolve_candidate_hard_timeout(None) is None

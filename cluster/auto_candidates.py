@@ -1073,8 +1073,8 @@ def _get_candidate_worker_start_methods() -> list[str]:
 
     В GUI-приложении нельзя использовать spawn/forkserver: свежий интерпретатор
     повторно импортирует стартовый модуль приложения и может открыть второе окно.
-    Поэтому isolated AUTO-кандидат запускается только через fork, а зависания
-    ограничиваются аварийным watchdog.
+    Поэтому isolated AUTO-кандидат запускается только через fork и только при
+    явно включенном UI-timeout кандидата.
     """
     available_methods = set(mp.get_all_start_methods())
     return ["fork"] if "fork" in available_methods else []
@@ -1090,15 +1090,14 @@ def _select_candidate_worker_start_method() -> Optional[str]:
 
 def _resolve_candidate_hard_timeout(hard_timeout_sec: Optional[float]) -> Optional[float]:
     """
-    Возвращает timeout worker'а: явный UI-лимит или аварийный watchdog.
+    Возвращает явный UI-timeout worker'а. Если UI-лимит отключен, isolated
+    subprocess не запускается: кандидат считается в текущем процессе, чтобы AUTO
+    не зависал на fork до первого же расчета и не открывал дополнительные окна.
     """
-    timeout_value = hard_timeout_sec
-    if timeout_value is None:
-        timeout_value = AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC
-    if timeout_value is None:
+    if hard_timeout_sec is None:
         return None
     try:
-        timeout_float = float(timeout_value)
+        timeout_float = float(hard_timeout_sec)
     except (TypeError, ValueError):
         return None
     if timeout_float <= 0:
@@ -1125,6 +1124,13 @@ def run_cluster_candidate_isolated(
         hard_timeout_sec: Optional[float] = AUTO_CANDIDATE_HARD_TIMEOUT_SEC,
         **kwargs
 ) -> CandidateResult:
+    effective_timeout_sec = _resolve_candidate_hard_timeout(hard_timeout_sec)
+    if effective_timeout_sec is None:
+        # Без явного UI-timeout считаем в текущем процессе. Это исключает fork/forkserver
+        # на обычном AUTO-запуске: расчет идет в основном окне и не провоцирует
+        # deadlock на первом кандидате из-за унаследованного состояния потоков.
+        return run_cluster_candidate(**kwargs)
+
     start_methods = _get_candidate_worker_start_methods()
     if not start_methods:
         # Windows fallback: избегаем spawn, чтобы дочерний процесс не инициализировал GUI.
@@ -1133,7 +1139,6 @@ def run_cluster_candidate_isolated(
     candidate_id = str(kwargs.get("candidate_id") or "")
     candidate = kwargs.get("candidate")
     payload = _build_isolated_candidate_payload(kwargs)
-    effective_timeout_sec = _resolve_candidate_hard_timeout(hard_timeout_sec)
     start_errors: list[str] = []
 
     for method_idx, start_method in enumerate(start_methods):
