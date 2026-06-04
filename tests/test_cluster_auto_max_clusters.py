@@ -63,6 +63,7 @@ def load_auto_candidates_module():
             "CandidateStats": dict,
             "GMM_COVARIANCE_TYPES": ("full", "diag", "tied", "spherical"),
             "AUTO_CANDIDATE_HARD_TIMEOUT_SEC": 1,
+            "AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC": 300,
             "AUTO_PCA_PILOT_ENABLED": False,
             "AUTO_PCA_PILOT_MAX_ROWS": 10,
             "AUTO_SILHOUETTE_MAX_SAMPLES": 100,
@@ -179,3 +180,37 @@ def test_build_fine_search_space_clamps_kmeans_and_gmm_to_max_clusters(auto_cand
         params = candidate["method_params"]
         assert params.get("kmeans_n_clusters", 0) <= 4
         assert params.get("gmm_n_components", 0) <= 4
+
+
+def test_candidate_worker_prefers_forkserver(auto_candidates, monkeypatch):
+    class MpStub:
+        @staticmethod
+        def get_all_start_methods():
+            return ["fork", "forkserver"]
+
+    monkeypatch.setattr(auto_candidates, "mp", MpStub, raising=False)
+
+    assert auto_candidates._select_candidate_worker_start_method() == "forkserver"
+
+
+def test_isolated_candidate_payload_drops_runtime_caches(auto_candidates):
+    payload = auto_candidates._build_isolated_candidate_payload({
+        "candidate_id": "C001",
+        "transform_cache": {"old": "value"},
+        "preprocess_cache": {"old": "value"},
+        "preprocess_rank_cache": {"old": "value"},
+        "metrics_cache": {"old": "value"},
+        "base_data": [[1.0]],
+    })
+
+    assert payload["transform_cache"] is None
+    assert payload["preprocess_cache"] is None
+    assert payload["preprocess_rank_cache"] is None
+    assert payload["metrics_cache"] is None
+    assert payload["base_data"] == [[1.0]]
+
+
+def test_candidate_watchdog_used_when_ui_timeout_disabled(auto_candidates):
+    auto_candidates.AUTO_CANDIDATE_WATCHDOG_TIMEOUT_SEC = 123
+
+    assert auto_candidates._resolve_candidate_hard_timeout(None) == 123.0
