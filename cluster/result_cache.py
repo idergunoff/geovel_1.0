@@ -79,10 +79,54 @@ def build_cluster_calculation_cache_key(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def build_cluster_postprocess_cache_key(config: dict[str, Any] | None) -> str:
+    """Builds a key for smoothing and quality metrics applied to base labels."""
+    source = config or {}
+    smoothing = dict(source.get("smoothing") or {})
+    metrics = dict(source.get("metrics") or {})
+    payload = {
+        "smoothing": {
+            "enabled": bool(smoothing.get("enabled")),
+            "method": str(smoothing.get("method") or "maj"),
+            "window": int(smoothing.get("window", 3)),
+        },
+        "metrics": {
+            "use_silhouette": bool(metrics.get("use_silhouette")),
+            "use_db": bool(metrics.get("use_db")),
+            "use_ch": bool(metrics.get("use_ch")),
+        },
+    }
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def get_cached_postprocess_result(
+        payload: dict[str, Any] | None,
+        config: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    if not payload:
+        return None
+    variants = payload.get("postprocess_results") or {}
+    result = variants.get(build_cluster_postprocess_cache_key(config))
+    return dict(result) if isinstance(result, dict) else None
+
+
+def put_cached_postprocess_result(
+        payload: dict[str, Any],
+        config: dict[str, Any] | None,
+        result: dict[str, Any]
+) -> dict[str, Any]:
+    updated = dict(payload or {})
+    variants = dict(updated.get("postprocess_results") or {})
+    variants[build_cluster_postprocess_cache_key(config)] = result
+    updated["postprocess_results"] = variants
+    return updated
+
+
 def encode_cluster_calculation_payload(payload: dict[str, Any]) -> str:
     """Serializes and compresses a CALC result for a Text database column."""
     raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str).encode("utf-8")
-    return CLUSTER_CALC_CACHE_GZIP_PREFIX + base64.b64encode(gzip.compress(raw)).decode("ascii")
+    return CLUSTER_CALC_CACHE_GZIP_PREFIX + base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")
 
 
 def decode_cluster_calculation_payload(value: str) -> dict[str, Any] | None:
@@ -181,23 +225,53 @@ def _ensure_cluster_calculation_cache_table(source_type: str) -> None:
             connection.exec_driver_sql(
                 f"ALTER TABLE {table_name} ADD COLUMN assignments_json TEXT NOT NULL DEFAULT '[]'"
             )
+        if "postprocess_results_json" not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE {table_name} ADD COLUMN postprocess_results_json TEXT NOT NULL DEFAULT '{{}}'"
+            )
 
 
 def load_cluster_calculation_cache(
         *,
         source_type: str,
         dataset_id: int,
-        cache_key: str
+        cache_key: str,
+        data_hash: str = "",
+        config: dict[str, Any] | None = None
 ) -> dict[str, Any] | None:
     """Loads a completed CALC result from the persistent cache."""
     try:
         _ensure_cluster_calculation_cache_table(source_type)
         cache_model = _cluster_calculation_cache_model(source_type)
         id_field = "dataset_id" if cache_model is WellLogClusterCalculationCache else "object_set_id"
+        id_filter = {id_field: int(dataset_id)}
         row = session.query(cache_model).filter_by(
             cache_key=str(cache_key),
-            **{id_field: int(dataset_id)},
+            **id_filter,
         ).first()
+        lookup_mode = "cache_key"
+        if row is None:
+            # Be tolerant to cache-key implementation/version changes. The
+            # persisted normalized config and data hash are the authoritative
+            # identity of the expensive base calculation.
+            expected_config_json = json.dumps(
+                normalize_cluster_calculation_config(config),
+                ensure_ascii=False,
+                sort_keys=True,
+                default=str,
+            ) if config is not None else None
+            if expected_config_json is not None:
+                row = (
+                    session.query(cache_model)
+                    .filter_by(
+                        data_hash=str(data_hash or ""),
+                        config_json=expected_config_json,
+                        **id_filter,
+                    )
+                    .order_by(cache_model.created_at.desc())
+                    .first()
+                )
+                lookup_mode = "data_hash+config"
         if row is None:
             return None
         payload = decode_cluster_calculation_payload(row.result_payload)
@@ -207,12 +281,47 @@ def load_cluster_calculation_cache(
             payload["labels"] = json.loads(row.labels_json or "[]")
             payload["kept_row_indices"] = json.loads(row.kept_row_indices_json or "[]")
             payload["assignments"] = json.loads(row.assignments_json or "[]")
+            payload["postprocess_results"] = json.loads(row.postprocess_results_json or "{}")
+            payload["_cache_lookup_mode"] = lookup_mode
+            payload["_cache_row_id"] = int(row.id)
         except (TypeError, ValueError, json.JSONDecodeError):
             return None
         return payload
     except Exception as exc:
         set_info(f"CALC: ошибка чтения сохраненного результата: {exc}", "brown")
         return None
+
+
+def _persistent_cluster_cache_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    """Removes runtime-only lookup metadata before comparing or persisting."""
+    return {
+        str(key): value
+        for key, value in dict(payload or {}).items()
+        if not str(key).startswith("_cache_")
+    }
+
+
+def _cluster_cache_row_matches(
+        row: Any,
+        *,
+        data_hash: str,
+        config_json: str,
+        labels_json: str,
+        kept_row_indices_json: str,
+        assignments_json: str,
+        postprocess_results_json: str,
+        result_payload: str
+) -> bool:
+    """Returns True when a DB row already contains the exact same cache data."""
+    return all((
+        str(row.data_hash or "") == str(data_hash or ""),
+        str(row.config_json or "") == config_json,
+        str(row.labels_json or "[]") == labels_json,
+        str(row.kept_row_indices_json or "[]") == kept_row_indices_json,
+        str(row.assignments_json or "[]") == assignments_json,
+        str(row.postprocess_results_json or "{}") == postprocess_results_json,
+        str(row.result_payload or "") == result_payload,
+    ))
 
 
 def save_cluster_calculation_cache(
@@ -223,36 +332,81 @@ def save_cluster_calculation_cache(
         data_hash: str,
         config: dict[str, Any],
         result_payload: dict[str, Any]
-) -> None:
+) -> bool:
     """Creates or updates a persistent completed-CALC cache record."""
     try:
         _ensure_cluster_calculation_cache_table(source_type)
         cache_model = _cluster_calculation_cache_model(source_type)
         id_field = "dataset_id" if cache_model is WellLogClusterCalculationCache else "object_set_id"
         id_filter = {id_field: int(dataset_id)}
-        row = session.query(cache_model).filter_by(cache_key=str(cache_key), **id_filter).first()
+
+        persistent_payload = _persistent_cluster_cache_payload(result_payload)
+        existing_row_id = (result_payload or {}).get("_cache_row_id")
+        row = None
+        if existing_row_id is not None:
+            try:
+                row = session.query(cache_model).filter_by(
+                    id=int(existing_row_id),
+                    **id_filter,
+                ).first()
+            except (TypeError, ValueError):
+                row = None
+        if row is None:
+            row = session.query(cache_model).filter_by(cache_key=str(cache_key), **id_filter).first()
         if row is None:
             row = cache_model(cache_key=str(cache_key), **id_filter)
             session.add(row)
-        row.created_at = dt.datetime.utcnow()
-        row.data_hash = str(data_hash or "")
-        row.config_json = json.dumps(
+        elif str(row.cache_key) != str(cache_key):
+            conflicting_row = session.query(cache_model).filter_by(cache_key=str(cache_key)).first()
+            if conflicting_row is None:
+                row.cache_key = str(cache_key)
+
+        config_json = json.dumps(
             normalize_cluster_calculation_config(config),
             ensure_ascii=False,
             sort_keys=True,
             default=str,
         )
-        labels = [int(value) for value in (result_payload or {}).get("labels", [])]
-        kept_row_indices = [int(value) for value in (result_payload or {}).get("kept_row_indices", [])]
-        row.labels_json = json.dumps(labels, ensure_ascii=False)
-        row.kept_row_indices_json = json.dumps(kept_row_indices, ensure_ascii=False)
-        row.assignments_json = json.dumps(
-            list((result_payload or {}).get("assignments") or []),
+        labels = [int(value) for value in persistent_payload.get("labels", [])]
+        kept_row_indices = [int(value) for value in persistent_payload.get("kept_row_indices", [])]
+        labels_json = json.dumps(labels, ensure_ascii=False)
+        kept_row_indices_json = json.dumps(kept_row_indices, ensure_ascii=False)
+        assignments_json = json.dumps(
+            list(persistent_payload.get("assignments") or []),
             ensure_ascii=False,
             default=str,
         )
-        row.result_payload = encode_cluster_calculation_payload(result_payload or {})
+        postprocess_results_json = json.dumps(
+            dict(persistent_payload.get("postprocess_results") or {}),
+            ensure_ascii=False,
+            default=str,
+        )
+        encoded_payload = encode_cluster_calculation_payload(persistent_payload)
+
+        if getattr(row, "id", None) is not None and _cluster_cache_row_matches(
+                row,
+                data_hash=str(data_hash or ""),
+                config_json=config_json,
+                labels_json=labels_json,
+                kept_row_indices_json=kept_row_indices_json,
+                assignments_json=assignments_json,
+                postprocess_results_json=postprocess_results_json,
+                result_payload=encoded_payload,
+        ):
+            return True
+
+        # created_at is creation time. It must not change when metrics or
+        # diagnostics are appended to an existing calculation cache row.
+        row.data_hash = str(data_hash or "")
+        row.config_json = config_json
+        row.labels_json = labels_json
+        row.kept_row_indices_json = kept_row_indices_json
+        row.assignments_json = assignments_json
+        row.postprocess_results_json = postprocess_results_json
+        row.result_payload = encoded_payload
         session.commit()
+        return True
     except Exception as exc:
         session.rollback()
         set_info(f"CALC: ошибка сохранения результата: {exc}", "brown")
+        return False

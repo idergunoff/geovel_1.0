@@ -64,6 +64,7 @@ class ClusterCalculationCache(Base):
     labels_json = Column(Text, nullable=False, default='[]')
     kept_row_indices_json = Column(Text, nullable=False, default='[]')
     assignments_json = Column(Text, nullable=False, default='[]')
+    postprocess_results_json = Column(Text, nullable=False, default='{}')
     result_payload = Column(Text, nullable=False)
 
     object_set = relationship('ObjectSet', back_populates='calculation_cache')
@@ -120,6 +121,7 @@ class WellLogClusterCalculationCache(Base):
     labels_json = Column(Text, nullable=False, default='[]')
     kept_row_indices_json = Column(Text, nullable=False, default='[]')
     assignments_json = Column(Text, nullable=False, default='[]')
+    postprocess_results_json = Column(Text, nullable=False, default='{}')
     result_payload = Column(Text, nullable=False)
 
     well_cluster_set = relationship('WellLogClusterDataset', back_populates='calculation_cache')

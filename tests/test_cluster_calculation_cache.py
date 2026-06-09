@@ -225,3 +225,168 @@ def test_well_log_cache_contains_pre_smoothing_row_assignments():
     smoothed_for_output = list(cached["labels"])
     smoothed_for_output[1] = 0
     assert cached["labels"] == [2, 2, 0, 1]
+
+
+def test_postprocess_cache_separates_smoothing_and_metric_variants():
+    module = load_result_cache_module()
+    base = _full_manual_config(smoothing_enabled=False)
+    smoothed = _full_manual_config(smoothing_enabled=True)
+    payload = {"result_type": "gpr", "labels": [0, 1]}
+    evaluation = {
+        "metrics": {"silhouette": 0.42, "davies_bouldin": 1.1},
+        "overall_label": "Приемлемое качество кластеризации",
+    }
+
+    updated = module.put_cached_postprocess_result(
+        payload,
+        base,
+        {"labels": [0, 1], "evaluation": evaluation},
+    )
+
+    assert module.get_cached_postprocess_result(updated, base)["evaluation"] == evaluation
+    assert module.get_cached_postprocess_result(updated, smoothed) is None
+
+
+def test_base_cache_key_is_shared_by_metric_variants():
+    module = load_result_cache_module()
+    first = _full_manual_config()
+    second = _full_manual_config()
+    second["metrics"] = {"use_silhouette": False, "use_db": False, "use_ch": True}
+
+    assert module.build_cluster_calculation_cache_key(
+        source_type="well_log", dataset_id=8, data_hash="data", config=first
+    ) == module.build_cluster_calculation_cache_key(
+        source_type="well_log", dataset_id=8, data_hash="data", config=second
+    )
+    assert module.build_cluster_postprocess_cache_key(first) != module.build_cluster_postprocess_cache_key(second)
+
+
+def test_database_lookup_falls_back_to_data_hash_and_normalized_config(monkeypatch):
+    module = load_result_cache_module()
+    config = _full_manual_config()
+    normalized_config = json.dumps(
+        module.normalize_cluster_calculation_config(config),
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+    )
+
+    class ColumnStub:
+        @staticmethod
+        def desc():
+            return None
+
+    class CacheModel:
+        created_at = ColumnStub()
+
+    class Row:
+        id = 17
+        cache_key = "legacy-key"
+        dataset_id = 4
+        data_hash = "same-data"
+        config_json = normalized_config
+        result_payload = module.encode_cluster_calculation_payload(
+            {
+                "result_type": "well_log",
+                "data_for_diagnostics": [[1.0], [2.0]],
+                "cluster_info": {"n_clusters": 2},
+                "pca_info_report": {},
+            }
+        )
+        labels_json = "[0, 1]"
+        kept_row_indices_json = "[3, 5]"
+        assignments_json = "[]"
+        postprocess_results_json = "{}"
+
+    class Query:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def filter_by(self, **filters):
+            return Query([
+                row for row in self.rows
+                if all(getattr(row, key) == value for key, value in filters.items())
+            ])
+
+        def order_by(self, *_args):
+            return self
+
+        def first(self):
+            return self.rows[0] if self.rows else None
+
+    class Session:
+        @staticmethod
+        def query(_model):
+            return Query([Row()])
+
+    monkeypatch.setattr(module, "_ensure_cluster_calculation_cache_table", lambda _source: None)
+    monkeypatch.setattr(module, "_cluster_calculation_cache_model", lambda _source: CacheModel)
+    monkeypatch.setattr(module, "WellLogClusterCalculationCache", CacheModel, raising=False)
+    monkeypatch.setattr(module, "session", Session(), raising=False)
+
+    payload = module.load_cluster_calculation_cache(
+        source_type="well_log",
+        dataset_id=4,
+        cache_key="new-key",
+        data_hash="same-data",
+        config=config,
+    )
+
+    assert payload["labels"] == [0, 1]
+    assert payload["kept_row_indices"] == [3, 5]
+    assert payload["_cache_lookup_mode"] == "data_hash+config"
+
+
+def test_payload_encoding_is_deterministic_for_identical_result():
+    module = load_result_cache_module()
+    payload = {
+        "result_type": "gpr",
+        "labels": [0, 1, 1],
+        "postprocess_results": {"variant": {"metrics": {"silhouette": 0.4}}},
+    }
+
+    first = module.encode_cluster_calculation_payload(payload)
+    second = module.encode_cluster_calculation_payload(payload)
+
+    assert first == second
+
+
+def test_runtime_lookup_metadata_is_not_persisted():
+    module = load_result_cache_module()
+    payload = {
+        "result_type": "well_log",
+        "labels": [0, 1],
+        "_cache_row_id": 15,
+        "_cache_lookup_mode": "data_hash+config",
+    }
+
+    assert module._persistent_cluster_cache_payload(payload) == {
+        "result_type": "well_log",
+        "labels": [0, 1],
+    }
+
+
+def test_identical_persistent_cache_row_is_detected_as_unchanged():
+    module = load_result_cache_module()
+    payload = {"result_type": "gpr", "labels": [0, 1]}
+    encoded = module.encode_cluster_calculation_payload(payload)
+
+    class Row:
+        data_hash = "hash"
+        config_json = "config"
+        labels_json = "[0, 1]"
+        kept_row_indices_json = "[2, 3]"
+        assignments_json = "[]"
+        postprocess_results_json = "{}"
+        result_payload = encoded
+
+    assert module._cluster_cache_row_matches(
+        Row(),
+        data_hash="hash",
+        config_json="config",
+        labels_json="[0, 1]",
+        kept_row_indices_json="[2, 3]",
+        assignments_json="[]",
+        postprocess_results_json="{}",
+        result_payload=encoded,
+    ) is True

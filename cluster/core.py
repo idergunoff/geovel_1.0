@@ -302,8 +302,9 @@ def show_cluster_diagnostics(
         data_for_clustering,
         labels,
         method_name: str,
-        model=None
-):
+        model=None,
+        cached_image_base64: str | None = None
+) -> str | None:
     """
     Показывает набор диагностических графиков на одном листе:
     PCA 2D/3D, t-SNE 2D/3D, матрица расстояний, silhouette.
@@ -311,6 +312,21 @@ def show_cluster_diagnostics(
     from sklearn.decomposition import PCA
     from sklearn.metrics import pairwise_distances, silhouette_samples
     from sklearn.manifold import TSNE
+    import io
+
+    if cached_image_base64:
+        try:
+            image_bytes = base64.b64decode(cached_image_base64.encode("ascii"))
+            image = plt.imread(io.BytesIO(image_bytes), format="png")
+            fig = plt.figure(figsize=(20, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.imshow(image)
+            ax.axis("off")
+            fig.tight_layout()
+            plt.show()
+            return cached_image_base64
+        except Exception:
+            pass
 
     X = np.asarray(data_for_clustering, dtype=float)
     y = np.asarray(labels, dtype=int)
@@ -433,7 +449,11 @@ def show_cluster_diagnostics(
 
     fig.suptitle(f"Cluster diagnostics • {method_name.upper()}", fontsize=14)
     fig.tight_layout(rect=(0, 0.02, 1, 0.96))
+    image_buffer = io.BytesIO()
+    fig.savefig(image_buffer, format="png", dpi=110, bbox_inches="tight")
+    image_base64 = base64.b64encode(image_buffer.getvalue()).decode("ascii")
     plt.show()
+    return image_base64
 
 def evaluate_clustering(
         data,

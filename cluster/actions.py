@@ -21,6 +21,8 @@ def calculate_well_log_cluster(
         source_type="well_log",
         dataset_id=int(run_context["dataset_id"]),
         cache_key=cache_key,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=config,
     )
     cached_base = get_cached_base_calculation(cached_result, result_type="well_log")
     params = config["method_params"]
@@ -32,11 +34,16 @@ def calculate_well_log_cluster(
         clust_info = cached_base["cluster_info"]
         pca_info_report = cached_base["pca_info_report"]
         set_info(
-            "CALC Well Log: базовые метки загружены из базы данных; "
-            "очистка, PCA и кластеризация пропущены.",
+            f"CALC Well Log: CACHE HIT ({cached_result.get('_cache_lookup_mode', 'cache_key')}), "
+            "базовые метки загружены из базы; очистка, PCA и кластеризация пропущены.",
             "green",
         )
     else:
+        set_info(
+            f"CALC Well Log: CACHE MISS, сохраненная база не найдена или неполна "
+            f"(key={cache_key[:12]}, data={str(run_context.get('data_hash', ''))[:12]}).",
+            "brown",
+        )
         clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
         if not clear_data:
             set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
@@ -95,26 +102,30 @@ def calculate_well_log_cluster(
                 "depth_md": float(meta["depth_md"]),
                 "cluster_label": int(cluster_label),
             })
-        save_cluster_calculation_cache(
+        cached_result = {
+            "result_type": "well_log",
+            "labels": base_labels,
+            "kept_row_indices": [int(value) for value in kept_row_indices],
+            "assignments": assignments,
+            "data_for_diagnostics": np.asarray(data_pca).tolist(),
+            "cluster_info": clust_info,
+            "pca_info_report": pca_info_report,
+        }
+        cache_saved = save_cluster_calculation_cache(
             source_type="well_log",
             dataset_id=int(run_context["dataset_id"]),
             cache_key=cache_key,
             data_hash=str(run_context.get("data_hash", "")),
             config=config,
-            result_payload={
-                "result_type": "well_log",
-                "labels": base_labels,
-                "kept_row_indices": [int(value) for value in kept_row_indices],
-                "assignments": assignments,
-                "data_for_diagnostics": np.asarray(data_pca).tolist(),
-                "cluster_info": clust_info,
-                "pca_info_report": pca_info_report,
-            },
+            result_payload=cached_result,
         )
-        set_info(
-            f"CALC Well Log: сохранены базовые метки до сглаживания: {len(base_labels)} строк.",
-            "blue",
-        )
+        if cache_saved:
+            set_info(
+                f"CALC Well Log: сохранены базовые метки до сглаживания: {len(base_labels)} строк.",
+                "blue",
+            )
+        else:
+            set_info("CALC Well Log: базовые метки не удалось сохранить в БД.", "red")
 
     # Smoothing must never mutate the labels stored in the database.
     labels_for_output = list(base_labels)
@@ -151,13 +162,22 @@ def calculate_well_log_cluster(
     elif config["smoothing"]["enabled"]:
         set_info("CALC Well Log: smoothing включен, но окно слишком маленькое. Постобработка пропущена.", "brown")
 
-    result_eval = evaluate_clustering(
-        data_pca,
-        labels_for_output,
-        use_silhouette=config["metrics"]["use_silhouette"],
-        use_db=config["metrics"]["use_db"],
-        use_ch=config["metrics"]["use_ch"],
+    cached_postprocess = get_cached_postprocess_result(cached_result, config)
+    cached_output_labels = (
+        [int(value) for value in cached_postprocess.get("labels", [])]
+        if cached_postprocess else []
     )
+    if cached_postprocess and cached_output_labels == labels_for_output:
+        result_eval = dict(cached_postprocess.get("evaluation") or {})
+        set_info("CALC Well Log: оценочные показатели загружены из базы данных.", "green")
+    else:
+        result_eval = evaluate_clustering(
+            data_pca,
+            labels_for_output,
+            use_silhouette=config["metrics"]["use_silhouette"],
+            use_db=config["metrics"]["use_db"],
+            use_ch=config["metrics"]["use_ch"],
+        )
     report_text = build_clustering_report(
         preprocess_mode=config["preprocess_mode"],
         pca_mode=config["pca"]["mode"],
@@ -180,24 +200,65 @@ def calculate_well_log_cluster(
     )
     set_info(report_text, "blue")
 
-    visualization_data = build_well_log_cluster_visualization_data(
-        run_context=run_context,
-        labels=labels_for_output,
-        kept_row_indices=kept_row_indices,
-        metrics=result_eval,
-        config=config,
-        pca_info=pca_info_report,
-        cluster_info=clust_info,
-        smoothing_changes=smoothing_changes,
-    )
+    cached_visualization = cached_postprocess.get("visualization_data") if cached_postprocess else None
+    if isinstance(cached_visualization, dict) and cached_output_labels == labels_for_output:
+        visualization_data = cached_visualization
+        set_info("CALC Well Log: данные визуализации загружены из базы данных.", "green")
+    else:
+        visualization_data = build_well_log_cluster_visualization_data(
+            run_context=run_context,
+            labels=labels_for_output,
+            kept_row_indices=kept_row_indices,
+            metrics=result_eval,
+            config=config,
+            pca_info=pca_info_report,
+            cluster_info=clust_info,
+            smoothing_changes=smoothing_changes,
+        )
+    postprocess_payload = dict(cached_postprocess or {})
+    postprocess_payload.update({
+        "labels": [int(value) for value in labels_for_output],
+        "smoothing_changes": int(smoothing_changes),
+        "evaluation": result_eval,
+        "visualization_data": visualization_data,
+    })
+    if not cached_postprocess or cached_postprocess != postprocess_payload:
+        cached_result = put_cached_postprocess_result(cached_result or {}, config, postprocess_payload)
+        save_cluster_calculation_cache(
+            source_type="well_log",
+            dataset_id=int(run_context["dataset_id"]),
+            cache_key=cache_key,
+            data_hash=str(run_context.get("data_hash", "")),
+            config=config,
+            result_payload=cached_result,
+        )
     well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
     try:
-        show_cluster_diagnostics(
+        cached_diagnostics_image = (
+            str(cached_postprocess.get("diagnostics_image_base64") or "")
+            if cached_postprocess else ""
+        )
+        diagnostics_image = show_cluster_diagnostics(
             data_for_clustering=data_pca,
             labels=labels_for_output,
             method_name=config["method"],
+            cached_image_base64=cached_diagnostics_image or None,
         )
-        set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
+        if cached_diagnostics_image:
+            set_info("CALC Well Log: диагностические графики загружены из базы данных.", "green")
+        else:
+            set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
+        if diagnostics_image and diagnostics_image != cached_diagnostics_image:
+            postprocess_payload["diagnostics_image_base64"] = diagnostics_image
+            cached_result = put_cached_postprocess_result(cached_result or {}, config, postprocess_payload)
+            save_cluster_calculation_cache(
+                source_type="well_log",
+                dataset_id=int(run_context["dataset_id"]),
+                cache_key=cache_key,
+                data_hash=str(run_context.get("data_hash", "")),
+                config=config,
+                result_payload=cached_result,
+            )
     except Exception as exc:
         set_info(f"CALC Well Log: не удалось построить диагностические графики: {exc}", "brown")
 
@@ -269,6 +330,8 @@ def calculate_cluster():
         source_type="gpr",
         dataset_id=clust_object_id,
         cache_key=cache_key,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=manual_config,
     )
     cached_gpr = get_cached_gpr_calculation(cached_result)
 
@@ -278,8 +341,17 @@ def calculate_cluster():
         data_pca = cached_gpr["data_for_diagnostics"]
         clust_info = cached_gpr["cluster_info"]
         pca_info_report = cached_gpr["pca_info_report"]
-        set_info("CALC: результат загружен из базы данных без повторной очистки, PCA и кластеризации.", "green")
+        set_info(
+            f"CALC: CACHE HIT ({cached_result.get('_cache_lookup_mode', 'cache_key')}), результат загружен "
+            "из базы без повторной очистки, PCA и кластеризации.",
+            "green",
+        )
     else:
+        set_info(
+            f"CALC: CACHE MISS, сохраненная база не найдена или неполна "
+            f"(key={cache_key[:12]}, data={str(run_context.get('data_hash', ''))[:12]}).",
+            "brown",
+        )
         clear_data, kept_row_indices = clean_features(
             data=data,
             use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
@@ -333,22 +405,27 @@ def calculate_cluster():
                 "measurement_key": str(data[source_row_idx][0]),
                 "cluster_label": int(cluster_label),
             })
-        save_cluster_calculation_cache(
+        cached_result = {
+            "result_type": "gpr",
+            "labels": [int(value) for value in label_list],
+            "kept_row_indices": [int(value) for value in kept_row_indices],
+            "assignments": assignments,
+            "data_for_diagnostics": np.asarray(data_pca).tolist(),
+            "cluster_info": clust_info,
+            "pca_info_report": pca_info_report,
+        }
+        cache_saved = save_cluster_calculation_cache(
             source_type="gpr",
             dataset_id=clust_object_id,
             cache_key=cache_key,
             data_hash=str(run_context.get("data_hash", "")),
             config=manual_config,
-            result_payload={
-                "result_type": "gpr",
-                "labels": [int(value) for value in label_list],
-                "kept_row_indices": [int(value) for value in kept_row_indices],
-                "assignments": assignments,
-                "data_for_diagnostics": np.asarray(data_pca).tolist(),
-                "cluster_info": clust_info,
-                "pca_info_report": pca_info_report,
-            },
+            result_payload=cached_result,
         )
+        if cache_saved:
+            set_info(f"CALC: сохранены базовые метки до сглаживания: {len(label_list)} строк.", "blue")
+        else:
+            set_info("CALC: базовые метки не удалось сохранить в БД.", "red")
 
     labels_for_output = list(label_list)
     profile_trace_rows: dict[int, dict[int, int]] = {}
@@ -458,13 +535,39 @@ def calculate_cluster():
     print(labels_for_output)
     print(clust_info)
 
-    result_eval = evaluate_clustering(
-        data_pca,
-        labels_for_output,
-        use_silhouette=ui.checkBox_cluster_silhoutte.isChecked(),
-        use_db=ui.checkBox_cluster_dav_boul.isChecked(),
-        use_ch=ui.checkBox_cluster_calin_har.isChecked()
+    cached_postprocess = get_cached_postprocess_result(cached_result, manual_config)
+    cached_output_labels = (
+        [int(value) for value in cached_postprocess.get("labels", [])]
+        if cached_postprocess else []
     )
+    if cached_postprocess and cached_output_labels == labels_for_output:
+        result_eval = dict(cached_postprocess.get("evaluation") or {})
+        set_info("CALC: оценочные показатели загружены из базы данных.", "green")
+    else:
+        result_eval = evaluate_clustering(
+            data_pca,
+            labels_for_output,
+            use_silhouette=ui.checkBox_cluster_silhoutte.isChecked(),
+            use_db=ui.checkBox_cluster_dav_boul.isChecked(),
+            use_ch=ui.checkBox_cluster_calin_har.isChecked()
+        )
+        cached_result = put_cached_postprocess_result(
+            cached_result or {},
+            manual_config,
+            {
+                "labels": [int(value) for value in labels_for_output],
+                "smoothing_changes": int(smoothing_changes),
+                "evaluation": result_eval,
+            },
+        )
+        save_cluster_calculation_cache(
+            source_type="gpr",
+            dataset_id=clust_object_id,
+            cache_key=cache_key,
+            data_hash=str(run_context.get("data_hash", "")),
+            config=manual_config,
+            result_payload=cached_result,
+        )
 
     print(result_eval)
 
@@ -548,12 +651,37 @@ def calculate_cluster():
         set_info("Не удалось автоматически выбрать исследование/профиль для отрисовки кластеров.", "brown")
 
     try:
-        show_cluster_diagnostics(
+        cached_diagnostics_image = (
+            str(cached_postprocess.get("diagnostics_image_base64") or "")
+            if cached_postprocess else ""
+        )
+        diagnostics_image = show_cluster_diagnostics(
             data_for_clustering=data_pca,
             labels=labels_for_output,
-            method_name=clust_method_analys
+            method_name=clust_method_analys,
+            cached_image_base64=cached_diagnostics_image or None,
         )
-        set_info("Открыты диагностические графики кластеризации (PCA 2D/3D, distance matrix, silhouette и спец-графики метода).", "blue")
+        if cached_diagnostics_image:
+            set_info("Диагностические графики загружены из базы данных.", "green")
+        else:
+            set_info("Открыты диагностические графики кластеризации (PCA 2D/3D, distance matrix, silhouette и спец-графики метода).", "blue")
+        if diagnostics_image and diagnostics_image != cached_diagnostics_image:
+            updated_postprocess = dict(cached_postprocess or {})
+            updated_postprocess.update({
+                "labels": [int(value) for value in labels_for_output],
+                "smoothing_changes": int(smoothing_changes),
+                "evaluation": result_eval,
+                "diagnostics_image_base64": diagnostics_image,
+            })
+            cached_result = put_cached_postprocess_result(cached_result or {}, manual_config, updated_postprocess)
+            save_cluster_calculation_cache(
+                source_type="gpr",
+                dataset_id=clust_object_id,
+                cache_key=cache_key,
+                data_hash=str(run_context.get("data_hash", "")),
+                config=manual_config,
+                result_payload=cached_result,
+            )
     except Exception as exc:
         set_info(f"Не удалось построить диагностические графики: {exc}", "brown")
 
