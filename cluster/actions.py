@@ -2,12 +2,53 @@ from __future__ import annotations
 
 from .common import *
 
-def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogClusterVisualizationData | None:
+def calculate_well_log_cluster(
+        run_context: ClusterRunContext,
+        config: dict[str, Any] | None = None
+) -> WellLogClusterVisualizationData | None:
     """
     Выполняет ручной CALC для Well Log через общий pipeline clean → scale → PCA → cluster → metrics.
     """
     data = run_context["raw_rows"]
-    config = _read_manual_cluster_ui_config()
+    config = config or _read_manual_cluster_ui_config()
+    cache_key = build_cluster_calculation_cache_key(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        data_hash=str(run_context.get("data_hash", "")),
+        config=config,
+    )
+    cached_result = load_cluster_calculation_cache(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        cache_key=cache_key,
+    )
+    labels_for_output = get_cached_cluster_labels(cached_result, result_type="well_log")
+    if labels_for_output is not None:
+        visualization_data = cached_result.get("visualization_data")
+        data_pca = cached_result.get("data_for_diagnostics", [])
+        if isinstance(visualization_data, dict):
+            well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
+            report_text = str(cached_result.get("report_text") or "")
+            if report_text:
+                set_info(report_text, "blue")
+            try:
+                show_cluster_diagnostics(
+                    data_for_clustering=data_pca,
+                    labels=labels_for_output,
+                    method_name=str(cached_result.get("method") or config["method"]),
+                )
+                set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
+            except Exception as exc:
+                set_info(f"CALC Well Log: не удалось построить диагностические графики: {exc}", "brown")
+            show_well_log_cluster_visualization(visualization_data)
+            set_info("CALC Well Log: результат загружен из базы данных без повторного расчета.", "green")
+            set_info(
+                f"CALC Well Log: расчет завершен, labels={len(labels_for_output)}, "
+                f"clusters={visualization_data.get('summary', {}).get('cluster_count', 0)}.",
+                "green"
+            )
+            return visualization_data
+
     clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
     if not clear_data:
         set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
@@ -125,6 +166,21 @@ def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogCluster
         smoothing_changes=smoothing_changes,
     )
     well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
+    save_cluster_calculation_cache(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        cache_key=cache_key,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=config,
+        result_payload={
+            "result_type": "well_log",
+            "visualization_data": visualization_data,
+            "labels": labels_for_output,
+            "data_for_diagnostics": np.asarray(data_pca).tolist(),
+            "method": config["method"],
+            "report_text": report_text,
+        },
+    )
 
     try:
         show_cluster_diagnostics(
@@ -149,9 +205,11 @@ def calculate_cluster():
     if run_context is None:
         return
 
+    manual_config = _read_manual_cluster_ui_config()
+
     if run_context["source_type"] == "well_log":
         try:
-            calculate_well_log_cluster(run_context)
+            calculate_well_log_cluster(run_context, manual_config)
         except Exception as exc:
             set_info(f"CALC Well Log: ошибка расчета: {exc}", "red")
             try:
@@ -166,51 +224,12 @@ def calculate_cluster():
     data = run_context["raw_rows"]
     raw_meta = np.array(data, dtype=object)[:, 0] if data else np.array([])
     selected_button = ui.buttonGroup_3.checkedButton()
-
     text_method_nan = selected_button.text() if selected_button else 'impute'
-    clear_data, kept_row_indices = clean_features(
-        data=data,
-        use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
-        non_finite_mode=text_method_nan,
-        use_variance_threshold=ui.checkBox_clust_clear_vartresh.isChecked(),
-        use_correlation_filter=ui.checkBox_clust_clear_corr.isChecked()
-    )
-    if clear_data:
-        print('Before: ', len(data), len(data[0]))
-        print('After: ', len(clear_data), len(clear_data[0]))
-        print('Rows kept after cleaning: ', len(kept_row_indices))
-    else:
-        return
-
-    if ui.radioButton_clust_scaler_none.isChecked():
-        preprocess_mode = 'none'
-    elif ui.radioButton_clust_scaler_stnd.isChecked():
-        preprocess_mode = 'standard'
-    elif ui.radioButton_clust_scaler_rob.isChecked():
-        preprocess_mode = 'robust'
-    elif ui.radioButton_clust_scaler_l2.isChecked():
-        preprocess_mode = 'l2_norm'
-    else:
-        preprocess_mode = 'row_center'
-
-    preprocess_data = preprocess_features(clear_data, mode=preprocess_mode)
-
-    if ui.checkBox_cluster_pca.isChecked():
-        mode_pca = "fixed_components" if ui.radioButton_clust_pca_fix.isChecked() else "variance_ratio"
-        n_comp_pca = ui.spinBox_clust_pca_fix.value()
-        disp_pca = ui.doubleSpinBox_clust_pca_disp.value()
-
-        data_pca, pca_info = apply_pca(preprocess_data, mode=mode_pca, n_components=n_comp_pca, variance_ratio=disp_pca)
-        print("PCA info: ", pca_info)
-
-        pca_info_report = {
-            "components_after_pca": n_comp_pca,
-            "explained_variance": disp_pca
-        }
-    else:
-        data_pca = preprocess_data
-        mode_pca = None
-        pca_info_report = {}
+    preprocess_mode = str(manual_config["preprocess_mode"])
+    pca_enabled = bool(manual_config["pca"]["enabled"])
+    mode_pca = manual_config["pca"]["mode"] if pca_enabled else None
+    n_comp_pca = int(manual_config["pca"]["fixed_components"])
+    disp_pca = float(manual_config["pca"]["variance_ratio"])
 
     kmeans_n = ui.spinBox_clust_kmeans_n.value()
     kmeans_n_init = ui.spinBox_clust_kmean_ninint.value()
@@ -231,17 +250,83 @@ def calculate_cluster():
     else:
         clust_method_analys = "kmeans"
 
-    label_list, clust_info = cluster_data(
-        data=data_pca,
-        method=clust_method_analys,
-        kmeans_n_clusters=kmeans_n,
-        kmeans_n_init=kmeans_n_init,
-        hdbscan_min_cluster_size=hdbsc_min_size,
-        hdbscan_min_samples=hdbsc_min_sample,
-        hdbscan_metric=hdbsc_type,
-        gmm_n_components=gmm_n,
-        gmm_covariance_type=gmm_type
+    cache_key = build_cluster_calculation_cache_key(
+        source_type="gpr",
+        dataset_id=clust_object_id,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=manual_config,
     )
+    cached_result = load_cluster_calculation_cache(
+        source_type="gpr",
+        dataset_id=clust_object_id,
+        cache_key=cache_key,
+    )
+    cached_gpr = get_cached_gpr_calculation(cached_result)
+
+    if cached_gpr is not None:
+        label_list = cached_gpr["labels"]
+        kept_row_indices = cached_gpr["kept_row_indices"]
+        data_pca = cached_gpr["data_for_diagnostics"]
+        clust_info = cached_gpr["cluster_info"]
+        pca_info_report = cached_gpr["pca_info_report"]
+        set_info("CALC: результат загружен из базы данных без повторной очистки, PCA и кластеризации.", "green")
+    else:
+        clear_data, kept_row_indices = clean_features(
+            data=data,
+            use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
+            non_finite_mode=text_method_nan,
+            use_variance_threshold=ui.checkBox_clust_clear_vartresh.isChecked(),
+            use_correlation_filter=ui.checkBox_clust_clear_corr.isChecked()
+        )
+        if not clear_data:
+            return
+        print('Before: ', len(data), len(data[0]))
+        print('After: ', len(clear_data), len(clear_data[0]))
+        print('Rows kept after cleaning: ', len(kept_row_indices))
+
+        preprocess_data = preprocess_features(clear_data, mode=preprocess_mode)
+        if pca_enabled:
+            data_pca, pca_info = apply_pca(
+                preprocess_data,
+                mode=mode_pca,
+                n_components=n_comp_pca,
+                variance_ratio=disp_pca,
+            )
+            print("PCA info: ", pca_info)
+            pca_info_report = {
+                "components_after_pca": n_comp_pca,
+                "explained_variance": disp_pca,
+            }
+        else:
+            data_pca = preprocess_data
+            pca_info_report = {}
+
+        label_list, clust_info = cluster_data(
+            data=data_pca,
+            method=clust_method_analys,
+            kmeans_n_clusters=kmeans_n,
+            kmeans_n_init=kmeans_n_init,
+            hdbscan_min_cluster_size=hdbsc_min_size,
+            hdbscan_min_samples=hdbsc_min_sample,
+            hdbscan_metric=hdbsc_type,
+            gmm_n_components=gmm_n,
+            gmm_covariance_type=gmm_type
+        )
+        save_cluster_calculation_cache(
+            source_type="gpr",
+            dataset_id=clust_object_id,
+            cache_key=cache_key,
+            data_hash=str(run_context.get("data_hash", "")),
+            config=manual_config,
+            result_payload={
+                "result_type": "gpr",
+                "labels": [int(value) for value in label_list],
+                "kept_row_indices": [int(value) for value in kept_row_indices],
+                "data_for_diagnostics": np.asarray(data_pca).tolist(),
+                "cluster_info": clust_info,
+                "pca_info_report": pca_info_report,
+            },
+        )
 
     labels_for_output = list(label_list)
     profile_trace_rows: dict[int, dict[int, int]] = {}
