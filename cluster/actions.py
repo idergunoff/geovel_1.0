@@ -2,12 +2,53 @@ from __future__ import annotations
 
 from .common import *
 
-def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogClusterVisualizationData | None:
+def calculate_well_log_cluster(
+        run_context: ClusterRunContext,
+        config: dict[str, Any] | None = None
+) -> WellLogClusterVisualizationData | None:
     """
     Выполняет ручной CALC для Well Log через общий pipeline clean → scale → PCA → cluster → metrics.
     """
     data = run_context["raw_rows"]
-    config = _read_manual_cluster_ui_config()
+    config = config or _read_manual_cluster_ui_config()
+    cache_key = build_cluster_calculation_cache_key(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        data_hash=str(run_context.get("data_hash", "")),
+        config=config,
+    )
+    cached_result = load_cluster_calculation_cache(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        cache_key=cache_key,
+    )
+    labels_for_output = get_cached_cluster_labels(cached_result, result_type="well_log")
+    if labels_for_output is not None:
+        visualization_data = cached_result.get("visualization_data")
+        data_pca = cached_result.get("data_for_diagnostics", [])
+        if isinstance(visualization_data, dict):
+            well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
+            report_text = str(cached_result.get("report_text") or "")
+            if report_text:
+                set_info(report_text, "blue")
+            try:
+                show_cluster_diagnostics(
+                    data_for_clustering=data_pca,
+                    labels=labels_for_output,
+                    method_name=str(cached_result.get("method") or config["method"]),
+                )
+                set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
+            except Exception as exc:
+                set_info(f"CALC Well Log: не удалось построить диагностические графики: {exc}", "brown")
+            show_well_log_cluster_visualization(visualization_data)
+            set_info("CALC Well Log: результат загружен из базы данных без повторного расчета.", "green")
+            set_info(
+                f"CALC Well Log: расчет завершен, labels={len(labels_for_output)}, "
+                f"clusters={visualization_data.get('summary', {}).get('cluster_count', 0)}.",
+                "green"
+            )
+            return visualization_data
+
     clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
     if not clear_data:
         set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
@@ -125,6 +166,21 @@ def calculate_well_log_cluster(run_context: ClusterRunContext) -> WellLogCluster
         smoothing_changes=smoothing_changes,
     )
     well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
+    save_cluster_calculation_cache(
+        source_type="well_log",
+        dataset_id=int(run_context["dataset_id"]),
+        cache_key=cache_key,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=config,
+        result_payload={
+            "result_type": "well_log",
+            "visualization_data": visualization_data,
+            "labels": labels_for_output,
+            "data_for_diagnostics": np.asarray(data_pca).tolist(),
+            "method": config["method"],
+            "report_text": report_text,
+        },
+    )
 
     try:
         show_cluster_diagnostics(
@@ -149,9 +205,11 @@ def calculate_cluster():
     if run_context is None:
         return
 
+    manual_config = _read_manual_cluster_ui_config()
+
     if run_context["source_type"] == "well_log":
         try:
-            calculate_well_log_cluster(run_context)
+            calculate_well_log_cluster(run_context, manual_config)
         except Exception as exc:
             set_info(f"CALC Well Log: ошибка расчета: {exc}", "red")
             try:
@@ -231,17 +289,52 @@ def calculate_cluster():
     else:
         clust_method_analys = "kmeans"
 
-    label_list, clust_info = cluster_data(
-        data=data_pca,
-        method=clust_method_analys,
-        kmeans_n_clusters=kmeans_n,
-        kmeans_n_init=kmeans_n_init,
-        hdbscan_min_cluster_size=hdbsc_min_size,
-        hdbscan_min_samples=hdbsc_min_sample,
-        hdbscan_metric=hdbsc_type,
-        gmm_n_components=gmm_n,
-        gmm_covariance_type=gmm_type
+    cache_key = build_cluster_calculation_cache_key(
+        source_type="gpr",
+        dataset_id=clust_object_id,
+        data_hash=str(run_context.get("data_hash", "")),
+        config=manual_config,
     )
+    cached_result = load_cluster_calculation_cache(
+        source_type="gpr",
+        dataset_id=clust_object_id,
+        cache_key=cache_key,
+    )
+    label_list = get_cached_cluster_labels(
+        cached_result,
+        result_type="gpr",
+        expected_count=len(data_pca),
+    )
+    if label_list is not None:
+        clust_info = dict(cached_result.get("cluster_info") or {})
+        set_info("CALC: результат кластеризации загружен из базы данных без повторного расчета.", "green")
+    else:
+        label_list = []
+
+    if not label_list:
+        label_list, clust_info = cluster_data(
+            data=data_pca,
+            method=clust_method_analys,
+            kmeans_n_clusters=kmeans_n,
+            kmeans_n_init=kmeans_n_init,
+            hdbscan_min_cluster_size=hdbsc_min_size,
+            hdbscan_min_samples=hdbsc_min_sample,
+            hdbscan_metric=hdbsc_type,
+            gmm_n_components=gmm_n,
+            gmm_covariance_type=gmm_type
+        )
+        save_cluster_calculation_cache(
+            source_type="gpr",
+            dataset_id=clust_object_id,
+            cache_key=cache_key,
+            data_hash=str(run_context.get("data_hash", "")),
+            config=manual_config,
+            result_payload={
+                "result_type": "gpr",
+                "labels": [int(value) for value in label_list],
+                "cluster_info": clust_info,
+            },
+        )
 
     labels_for_output = list(label_list)
     profile_trace_rows: dict[int, dict[int, int]] = {}

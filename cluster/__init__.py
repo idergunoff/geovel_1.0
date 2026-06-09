@@ -14,6 +14,7 @@ _MODULE_NAMES = (
     "auto_candidates",
     "auto_runner",
     "auto_cache",
+    "result_cache",
     "profile_cache",
     "objects",
     "core",
