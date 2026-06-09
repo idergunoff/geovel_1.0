@@ -25,6 +25,7 @@ class ObjectSet(Base):
     analysis = relationship('AnalysisCluster', back_populates='object_set')
     auto_tuning_cache = relationship('ClusterAutoTuningCache', back_populates='object_set', cascade='all, delete-orphan')
     auto_tuning_runs = relationship('ClusterAutoTuningRunState', back_populates='object_set', cascade='all, delete-orphan')
+    calculation_cache = relationship('ClusterCalculationCache', back_populates='object_set', cascade='all, delete-orphan')
 
 
 class ClusterAutoTuningCache(Base):
@@ -49,6 +50,26 @@ class WellLogClusterAutoTuningCache(Base):
     top_results = Column(Text, nullable=False)
 
     well_cluster_set = relationship('WellLogClusterDataset', back_populates='auto_tuning_cache')
+
+
+class ClusterCalculationCache(Base):
+    __tablename__ = 'cluster_calculation_cache'
+
+    id = Column(Integer, primary_key=True)
+    object_set_id = Column(Integer, ForeignKey('object_set.id'), nullable=False, index=True)
+    cache_key = Column(String, nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    data_hash = Column(String, nullable=False)
+    config_json = Column(Text, nullable=False)
+    labels_json = Column(Text, nullable=False, default='[]')
+    kept_row_indices_json = Column(Text, nullable=False, default='[]')
+    assignments_json = Column(Text, nullable=False, default='[]')
+    postprocess_results_json = Column(Text, nullable=False, default='{}')
+    result_payload = Column(Text, nullable=False)
+
+    object_set = relationship('ObjectSet', back_populates='calculation_cache')
+
+
 
 
 class ClusterAutoTuningRunState(Base):
@@ -85,6 +106,27 @@ class WellLogClusterDataset(Base):
     cluster_well_log_param_from_calculator = relationship('ClusterWellLogParameterFromCalculator', back_populates='well_cluster_set', cascade='all, delete-orphan')
     data = relationship('WellLogClusterDatasetData', back_populates='well_cluster_set', cascade='all, delete-orphan')
     auto_tuning_cache = relationship('WellLogClusterAutoTuningCache', back_populates='well_cluster_set', cascade='all, delete-orphan')
+    calculation_cache = relationship('WellLogClusterCalculationCache', back_populates='well_cluster_set', cascade='all, delete-orphan')
+
+
+class WellLogClusterCalculationCache(Base):
+    __tablename__ = 'well_log_cluster_calculation_cache'
+
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey('well_log_cluster_dataset.id'), nullable=False, index=True)
+    cache_key = Column(String, nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    data_hash = Column(String, nullable=False)
+    config_json = Column(Text, nullable=False)
+    labels_json = Column(Text, nullable=False, default='[]')
+    kept_row_indices_json = Column(Text, nullable=False, default='[]')
+    assignments_json = Column(Text, nullable=False, default='[]')
+    postprocess_results_json = Column(Text, nullable=False, default='{}')
+    result_payload = Column(Text, nullable=False)
+
+    well_cluster_set = relationship('WellLogClusterDataset', back_populates='calculation_cache')
+
+
 
 
 class WellForCluster(Base):
