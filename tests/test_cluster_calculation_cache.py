@@ -56,20 +56,20 @@ def test_calculation_cache_key_changes_with_data_or_settings():
         source_type="well_log",
         dataset_id=3,
         data_hash="data-v1",
-        config={"method": "kmeans", "clusters": 3},
+        config={"method": "kmeans", "method_params": {"kmeans_n_clusters": 3}},
     )
 
     changed_data = module.build_cluster_calculation_cache_key(
         source_type="well_log",
         dataset_id=3,
         data_hash="data-v2",
-        config={"method": "kmeans", "clusters": 3},
+        config={"method": "kmeans", "method_params": {"kmeans_n_clusters": 3}},
     )
     changed_settings = module.build_cluster_calculation_cache_key(
         source_type="well_log",
         dataset_id=3,
         data_hash="data-v1",
-        config={"method": "kmeans", "clusters": 4},
+        config={"method": "kmeans", "method_params": {"kmeans_n_clusters": 4}},
     )
 
     assert base != changed_data
@@ -115,3 +115,91 @@ def test_cached_labels_reject_wrong_source_stale_size_and_invalid_payload():
         {"result_type": "gpr", "labels": ["bad"]},
         result_type="gpr",
     ) is None
+
+
+def _full_manual_config(*, method="kmeans", pca_enabled=False, smoothing_enabled=False):
+    return {
+        "clean": {
+            "use_non_finite": False,
+            "non_finite_mode": "impute",
+            "use_variance_threshold": True,
+            "use_correlation_filter": False,
+        },
+        "preprocess_mode": "standard",
+        "pca": {
+            "enabled": pca_enabled,
+            "mode": "fixed_components" if pca_enabled else None,
+            "value": 3 if pca_enabled else None,
+            "fixed_components": 3,
+            "variance_ratio": 0.91,
+        },
+        "method": method,
+        "method_params": {
+            "kmeans_n_clusters": 4,
+            "kmeans_n_init": 10,
+            "hdbscan_min_cluster_size": 20,
+            "hdbscan_min_samples": 7,
+            "hdbscan_metric": "euclidean",
+            "gmm_n_components": 6,
+            "gmm_covariance_type": "diag",
+        },
+        "metrics": {"use_silhouette": True, "use_db": True, "use_ch": False},
+        "smoothing": {"enabled": smoothing_enabled, "method": "maj", "window": 5},
+    }
+
+
+def test_cache_key_ignores_inactive_method_pca_clean_and_smoothing_controls():
+    module = load_result_cache_module()
+    first = _full_manual_config()
+    second = _full_manual_config()
+    second["clean"]["non_finite_mode"] = "drop"
+    second["pca"]["fixed_components"] = 12
+    second["pca"]["variance_ratio"] = 0.55
+    second["method_params"]["gmm_n_components"] = 11
+    second["method_params"]["hdbscan_min_samples"] = 99
+    second["smoothing"]["method"] = "med"
+    second["smoothing"]["window"] = 21
+
+    first_key = module.build_cluster_calculation_cache_key(
+        source_type="gpr", dataset_id=1, data_hash="same", config=first
+    )
+    second_key = module.build_cluster_calculation_cache_key(
+        source_type="gpr", dataset_id=1, data_hash="same", config=second
+    )
+
+    assert first_key == second_key
+
+
+def test_cache_key_changes_when_active_auto_parameter_changes():
+    module = load_result_cache_module()
+    first = _full_manual_config(method="gmm", pca_enabled=True, smoothing_enabled=True)
+    second = _full_manual_config(method="gmm", pca_enabled=True, smoothing_enabled=True)
+    second["method_params"]["gmm_n_components"] = 7
+
+    assert module.build_cluster_calculation_cache_key(
+        source_type="well_log", dataset_id=2, data_hash="same", config=first
+    ) != module.build_cluster_calculation_cache_key(
+        source_type="well_log", dataset_id=2, data_hash="same", config=second
+    )
+
+
+def test_gpr_cache_requires_complete_preparation_payload():
+    module = load_result_cache_module()
+    complete = {
+        "result_type": "gpr",
+        "labels": [0, 1],
+        "kept_row_indices": [3, 5],
+        "data_for_diagnostics": [[0.1], [0.2]],
+        "cluster_info": {"n_clusters": 2},
+        "pca_info_report": {"components_after_pca": 1},
+    }
+
+    assert module.get_cached_gpr_calculation(complete) == {
+        "labels": [0, 1],
+        "kept_row_indices": [3, 5],
+        "data_for_diagnostics": [[0.1], [0.2]],
+        "cluster_info": {"n_clusters": 2},
+        "pca_info_report": {"components_after_pca": 1},
+    }
+    incomplete = dict(complete, data_for_diagnostics=[[0.1]])
+    assert module.get_cached_gpr_calculation(incomplete) is None

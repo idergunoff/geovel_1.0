@@ -224,51 +224,12 @@ def calculate_cluster():
     data = run_context["raw_rows"]
     raw_meta = np.array(data, dtype=object)[:, 0] if data else np.array([])
     selected_button = ui.buttonGroup_3.checkedButton()
-
     text_method_nan = selected_button.text() if selected_button else 'impute'
-    clear_data, kept_row_indices = clean_features(
-        data=data,
-        use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
-        non_finite_mode=text_method_nan,
-        use_variance_threshold=ui.checkBox_clust_clear_vartresh.isChecked(),
-        use_correlation_filter=ui.checkBox_clust_clear_corr.isChecked()
-    )
-    if clear_data:
-        print('Before: ', len(data), len(data[0]))
-        print('After: ', len(clear_data), len(clear_data[0]))
-        print('Rows kept after cleaning: ', len(kept_row_indices))
-    else:
-        return
-
-    if ui.radioButton_clust_scaler_none.isChecked():
-        preprocess_mode = 'none'
-    elif ui.radioButton_clust_scaler_stnd.isChecked():
-        preprocess_mode = 'standard'
-    elif ui.radioButton_clust_scaler_rob.isChecked():
-        preprocess_mode = 'robust'
-    elif ui.radioButton_clust_scaler_l2.isChecked():
-        preprocess_mode = 'l2_norm'
-    else:
-        preprocess_mode = 'row_center'
-
-    preprocess_data = preprocess_features(clear_data, mode=preprocess_mode)
-
-    if ui.checkBox_cluster_pca.isChecked():
-        mode_pca = "fixed_components" if ui.radioButton_clust_pca_fix.isChecked() else "variance_ratio"
-        n_comp_pca = ui.spinBox_clust_pca_fix.value()
-        disp_pca = ui.doubleSpinBox_clust_pca_disp.value()
-
-        data_pca, pca_info = apply_pca(preprocess_data, mode=mode_pca, n_components=n_comp_pca, variance_ratio=disp_pca)
-        print("PCA info: ", pca_info)
-
-        pca_info_report = {
-            "components_after_pca": n_comp_pca,
-            "explained_variance": disp_pca
-        }
-    else:
-        data_pca = preprocess_data
-        mode_pca = None
-        pca_info_report = {}
+    preprocess_mode = str(manual_config["preprocess_mode"])
+    pca_enabled = bool(manual_config["pca"]["enabled"])
+    mode_pca = manual_config["pca"]["mode"] if pca_enabled else None
+    n_comp_pca = int(manual_config["pca"]["fixed_components"])
+    disp_pca = float(manual_config["pca"]["variance_ratio"])
 
     kmeans_n = ui.spinBox_clust_kmeans_n.value()
     kmeans_n_init = ui.spinBox_clust_kmean_ninint.value()
@@ -300,18 +261,46 @@ def calculate_cluster():
         dataset_id=clust_object_id,
         cache_key=cache_key,
     )
-    label_list = get_cached_cluster_labels(
-        cached_result,
-        result_type="gpr",
-        expected_count=len(data_pca),
-    )
-    if label_list is not None:
-        clust_info = dict(cached_result.get("cluster_info") or {})
-        set_info("CALC: результат кластеризации загружен из базы данных без повторного расчета.", "green")
-    else:
-        label_list = []
+    cached_gpr = get_cached_gpr_calculation(cached_result)
 
-    if not label_list:
+    if cached_gpr is not None:
+        label_list = cached_gpr["labels"]
+        kept_row_indices = cached_gpr["kept_row_indices"]
+        data_pca = cached_gpr["data_for_diagnostics"]
+        clust_info = cached_gpr["cluster_info"]
+        pca_info_report = cached_gpr["pca_info_report"]
+        set_info("CALC: результат загружен из базы данных без повторной очистки, PCA и кластеризации.", "green")
+    else:
+        clear_data, kept_row_indices = clean_features(
+            data=data,
+            use_non_finite=ui.checkBox_clust_clean_nan.isChecked(),
+            non_finite_mode=text_method_nan,
+            use_variance_threshold=ui.checkBox_clust_clear_vartresh.isChecked(),
+            use_correlation_filter=ui.checkBox_clust_clear_corr.isChecked()
+        )
+        if not clear_data:
+            return
+        print('Before: ', len(data), len(data[0]))
+        print('After: ', len(clear_data), len(clear_data[0]))
+        print('Rows kept after cleaning: ', len(kept_row_indices))
+
+        preprocess_data = preprocess_features(clear_data, mode=preprocess_mode)
+        if pca_enabled:
+            data_pca, pca_info = apply_pca(
+                preprocess_data,
+                mode=mode_pca,
+                n_components=n_comp_pca,
+                variance_ratio=disp_pca,
+            )
+            print("PCA info: ", pca_info)
+            pca_info_report = {
+                "components_after_pca": n_comp_pca,
+                "explained_variance": disp_pca,
+            }
+        else:
+            data_pca = preprocess_data
+            pca_info_report = {}
+
         label_list, clust_info = cluster_data(
             data=data_pca,
             method=clust_method_analys,
@@ -332,7 +321,10 @@ def calculate_cluster():
             result_payload={
                 "result_type": "gpr",
                 "labels": [int(value) for value in label_list],
+                "kept_row_indices": [int(value) for value in kept_row_indices],
+                "data_for_diagnostics": np.asarray(data_pca).tolist(),
                 "cluster_info": clust_info,
+                "pca_info_report": pca_info_report,
             },
         )
 
