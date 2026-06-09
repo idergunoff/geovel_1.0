@@ -148,7 +148,7 @@ def _full_manual_config(*, method="kmeans", pca_enabled=False, smoothing_enabled
     }
 
 
-def test_cache_key_ignores_inactive_method_pca_clean_and_smoothing_controls():
+def test_cache_key_ignores_inactive_controls_and_all_postprocessing_settings():
     module = load_result_cache_module()
     first = _full_manual_config()
     second = _full_manual_config()
@@ -157,8 +157,10 @@ def test_cache_key_ignores_inactive_method_pca_clean_and_smoothing_controls():
     second["pca"]["variance_ratio"] = 0.55
     second["method_params"]["gmm_n_components"] = 11
     second["method_params"]["hdbscan_min_samples"] = 99
+    second["smoothing"]["enabled"] = True
     second["smoothing"]["method"] = "med"
     second["smoothing"]["window"] = 21
+    second["metrics"] = {"use_silhouette": False, "use_db": False, "use_ch": True}
 
     first_key = module.build_cluster_calculation_cache_key(
         source_type="gpr", dataset_id=1, data_hash="same", config=first
@@ -203,3 +205,23 @@ def test_gpr_cache_requires_complete_preparation_payload():
     }
     incomplete = dict(complete, data_for_diagnostics=[[0.1]])
     assert module.get_cached_gpr_calculation(incomplete) is None
+
+
+def test_well_log_cache_contains_pre_smoothing_row_assignments():
+    module = load_result_cache_module()
+    payload = {
+        "result_type": "well_log",
+        "labels": [2, 2, 0, 1],
+        "kept_row_indices": [0, 1, 3, 4],
+        "data_for_diagnostics": [[1.0], [1.1], [3.0], [5.0]],
+        "cluster_info": {"n_clusters": 3},
+        "pca_info_report": {},
+    }
+
+    cached = module.get_cached_base_calculation(payload, result_type="well_log")
+
+    assert cached["labels"] == [2, 2, 0, 1]
+    assert cached["kept_row_indices"] == [0, 1, 3, 4]
+    smoothed_for_output = list(cached["labels"])
+    smoothed_for_output[1] = 0
+    assert cached["labels"] == [2, 2, 0, 1]

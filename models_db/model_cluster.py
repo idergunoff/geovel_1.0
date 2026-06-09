@@ -61,6 +61,9 @@ class ClusterCalculationCache(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     data_hash = Column(String, nullable=False)
     config_json = Column(Text, nullable=False)
+    labels_json = Column(Text, nullable=False, default='[]')
+    kept_row_indices_json = Column(Text, nullable=False, default='[]')
+    assignments_json = Column(Text, nullable=False, default='[]')
     result_payload = Column(Text, nullable=False)
 
     object_set = relationship('ObjectSet', back_populates='calculation_cache')
@@ -114,6 +117,9 @@ class WellLogClusterCalculationCache(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     data_hash = Column(String, nullable=False)
     config_json = Column(Text, nullable=False)
+    labels_json = Column(Text, nullable=False, default='[]')
+    kept_row_indices_json = Column(Text, nullable=False, default='[]')
+    assignments_json = Column(Text, nullable=False, default='[]')
     result_payload = Column(Text, nullable=False)
 
     well_cluster_set = relationship('WellLogClusterDataset', back_populates='calculation_cache')

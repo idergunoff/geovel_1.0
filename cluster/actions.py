@@ -22,77 +22,102 @@ def calculate_well_log_cluster(
         dataset_id=int(run_context["dataset_id"]),
         cache_key=cache_key,
     )
-    labels_for_output = get_cached_cluster_labels(cached_result, result_type="well_log")
-    if labels_for_output is not None:
-        visualization_data = cached_result.get("visualization_data")
-        data_pca = cached_result.get("data_for_diagnostics", [])
-        if isinstance(visualization_data, dict):
-            well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
-            report_text = str(cached_result.get("report_text") or "")
-            if report_text:
-                set_info(report_text, "blue")
-            try:
-                show_cluster_diagnostics(
-                    data_for_clustering=data_pca,
-                    labels=labels_for_output,
-                    method_name=str(cached_result.get("method") or config["method"]),
-                )
-                set_info("CALC Well Log: обновлены диагностические графики качества кластеризации.", "blue")
-            except Exception as exc:
-                set_info(f"CALC Well Log: не удалось построить диагностические графики: {exc}", "brown")
-            show_well_log_cluster_visualization(visualization_data)
-            set_info("CALC Well Log: результат загружен из базы данных без повторного расчета.", "green")
-            set_info(
-                f"CALC Well Log: расчет завершен, labels={len(labels_for_output)}, "
-                f"clusters={visualization_data.get('summary', {}).get('cluster_count', 0)}.",
-                "green"
-            )
-            return visualization_data
-
-    clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
-    if not clear_data:
-        set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
-        return None
-
-    set_info(
-        f"CALC Well Log: очистка данных {len(data)} → {len(clear_data)} строк, "
-        f"признаков после очистки={len(clear_data[0]) if clear_data else 0}.",
-        "blue"
-    )
-    preprocess_data = preprocess_features(clear_data, mode=config["preprocess_mode"])
-
-    pca_info_report: dict[str, Any] = {}
-    if config["pca"]["enabled"]:
-        if config["pca"]["mode"] == "fixed_components":
-            data_pca, pca_info_report = apply_pca(
-                preprocess_data,
-                mode="fixed_components",
-                n_components=config["pca"]["fixed_components"],
-                variance_ratio=config["pca"]["variance_ratio"],
-            )
-        else:
-            data_pca, pca_info_report = apply_pca(
-                preprocess_data,
-                mode="variance_ratio",
-                n_components=config["pca"]["fixed_components"],
-                variance_ratio=config["pca"]["variance_ratio"],
-            )
-    else:
-        data_pca = preprocess_data
-
+    cached_base = get_cached_base_calculation(cached_result, result_type="well_log")
     params = config["method_params"]
-    label_list, clust_info = cluster_data(
-        data=data_pca,
-        method=config["method"],
-        kmeans_n_clusters=params["kmeans_n_clusters"],
-        kmeans_n_init=params["kmeans_n_init"],
-        hdbscan_min_cluster_size=params["hdbscan_min_cluster_size"],
-        hdbscan_min_samples=params["hdbscan_min_samples"],
-        hdbscan_metric=params["hdbscan_metric"],
-        gmm_n_components=params["gmm_n_components"],
-        gmm_covariance_type=params["gmm_covariance_type"],
-    )
-    labels_for_output = [int(label) for label in label_list]
+
+    if cached_base is not None:
+        base_labels = cached_base["labels"]
+        kept_row_indices = cached_base["kept_row_indices"]
+        data_pca = cached_base["data_for_diagnostics"]
+        clust_info = cached_base["cluster_info"]
+        pca_info_report = cached_base["pca_info_report"]
+        set_info(
+            "CALC Well Log: базовые метки загружены из базы данных; "
+            "очистка, PCA и кластеризация пропущены.",
+            "green",
+        )
+    else:
+        clear_data, kept_row_indices = clean_features(data=data, **config["clean"])
+        if not clear_data:
+            set_info("CALC Well Log: после очистки не осталось строк для кластеризации.", "brown")
+            return None
+
+        set_info(
+            f"CALC Well Log: очистка данных {len(data)} → {len(clear_data)} строк, "
+            f"признаков после очистки={len(clear_data[0]) if clear_data else 0}.",
+            "blue"
+        )
+        preprocess_data = preprocess_features(clear_data, mode=config["preprocess_mode"])
+
+        pca_info_report: dict[str, Any] = {}
+        if config["pca"]["enabled"]:
+            if config["pca"]["mode"] == "fixed_components":
+                data_pca, pca_info_report = apply_pca(
+                    preprocess_data,
+                    mode="fixed_components",
+                    n_components=config["pca"]["fixed_components"],
+                    variance_ratio=config["pca"]["variance_ratio"],
+                )
+            else:
+                data_pca, pca_info_report = apply_pca(
+                    preprocess_data,
+                    mode="variance_ratio",
+                    n_components=config["pca"]["fixed_components"],
+                    variance_ratio=config["pca"]["variance_ratio"],
+                )
+        else:
+            data_pca = preprocess_data
+
+        label_list, clust_info = cluster_data(
+            data=data_pca,
+            method=config["method"],
+            kmeans_n_clusters=params["kmeans_n_clusters"],
+            kmeans_n_init=params["kmeans_n_init"],
+            hdbscan_min_cluster_size=params["hdbscan_min_cluster_size"],
+            hdbscan_min_samples=params["hdbscan_min_samples"],
+            hdbscan_metric=params["hdbscan_metric"],
+            gmm_n_components=params["gmm_n_components"],
+            gmm_covariance_type=params["gmm_covariance_type"],
+        )
+        base_labels = [int(label) for label in label_list]
+        meta_rows = run_context.get("meta", [])
+        assignments = []
+        for clean_row_idx, cluster_label in enumerate(base_labels):
+            if clean_row_idx >= len(kept_row_indices):
+                break
+            source_row_idx = int(kept_row_indices[clean_row_idx])
+            if source_row_idx < 0 or source_row_idx >= len(meta_rows):
+                continue
+            meta = meta_rows[source_row_idx]
+            assignments.append({
+                "source_row_index": source_row_idx,
+                "well_id": int(meta["well_id"]),
+                "depth_md": float(meta["depth_md"]),
+                "cluster_label": int(cluster_label),
+            })
+        save_cluster_calculation_cache(
+            source_type="well_log",
+            dataset_id=int(run_context["dataset_id"]),
+            cache_key=cache_key,
+            data_hash=str(run_context.get("data_hash", "")),
+            config=config,
+            result_payload={
+                "result_type": "well_log",
+                "labels": base_labels,
+                "kept_row_indices": [int(value) for value in kept_row_indices],
+                "assignments": assignments,
+                "data_for_diagnostics": np.asarray(data_pca).tolist(),
+                "cluster_info": clust_info,
+                "pca_info_report": pca_info_report,
+            },
+        )
+        set_info(
+            f"CALC Well Log: сохранены базовые метки до сглаживания: {len(base_labels)} строк.",
+            "blue",
+        )
+
+    # Smoothing must never mutate the labels stored in the database.
+    labels_for_output = list(base_labels)
 
     well_trace_rows: dict[int, dict[int, int]] = {}
     meta_rows = run_context.get("meta", [])
@@ -166,22 +191,6 @@ def calculate_well_log_cluster(
         smoothing_changes=smoothing_changes,
     )
     well_log_cluster_result_cache[int(run_context["dataset_id"])] = visualization_data
-    save_cluster_calculation_cache(
-        source_type="well_log",
-        dataset_id=int(run_context["dataset_id"]),
-        cache_key=cache_key,
-        data_hash=str(run_context.get("data_hash", "")),
-        config=config,
-        result_payload={
-            "result_type": "well_log",
-            "visualization_data": visualization_data,
-            "labels": labels_for_output,
-            "data_for_diagnostics": np.asarray(data_pca).tolist(),
-            "method": config["method"],
-            "report_text": report_text,
-        },
-    )
-
     try:
         show_cluster_diagnostics(
             data_for_clustering=data_pca,
@@ -312,6 +321,18 @@ def calculate_cluster():
             gmm_n_components=gmm_n,
             gmm_covariance_type=gmm_type
         )
+        assignments = []
+        for clean_row_idx, cluster_label in enumerate(label_list):
+            if clean_row_idx >= len(kept_row_indices):
+                break
+            source_row_idx = int(kept_row_indices[clean_row_idx])
+            if source_row_idx < 0 or source_row_idx >= len(data):
+                continue
+            assignments.append({
+                "source_row_index": source_row_idx,
+                "measurement_key": str(data[source_row_idx][0]),
+                "cluster_label": int(cluster_label),
+            })
         save_cluster_calculation_cache(
             source_type="gpr",
             dataset_id=clust_object_id,
@@ -322,6 +343,7 @@ def calculate_cluster():
                 "result_type": "gpr",
                 "labels": [int(value) for value in label_list],
                 "kept_row_indices": [int(value) for value in kept_row_indices],
+                "assignments": assignments,
                 "data_for_diagnostics": np.asarray(data_pca).tolist(),
                 "cluster_info": clust_info,
                 "pca_info_report": pca_info_report,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from .common import *
 
 
-CLUSTER_CALC_CACHE_SCHEMA_VERSION = 2
+CLUSTER_CALC_CACHE_SCHEMA_VERSION = 3
 CLUSTER_CALC_CACHE_GZIP_PREFIX = "gzjson:"
 
 
@@ -50,29 +50,14 @@ def normalize_cluster_calculation_config(config: dict[str, Any] | None) -> dict[
             "kmeans_n_init": int(params.get("kmeans_n_init", 10)),
         }
 
-    metrics = dict(source.get("metrics") or {})
-    smoothing = dict(source.get("smoothing") or {})
-    smoothing_enabled = bool(smoothing.get("enabled"))
-    normalized_smoothing: dict[str, Any] = {"enabled": smoothing_enabled}
-    if smoothing_enabled:
-        normalized_smoothing.update({
-            "method": str(smoothing.get("method") or "maj"),
-            "window": int(smoothing.get("window", 3)),
-        })
-
     return {
         "clean": normalized_clean,
         "preprocess_mode": str(source.get("preprocess_mode") or "none"),
         "pca": normalized_pca,
         "method": method,
         "method_params": active_method_params,
-        "metrics": {
-            "use_silhouette": bool(metrics.get("use_silhouette")),
-            "use_db": bool(metrics.get("use_db")),
-            "use_ch": bool(metrics.get("use_ch")),
-        },
-        "smoothing": normalized_smoothing,
     }
+
 
 
 def build_cluster_calculation_cache_key(
@@ -136,9 +121,13 @@ def get_cached_cluster_labels(
     return labels
 
 
-def get_cached_gpr_calculation(payload: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Validates that a GPR cache entry can skip the complete preparation pipeline."""
-    labels = get_cached_cluster_labels(payload, result_type="gpr")
+def get_cached_base_calculation(
+        payload: dict[str, Any] | None,
+        *,
+        result_type: str
+) -> dict[str, Any] | None:
+    """Validates a pre-smoothing calculation payload for either data source."""
+    labels = get_cached_cluster_labels(payload, result_type=result_type)
     if labels is None:
         return None
     try:
@@ -157,6 +146,11 @@ def get_cached_gpr_calculation(payload: dict[str, Any] | None) -> dict[str, Any]
     }
 
 
+def get_cached_gpr_calculation(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Backward-compatible wrapper for GPR pre-smoothing cache validation."""
+    return get_cached_base_calculation(payload, result_type="gpr")
+
+
 def _cluster_calculation_cache_model(source_type: str):
     if str(source_type or "").strip().lower() == "well_log":
         return WellLogClusterCalculationCache
@@ -164,7 +158,29 @@ def _cluster_calculation_cache_model(source_type: str):
 
 
 def _ensure_cluster_calculation_cache_table(source_type: str) -> None:
-    _cluster_calculation_cache_model(source_type).__table__.create(bind=engine, checkfirst=True)
+    cache_model = _cluster_calculation_cache_model(source_type)
+    cache_model.__table__.create(bind=engine, checkfirst=True)
+    # Existing installations may already have the first cache-table version.
+    # Add explicit result columns in-place so saving labels does not depend on
+    # whether Alembic was run before the application starts.
+    table_name = cache_model.__tablename__
+    with engine.begin() as connection:
+        columns = {
+            str(row[1])
+            for row in connection.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
+        }
+        if "labels_json" not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE {table_name} ADD COLUMN labels_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "kept_row_indices_json" not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE {table_name} ADD COLUMN kept_row_indices_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "assignments_json" not in columns:
+            connection.exec_driver_sql(
+                f"ALTER TABLE {table_name} ADD COLUMN assignments_json TEXT NOT NULL DEFAULT '[]'"
+            )
 
 
 def load_cluster_calculation_cache(
@@ -184,7 +200,16 @@ def load_cluster_calculation_cache(
         ).first()
         if row is None:
             return None
-        return decode_cluster_calculation_payload(row.result_payload)
+        payload = decode_cluster_calculation_payload(row.result_payload)
+        if payload is None:
+            return None
+        try:
+            payload["labels"] = json.loads(row.labels_json or "[]")
+            payload["kept_row_indices"] = json.loads(row.kept_row_indices_json or "[]")
+            payload["assignments"] = json.loads(row.assignments_json or "[]")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+        return payload
     except Exception as exc:
         set_info(f"CALC: ошибка чтения сохраненного результата: {exc}", "brown")
         return None
@@ -215,6 +240,15 @@ def save_cluster_calculation_cache(
             normalize_cluster_calculation_config(config),
             ensure_ascii=False,
             sort_keys=True,
+            default=str,
+        )
+        labels = [int(value) for value in (result_payload or {}).get("labels", [])]
+        kept_row_indices = [int(value) for value in (result_payload or {}).get("kept_row_indices", [])]
+        row.labels_json = json.dumps(labels, ensure_ascii=False)
+        row.kept_row_indices_json = json.dumps(kept_row_indices, ensure_ascii=False)
+        row.assignments_json = json.dumps(
+            list((result_payload or {}).get("assignments") or []),
+            ensure_ascii=False,
             default=str,
         )
         row.result_payload = encode_cluster_calculation_payload(result_payload or {})
