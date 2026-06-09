@@ -838,6 +838,100 @@ def render_auto_results_table(results: list[CandidateResult]) -> None:
     table.resizeColumnsToContents()
 
 
+def _auto_result_identity(result: CandidateResult) -> str:
+    """Возвращает стабильный идентификатор строки AUTO-результата для синхронизации cache."""
+    result_row = result or {}
+    payload = {
+        "candidate_id": result_row.get("candidate_id"),
+        "candidate_config": result_row.get("candidate_config") or {},
+        "partition_hash": (result_row.get("stats") or {}).get("partition_hash"),
+    }
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _remove_auto_results_from_saved_cache(
+        run_context: ClusterRunContext,
+        displayed_results: list[CandidateResult],
+        removed_results: list[CandidateResult]
+) -> int:
+    """Удаляет выбранные строки из соответствующей записи persistent-cache."""
+    source_type = str(run_context.get("source_type") or "gpr").strip().lower()
+    dataset_id = int(run_context.get("dataset_id", 0) or 0)
+    if dataset_id <= 0 or not removed_results:
+        return 0
+
+    _ensure_cluster_auto_tuning_cache_table(source_type)
+    cache_model = _auto_tuning_cache_model(source_type)
+    id_filter = {"dataset_id" if cache_model is WellLogClusterAutoTuningCache else "object_set_id": dataset_id}
+    displayed_identities = [_auto_result_identity(result) for result in displayed_results]
+    removed_identities = {_auto_result_identity(result) for result in removed_results}
+    updated_rows = 0
+
+    cache_rows = session.query(cache_model).filter_by(**id_filter).all()
+    for cache_row in cache_rows:
+        if not _cache_row_matches_source_type(cache_row, source_type):
+            continue
+        try:
+            cached_results = json.loads(cache_row.top_results or "[]")
+        except Exception:
+            continue
+        if not isinstance(cached_results, list):
+            continue
+        cached_identities = [_auto_result_identity(result) for result in cached_results]
+        if cached_identities != displayed_identities:
+            continue
+
+        remaining_cached_results = [
+            result
+            for result in cached_results
+            if _auto_result_identity(result) not in removed_identities
+        ]
+        if remaining_cached_results:
+            cache_row.top_results = json.dumps(remaining_cached_results, ensure_ascii=False, default=str)
+        else:
+            session.delete(cache_row)
+        updated_rows += 1
+
+    if updated_rows:
+        session.commit()
+    return updated_rows
+
+
+def remove_selected_cluster_auto_tune_results() -> None:
+    """Удаляет выбранные строки AUTO-таблицы и синхронизирует runtime/persistent cache."""
+    global cluster_auto_results_cache
+
+    table = getattr(ui, "tableWidget_cluster_auto_result", None)
+    if table is None:
+        return
+
+    selected_rows = sorted({index.row() for index in table.selectionModel().selectedRows()})
+    if not selected_rows and table.currentRow() >= 0:
+        selected_rows = [table.currentRow()]
+    selected_rows = [row for row in selected_rows if 0 <= row < len(cluster_auto_results_cache)]
+    if not selected_rows:
+        set_info("AUTO: выберите строку результата для удаления.", "brown")
+        return
+
+    previous_results = list(cluster_auto_results_cache)
+    selected_row_set = set(selected_rows)
+    removed_results = [result for idx, result in enumerate(previous_results) if idx in selected_row_set]
+    remaining_results = [result for idx, result in enumerate(previous_results) if idx not in selected_row_set]
+    active_context = build_cluster_run_context(show_errors=False)
+
+    if active_context is not None:
+        remember_auto_results_for_context(active_context, remaining_results)
+        try:
+            _remove_auto_results_from_saved_cache(active_context, previous_results, removed_results)
+        except Exception as exc:
+            session.rollback()
+            render_auto_results_table(remaining_results)
+            set_info(f"AUTO: строки удалены из таблицы, но не удалось обновить сохраненный кэш: {exc}", "brown")
+            return
+
+    render_auto_results_table(remaining_results)
+    set_info(f"AUTO: удалено строк результатов: {len(removed_results)}.", "green")
+
 
 def clear_cluster_auto_tune_results_with_confirm() -> None:
     """
@@ -871,10 +965,8 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
 
     cluster_auto_results_cache = []
     if active_context_key is not None:
-        cluster_auto_results_by_context.pop(active_context_key, None)
-    table.clear()
-    table.setRowCount(0)
-    table.setColumnCount(0)
+        cluster_auto_results_by_context[active_context_key] = []
+    render_auto_results_table([])
 
     if active_context is not None:
         dataset_id = int(active_context.get("dataset_id", 0) or 0)
@@ -899,6 +991,7 @@ def clear_cluster_auto_tune_results_with_confirm() -> None:
                 return
 
     set_info("AUTO: результаты автоподбора очищены.", "green")
+
 
 def apply_selected_auto_result_from_table(row_idx: int, _column_idx: int) -> None:
     """
