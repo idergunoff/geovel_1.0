@@ -129,6 +129,7 @@ def open_ml_clutter_experiment():
             profile_id_getter=get_profile_id,
             profile_name_getter=get_profile_name,
             info_callback=set_info,
+            visualization_callback=lambda data, title: (draw_image(data), set_info(title, 'blue')),
         )
     ml_clutter_experiment_window.show()
     ml_clutter_experiment_window.raise_()
