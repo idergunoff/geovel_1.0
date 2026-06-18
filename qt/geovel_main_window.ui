@@ -620,13 +620,16 @@
               </item>
               <item row="22" column="0">
                <layout class="QGridLayout" name="gridLayout_26">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_save_img">
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
+                  </property>
                   <property name="styleSheet">
-                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                   <string notr="true">background-color: rgb(175, 188, 255);</string>
                   </property>
                   <property name="text">
-                   <string>Save Image</string>
+                   <string>save all well</string>
                   </property>
                  </widget>
                 </item>
@@ -653,6 +656,16 @@
                   </property>
                  </widget>
                 </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="text">
+                   <string>Save Image</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="0" column="1">
                  <widget class="QSpinBox" name="spinBox_save_img">
                   <property name="styleSheet">
@@ -672,19 +685,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 188, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save all well</string>
-                  </property>
-                 </widget>
-                </item>
                 <item row="0" column="4">
                  <widget class="QSpinBox" name="spinBox_save_prod_sig">
                   <property name="minimum">
@@ -695,6 +695,16 @@
                   </property>
                   <property name="value">
                    <number>30</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_ml_clutter">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 255, 137);</string>
+                  </property>
+                  <property name="text">
+                   <string>ML Clutter</string>
                   </property>
                  </widget>
                 </item>
@@ -1316,8 +1326,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>46</width>
-                       <height>26</height>
+                       <width>676</width>
+                       <height>200</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -6975,9 +6985,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_4"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>
