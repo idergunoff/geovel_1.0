@@ -30,6 +30,7 @@ from noise import *
 from slice import *
 from calc_object_models import *
 from cluster import *
+from ml_clutter_experiment import MLClutterExperimentWindow
 
 MainWindow.show()
 
@@ -118,6 +119,23 @@ ui.pushButton_medfilt.clicked.connect(calc_medfilt)
 ui.pushButton_wiener.clicked.connect(calc_wiener)
 ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
+
+
+def open_ml_clutter_experiment():
+    global ml_clutter_experiment_window
+    if 'ml_clutter_experiment_window' not in globals() or ml_clutter_experiment_window is None:
+        ml_clutter_experiment_window = MLClutterExperimentWindow(
+            MainWindow,
+            profile_id_getter=get_profile_id,
+            profile_name_getter=get_profile_name,
+            info_callback=set_info,
+        )
+    ml_clutter_experiment_window.show()
+    ml_clutter_experiment_window.raise_()
+    ml_clutter_experiment_window.activateWindow()
+
+
+ui.pushButton_ml_clutter.clicked.connect(open_ml_clutter_experiment)
 ui.pushButton_wavelet_filter.clicked.connect(calc_wavelet_filter)
 ui.pushButton_calc_all_param.clicked.connect(calc_all_params)
 ui.toolButton_recalc_relief.clicked.connect(recalc_relief)
