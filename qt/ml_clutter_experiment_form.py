@@ -20,10 +20,7 @@ class Ui_MLClutterExperiment(object):
             "tab_noise_patterns",
             "Add noisy radarograms and configure extraction of real air-clutter patterns.",
         )
-        self.tab_generator = self._add_placeholder_tab(
-            "tab_generator",
-            "Configure analytical, real-pattern, or mixed clutter generation.",
-        )
+        self.tab_generator = self._add_generator_tab()
         self.tab_dataset = self._add_placeholder_tab(
             "tab_dataset",
             "Generate synthetic noisy/clean training pairs and patch datasets.",
@@ -102,6 +99,59 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.addTab(tab, "")
         return tab
 
+
+    def _add_generator_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_generator")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText("Configure analytical synthetic air-clutter generation for the loaded clean profile.")
+        layout.addWidget(intro, 0, 0, 1, 3)
+        self.checkBox_gen_hyperbolas = QtWidgets.QCheckBox(tab)
+        self.checkBox_gen_hyperbolas.setObjectName("checkBox_gen_hyperbolas")
+        self.checkBox_gen_hyperbolas.setChecked(True)
+        layout.addWidget(self.checkBox_gen_hyperbolas, 1, 0)
+        self.checkBox_gen_sloped_events = QtWidgets.QCheckBox(tab)
+        self.checkBox_gen_sloped_events.setObjectName("checkBox_gen_sloped_events")
+        self.checkBox_gen_sloped_events.setChecked(True)
+        layout.addWidget(self.checkBox_gen_sloped_events, 1, 1)
+        self.checkBox_gen_ringing = QtWidgets.QCheckBox(tab)
+        self.checkBox_gen_ringing.setObjectName("checkBox_gen_ringing")
+        self.checkBox_gen_ringing.setChecked(True)
+        layout.addWidget(self.checkBox_gen_ringing, 1, 2)
+        self.checkBox_gen_vertical_spikes = QtWidgets.QCheckBox(tab)
+        self.checkBox_gen_vertical_spikes.setObjectName("checkBox_gen_vertical_spikes")
+        self.checkBox_gen_vertical_spikes.setChecked(True)
+        layout.addWidget(self.checkBox_gen_vertical_spikes, 2, 0)
+        self.checkBox_gen_noise_zones = QtWidgets.QCheckBox(tab)
+        self.checkBox_gen_noise_zones.setObjectName("checkBox_gen_noise_zones")
+        self.checkBox_gen_noise_zones.setChecked(True)
+        layout.addWidget(self.checkBox_gen_noise_zones, 2, 1)
+        self.spinBox_gen_seed = QtWidgets.QSpinBox(tab)
+        self.spinBox_gen_seed.setObjectName("spinBox_gen_seed")
+        self.spinBox_gen_seed.setRange(0, 2147483647)
+        self.spinBox_gen_seed.setValue(42)
+        layout.addWidget(QtWidgets.QLabel("Seed", tab), 3, 0)
+        layout.addWidget(self.spinBox_gen_seed, 3, 1)
+        self.doubleSpinBox_gen_target_snr = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_gen_target_snr.setObjectName("doubleSpinBox_gen_target_snr")
+        self.doubleSpinBox_gen_target_snr.setRange(-30.0, 60.0)
+        self.doubleSpinBox_gen_target_snr.setValue(6.0)
+        self.doubleSpinBox_gen_target_snr.setSuffix(" dB")
+        layout.addWidget(QtWidgets.QLabel("Target SNR", tab), 4, 0)
+        layout.addWidget(self.doubleSpinBox_gen_target_snr, 4, 1)
+        self.pushButton_generate_synthetic_clutter = QtWidgets.QPushButton(tab)
+        self.pushButton_generate_synthetic_clutter.setObjectName("pushButton_generate_synthetic_clutter")
+        layout.addWidget(self.pushButton_generate_synthetic_clutter, 5, 0, 1, 2)
+        self.textEdit_generator_meta = QtWidgets.QTextEdit(tab)
+        self.textEdit_generator_meta.setReadOnly(True)
+        self.textEdit_generator_meta.setObjectName("textEdit_generator_meta")
+        layout.addWidget(self.textEdit_generator_meta, 6, 0, 1, 3)
+        layout.setRowStretch(6, 1)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
     def _add_placeholder_tab(self, object_name, message):
         tab = QtWidgets.QWidget()
         tab.setObjectName(object_name)
@@ -138,6 +188,12 @@ class Ui_MLClutterExperiment(object):
         self.checkBox_enable_preprocessing.setText(_translate("MLClutterExperiment", "Enable preprocessing"))
         self.pushButton_apply_preprocessing.setText(_translate("MLClutterExperiment", "Normalize Clean Profile"))
         self.pushButton_inverse_preprocessing.setText(_translate("MLClutterExperiment", "Preview Inverse Transform"))
+        self.checkBox_gen_hyperbolas.setText(_translate("MLClutterExperiment", "Hyperbolas"))
+        self.checkBox_gen_sloped_events.setText(_translate("MLClutterExperiment", "Sloped events"))
+        self.checkBox_gen_ringing.setText(_translate("MLClutterExperiment", "Ringing"))
+        self.checkBox_gen_vertical_spikes.setText(_translate("MLClutterExperiment", "Vertical spikes"))
+        self.checkBox_gen_noise_zones.setText(_translate("MLClutterExperiment", "Wide noise zones"))
+        self.pushButton_generate_synthetic_clutter.setText(_translate("MLClutterExperiment", "Generate Synthetic Clutter"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))

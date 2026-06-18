@@ -3,8 +3,9 @@ import json
 import numpy as np
 from PyQt5 import QtWidgets
 
-from ml_air_clutter.config import NormalizationConfig
+from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
+from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
 from models_db.model import Profile, CurrentProfile, session
 from qt.ml_clutter_experiment_form import Ui_MLClutterExperiment
 
@@ -34,8 +35,9 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.real_noisy_profile = None
         self.normalized_clean_profile = None
         self.normalization_result = None
-        self.experiment_config = {"normalization": None}
+        self.experiment_config = {"normalization": None, "synthetic_clutter": None}
         self.experiment_profiles = {}
+        self.synthetic_clutter_result = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -43,6 +45,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_load_real_noisy.clicked.connect(lambda: self.load_selected_profile("real_noisy"))
         self.ui.pushButton_apply_preprocessing.clicked.connect(self.normalize_clean_profile)
         self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
+        self.ui.pushButton_generate_synthetic_clutter.clicked.connect(self.generate_synthetic_clutter_preview)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self._show_stats(
             "Experiment profile list is empty. "
@@ -163,6 +166,38 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self._display_profile(result.data, f"ML Clutter normalized clean ({config.mode})")
         self._log(f"Clean profile normalized with mode '{config.mode}'")
 
+    def generate_synthetic_clutter_preview(self):
+        if self.clean_profile is None:
+            self._show_generator_stats("Load a clean profile before synthetic clutter generation.")
+            self._log("ML Clutter: clean profile is not loaded for synthetic clutter generation", "red")
+            return
+
+        source_profile = self.normalized_clean_profile if self.normalized_clean_profile is not None else self.clean_profile
+        config = self._current_synthetic_clutter_config()
+        try:
+            noisy, clutter, mask, meta = generate_synthetic_clutter(source_profile, config)
+        except ValueError as exc:
+            self._show_generator_stats(str(exc))
+            self._log(f"ML Clutter: synthetic clutter generation failed: {exc}", "red")
+            return
+
+        self.synthetic_clutter_result = {
+            "noisy": noisy,
+            "clutter": clutter,
+            "mask": mask,
+            "meta": meta,
+        }
+        self.experiment_config["synthetic_clutter"] = meta
+        report = self._format_generator_report(meta, clutter, mask, noisy)
+        self._show_generator_stats(report)
+        self._display_profile(source_profile, "ML Clutter synthetic source clean")
+        self._display_profile(clutter, "ML Clutter synthetic clutter")
+        self._display_profile(mask, "ML Clutter synthetic clutter mask")
+        self._display_profile(noisy, "ML Clutter synthetic noisy profile")
+        self._log(
+            f"Synthetic clutter generated: {len(meta['objects'])} objects, SNR={meta['actual_snr_db']:.3g} dB"
+        )
+
     def preview_inverse_normalization(self):
         if self.normalization_result is None:
             self._show_preprocessing_stats("Normalize a clean profile first; no inverse parameters are available.")
@@ -181,6 +216,37 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
     def _current_normalization_config(self):
         mode = self.ui.comboBox_normalization_mode.currentData() or "standard"
         return NormalizationConfig(mode=mode)
+
+    def _current_synthetic_clutter_config(self):
+        return SyntheticClutterConfig(
+            seed=int(self.ui.spinBox_gen_seed.value()),
+            target_snr_db=float(self.ui.doubleSpinBox_gen_target_snr.value()),
+            hyperbolas=self.ui.checkBox_gen_hyperbolas.isChecked(),
+            sloped_events=self.ui.checkBox_gen_sloped_events.isChecked(),
+            ringing=self.ui.checkBox_gen_ringing.isChecked(),
+            vertical_spikes=self.ui.checkBox_gen_vertical_spikes.isChecked(),
+            noise_zones=self.ui.checkBox_gen_noise_zones.isChecked(),
+        )
+
+    @staticmethod
+    def _format_generator_report(meta, clutter, mask, noisy):
+        object_counts = {}
+        for obj in meta["objects"]:
+            object_counts[obj["type"]] = object_counts.get(obj["type"], 0) + 1
+        lines = [
+            "Synthetic clutter generation report",
+            f"Config: {meta['config']}",
+            f"Generated objects: {len(meta['objects'])} ({object_counts})",
+            f"Target SNR scale: {meta['target_snr_scale']:.6g}",
+            f"Actual SNR: {meta['actual_snr_db']:.6g} dB",
+            f"Clutter min/max: {float(np.min(clutter)):.6g} / {float(np.max(clutter)):.6g}",
+            f"Clutter RMS: {float(np.sqrt(np.mean(clutter ** 2))):.6g}",
+            f"Mask coverage: {float(np.mean(mask > 0)) * 100.0:.3g}%",
+            f"Noisy min/max: {float(np.min(noisy)):.6g} / {float(np.max(noisy)):.6g}",
+            "Meta preview:",
+            json.dumps(meta, indent=2)[:6000],
+        ]
+        return "\n".join(lines)
 
     def _prepare_profile_for_role(self, data, name):
         validation = self.validate_profile(data)
@@ -294,6 +360,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_preprocessing_stats(self, text):
         self.ui.textEdit_preprocessing_stats.setPlainText(text)
+        self.ui.textEdit_results_log.append(text)
+
+    def _show_generator_stats(self, text):
+        self.ui.textEdit_generator_meta.setPlainText(text)
         self.ui.textEdit_results_log.append(text)
 
     def _log(self, text, color="green"):
