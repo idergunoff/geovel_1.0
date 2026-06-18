@@ -105,8 +105,8 @@ class Ui_MLClutterExperiment(object):
         _translate = QtCore.QCoreApplication.translate
         MLClutterExperiment.setWindowTitle(_translate("MLClutterExperiment", "ML Clutter Experiment"))
         self.headerLabel.setText(_translate("MLClutterExperiment", "Experimental ML Clutter block: data, generator, dataset, model, training, inference and results."))
-        self.pushButton_refresh_profiles.setText(_translate("MLClutterExperiment", "Refresh"))
-        self.pushButton_use_current_profile.setText(_translate("MLClutterExperiment", "Use Current Profile"))
+        self.pushButton_refresh_profiles.setText(_translate("MLClutterExperiment", "Add Current Profile"))
+        self.pushButton_use_current_profile.setText(_translate("MLClutterExperiment", "Use Drawn CurrentProfile"))
         self.pushButton_load_clean.setText(_translate("MLClutterExperiment", "Load as Clean"))
         self.pushButton_load_real_noisy.setText(_translate("MLClutterExperiment", "Load as Real Noisy"))
         self.groupBox_profile_stats.setTitle(_translate("MLClutterExperiment", "Profile statistics and validation"))
