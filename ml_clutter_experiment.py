@@ -3,6 +3,8 @@ import json
 import numpy as np
 from PyQt5 import QtWidgets
 
+from ml_air_clutter.config import NormalizationConfig
+from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
 from models_db.model import Profile, CurrentProfile, session
 from qt.ml_clutter_experiment_form import Ui_MLClutterExperiment
 
@@ -30,12 +32,17 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.visualization_callback = visualization_callback
         self.clean_profile = None
         self.real_noisy_profile = None
+        self.normalized_clean_profile = None
+        self.normalization_result = None
+        self.experiment_config = {"normalization": None}
         self.experiment_profiles = {}
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
         self.ui.pushButton_load_clean.clicked.connect(lambda: self.load_selected_profile("clean"))
         self.ui.pushButton_load_real_noisy.clicked.connect(lambda: self.load_selected_profile("real_noisy"))
+        self.ui.pushButton_apply_preprocessing.clicked.connect(self.normalize_clean_profile)
+        self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self._show_stats(
             "Experiment profile list is empty. "
@@ -112,10 +119,68 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
         if role == "clean":
             self.clean_profile = prepared
+            self.normalized_clean_profile = None
+            self.normalization_result = None
         else:
             self.real_noisy_profile = prepared
         self._display_profile(prepared, f"ML Clutter {role.replace('_', ' ')}: {name}")
         self._log(f"Profile '{name}' loaded as {role.replace('_', ' ')} and displayed in MainWindow")
+
+    def normalize_clean_profile(self):
+        if self.clean_profile is None:
+            self._show_preprocessing_stats("Load a clean profile before normalization.")
+            self._log("ML Clutter: clean profile is not loaded for normalization", "red")
+            return
+        if not self.ui.checkBox_enable_preprocessing.isChecked():
+            self.normalized_clean_profile = self.clean_profile.copy()
+            self.normalization_result = None
+            self.experiment_config["normalization"] = {"enabled": False}
+            self._show_preprocessing_stats("Preprocessing is disabled. Clean profile remains in the original scale.")
+            self._display_profile(self.normalized_clean_profile, "ML Clutter clean profile without preprocessing")
+            return
+
+        config = self._current_normalization_config()
+        try:
+            result = Normalizer.fit_transform(self.clean_profile, config)
+        except ValueError as exc:
+            self._show_preprocessing_stats(str(exc))
+            self._log(f"ML Clutter: normalization failed: {exc}", "red")
+            return
+
+        self.normalized_clean_profile = result.data
+        self.normalization_result = result
+        self.experiment_config["normalization"] = {
+            "enabled": True,
+            "config": config.to_dict(),
+            "params": result.params,
+        }
+        report = build_preprocessing_report(
+            self.profile_statistics(self.clean_profile),
+            self.profile_statistics(result.data),
+            result,
+        )
+        self._show_preprocessing_stats(report)
+        self._display_profile(result.data, f"ML Clutter normalized clean ({config.mode})")
+        self._log(f"Clean profile normalized with mode '{config.mode}'")
+
+    def preview_inverse_normalization(self):
+        if self.normalization_result is None:
+            self._show_preprocessing_stats("Normalize a clean profile first; no inverse parameters are available.")
+            return
+        restored = self.normalization_result.inverse_transform()
+        max_abs_error = float(np.max(np.abs(restored - self.clean_profile)))
+        text = "\n".join([
+            "Inverse normalization preview",
+            f"Max absolute reconstruction error: {max_abs_error:.6g}",
+            self._format_validation_report("inverse-normalized clean", restored, "normalized clean -> original scale"),
+        ])
+        self._show_preprocessing_stats(text)
+        self._display_profile(restored, "ML Clutter inverse-normalized clean preview")
+        self._log(f"Inverse normalization preview prepared; max abs error={max_abs_error:.6g}")
+
+    def _current_normalization_config(self):
+        mode = self.ui.comboBox_normalization_mode.currentData() or "standard"
+        return NormalizationConfig(mode=mode)
 
     def _prepare_profile_for_role(self, data, name):
         validation = self.validate_profile(data)
@@ -225,6 +290,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_stats(self, text):
         self.ui.textEdit_profile_stats.setPlainText(text)
+        self.ui.textEdit_results_log.append(text)
+
+    def _show_preprocessing_stats(self, text):
+        self.ui.textEdit_preprocessing_stats.setPlainText(text)
         self.ui.textEdit_results_log.append(text)
 
     def _log(self, text, color="green"):
