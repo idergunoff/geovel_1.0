@@ -6,6 +6,7 @@ from PyQt5 import QtWidgets
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
 from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energy_patterns, extract_pattern_from_bbox
+from ml_air_clutter.pattern_generator import PatternClutterConfig, generate_pattern_clutter
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
 from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
@@ -43,6 +44,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.experiment_config = {"normalization": None, "synthetic_clutter": None, "pattern_library": None}
         self.experiment_profiles = {}
         self.synthetic_clutter_result = None
+        self.pattern_clutter_result = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -285,30 +287,41 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
 
         source_profile = self.normalized_clean_profile if self.normalized_clean_profile is not None else self.clean_profile
+        mode = self.ui.comboBox_gen_mode.currentData() or "synthetic"
         config = self._current_synthetic_clutter_config()
         try:
-            noisy, clutter, mask, meta = generate_synthetic_clutter(source_profile, config)
+            if mode == "synthetic":
+                noisy, clutter, mask, meta = generate_synthetic_clutter(source_profile, config)
+            else:
+                pattern_config = self._current_pattern_clutter_config(mode)
+                noisy, clutter, mask, meta = generate_pattern_clutter(source_profile, self.pattern_library, pattern_config, config)
         except ValueError as exc:
             self._show_generator_stats(str(exc))
             self._log(f"ML Clutter: synthetic clutter generation failed: {exc}", "red")
             return
 
-        self.synthetic_clutter_result = {
+        result = {
             "noisy": noisy,
             "clutter": clutter,
             "mask": mask,
             "meta": meta,
         }
-        self.experiment_config["synthetic_clutter"] = meta
+        if mode == "synthetic":
+            self.synthetic_clutter_result = result
+            self.experiment_config["synthetic_clutter"] = meta
+        else:
+            self.pattern_clutter_result = result
+            self.experiment_config["pattern_clutter"] = meta
         report = self._format_generator_report(meta, clutter, mask, noisy)
         self._show_generator_stats(report)
         self._display_profile(source_profile, "ML Clutter synthetic source clean")
         self._display_profile(clutter, "ML Clutter synthetic clutter")
         self._display_profile(mask, "ML Clutter synthetic clutter mask")
         self._display_profile(noisy, "ML Clutter synthetic noisy profile")
-        self._log(
-            f"Synthetic clutter generated: {len(meta['objects'])} objects, SNR={meta['actual_snr_db']:.3g} dB"
-        )
+        if mode == "synthetic":
+            self._log(f"Synthetic clutter generated: {len(meta['objects'])} objects, SNR={meta['actual_snr_db']:.3g} dB")
+        else:
+            self._log(f"{mode.title()} clutter generated: {len(meta['placements'])} real pattern placements, SNR={meta['actual_snr_db']:.3g} dB")
 
     def preview_inverse_normalization(self):
         if self.normalization_result is None:
@@ -340,15 +353,34 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             noise_zones=self.ui.checkBox_gen_noise_zones.isChecked(),
         )
 
+    def _current_pattern_clutter_config(self, mode):
+        pattern = self._selected_pattern()
+        pattern_ids = [pattern.pattern_id] if pattern is not None else None
+        return PatternClutterConfig(
+            seed=int(self.ui.spinBox_gen_seed.value()),
+            mode=mode,
+            pattern_ids=pattern_ids,
+            num_patterns=int(self.ui.spinBox_pattern_num.value()),
+            pattern_strength=float(self.ui.doubleSpinBox_pattern_strength.value()),
+            synthetic_strength=float(self.ui.doubleSpinBox_synthetic_strength.value()),
+            target_snr_db=float(self.ui.doubleSpinBox_gen_target_snr.value()),
+        )
+
     @staticmethod
     def _format_generator_report(meta, clutter, mask, noisy):
-        object_counts = {}
-        for obj in meta["objects"]:
-            object_counts[obj["type"]] = object_counts.get(obj["type"], 0) + 1
+        if "objects" in meta:
+            object_counts = {}
+            for obj in meta["objects"]:
+                object_counts[obj["type"]] = object_counts.get(obj["type"], 0) + 1
+            title = "Synthetic clutter generation report"
+            generated = f"Generated objects: {len(meta['objects'])} ({object_counts})"
+        else:
+            title = "Real-pattern clutter generation report"
+            generated = f"Pattern placements: {len(meta.get('placements', []))}"
         lines = [
-            "Synthetic clutter generation report",
+            title,
             f"Config: {meta['config']}",
-            f"Generated objects: {len(meta['objects'])} ({object_counts})",
+            generated,
             f"Target SNR scale: {meta['target_snr_scale']:.6g}",
             f"Actual SNR: {meta['actual_snr_db']:.6g} dB",
             f"Clutter min/max: {float(np.min(clutter)):.6g} / {float(np.max(clutter)):.6g}",

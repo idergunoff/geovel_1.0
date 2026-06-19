@@ -1,0 +1,64 @@
+from pathlib import Path
+import sys
+
+import numpy as np
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from ml_air_clutter.pattern_generator import PatternClutterConfig, generate_pattern_clutter, transform_pattern
+from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
+from ml_air_clutter.synthetic_clutter import SyntheticClutterConfig
+
+
+def _library():
+    arr = np.zeros((12, 64), dtype=float)
+    arr[:, 20:32] = 2.0
+    mask = (arr != 0).astype(float)
+    pattern = NoisePattern.create("src", arr, mask, [0, 12, 0, 64], pattern_id="p1", tags=["ringing"])
+    return PatternLibrary([pattern])
+
+
+def test_pattern_generator_places_real_pattern_and_scales_to_snr():
+    clean = np.ones((32, 512), dtype=float)
+    cfg = PatternClutterConfig(seed=7, target_snr_db=10.0, random_crop=False, num_patterns=1, jitter_std=0.0)
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    assert noisy.shape == clean.shape
+    assert clutter.shape == clean.shape
+    assert mask.shape == clean.shape
+    assert np.any(clutter)
+    assert np.any(mask)
+    assert meta["placements"][0]["pattern_id"] == "p1"
+    assert abs(meta["actual_snr_db"] - 10.0) < 1e-6
+
+
+def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations():
+    pattern = _library().get("p1")
+    cfg = PatternClutterConfig(seed=3, random_crop=True, jitter_std=0.0, horizontal_flip_probability=1.0)
+    rng1 = np.random.default_rng(cfg.seed)
+    rng2 = np.random.default_rng(cfg.seed)
+
+    arr1, mask1, meta1 = transform_pattern(pattern, cfg, rng1)
+    arr2, mask2, meta2 = transform_pattern(pattern, cfg, rng2)
+
+    np.testing.assert_allclose(arr1, arr2)
+    np.testing.assert_allclose(mask1, mask2)
+    assert meta1 == meta2
+    assert meta1["horizontal_flip"] is True
+    assert "stretch" in meta1
+
+
+def test_mixed_mode_keeps_pattern_and_synthetic_components_in_meta():
+    clean = np.ones((40, 512), dtype=float)
+    cfg = PatternClutterConfig(seed=5, mode="mixed", target_snr_db=None, random_crop=False, jitter_std=0.0)
+    syn_cfg = SyntheticClutterConfig(seed=5, target_snr_db=None, hyperbolas=False, sloped_events=False, ringing=False, vertical_spikes=True, noise_zones=False)
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg, syn_cfg)
+
+    assert np.any(noisy - clean)
+    assert np.any(clutter)
+    assert np.any(mask)
+    assert meta["synthetic_clutter"] is not None
+    assert meta["pattern_clutter"]["rms"] > 0
+    assert meta["total_clutter"]["rms"] > 0
