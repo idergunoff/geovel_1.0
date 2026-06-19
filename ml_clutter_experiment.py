@@ -1,9 +1,12 @@
 import json
+from pathlib import Path
 
 import numpy as np
 from PyQt5 import QtWidgets
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
+from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energy_patterns, extract_pattern_from_bbox
+from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
 from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
 from models_db.model import Profile, CurrentProfile, session
@@ -33,9 +36,11 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.visualization_callback = visualization_callback
         self.clean_profile = None
         self.real_noisy_profile = None
+        self.real_noisy_profiles = []
+        self.pattern_library = PatternLibrary()
         self.normalized_clean_profile = None
         self.normalization_result = None
-        self.experiment_config = {"normalization": None, "synthetic_clutter": None}
+        self.experiment_config = {"normalization": None, "synthetic_clutter": None, "pattern_library": None}
         self.experiment_profiles = {}
         self.synthetic_clutter_result = None
 
@@ -46,6 +51,12 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_apply_preprocessing.clicked.connect(self.normalize_clean_profile)
         self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
         self.ui.pushButton_generate_synthetic_clutter.clicked.connect(self.generate_synthetic_clutter_preview)
+        self.ui.pushButton_add_noisy_to_library.clicked.connect(self.add_loaded_real_noisy_to_pattern_sources)
+        self.ui.pushButton_extract_manual_pattern.clicked.connect(self.extract_manual_pattern)
+        self.ui.pushButton_extract_energy_patterns.clicked.connect(self.extract_energy_patterns)
+        self.ui.pushButton_preview_pattern.clicked.connect(self.preview_selected_pattern)
+        self.ui.pushButton_save_pattern_library.clicked.connect(self.save_pattern_library)
+        self.ui.pushButton_load_pattern_library.clicked.connect(self.load_pattern_library)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self._show_stats(
             "Experiment profile list is empty. "
@@ -126,8 +137,109 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self.normalization_result = None
         else:
             self.real_noisy_profile = prepared
+            self._register_real_noisy_profile(name, prepared, source)
         self._display_profile(prepared, f"ML Clutter {role.replace('_', ' ')}: {name}")
         self._log(f"Profile '{name}' loaded as {role.replace('_', ' ')} and displayed in MainWindow")
+
+    def add_loaded_real_noisy_to_pattern_sources(self):
+        if self.real_noisy_profile is None:
+            self._show_pattern_stats("Load a real noisy profile before adding it to the pattern source list.")
+            self._log("ML Clutter: no real noisy profile loaded for pattern extraction", "red")
+            return
+        name = f"real_noisy_{len(self.real_noisy_profiles) + 1}"
+        self._register_real_noisy_profile(name, self.real_noisy_profile, "loaded real noisy profile")
+
+    def extract_manual_pattern(self):
+        source = self._selected_noisy_source()
+        if source is None:
+            self._show_pattern_stats("Add and select a real noisy radarogram source first.")
+            return
+        bbox = [
+            self.ui.spinBox_pattern_x_start.value(),
+            self.ui.spinBox_pattern_x_end.value(),
+            self.ui.spinBox_pattern_z_start.value(),
+            self.ui.spinBox_pattern_z_end.value(),
+        ]
+        try:
+            extracted = extract_pattern_from_bbox(source["data"], bbox)
+            pattern = NoisePattern.create(
+                source_profile=source["name"],
+                array=extracted["array"],
+                mask=extracted["mask"],
+                bbox=bbox,
+                normalization=extracted["normalization"],
+                tags=[self.ui.comboBox_pattern_tag.currentData() or "unknown"],
+                comment="manual bbox extraction",
+            )
+            self.pattern_library.add_pattern(pattern)
+        except ValueError as exc:
+            self._show_pattern_stats(str(exc))
+            self._log(f"ML Clutter: manual pattern extraction failed: {exc}", "red")
+            return
+        self._refresh_pattern_library_ui()
+        self._display_profile(pattern.array, f"ML Clutter extracted pattern {pattern.pattern_id}")
+        self._log(f"Manual real-noise pattern extracted from '{source['name']}': {pattern.pattern_id}")
+
+    def extract_energy_patterns(self):
+        source = self._selected_noisy_source()
+        if source is None:
+            self._show_pattern_stats("Add and select a real noisy radarogram source first.")
+            return
+        config = PatternExtractionConfig()
+        try:
+            extracted_patterns = extract_energy_patterns(source["data"], config)
+            for extracted in extracted_patterns:
+                self.pattern_library.add_pattern(NoisePattern.create(
+                    source_profile=source["name"],
+                    array=extracted["array"],
+                    mask=extracted["mask"],
+                    bbox=extracted["bbox"],
+                    normalization=extracted["normalization"],
+                    tags=["unknown"],
+                    comment=f"auto energy extraction; score={extracted['energy_score']:.6g}",
+                ))
+        except ValueError as exc:
+            self._show_pattern_stats(str(exc))
+            self._log(f"ML Clutter: energy pattern extraction failed: {exc}", "red")
+            return
+        self._refresh_pattern_library_ui()
+        self._log(f"Auto-extracted {len(extracted_patterns)} high-energy real-noise patterns from '{source['name']}'")
+
+    def preview_selected_pattern(self):
+        pattern = self._selected_pattern()
+        if pattern is None:
+            self._show_pattern_stats("Select a pattern from the library before preview.")
+            return
+        self._display_profile(pattern.array, f"ML Clutter pattern {pattern.pattern_id}")
+        self._display_profile(pattern.mask, f"ML Clutter pattern mask {pattern.pattern_id}")
+        self._show_pattern_stats(self._format_pattern_report(pattern))
+
+    def save_pattern_library(self):
+        if not self.pattern_library.patterns:
+            self._show_pattern_stats("Pattern library is empty; extract at least one pattern before saving.")
+            return
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Save pattern library directory")
+        if not directory:
+            return
+        index_path = self.pattern_library.save(directory)
+        self.experiment_config["pattern_library"] = {"path": str(index_path), "summary": self.pattern_library.summary()}
+        self._show_pattern_stats(f"Pattern library saved to {index_path}\n{json.dumps(self.pattern_library.summary(), indent=2)}")
+        self._log(f"Pattern library saved: {index_path}")
+
+    def load_pattern_library(self):
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Load pattern library directory")
+        if not directory:
+            return
+        try:
+            self.pattern_library = PatternLibrary.load(directory)
+        except (OSError, ValueError, KeyError) as exc:
+            self._show_pattern_stats(f"Failed to load pattern library: {exc}")
+            self._log(f"ML Clutter: failed to load pattern library: {exc}", "red")
+            return
+        self._refresh_pattern_library_ui()
+        self.experiment_config["pattern_library"] = {"path": str(Path(directory) / "pattern_library_index.json"), "summary": self.pattern_library.summary()}
+        self._log(f"Pattern library loaded from {directory}")
+
 
     def normalize_clean_profile(self):
         if self.clean_profile is None:
@@ -296,6 +408,57 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         result["reason"] = "OK"
         return result
 
+    def _register_real_noisy_profile(self, name, data, source):
+        entry = {"name": name, "data": np.asarray(data, dtype=float), "source": source}
+        self.real_noisy_profiles.append(entry)
+        item = QtWidgets.QListWidgetItem(f"{name} ({entry['data'].shape[0]} traces)")
+        item.setData(self.PROFILE_ID_ROLE, len(self.real_noisy_profiles) - 1)
+        self.ui.listWidget_noisy_profiles.addItem(item)
+        self.ui.listWidget_noisy_profiles.setCurrentItem(item)
+        self.ui.spinBox_pattern_x_end.setMaximum(entry["data"].shape[0])
+        self.ui.spinBox_pattern_x_end.setValue(min(entry["data"].shape[0], max(1, self.ui.spinBox_pattern_x_end.value())))
+        self.ui.spinBox_pattern_z_end.setValue(min(entry["data"].shape[1], max(1, self.ui.spinBox_pattern_z_end.value())))
+        self._show_pattern_stats(
+            f"Real noisy source registered: {name}\nShape: {entry['data'].shape}\nSource: {source}"
+        )
+
+    def _selected_noisy_source(self):
+        item = self.ui.listWidget_noisy_profiles.currentItem()
+        if item is None:
+            return None
+        index = item.data(self.PROFILE_ID_ROLE)
+        if index is None or index < 0 or index >= len(self.real_noisy_profiles):
+            return None
+        return self.real_noisy_profiles[index]
+
+    def _selected_pattern(self):
+        item = self.ui.listWidget_pattern_library.currentItem()
+        if item is None:
+            return None
+        return self.pattern_library.get(item.data(self.PROFILE_ID_ROLE))
+
+    def _refresh_pattern_library_ui(self):
+        self.ui.listWidget_pattern_library.clear()
+        for pattern in self.pattern_library.patterns:
+            item = QtWidgets.QListWidgetItem(f"{pattern.pattern_id[:8]} {pattern.array.shape} tags={','.join(pattern.tags)}")
+            item.setData(self.PROFILE_ID_ROLE, pattern.pattern_id)
+            self.ui.listWidget_pattern_library.addItem(item)
+        self._show_pattern_stats(json.dumps(self.pattern_library.summary(), indent=2))
+
+    @staticmethod
+    def _format_pattern_report(pattern):
+        return "\n".join([
+            "Noise pattern report",
+            f"Pattern id: {pattern.pattern_id}",
+            f"Source profile: {pattern.source_profile}",
+            f"BBox: {pattern.bbox}",
+            f"Tags: {', '.join(pattern.tags)}",
+            f"Created at: {pattern.created_at}",
+            f"Comment: {pattern.comment}",
+            f"Stats: {json.dumps(pattern.stats, indent=2)}",
+        ])
+
+
     def _display_profile(self, data, title):
         if self.visualization_callback:
             self.visualization_callback(data.tolist(), title)
@@ -364,6 +527,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_generator_stats(self, text):
         self.ui.textEdit_generator_meta.setPlainText(text)
+        self.ui.textEdit_results_log.append(text)
+
+    def _show_pattern_stats(self, text):
+        self.ui.textEdit_pattern_library.setPlainText(text)
         self.ui.textEdit_results_log.append(text)
 
     def _log(self, text, color="green"):
