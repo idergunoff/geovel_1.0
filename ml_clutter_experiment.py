@@ -57,9 +57,19 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_extract_manual_pattern.clicked.connect(self.extract_manual_pattern)
         self.ui.pushButton_extract_energy_patterns.clicked.connect(self.extract_energy_patterns)
         self.ui.pushButton_preview_pattern.clicked.connect(self.preview_selected_pattern)
+        self.ui.pushButton_delete_pattern.clicked.connect(self.delete_selected_pattern)
+        self.ui.pushButton_clear_pattern_library.clicked.connect(self.clear_pattern_library)
         self.ui.pushButton_save_pattern_library.clicked.connect(self.save_pattern_library)
         self.ui.pushButton_load_pattern_library.clicked.connect(self.load_pattern_library)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
+        self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
+        for spin_box in (
+            self.ui.spinBox_pattern_x_start,
+            self.ui.spinBox_pattern_x_end,
+            self.ui.spinBox_pattern_z_start,
+            self.ui.spinBox_pattern_z_end,
+        ):
+            spin_box.valueChanged.connect(lambda *_: self.preview_manual_pattern_bbox())
         self._show_stats(
             "Experiment profile list is empty. "
             "Click 'Add Current Profile' to add the profile selected in the main window."
@@ -156,12 +166,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         if source is None:
             self._show_pattern_stats("Add and select a real noisy radarogram source first.")
             return
-        bbox = [
-            self.ui.spinBox_pattern_x_start.value(),
-            self.ui.spinBox_pattern_x_end.value(),
-            self.ui.spinBox_pattern_z_start.value(),
-            self.ui.spinBox_pattern_z_end.value(),
-        ]
+        bbox = self._current_pattern_bbox(source["data"].shape)
         try:
             extracted = extract_pattern_from_bbox(source["data"], bbox)
             pattern = NoisePattern.create(
@@ -179,6 +184,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self._log(f"ML Clutter: manual pattern extraction failed: {exc}", "red")
             return
         self._refresh_pattern_library_ui()
+        self.preview_manual_pattern_bbox()
         self._display_profile(pattern.array, f"ML Clutter extracted pattern {pattern.pattern_id}")
         self._log(f"Manual real-noise pattern extracted from '{source['name']}': {pattern.pattern_id}")
 
@@ -215,6 +221,51 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self._display_profile(pattern.array, f"ML Clutter pattern {pattern.pattern_id}")
         self._display_profile(pattern.mask, f"ML Clutter pattern mask {pattern.pattern_id}")
         self._show_pattern_stats(self._format_pattern_report(pattern))
+
+    def delete_selected_pattern(self):
+        item = self.ui.listWidget_pattern_library.currentItem()
+        if item is None:
+            self._show_pattern_stats("Select a pattern from the library before deleting it.")
+            return
+        pattern_id = item.data(self.PROFILE_ID_ROLE)
+        removed = self.pattern_library.remove_pattern(pattern_id)
+        if removed is None:
+            self._show_pattern_stats(f"Pattern was not found: {pattern_id}")
+            return
+        self._refresh_pattern_library_ui()
+        self._log(f"Pattern deleted from library: {removed.pattern_id}")
+
+    def clear_pattern_library(self):
+        if not self.pattern_library.patterns:
+            self._show_pattern_stats("Pattern library is already empty.")
+            return
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            "Clear pattern library?",
+            "Delete all selected noise patterns from the in-memory library?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if answer != QtWidgets.QMessageBox.Yes:
+            return
+        removed_count = len(self.pattern_library.patterns)
+        self.pattern_library.clear()
+        self._refresh_pattern_library_ui()
+        self._log(f"Pattern library cleared: {removed_count} pattern(s) removed")
+
+    def preview_manual_pattern_bbox(self):
+        source = self._selected_noisy_source()
+        if source is None:
+            return
+        bbox = self._current_pattern_bbox(source["data"].shape)
+        preview = self._profile_with_bbox_overlay(source["data"], bbox)
+        self._display_profile(preview, f"ML Clutter noise pattern bbox preview: {source['name']} {bbox}")
+        self._show_pattern_stats(
+            f"Selected noise source: {source['name']}\n"
+            f"Shape: {source['data'].shape}\n"
+            f"BBox: x={bbox[0]}:{bbox[1]}, z={bbox[2]}:{bbox[3]}\n"
+            "The highlighted rectangle marks the region that will be extracted as a noise pattern."
+        )
 
     def save_pattern_library(self):
         if not self.pattern_library.patterns:
@@ -447,12 +498,62 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         item.setData(self.PROFILE_ID_ROLE, len(self.real_noisy_profiles) - 1)
         self.ui.listWidget_noisy_profiles.addItem(item)
         self.ui.listWidget_noisy_profiles.setCurrentItem(item)
-        self.ui.spinBox_pattern_x_end.setMaximum(entry["data"].shape[0])
-        self.ui.spinBox_pattern_x_end.setValue(min(entry["data"].shape[0], max(1, self.ui.spinBox_pattern_x_end.value())))
-        self.ui.spinBox_pattern_z_end.setValue(min(entry["data"].shape[1], max(1, self.ui.spinBox_pattern_z_end.value())))
+        self._configure_pattern_bbox_controls(entry["data"].shape)
+        self.preview_manual_pattern_bbox()
         self._show_pattern_stats(
             f"Real noisy source registered: {name}\nShape: {entry['data'].shape}\nSource: {source}"
         )
+
+    def _on_noisy_source_changed(self):
+        source = self._selected_noisy_source()
+        if source is None:
+            return
+        self._configure_pattern_bbox_controls(source["data"].shape)
+        self.preview_manual_pattern_bbox()
+
+    def _configure_pattern_bbox_controls(self, shape):
+        num_traces, num_samples = shape
+        self.ui.spinBox_pattern_x_start.setMaximum(max(0, num_traces - 1))
+        self.ui.spinBox_pattern_x_end.setMaximum(num_traces)
+        self.ui.spinBox_pattern_z_start.setMaximum(max(0, num_samples - 1))
+        self.ui.spinBox_pattern_z_end.setMaximum(num_samples)
+        self.ui.spinBox_pattern_x_end.setValue(min(num_traces, max(1, self.ui.spinBox_pattern_x_end.value())))
+        self.ui.spinBox_pattern_z_end.setValue(min(num_samples, max(1, self.ui.spinBox_pattern_z_end.value())))
+
+    def _current_pattern_bbox(self, shape):
+        num_traces, num_samples = shape
+        x_start = min(max(0, self.ui.spinBox_pattern_x_start.value()), max(0, num_traces - 1))
+        x_end = min(max(x_start + 1, self.ui.spinBox_pattern_x_end.value()), num_traces)
+        z_start = min(max(0, self.ui.spinBox_pattern_z_start.value()), max(0, num_samples - 1))
+        z_end = min(max(z_start + 1, self.ui.spinBox_pattern_z_end.value()), num_samples)
+        if (x_start, x_end, z_start, z_end) != (
+            self.ui.spinBox_pattern_x_start.value(),
+            self.ui.spinBox_pattern_x_end.value(),
+            self.ui.spinBox_pattern_z_start.value(),
+            self.ui.spinBox_pattern_z_end.value(),
+        ):
+            self.ui.spinBox_pattern_x_start.setValue(x_start)
+            self.ui.spinBox_pattern_x_end.setValue(x_end)
+            self.ui.spinBox_pattern_z_start.setValue(z_start)
+            self.ui.spinBox_pattern_z_end.setValue(z_end)
+        return [x_start, x_end, z_start, z_end]
+
+    @staticmethod
+    def _profile_with_bbox_overlay(data, bbox):
+        preview = np.asarray(data, dtype=float).copy()
+        x_start, x_end, z_start, z_end = bbox
+        finite = preview[np.isfinite(preview)]
+        if finite.size == 0:
+            border_value = 1.0
+        else:
+            data_min = float(np.min(finite))
+            data_max = float(np.max(finite))
+            border_value = data_max + max(data_max - data_min, 1.0) * 0.15
+        preview[x_start:x_end, z_start] = border_value
+        preview[x_start:x_end, z_end - 1] = border_value
+        preview[x_start, z_start:z_end] = border_value
+        preview[x_end - 1, z_start:z_end] = border_value
+        return preview
 
     def _selected_noisy_source(self):
         item = self.ui.listWidget_noisy_profiles.currentItem()
