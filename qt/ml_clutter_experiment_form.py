@@ -16,10 +16,7 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.setObjectName("tabWidget")
 
         self.tab_profiles = self._add_profiles_tab()
-        self.tab_noise_patterns = self._add_placeholder_tab(
-            "tab_noise_patterns",
-            "Add noisy radarograms and configure extraction of real air-clutter patterns.",
-        )
+        self.tab_noise_patterns = self._add_noise_patterns_tab()
         self.tab_generator = self._add_generator_tab()
         self.tab_dataset = self._add_placeholder_tab(
             "tab_dataset",
@@ -96,6 +93,73 @@ class Ui_MLClutterExperiment(object):
         self.textEdit_preprocessing_stats.setObjectName("textEdit_preprocessing_stats")
         preprocessing_layout.addWidget(self.textEdit_preprocessing_stats, 3, 0, 1, 2)
         layout.addWidget(self.groupBox_preprocessing, 8, 0, 1, 2)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
+    def _add_noise_patterns_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_noise_patterns")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText("Load real noisy radarograms, extract air-clutter patches, preview them, and persist the pattern library.")
+        layout.addWidget(intro, 0, 0, 1, 4)
+        self.listWidget_noisy_profiles = QtWidgets.QListWidget(tab)
+        self.listWidget_noisy_profiles.setObjectName("listWidget_noisy_profiles")
+        layout.addWidget(self.listWidget_noisy_profiles, 1, 0, 5, 1)
+        self.pushButton_add_noisy_to_library = QtWidgets.QPushButton(tab)
+        self.pushButton_add_noisy_to_library.setObjectName("pushButton_add_noisy_to_library")
+        layout.addWidget(self.pushButton_add_noisy_to_library, 1, 1)
+        self.spinBox_pattern_x_start = QtWidgets.QSpinBox(tab)
+        self.spinBox_pattern_x_start.setObjectName("spinBox_pattern_x_start")
+        self.spinBox_pattern_x_start.setRange(0, 1000000)
+        self.spinBox_pattern_x_end = QtWidgets.QSpinBox(tab)
+        self.spinBox_pattern_x_end.setObjectName("spinBox_pattern_x_end")
+        self.spinBox_pattern_x_end.setRange(1, 1000000)
+        self.spinBox_pattern_z_start = QtWidgets.QSpinBox(tab)
+        self.spinBox_pattern_z_start.setObjectName("spinBox_pattern_z_start")
+        self.spinBox_pattern_z_start.setRange(0, 511)
+        self.spinBox_pattern_z_end = QtWidgets.QSpinBox(tab)
+        self.spinBox_pattern_z_end.setObjectName("spinBox_pattern_z_end")
+        self.spinBox_pattern_z_end.setRange(1, 512)
+        self.spinBox_pattern_z_end.setValue(128)
+        for row, (label, widget) in enumerate([
+            ("x start", self.spinBox_pattern_x_start),
+            ("x end", self.spinBox_pattern_x_end),
+            ("z start", self.spinBox_pattern_z_start),
+            ("z end", self.spinBox_pattern_z_end),
+        ], start=2):
+            layout.addWidget(QtWidgets.QLabel(label, tab), row, 1)
+            layout.addWidget(widget, row, 2)
+        self.comboBox_pattern_tag = QtWidgets.QComboBox(tab)
+        self.comboBox_pattern_tag.setObjectName("comboBox_pattern_tag")
+        for tag in ["pole", "powerline", "metal_fence", "building", "ringing", "vertical_spike", "unknown"]:
+            self.comboBox_pattern_tag.addItem(tag, tag)
+        layout.addWidget(QtWidgets.QLabel("tag", tab), 6, 1)
+        layout.addWidget(self.comboBox_pattern_tag, 6, 2)
+        self.pushButton_extract_manual_pattern = QtWidgets.QPushButton(tab)
+        self.pushButton_extract_manual_pattern.setObjectName("pushButton_extract_manual_pattern")
+        layout.addWidget(self.pushButton_extract_manual_pattern, 7, 1, 1, 2)
+        self.pushButton_extract_energy_patterns = QtWidgets.QPushButton(tab)
+        self.pushButton_extract_energy_patterns.setObjectName("pushButton_extract_energy_patterns")
+        layout.addWidget(self.pushButton_extract_energy_patterns, 8, 1, 1, 2)
+        self.listWidget_pattern_library = QtWidgets.QListWidget(tab)
+        self.listWidget_pattern_library.setObjectName("listWidget_pattern_library")
+        layout.addWidget(self.listWidget_pattern_library, 1, 3, 6, 1)
+        self.pushButton_preview_pattern = QtWidgets.QPushButton(tab)
+        self.pushButton_preview_pattern.setObjectName("pushButton_preview_pattern")
+        layout.addWidget(self.pushButton_preview_pattern, 7, 3)
+        self.pushButton_save_pattern_library = QtWidgets.QPushButton(tab)
+        self.pushButton_save_pattern_library.setObjectName("pushButton_save_pattern_library")
+        layout.addWidget(self.pushButton_save_pattern_library, 8, 3)
+        self.pushButton_load_pattern_library = QtWidgets.QPushButton(tab)
+        self.pushButton_load_pattern_library.setObjectName("pushButton_load_pattern_library")
+        layout.addWidget(self.pushButton_load_pattern_library, 9, 3)
+        self.textEdit_pattern_library = QtWidgets.QTextEdit(tab)
+        self.textEdit_pattern_library.setReadOnly(True)
+        self.textEdit_pattern_library.setObjectName("textEdit_pattern_library")
+        layout.addWidget(self.textEdit_pattern_library, 10, 0, 1, 4)
+        layout.setRowStretch(10, 1)
         self.tabWidget.addTab(tab, "")
         return tab
 
@@ -185,6 +249,12 @@ class Ui_MLClutterExperiment(object):
         self.pushButton_load_real_noisy.setText(_translate("MLClutterExperiment", "Load as Real Noisy"))
         self.groupBox_profile_stats.setTitle(_translate("MLClutterExperiment", "Profile statistics and validation"))
         self.groupBox_preprocessing.setTitle(_translate("MLClutterExperiment", "Preprocessing and normalization"))
+        self.pushButton_add_noisy_to_library.setText(_translate("MLClutterExperiment", "Add Loaded Real Noisy"))
+        self.pushButton_extract_manual_pattern.setText(_translate("MLClutterExperiment", "Extract Manual BBox Pattern"))
+        self.pushButton_extract_energy_patterns.setText(_translate("MLClutterExperiment", "Auto Extract High-Energy Patterns"))
+        self.pushButton_preview_pattern.setText(_translate("MLClutterExperiment", "Preview Pattern"))
+        self.pushButton_save_pattern_library.setText(_translate("MLClutterExperiment", "Save Pattern Library"))
+        self.pushButton_load_pattern_library.setText(_translate("MLClutterExperiment", "Load Pattern Library"))
         self.checkBox_enable_preprocessing.setText(_translate("MLClutterExperiment", "Enable preprocessing"))
         self.pushButton_apply_preprocessing.setText(_translate("MLClutterExperiment", "Normalize Clean Profile"))
         self.pushButton_inverse_preprocessing.setText(_translate("MLClutterExperiment", "Preview Inverse Transform"))
