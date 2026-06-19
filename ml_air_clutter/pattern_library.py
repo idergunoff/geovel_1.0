@@ -81,6 +81,15 @@ class PatternLibrary:
                 return pattern
         return None
 
+    def remove_pattern(self, pattern_id):
+        for index, pattern in enumerate(self.patterns):
+            if pattern.pattern_id == pattern_id:
+                return self.patterns.pop(index)
+        return None
+
+    def clear(self):
+        self.patterns.clear()
+
     def summary(self):
         tags = {}
         for pattern in self.patterns:

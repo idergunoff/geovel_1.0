@@ -65,3 +65,24 @@ def test_pattern_library_save_load_roundtrip(tmp_path):
     assert loaded.summary() == {"num_patterns": 1, "tags": {"ringing": 1}}
     np.testing.assert_allclose(loaded.get("pattern-1").array, array)
     assert loaded.get("pattern-1").comment == "test pattern"
+
+
+def test_pattern_library_remove_and_clear_patterns():
+    pattern = NoisePattern.create(
+        "src",
+        np.ones((2, 3)),
+        np.ones((2, 3)),
+        [0, 2, 0, 3],
+        pattern_id="pattern-to-delete",
+    )
+    library = PatternLibrary([pattern])
+
+    assert library.remove_pattern("missing") is None
+    assert library.remove_pattern("pattern-to-delete") is pattern
+    assert library.summary() == {"num_patterns": 0, "tags": {}}
+
+    library.add_pattern(pattern)
+    library.clear()
+
+    assert library.patterns == []
+    assert library.summary() == {"num_patterns": 0, "tags": {}}
