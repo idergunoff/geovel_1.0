@@ -9,6 +9,7 @@ from ml_air_clutter.pattern_generator import (
     PatternClutterConfig,
     generate_pattern_clutter,
     overlay_noise_by_dominant_amplitude,
+    overlay_noise_by_soft_dominance,
     transform_pattern,
 )
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
@@ -115,6 +116,45 @@ def test_pattern_generator_can_use_legacy_additive_overlay_mode():
     assert np.any(mask)
     np.testing.assert_allclose(noisy, clean + clutter)
     assert np.max(noisy) == 240.0
+
+
+def test_pattern_generator_can_use_soft_dominance_overlay_mode():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="soft_dominance",
+        soft_dominance_temperature=8.0,
+        target_snr_db=None,
+        random_crop=False,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    assert meta["overlay_mode"] == "soft_dominance"
+    assert meta["diagnostics"]["effective_pixel_count"] > 0
+    assert np.any(mask)
+    np.testing.assert_allclose(noisy, clean + clutter)
+    assert np.max(noisy) < 240.0
+    assert np.max(noisy) > 128.0
+
+
+def test_overlay_noise_by_soft_dominance_blends_instead_of_hard_replace():
+    clean = np.array([[128.0, 200.0, 20.0]])
+    noise = np.array([[240.0, 150.0, 250.0]])
+    mask = np.array([[1.0, 1.0, 0.0]])
+
+    noisy, effective_mask = overlay_noise_by_soft_dominance(clean, noise, mask, midpoint=128.0, temperature=12.0)
+
+    assert 128.0 < noisy[0, 0] < 240.0
+    assert 150.0 < noisy[0, 1] < 200.0
+    assert noisy[0, 2] == 20.0
+    np.testing.assert_allclose(effective_mask, [[1.0, 1.0, 0.0]])
 
 
 def test_place_pattern_clamps_preserved_depth_to_profile_bounds():

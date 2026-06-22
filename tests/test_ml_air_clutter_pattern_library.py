@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energy_patterns, extract_pattern_from_bbox
+from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energy_patterns, extract_frequency_band_patterns, extract_pattern_from_bbox
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 
 
@@ -51,6 +51,30 @@ def test_extract_energy_patterns_returns_high_energy_candidates():
 
     assert 1 <= len(patterns) <= 3
     assert patterns[0]["bbox"][0] == 8
+    assert patterns[0]["energy_score"] > 0
+
+
+def test_extract_frequency_band_patterns_keeps_dominant_band_metadata():
+    z = np.arange(128)
+    sinusoid = 8.0 * np.sin(2.0 * np.pi * 9.0 * z / z.size)
+    profile = np.zeros((16, 256), dtype=float)
+    profile[4:12, 64:192] = sinusoid
+    config = PatternExtractionConfig(
+        patch_width=8,
+        patch_height=128,
+        stride_x=4,
+        stride_z=64,
+        energy_percentile=85.0,
+        min_mask_coverage=0.05,
+        max_patterns=2,
+        frequency_bandwidth_bins=1,
+    )
+
+    patterns = extract_frequency_band_patterns(profile, config)
+
+    assert patterns
+    assert "frequency_band" in patterns[0]
+    assert patterns[0]["frequency_band"]["peak_bin"] == 9
     assert patterns[0]["energy_score"] > 0
 
 
