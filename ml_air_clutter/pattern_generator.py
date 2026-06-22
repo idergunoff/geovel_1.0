@@ -96,11 +96,11 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
 
     total_noise = pattern_clutter + synthetic_clutter
     pre_overlay_noise_rms = _rms(total_noise)
-    total_noise, beta = scale_clutter_to_target_snr(clean, total_noise, config.target_snr_db)
+    total_mask = np.maximum(pattern_mask, synthetic_mask)
+    total_noise, beta = scale_clutter_to_target_snr_for_overlay(clean, total_noise, total_mask, config)
     scaled_noise_rms = _rms(total_noise)
     pattern_clutter *= beta
     synthetic_clutter *= beta
-    total_mask = np.maximum(pattern_mask, synthetic_mask)
     noisy, effective_mask = overlay_noise(
         clean,
         total_noise,
@@ -303,12 +303,79 @@ def place_pattern(clean_shape, pattern, mask, rng, smooth_mask=True, target_z_st
 
 
 def _pattern_target_z_start(pattern, transform_meta):
+    del transform_meta  # Depth is anchored to the extracted pattern bbox, not to random augmentations.
     bbox = getattr(pattern, "bbox", None) or [0, 0, 0, 0]
-    source_z_start = int(bbox[2]) if len(bbox) >= 3 else 0
-    crop = transform_meta.get("crop")
-    if crop is not None and len(crop) == 4:
-        source_z_start += int(crop[2])
-    return source_z_start
+    return int(bbox[2]) if len(bbox) >= 3 else 0
+
+
+def scale_clutter_to_target_snr_for_overlay(clean, clutter, mask, config):
+    """Scale clutter so the final overlaid residual is closest to target SNR.
+
+    Dominant/soft-dominance overlays are nonlinear: the pre-overlay pattern RMS
+    is not the same as the residual left in ``noisy - clean``.  In particular,
+    changing ``num_patterns`` changes mask coverage and overlap, so a single
+    pre-overlay RMS normalization produces visibly different intensities.  This
+    helper chooses a global multiplier against the actual overlay residual,
+    keeping the requested SNR stable for one or many mixed real patterns.
+    """
+
+    target_snr_db = config.target_snr_db
+    if target_snr_db is None or not np.any(clutter):
+        return clutter, 1.0
+
+    clean = np.asarray(clean, dtype=float)
+    clutter = np.asarray(clutter, dtype=float)
+    signal_power = float(np.mean(clean ** 2))
+    target_noise_power = signal_power / (10.0 ** (float(target_snr_db) / 10.0))
+    if target_noise_power <= 0:
+        return clutter, 1.0
+
+    def objective(beta):
+        noisy, _ = overlay_noise(
+            clean,
+            clutter * beta,
+            mask,
+            config.overlay_mode,
+            config.overlay_midpoint,
+            soft_dominance_temperature=config.soft_dominance_temperature,
+        )
+        residual = noisy - clean
+        return abs(float(np.mean(residual ** 2)) - target_noise_power)
+
+    # Hard dominance can be non-monotonic around the overlay midpoint.  Use a
+    # bounded log-grid search followed by local golden-section refinement rather
+    # than assuming residual power grows monotonically with beta.
+    candidates = np.concatenate(([0.0], np.geomspace(1e-4, 1e6, num=241)))
+    errors = np.array([objective(float(beta)) for beta in candidates])
+    best_index = int(np.argmin(errors))
+    best = float(candidates[best_index])
+
+    left = float(candidates[max(0, best_index - 1)])
+    right = float(candidates[min(len(candidates) - 1, best_index + 1)])
+    if right > left:
+        inv_phi = (math.sqrt(5.0) - 1.0) / 2.0
+        c = right - inv_phi * (right - left)
+        d = left + inv_phi * (right - left)
+        fc = objective(c)
+        fd = objective(d)
+        for _ in range(48):
+            if fc < fd:
+                right = d
+                d = c
+                fd = fc
+                c = right - inv_phi * (right - left)
+                fc = objective(c)
+            else:
+                left = c
+                c = d
+                fc = fd
+                d = left + inv_phi * (right - left)
+                fd = objective(d)
+        refined = (left + right) / 2.0
+        if objective(refined) < objective(best):
+            best = refined
+
+    return clutter * best, float(best)
 
 
 def scale_clutter_to_target_snr(clean, clutter, target_snr_db):
