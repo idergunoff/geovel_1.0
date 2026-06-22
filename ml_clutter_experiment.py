@@ -230,8 +230,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         if pattern is None:
             self._show_pattern_stats("Select a pattern from the library before preview.")
             return
-        self._display_profile(pattern.array, f"ML Clutter pattern {pattern.pattern_id}")
         self._display_profile(pattern.mask, f"ML Clutter pattern mask {pattern.pattern_id}")
+        self._display_profile(pattern.array, f"ML Clutter pattern {pattern.pattern_id}")
         self._show_pattern_stats(self._format_pattern_report(pattern))
 
     def delete_selected_pattern(self):
