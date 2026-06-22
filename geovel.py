@@ -1,5 +1,7 @@
 import traceback
 
+import numpy as np
+
 from load import *
 from filtering import *
 from draw import *
@@ -121,6 +123,25 @@ ui.pushButton_savgol.clicked.connect(calc_savgol)
 ui.pushButton_filtfilt.clicked.connect(calc_filtfilt)
 
 
+def draw_ml_clutter_preview(data, title):
+    draw_image(data)
+    radar = np.asarray(data, dtype=float)
+    if radar.ndim == 2 and radar.size:
+        if radar.shape[0] > 1:
+            mean_signal = np.nanmean(radar, axis=0)
+            center_signal = radar[radar.shape[0] // 2]
+            y_axis = range(len(mean_signal))
+            ui.signal.plot(y=y_axis, x=mean_signal, clear=True, pen='r')
+            ui.signal.plot(y=y_axis, x=center_signal, pen='b')
+        else:
+            trace = radar[0]
+            ui.signal.plot(y=range(len(trace)), x=trace, clear=True, pen='b')
+        ui.signal.showGrid(x=True, y=True)
+        ui.signal.invertY(True)
+        ui.signal.getAxis('left').setLabel('Samples')
+    set_info(title, 'blue')
+
+
 def open_ml_clutter_experiment():
     global ml_clutter_experiment_window
     if 'ml_clutter_experiment_window' not in globals() or ml_clutter_experiment_window is None:
@@ -129,7 +150,7 @@ def open_ml_clutter_experiment():
             profile_id_getter=get_profile_id,
             profile_name_getter=get_profile_name,
             info_callback=set_info,
-            visualization_callback=lambda data, title: (draw_image(data), set_info(title, 'blue')),
+            visualization_callback=draw_ml_clutter_preview,
         )
     ml_clutter_experiment_window.show()
     ml_clutter_experiment_window.raise_()
