@@ -157,6 +157,50 @@ def test_overlay_noise_by_soft_dominance_blends_instead_of_hard_replace():
     np.testing.assert_allclose(effective_mask, [[1.0, 1.0, 0.0]])
 
 
+
+def test_pattern_generator_keeps_target_snr_stable_when_mixing_more_real_patterns():
+    clean = np.full((64, 512), 128.0, dtype=float)
+    common = dict(
+        seed=11,
+        target_snr_db=30.0,
+        random_crop=False,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    _, _, _, one_meta = generate_pattern_clutter(clean, _library(), PatternClutterConfig(num_patterns=1, **common))
+    _, _, _, many_meta = generate_pattern_clutter(clean, _library(), PatternClutterConfig(num_patterns=4, **common))
+
+    assert abs(one_meta["actual_snr_db"] - 30.0) < 0.05
+    assert abs(many_meta["actual_snr_db"] - 30.0) < 0.05
+    assert abs(one_meta["actual_snr_db"] - many_meta["actual_snr_db"]) < 0.05
+
+
+def test_random_crop_does_not_move_preserved_pattern_depth():
+    pattern = _library().get("p1")
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=2,
+        target_snr_db=None,
+        random_crop=True,
+        min_crop_fraction=0.5,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    _, _, _, meta = generate_pattern_clutter(clean, PatternLibrary([pattern]), cfg)
+
+    assert "crop" in meta["placements"][0]["transform"]
+    assert meta["placements"][0]["placement"]["z_start"] == pattern.bbox[2]
+
+
 def test_place_pattern_clamps_preserved_depth_to_profile_bounds():
     arr = np.full((12, 64), 240.0, dtype=float)
     pattern = NoisePattern.create("src", arr, np.ones_like(arr), [0, 12, 500, 564], pattern_id="deep", tags=["ringing"])
