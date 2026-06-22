@@ -415,6 +415,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             pattern_strength=float(self.ui.doubleSpinBox_pattern_strength.value()),
             synthetic_strength=float(self.ui.doubleSpinBox_synthetic_strength.value()),
             target_snr_db=float(self.ui.doubleSpinBox_gen_target_snr.value()),
+            overlay_mode=self.ui.comboBox_pattern_overlay_mode.currentData() or "dominant_amplitude",
         )
 
     @staticmethod

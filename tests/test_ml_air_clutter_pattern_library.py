@@ -9,7 +9,7 @@ from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energ
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 
 
-def test_extract_pattern_from_manual_bbox_normalizes_and_masks():
+def test_extract_pattern_from_manual_bbox_preserves_raw_amplitude_and_masks():
     profile = np.arange(16 * 512, dtype=float).reshape(16, 512)
     mask = np.zeros_like(profile)
     mask[2:6, 10:30] = 1
@@ -19,8 +19,19 @@ def test_extract_pattern_from_manual_bbox_normalizes_and_masks():
     assert extracted["array"].shape == (4, 20)
     assert extracted["mask"].shape == (4, 20)
     assert extracted["stats"]["shape"] == [4, 20]
-    assert abs(float(np.mean(extracted["array"]))) < 1e-12
+    np.testing.assert_allclose(extracted["array"], profile[2:6, 10:30])
+    assert extracted["normalization"]["config"]["mode"] == "none"
     assert extracted["stats"]["mask_coverage"] == 1.0
+
+
+def test_extract_pattern_from_manual_bbox_can_still_standardize_when_requested():
+    profile = np.arange(16 * 512, dtype=float).reshape(16, 512)
+    config = PatternExtractionConfig(normalization_mode="standard")
+
+    extracted = extract_pattern_from_bbox(profile, [2, 6, 10, 30], config=config)
+
+    assert abs(float(np.mean(extracted["array"]))) < 1e-12
+    assert extracted["normalization"]["config"]["mode"] == "standard"
 
 
 def test_extract_energy_patterns_returns_high_energy_candidates():

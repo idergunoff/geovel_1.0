@@ -20,7 +20,7 @@ class PatternExtractionConfig:
     energy_percentile: float = 95.0
     min_mask_coverage: float = 0.05
     max_patterns: Optional[int] = 32
-    normalization_mode: str = "standard"
+    normalization_mode: str = "none"
 
     def to_dict(self):
         return asdict(self)
@@ -39,7 +39,11 @@ def validate_bbox(bbox: Sequence[int], shape: Tuple[int, int]):
 
 
 def extract_pattern_from_bbox(profile, bbox, mask=None, config=None):
-    """Extract and normalize one real-noise pattern from a manually selected bbox."""
+    """Extract one real-noise pattern from a manually selected bbox.
+
+    By default the raw amplitude scale is preserved so extracted patterns stay
+    comparable with clean radarograms in the 0..256 ML Clutter workflow.
+    """
 
     array = np.asarray(profile, dtype=float)
     _validate_profile_array(array)
