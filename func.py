@@ -437,18 +437,38 @@ def build_list(indexes_1, indexes_minus_1):
 
 
 def updatePlot():
-    # Получаем данные с радара из базы данных
-    rad = session.query(CurrentProfile.signal).first()
-    # Преобразуем данные из строки json в словарь python
-    radar = json.loads(rad[0])
-    # Выбираем область интереса (ROI) изображения
-    selected = roi.getArrayRegion(np.array(radar), img)
-    # Вычисляем половину размера области интереса
-    n = ui.spinBox_roi.value()//2
-    # Очищаем график перед отрисовкой новых данных
-    ui.signal.plot(y=range(0, 512), x=selected.mean(axis=0), clear=True, pen='r')
-    # Добавляем график визуализации одного из профилей данных
-    ui.signal.plot(y=range(0, 512), x=selected[n])
+    # Для интерактивного окна сигнала используем именно ту радарограмму,
+    # которая сейчас показана в ImageItem. Это важно для предпросмотров
+    # ML Clutter: они отображаются без записи в CurrentProfile, поэтому
+    # чтение сигнала из БД может дать профиль другой длины. В таком случае
+    # ROI на правой части предпросмотра выходит за пределы старого профиля и
+    # график превращается в прямую линию.
+    radar = getattr(img, 'image', None)
+    if radar is None:
+        rad = session.query(CurrentProfile.signal).first()
+        if rad is None:
+            return
+        radar = json.loads(rad[0])
+    radar = np.asarray(radar, dtype=float)
+    if radar.ndim != 2 or radar.size == 0:
+        return
+
+    # Выбираем область интереса на текущем изображении. Масштаб подписи оси X
+    # (2.5 м на измерение) не меняет индексы массива ImageItem, поэтому ROI
+    # должен вырезаться из массива текущего изображения, а не из БД.
+    selected = roi.getArrayRegion(radar, img)
+    if selected is None or selected.size == 0:
+        return
+    selected = np.asarray(selected, dtype=float)
+    if selected.ndim == 1:
+        selected = selected.reshape(1, -1)
+    if selected.shape[0] == 0 or selected.shape[1] == 0:
+        return
+
+    trace_index = min(max(0, ui.spinBox_roi.value() // 2), selected.shape[0] - 1)
+    y_axis = range(selected.shape[1])
+    ui.signal.plot(y=y_axis, x=np.nanmean(selected, axis=0), clear=True, pen='r')
+    ui.signal.plot(y=y_axis, x=selected[trace_index])
     # Включаем отображение координатной сетки на графике
     ui.signal.showGrid(x=True, y=True)
     # Инвертируем направление оси Y на графике
