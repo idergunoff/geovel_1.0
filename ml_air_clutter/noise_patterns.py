@@ -21,6 +21,7 @@ class PatternExtractionConfig:
     min_mask_coverage: float = 0.05
     max_patterns: Optional[int] = 32
     normalization_mode: str = "none"
+    frequency_bandwidth_bins: int = 2
 
     def to_dict(self):
         return asdict(self)
@@ -88,6 +89,64 @@ def extract_energy_patterns(profile, config=None):
     if config.max_patterns is not None:
         candidates = candidates[: int(config.max_patterns)]
     return candidates
+
+
+def extract_frequency_band_patterns(profile, config=None):
+    """Extract high-energy patterns filtered to their dominant frequency band.
+
+    Candidate windows are selected the same way as ``extract_energy_patterns``.
+    Each candidate is then transformed along the sample/depth axis, only the
+    strongest non-DC frequency bin and neighbouring bins are kept, and the
+    patch is reconstructed back to the original amplitude domain.
+    """
+
+    config = config or PatternExtractionConfig()
+    candidates = extract_energy_patterns(profile, config)
+    filtered = []
+    for candidate in candidates:
+        band_patch, band_meta = isolate_dominant_frequency_band(
+            candidate["array"],
+            bandwidth_bins=config.frequency_bandwidth_bins,
+        )
+        normalized = normalize_pattern_patch(band_patch, candidate["mask"], config)
+        normalized["bbox"] = candidate["bbox"]
+        normalized["energy_score"] = float(np.sqrt(np.mean(band_patch ** 2)))
+        normalized["mask_coverage"] = candidate["mask_coverage"]
+        normalized["frequency_band"] = band_meta
+        filtered.append(normalized)
+    filtered.sort(key=lambda item: item["energy_score"], reverse=True)
+    return filtered
+
+
+def isolate_dominant_frequency_band(patch, bandwidth_bins=2):
+    """Return a patch reconstructed from the strongest sample-axis band."""
+
+    arr = np.asarray(patch, dtype=float)
+    if arr.ndim != 2:
+        raise ValueError("Frequency-band pattern patch must be a 2D array.")
+    if arr.shape[1] < 2:
+        return arr.copy(), {"peak_bin": 0, "band_bins": [0], "bandwidth_bins": 0}
+
+    centered = arr - np.mean(arr, axis=1, keepdims=True)
+    spectrum = np.fft.rfft(centered, axis=1)
+    power = np.mean(np.abs(spectrum) ** 2, axis=0)
+    if power.size > 1:
+        peak_bin = int(np.argmax(power[1:]) + 1)
+    else:
+        peak_bin = 0
+    half_width = max(0, int(bandwidth_bins))
+    start = max(0, peak_bin - half_width)
+    end = min(spectrum.shape[1], peak_bin + half_width + 1)
+    band_spectrum = np.zeros_like(spectrum)
+    band_spectrum[:, start:end] = spectrum[:, start:end]
+    reconstructed = np.fft.irfft(band_spectrum, n=arr.shape[1], axis=1)
+    reconstructed += np.mean(arr, axis=1, keepdims=True)
+    return reconstructed, {
+        "peak_bin": peak_bin,
+        "band_bins": list(range(start, end)),
+        "bandwidth_bins": half_width,
+        "num_samples": int(arr.shape[1]),
+    }
 
 
 def normalize_pattern_patch(patch, mask, config):

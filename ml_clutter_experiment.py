@@ -5,7 +5,12 @@ import numpy as np
 from PyQt5 import QtWidgets
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
-from ml_air_clutter.noise_patterns import PatternExtractionConfig, extract_energy_patterns, extract_pattern_from_bbox
+from ml_air_clutter.noise_patterns import (
+    PatternExtractionConfig,
+    extract_energy_patterns,
+    extract_frequency_band_patterns,
+    extract_pattern_from_bbox,
+)
 from ml_air_clutter.pattern_generator import PatternClutterConfig, generate_pattern_clutter
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
@@ -195,8 +200,15 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
         config = PatternExtractionConfig()
         try:
-            extracted_patterns = extract_energy_patterns(source["data"], config)
+            extraction_mode = self.ui.comboBox_pattern_extraction_mode.currentData() or "high_energy"
+            if extraction_mode == "frequency_band":
+                extracted_patterns = extract_frequency_band_patterns(source["data"], config)
+            else:
+                extracted_patterns = extract_energy_patterns(source["data"], config)
             for extracted in extracted_patterns:
+                frequency_note = ""
+                if "frequency_band" in extracted:
+                    frequency_note = f"; frequency_band={extracted['frequency_band']}"
                 self.pattern_library.add_pattern(NoisePattern.create(
                     source_profile=source["name"],
                     array=extracted["array"],
@@ -204,14 +216,14 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
                     bbox=extracted["bbox"],
                     normalization=extracted["normalization"],
                     tags=["unknown"],
-                    comment=f"auto energy extraction; score={extracted['energy_score']:.6g}",
+                    comment=f"auto {extraction_mode} extraction; score={extracted['energy_score']:.6g}{frequency_note}",
                 ))
         except ValueError as exc:
             self._show_pattern_stats(str(exc))
             self._log(f"ML Clutter: energy pattern extraction failed: {exc}", "red")
             return
         self._refresh_pattern_library_ui()
-        self._log(f"Auto-extracted {len(extracted_patterns)} high-energy real-noise patterns from '{source['name']}'")
+        self._log(f"Auto-extracted {len(extracted_patterns)} {extraction_mode} real-noise patterns from '{source['name']}'")
 
     def preview_selected_pattern(self):
         pattern = self._selected_pattern()
@@ -416,6 +428,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             synthetic_strength=float(self.ui.doubleSpinBox_synthetic_strength.value()),
             target_snr_db=float(self.ui.doubleSpinBox_gen_target_snr.value()),
             overlay_mode=self.ui.comboBox_pattern_overlay_mode.currentData() or "dominant_amplitude",
+            soft_dominance_temperature=float(self.ui.doubleSpinBox_soft_dominance_temperature.value()),
         )
 
     @staticmethod
@@ -439,6 +452,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             f"Clutter RMS: {float(np.sqrt(np.mean(clutter ** 2))):.6g}",
             f"Mask coverage: {float(np.mean(mask > 0)) * 100.0:.3g}%",
             f"Noisy min/max: {float(np.min(noisy)):.6g} / {float(np.max(noisy)):.6g}",
+            f"Diagnostics: {json.dumps(meta.get('diagnostics', {}), indent=2)}",
             "Meta preview:",
             json.dumps(meta, indent=2)[:6000],
         ]
