@@ -36,6 +36,8 @@ class PatternClutterConfig:
     fade_probability: float = 0.7
     jitter_std: float = 0.01
     smooth_mask: bool = True
+    overlay_mode: str = "dominant_amplitude"  # dominant_amplitude | additive
+    preserve_pattern_depth: bool = True
     overlay_midpoint: float = 128.0
 
     def to_dict(self):
@@ -64,7 +66,15 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
     placements = []
     for pattern in patterns:
         transformed, transformed_mask, transform_meta = transform_pattern(pattern, config, rng)
-        placed, placed_mask, place_meta = place_pattern(clean.shape, transformed, transformed_mask, rng, config.smooth_mask)
+        target_z_start = _pattern_target_z_start(pattern, transform_meta) if config.preserve_pattern_depth else None
+        placed, placed_mask, place_meta = place_pattern(
+            clean.shape,
+            transformed,
+            transformed_mask,
+            rng,
+            config.smooth_mask,
+            target_z_start=target_z_start,
+        )
         pattern_clutter += placed
         pattern_mask = np.maximum(pattern_mask, placed_mask)
         placements.append({
@@ -88,20 +98,55 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
     pattern_clutter *= beta
     synthetic_clutter *= beta
     total_mask = np.maximum(pattern_mask, synthetic_mask)
-    noisy, dominance_mask = overlay_noise_by_dominant_amplitude(clean, total_noise, total_mask, config.overlay_midpoint)
+    noisy, effective_mask = overlay_noise(clean, total_noise, total_mask, config.overlay_mode, config.overlay_midpoint)
     effective_clutter = noisy - clean
     meta = {
         "config": config.to_dict(),
         "placements": placements,
         "target_snr_scale": beta,
         "actual_snr_db": compute_snr_db(clean, effective_clutter),
-        "overlay_mode": "dominant_amplitude",
+        "overlay_mode": config.overlay_mode,
         "overlay_midpoint": float(config.overlay_midpoint),
         "pattern_clutter": {"rms": _rms(pattern_clutter), "mask_coverage": float(np.mean(pattern_mask > 0))},
         "synthetic_clutter": synthetic_meta,
-        "total_clutter": {"rms": _rms(effective_clutter), "mask_coverage": float(np.mean(dominance_mask > 0))},
+        "total_clutter": {"rms": _rms(effective_clutter), "mask_coverage": float(np.mean(effective_mask > 0))},
     }
-    return noisy, effective_clutter, dominance_mask, meta
+    return noisy, effective_clutter, effective_mask, meta
+
+
+def overlay_noise(clean_profile, noise_profile, mask=None, mode="dominant_amplitude", midpoint=128.0):
+    """Overlay a noise image using the selected ML Clutter overlay mode."""
+
+    if mode == "dominant_amplitude":
+        return overlay_noise_by_dominant_amplitude(clean_profile, noise_profile, mask, midpoint)
+    if mode == "additive":
+        return overlay_noise_additive(clean_profile, noise_profile, mask, midpoint)
+    raise ValueError(f"Unsupported pattern overlay mode: {mode}")
+
+
+def overlay_noise_additive(clean_profile, noise_profile, mask=None, midpoint=128.0):
+    """Legacy additive overlay kept as an explicit selectable mode."""
+
+    clean = np.asarray(clean_profile, dtype=float)
+    noise = np.asarray(noise_profile, dtype=float)
+    if clean.shape != noise.shape:
+        raise ValueError(f"Noise profile shape {noise.shape} must match clean profile shape {clean.shape}.")
+    if mask is None:
+        active_mask = np.ones_like(clean, dtype=bool)
+    else:
+        mask_array = np.asarray(mask, dtype=float)
+        if mask_array.shape != clean.shape:
+            raise ValueError(f"Noise mask shape {mask_array.shape} must match clean profile shape {clean.shape}.")
+        active_mask = mask_array > 0
+
+    midpoint = float(midpoint)
+    min_amplitude = 0.0
+    max_amplitude = midpoint * 2.0
+    additive = np.zeros_like(clean, dtype=float)
+    additive[active_mask] = noise[active_mask] - midpoint
+    noisy = np.clip(clean + additive, min_amplitude, max_amplitude)
+    changed_mask = active_mask & (np.abs(noisy - clean) > 0)
+    return noisy, changed_mask.astype(float)
 
 
 def overlay_noise_by_dominant_amplitude(clean_profile, noise_profile, mask=None, midpoint=128.0):
@@ -179,19 +224,31 @@ def transform_pattern(pattern: NoisePattern, config: PatternClutterConfig, rng):
     return arr, mask, meta
 
 
-def place_pattern(clean_shape, pattern, mask, rng, smooth_mask=True):
+def place_pattern(clean_shape, pattern, mask, rng, smooth_mask=True, target_z_start=None):
     traces, samples = clean_shape
     h, w = pattern.shape
     h, w = min(h, traces), min(w, samples)
     pattern, mask = pattern[:h, :w], mask[:h, :w]
     x0 = int(rng.integers(0, traces - h + 1))
-    z0 = int(rng.integers(0, samples - w + 1))
+    if target_z_start is None:
+        z0 = int(rng.integers(0, samples - w + 1))
+    else:
+        z0 = min(max(0, int(target_z_start)), samples - w)
     out = np.zeros(clean_shape, dtype=float)
     out_mask = np.zeros(clean_shape, dtype=float)
     effective_mask = np.clip(mask, 0.0, 1.0) if smooth_mask else (mask > 0).astype(float)
     out[x0:x0 + h, z0:z0 + w] = pattern * effective_mask
     out_mask[x0:x0 + h, z0:z0 + w] = effective_mask
     return out, out_mask, {"x_start": x0, "x_end": x0 + h, "z_start": z0, "z_end": z0 + w, "placed_shape": [h, w]}
+
+
+def _pattern_target_z_start(pattern, transform_meta):
+    bbox = getattr(pattern, "bbox", None) or [0, 0, 0, 0]
+    source_z_start = int(bbox[2]) if len(bbox) >= 3 else 0
+    crop = transform_meta.get("crop")
+    if crop is not None and len(crop) == 4:
+        source_z_start += int(crop[2])
+    return source_z_start
 
 
 def scale_clutter_to_target_snr(clean, clutter, target_snr_db):

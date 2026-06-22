@@ -7,7 +7,9 @@ from .config import NormalizationConfig
 STANDARD_NORMALIZATION = "standard"
 ROBUST_NORMALIZATION = "robust"
 PERCENTILE_STANDARD_NORMALIZATION = "percentile_standard"
+NO_NORMALIZATION = "none"
 NORMALIZATION_MODES = {
+    NO_NORMALIZATION,
     STANDARD_NORMALIZATION,
     ROBUST_NORMALIZATION,
     PERCENTILE_STANDARD_NORMALIZATION,
@@ -38,7 +40,10 @@ class Normalizer:
             raise ValueError("Normalization eps must be positive.")
 
         params = {"mode": config.mode, "eps": float(config.eps), "input_shape": tuple(array.shape)}
-        if config.mode == STANDARD_NORMALIZATION:
+        if config.mode == NO_NORMALIZATION:
+            normalized = array.copy()
+            params.update({"center": 0.0, "scale": 1.0})
+        elif config.mode == STANDARD_NORMALIZATION:
             center = float(np.mean(array))
             scale = Normalizer._safe_scale(float(np.std(array)), config.eps)
             normalized = (array - center) / scale

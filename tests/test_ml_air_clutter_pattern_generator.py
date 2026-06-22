@@ -19,13 +19,23 @@ def _library():
     arr = np.zeros((12, 64), dtype=float)
     arr[:, 20:32] = 240.0
     mask = (arr != 0).astype(float)
-    pattern = NoisePattern.create("src", arr, mask, [0, 12, 0, 64], pattern_id="p1", tags=["ringing"])
+    pattern = NoisePattern.create("src", arr, mask, [0, 12, 100, 164], pattern_id="p1", tags=["ringing"])
     return PatternLibrary([pattern])
 
 
 def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay():
     clean = np.full((32, 512), 128.0, dtype=float)
-    cfg = PatternClutterConfig(seed=7, target_snr_db=None, random_crop=False, num_patterns=1, jitter_std=0.0)
+    cfg = PatternClutterConfig(
+        seed=7,
+        target_snr_db=None,
+        random_crop=False,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
 
     noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
 
@@ -36,6 +46,7 @@ def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay()
     assert np.any(mask)
     assert meta["placements"][0]["pattern_id"] == "p1"
     assert meta["overlay_mode"] == "dominant_amplitude"
+    assert meta["placements"][0]["placement"]["z_start"] == 100
     np.testing.assert_allclose(noisy, clean + clutter)
     assert np.all((noisy >= 0.0) & (noisy <= 256.0))
 
@@ -81,3 +92,47 @@ def test_overlay_noise_by_dominant_amplitude_preserves_range_and_selects_stronge
     np.testing.assert_allclose(noisy, [[256.0, 200.0, 20.0]])
     np.testing.assert_allclose(dominance_mask, [[1.0, 0.0, 0.0]])
     assert np.all((noisy >= 0.0) & (noisy <= 256.0))
+
+
+def test_pattern_generator_can_use_legacy_additive_overlay_mode():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="additive",
+        target_snr_db=None,
+        random_crop=False,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    assert meta["overlay_mode"] == "additive"
+    assert np.any(mask)
+    np.testing.assert_allclose(noisy, clean + clutter)
+    assert np.max(noisy) == 240.0
+
+
+def test_place_pattern_clamps_preserved_depth_to_profile_bounds():
+    arr = np.full((12, 64), 240.0, dtype=float)
+    pattern = NoisePattern.create("src", arr, np.ones_like(arr), [0, 12, 500, 564], pattern_id="deep", tags=["ringing"])
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        target_snr_db=None,
+        random_crop=False,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    _, _, _, meta = generate_pattern_clutter(clean, PatternLibrary([pattern]), cfg)
+
+    assert meta["placements"][0]["placement"]["z_start"] == 448
