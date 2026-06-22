@@ -36,6 +36,7 @@ class PatternClutterConfig:
     fade_probability: float = 0.7
     jitter_std: float = 0.01
     smooth_mask: bool = True
+    overlay_midpoint: float = 128.0
 
     def to_dict(self):
         data = asdict(self)
@@ -82,22 +83,57 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
         _, synthetic_clutter, synthetic_mask, synthetic_meta = generate_synthetic_clutter(clean, syn_cfg)
         synthetic_clutter *= float(config.synthetic_strength)
 
-    total_clutter = pattern_clutter + synthetic_clutter
-    total_clutter, beta = scale_clutter_to_target_snr(clean, total_clutter, config.target_snr_db)
+    total_noise = pattern_clutter + synthetic_clutter
+    total_noise, beta = scale_clutter_to_target_snr(clean, total_noise, config.target_snr_db)
     pattern_clutter *= beta
     synthetic_clutter *= beta
     total_mask = np.maximum(pattern_mask, synthetic_mask)
-    noisy = clean + total_clutter
+    noisy, dominance_mask = overlay_noise_by_dominant_amplitude(clean, total_noise, total_mask, config.overlay_midpoint)
+    effective_clutter = noisy - clean
     meta = {
         "config": config.to_dict(),
         "placements": placements,
         "target_snr_scale": beta,
-        "actual_snr_db": compute_snr_db(clean, total_clutter),
+        "actual_snr_db": compute_snr_db(clean, effective_clutter),
+        "overlay_mode": "dominant_amplitude",
+        "overlay_midpoint": float(config.overlay_midpoint),
         "pattern_clutter": {"rms": _rms(pattern_clutter), "mask_coverage": float(np.mean(pattern_mask > 0))},
         "synthetic_clutter": synthetic_meta,
-        "total_clutter": {"rms": _rms(total_clutter), "mask_coverage": float(np.mean(total_mask > 0))},
+        "total_clutter": {"rms": _rms(effective_clutter), "mask_coverage": float(np.mean(dominance_mask > 0))},
     }
-    return noisy, total_clutter, (total_mask > 0).astype(float), meta
+    return noisy, effective_clutter, dominance_mask, meta
+
+
+def overlay_noise_by_dominant_amplitude(clean_profile, noise_profile, mask=None, midpoint=128.0):
+    """Overlay noise where its centered absolute amplitude dominates clean signal.
+
+    Clean and noise are interpreted as amplitude images with the same scale
+    (for the ML Clutter workflow this is typically 0..256). Values are shifted
+    around ``midpoint`` and the larger absolute centered amplitude wins.
+    """
+
+    clean = np.asarray(clean_profile, dtype=float)
+    noise = np.asarray(noise_profile, dtype=float)
+    if clean.shape != noise.shape:
+        raise ValueError(f"Noise profile shape {noise.shape} must match clean profile shape {clean.shape}.")
+    if mask is None:
+        active_mask = np.ones_like(clean, dtype=bool)
+    else:
+        mask_array = np.asarray(mask, dtype=float)
+        if mask_array.shape != clean.shape:
+            raise ValueError(f"Noise mask shape {mask_array.shape} must match clean profile shape {clean.shape}.")
+        active_mask = mask_array > 0
+
+    midpoint = float(midpoint)
+    min_amplitude = 0.0
+    max_amplitude = midpoint * 2.0
+    clipped_noise = np.clip(noise, min_amplitude, max_amplitude)
+    clean_centered = clean - midpoint
+    noise_centered = clipped_noise - midpoint
+    noise_dominates = active_mask & (np.abs(noise_centered) > np.abs(clean_centered))
+    noisy = np.clip(clean.copy(), min_amplitude, max_amplitude)
+    noisy[noise_dominates] = clipped_noise[noise_dominates]
+    return noisy, noise_dominates.astype(float)
 
 
 def transform_pattern(pattern: NoisePattern, config: PatternClutterConfig, rng):

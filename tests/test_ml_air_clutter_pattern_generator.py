@@ -5,22 +5,27 @@ import numpy as np
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from ml_air_clutter.pattern_generator import PatternClutterConfig, generate_pattern_clutter, transform_pattern
+from ml_air_clutter.pattern_generator import (
+    PatternClutterConfig,
+    generate_pattern_clutter,
+    overlay_noise_by_dominant_amplitude,
+    transform_pattern,
+)
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.synthetic_clutter import SyntheticClutterConfig
 
 
 def _library():
     arr = np.zeros((12, 64), dtype=float)
-    arr[:, 20:32] = 2.0
+    arr[:, 20:32] = 240.0
     mask = (arr != 0).astype(float)
     pattern = NoisePattern.create("src", arr, mask, [0, 12, 0, 64], pattern_id="p1", tags=["ringing"])
     return PatternLibrary([pattern])
 
 
-def test_pattern_generator_places_real_pattern_and_scales_to_snr():
-    clean = np.ones((32, 512), dtype=float)
-    cfg = PatternClutterConfig(seed=7, target_snr_db=10.0, random_crop=False, num_patterns=1, jitter_std=0.0)
+def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(seed=7, target_snr_db=None, random_crop=False, num_patterns=1, jitter_std=0.0)
 
     noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
 
@@ -30,7 +35,9 @@ def test_pattern_generator_places_real_pattern_and_scales_to_snr():
     assert np.any(clutter)
     assert np.any(mask)
     assert meta["placements"][0]["pattern_id"] == "p1"
-    assert abs(meta["actual_snr_db"] - 10.0) < 1e-6
+    assert meta["overlay_mode"] == "dominant_amplitude"
+    np.testing.assert_allclose(noisy, clean + clutter)
+    assert np.all((noisy >= 0.0) & (noisy <= 256.0))
 
 
 def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations():
@@ -50,7 +57,7 @@ def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations()
 
 
 def test_mixed_mode_keeps_pattern_and_synthetic_components_in_meta():
-    clean = np.ones((40, 512), dtype=float)
+    clean = np.full((40, 512), 128.0, dtype=float)
     cfg = PatternClutterConfig(seed=5, mode="mixed", target_snr_db=None, random_crop=False, jitter_std=0.0)
     syn_cfg = SyntheticClutterConfig(seed=5, target_snr_db=None, hyperbolas=False, sloped_events=False, ringing=False, vertical_spikes=True, noise_zones=False)
 
@@ -62,3 +69,15 @@ def test_mixed_mode_keeps_pattern_and_synthetic_components_in_meta():
     assert meta["synthetic_clutter"] is not None
     assert meta["pattern_clutter"]["rms"] > 0
     assert meta["total_clutter"]["rms"] > 0
+
+
+def test_overlay_noise_by_dominant_amplitude_preserves_range_and_selects_stronger_signal():
+    clean = np.array([[128.0, 200.0, 20.0]])
+    noise = np.array([[300.0, 150.0, 250.0]])
+    mask = np.array([[1.0, 1.0, 0.0]])
+
+    noisy, dominance_mask = overlay_noise_by_dominant_amplitude(clean, noise, mask, midpoint=128.0)
+
+    np.testing.assert_allclose(noisy, [[256.0, 200.0, 20.0]])
+    np.testing.assert_allclose(dominance_mask, [[1.0, 0.0, 0.0]])
+    assert np.all((noisy >= 0.0) & (noisy <= 256.0))
