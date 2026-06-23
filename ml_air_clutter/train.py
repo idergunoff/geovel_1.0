@@ -14,6 +14,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 
+from .metrics import paired_cleaning_metrics, summarize_metric_rows, write_metrics_report
 from .model import ModelConfig, checkpoint_payload, count_parameters
 
 try:
@@ -218,6 +219,9 @@ def train_model(
                 if progress_callback:
                     progress_callback("log_message", f"Early stopping at epoch {epoch}; best epoch={best_epoch}.")
                 break
+    metric_report = evaluate_model_on_splits(model, model_config, samples, device)
+    metrics_path = write_metrics_report(output_dir / "metrics.json", metric_report)
+
     summary = {
         "training_schema": "ml_air_clutter_training_v1",
         "config": config.to_dict(),
@@ -230,6 +234,8 @@ def train_model(
         "train_log": str(log_path),
         "model_best": str(best_path),
         "model_last": str(last_path),
+        "metrics_report": str(metrics_path),
+        "metrics": metric_report,
         "history": history,
     }
     with (output_dir / "training_summary.json").open("w", encoding="utf-8") as fh:
@@ -248,3 +254,44 @@ def _save_training_checkpoint(path, model, model_config, training_config, metric
         "best_validation_loss": best_loss,
     })
     torch.save(payload, path)
+
+
+def evaluate_model_on_splits(model, model_config: ModelConfig, samples: Dict[str, List[Dict[str, object]]], device=None) -> Dict[str, object]:
+    """Run paired before/after quality metrics for validation and test samples."""
+
+    _require_torch()
+    if device is None:
+        device = next(model.parameters()).device
+    report = {"metrics_schema": "ml_air_clutter_quality_metrics_v1", "splits": {}}
+    model.eval()
+    for split in ("train", "validation", "test"):
+        split_samples = list(samples.get(split, []))
+        rows = []
+        previews = []
+        for index, sample in enumerate(split_samples):
+            with torch.no_grad():
+                x = torch.from_numpy(make_input_channels(sample["noisy"], model_config.input_channels)[None, ...] / 256.0).to(device)
+                prediction = model(x).detach().cpu().numpy()[0, 0] * 256.0
+            metrics = paired_cleaning_metrics(sample["clean"], sample["noisy"], prediction, data_range=256.0)
+            metrics.update({
+                "sample_index": index,
+                "pair_id": sample.get("pair_id", ""),
+                "x_start": sample.get("x_start", 0),
+                "x_end": sample.get("x_end", 0),
+            })
+            rows.append(metrics)
+            if len(previews) < 3:
+                previews.append({
+                    "sample_index": index,
+                    "pair_id": sample.get("pair_id", ""),
+                    "x_start": sample.get("x_start", 0),
+                    "x_end": sample.get("x_end", 0),
+                    "mae_before": metrics["mae_before"],
+                    "mae_after": metrics["mae_after"],
+                    "snr_gain_db": metrics["snr_gain_db"],
+                })
+        report["splits"][split] = {
+            "summary": summarize_metric_rows(rows),
+            "samples_preview": previews,
+        }
+    return report
