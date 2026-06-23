@@ -19,10 +19,7 @@ class Ui_MLClutterExperiment(object):
         self.tab_noise_patterns = self._add_noise_patterns_tab()
         self.tab_generator = self._add_generator_tab()
         self.tab_dataset = self._add_dataset_tab()
-        self.tab_model = self._add_placeholder_tab(
-            "tab_model",
-            "Choose baseline CNN, DnCNN, or U-Net model settings.",
-        )
+        self.tab_model = self._add_model_tab()
         self.tab_training = self._add_placeholder_tab(
             "tab_training",
             "Run training, validation, checkpoints, and training metrics.",
@@ -345,6 +342,65 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.addTab(tab, "")
         return tab
 
+    def _add_model_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_model")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText(
+            "Baseline supervised direct-clean model: input noisy patch -> output clean patch. "
+            "Residual/clutter modes are diagnostic only for the MVP."
+        )
+        layout.addWidget(intro, 0, 0, 1, 4)
+        self.comboBox_model_type = QtWidgets.QComboBox(tab)
+        self.comboBox_model_type.setObjectName("comboBox_model_type")
+        self.comboBox_model_type.addItem("Baseline CNN", "baseline_cnn")
+        self.comboBox_model_type.addItem("Small U-Net", "small_unet")
+        self.spinBox_model_base_channels = QtWidgets.QSpinBox(tab)
+        self.spinBox_model_base_channels.setObjectName("spinBox_model_base_channels")
+        self.spinBox_model_base_channels.setRange(1, 512)
+        self.spinBox_model_base_channels.setValue(16)
+        self.spinBox_model_num_layers = QtWidgets.QSpinBox(tab)
+        self.spinBox_model_num_layers.setObjectName("spinBox_model_num_layers")
+        self.spinBox_model_num_layers.setRange(3, 64)
+        self.spinBox_model_num_layers.setValue(5)
+        for row, (label, widget) in enumerate([
+            ("model", self.comboBox_model_type),
+            ("base channels", self.spinBox_model_base_channels),
+            ("CNN layers", self.spinBox_model_num_layers),
+        ], start=1):
+            layout.addWidget(QtWidgets.QLabel(label, tab), row, 0)
+            layout.addWidget(widget, row, 1)
+        self.checkBox_model_raw = QtWidgets.QCheckBox(tab)
+        self.checkBox_model_raw.setObjectName("checkBox_model_raw")
+        self.checkBox_model_raw.setChecked(True)
+        self.checkBox_model_envelope = QtWidgets.QCheckBox(tab)
+        self.checkBox_model_envelope.setObjectName("checkBox_model_envelope")
+        self.checkBox_model_grad_x = QtWidgets.QCheckBox(tab)
+        self.checkBox_model_grad_x.setObjectName("checkBox_model_grad_x")
+        self.checkBox_model_grad_z = QtWidgets.QCheckBox(tab)
+        self.checkBox_model_grad_z.setObjectName("checkBox_model_grad_z")
+        self.groupBox_model_channels = QtWidgets.QGroupBox(tab)
+        self.groupBox_model_channels.setObjectName("groupBox_model_channels")
+        channel_layout = QtWidgets.QVBoxLayout(self.groupBox_model_channels)
+        for checkbox in (self.checkBox_model_raw, self.checkBox_model_envelope, self.checkBox_model_grad_x, self.checkBox_model_grad_z):
+            channel_layout.addWidget(checkbox)
+        layout.addWidget(self.groupBox_model_channels, 1, 2, 3, 2)
+        self.pushButton_create_model = QtWidgets.QPushButton(tab)
+        self.pushButton_create_model.setObjectName("pushButton_create_model")
+        layout.addWidget(self.pushButton_create_model, 4, 0)
+        self.pushButton_save_untrained_checkpoint = QtWidgets.QPushButton(tab)
+        self.pushButton_save_untrained_checkpoint.setObjectName("pushButton_save_untrained_checkpoint")
+        layout.addWidget(self.pushButton_save_untrained_checkpoint, 4, 1)
+        self.textEdit_model_summary = QtWidgets.QTextEdit(tab)
+        self.textEdit_model_summary.setReadOnly(True)
+        self.textEdit_model_summary.setObjectName("textEdit_model_summary")
+        layout.addWidget(self.textEdit_model_summary, 5, 0, 1, 4)
+        layout.setRowStretch(5, 1)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
     def _add_placeholder_tab(self, object_name, message):
         tab = QtWidgets.QWidget()
         tab.setObjectName(object_name)
@@ -401,6 +457,13 @@ class Ui_MLClutterExperiment(object):
         self.pushButton_preview_random_patch.setText(_translate("MLClutterExperiment", "Preview Random Patch"))
         self.pushButton_save_dataset.setText(_translate("MLClutterExperiment", "Save Dataset"))
         self.pushButton_load_dataset.setText(_translate("MLClutterExperiment", "Load Dataset"))
+        self.groupBox_model_channels.setTitle(_translate("MLClutterExperiment", "Input channels"))
+        self.checkBox_model_raw.setText(_translate("MLClutterExperiment", "raw"))
+        self.checkBox_model_envelope.setText(_translate("MLClutterExperiment", "envelope (optional)"))
+        self.checkBox_model_grad_x.setText(_translate("MLClutterExperiment", "grad_x (optional)"))
+        self.checkBox_model_grad_z.setText(_translate("MLClutterExperiment", "grad_z (optional)"))
+        self.pushButton_create_model.setText(_translate("MLClutterExperiment", "Create Model"))
+        self.pushButton_save_untrained_checkpoint.setText(_translate("MLClutterExperiment", "Save Untrained Checkpoint"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))
