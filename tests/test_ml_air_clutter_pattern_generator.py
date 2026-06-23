@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from ml_air_clutter.pattern_generator import (
     PatternClutterConfig,
     generate_pattern_clutter,
+    merge_raw_dominant_pattern,
     overlay_noise_by_dominant_amplitude,
     overlay_noise_by_soft_dominance,
     transform_pattern,
@@ -50,6 +51,85 @@ def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay()
     assert meta["placements"][0]["placement"]["z_start"] == 100
     np.testing.assert_allclose(noisy, clean + clutter)
     assert np.all((noisy >= 0.0) & (noisy <= 256.0))
+
+
+def test_raw_dominant_mode_places_untransformed_pattern_without_snr_scaling():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="raw_dominant_amplitude",
+        target_snr_db=-30.0,
+        random_crop=True,
+        num_patterns=1,
+        pattern_strength=0.0,
+        jitter_std=1.0,
+        fade_probability=1.0,
+        polarity_flip_probability=1.0,
+        amplitude_scale_min=0.1,
+        amplitude_scale_max=0.1,
+        trace_stretch_min=2.0,
+        trace_stretch_max=2.0,
+        sample_stretch_min=2.0,
+        sample_stretch_max=2.0,
+    )
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    placement = meta["placements"][0]["placement"]
+    transform = meta["placements"][0]["transform"]
+    assert meta["overlay_mode"] == "raw_dominant_amplitude"
+    assert meta["target_snr_scale"] == 1.0
+    assert transform == {"mode": "raw", "original_shape": [12, 64]}
+    assert placement["z_start"] == 100
+    assert placement["placed_shape"] == [12, 64]
+    assert np.max(noisy) == 240.0
+    np.testing.assert_allclose(noisy, clean + clutter)
+    assert np.count_nonzero(mask) == 12 * 12
+
+
+def test_raw_dominant_mode_does_not_add_overlapping_identical_patterns():
+    base = np.zeros((4, 4), dtype=float)
+    base_mask = np.zeros_like(base)
+    placed = np.full((4, 4), 240.0, dtype=float)
+    placed_mask = np.ones_like(placed)
+
+    merged, merged_mask = merge_raw_dominant_pattern(base, base_mask, placed, placed_mask, midpoint=128.0)
+    merged_again, merged_again_mask = merge_raw_dominant_pattern(merged, merged_mask, placed, placed_mask, midpoint=128.0)
+
+    np.testing.assert_allclose(merged_again, placed)
+    np.testing.assert_allclose(merged_again_mask, placed_mask)
+    assert np.max(merged_again) == 240.0
+
+
+def test_raw_dominant_mode_keeps_multiple_same_pattern_placements_at_source_amplitude():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="raw_dominant_amplitude",
+        target_snr_db=-30.0,
+        random_crop=True,
+        num_patterns=4,
+        pattern_strength=0.0,
+        jitter_std=1.0,
+        fade_probability=1.0,
+        polarity_flip_probability=1.0,
+        amplitude_scale_min=0.1,
+        amplitude_scale_max=0.1,
+        trace_stretch_min=2.0,
+        trace_stretch_max=2.0,
+        sample_stretch_min=2.0,
+        sample_stretch_max=2.0,
+    )
+
+    noisy, _, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    assert len(meta["placements"]) == 4
+    assert meta["target_snr_scale"] == 1.0
+    assert {tuple(p["placement"]["placed_shape"]) for p in meta["placements"]} == {(12, 64)}
+    assert {p["placement"]["z_start"] for p in meta["placements"]} == {100}
+    assert all(p["transform"] == {"mode": "raw", "original_shape": [12, 64]} for p in meta["placements"])
+    assert np.max(noisy) == 240.0
+    assert np.all(noisy[mask > 0] == 240.0)
 
 
 def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations():
@@ -155,6 +235,50 @@ def test_overlay_noise_by_soft_dominance_blends_instead_of_hard_replace():
     assert 150.0 < noisy[0, 1] < 200.0
     assert noisy[0, 2] == 20.0
     np.testing.assert_allclose(effective_mask, [[1.0, 1.0, 0.0]])
+
+
+
+def test_pattern_generator_keeps_target_snr_stable_when_mixing_more_real_patterns():
+    clean = np.full((64, 512), 128.0, dtype=float)
+    common = dict(
+        seed=11,
+        target_snr_db=30.0,
+        random_crop=False,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    _, _, _, one_meta = generate_pattern_clutter(clean, _library(), PatternClutterConfig(num_patterns=1, **common))
+    _, _, _, many_meta = generate_pattern_clutter(clean, _library(), PatternClutterConfig(num_patterns=4, **common))
+
+    assert abs(one_meta["actual_snr_db"] - 30.0) < 0.05
+    assert abs(many_meta["actual_snr_db"] - 30.0) < 0.05
+    assert abs(one_meta["actual_snr_db"] - many_meta["actual_snr_db"]) < 0.05
+
+
+def test_random_crop_does_not_move_preserved_pattern_depth():
+    pattern = _library().get("p1")
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=2,
+        target_snr_db=None,
+        random_crop=True,
+        min_crop_fraction=0.5,
+        num_patterns=1,
+        jitter_std=0.0,
+        fade_probability=0.0,
+        polarity_flip_probability=0.0,
+        amplitude_scale_min=1.0,
+        amplitude_scale_max=1.0,
+    )
+
+    _, _, _, meta = generate_pattern_clutter(clean, PatternLibrary([pattern]), cfg)
+
+    assert "crop" in meta["placements"][0]["transform"]
+    assert meta["placements"][0]["placement"]["z_start"] == pattern.bbox[2]
 
 
 def test_place_pattern_clamps_preserved_depth_to_profile_bounds():
