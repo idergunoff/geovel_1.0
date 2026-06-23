@@ -418,11 +418,13 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _current_pattern_clutter_config(self, mode):
         pattern = self._selected_pattern()
-        pattern_ids = [pattern.pattern_id] if pattern is not None else None
+        pattern_selection_mode = self.ui.comboBox_pattern_selection_mode.currentData() or "selected"
+        pattern_ids = [pattern.pattern_id] if pattern is not None and pattern_selection_mode == "selected" else None
         return PatternClutterConfig(
             seed=int(self.ui.spinBox_gen_seed.value()),
             mode=mode,
             pattern_ids=pattern_ids,
+            pattern_selection_mode=pattern_selection_mode,
             num_patterns=int(self.ui.spinBox_pattern_num.value()),
             pattern_strength=float(self.ui.doubleSpinBox_pattern_strength.value()),
             synthetic_strength=float(self.ui.doubleSpinBox_synthetic_strength.value()),

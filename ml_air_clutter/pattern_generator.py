@@ -19,6 +19,7 @@ class PatternClutterConfig:
     seed: Optional[int] = 42
     mode: str = "pattern"  # pattern | mixed
     pattern_ids: Optional[Sequence[str]] = None
+    pattern_selection_mode: str = "selected"  # selected | random
     num_patterns: int = 1
     amplitude_scale_min: float = 0.8
     amplitude_scale_max: float = 1.2
@@ -36,7 +37,7 @@ class PatternClutterConfig:
     fade_probability: float = 0.7
     jitter_std: float = 0.01
     smooth_mask: bool = True
-    overlay_mode: str = "dominant_amplitude"  # dominant_amplitude | soft_dominance | additive
+    overlay_mode: str = "dominant_amplitude"  # raw_dominant_amplitude | dominant_amplitude | soft_dominance | additive
     preserve_pattern_depth: bool = True
     overlay_midpoint: float = 128.0
     soft_dominance_temperature: float = 12.0
@@ -65,8 +66,14 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
     pattern_clutter = np.zeros_like(clean, dtype=float)
     pattern_mask = np.zeros_like(clean, dtype=float)
     placements = []
+    raw_dominant_mode = config.overlay_mode == "raw_dominant_amplitude"
     for pattern in patterns:
-        transformed, transformed_mask, transform_meta = transform_pattern(pattern, config, rng)
+        if raw_dominant_mode:
+            transformed = np.asarray(pattern.array, dtype=float).copy()
+            transformed_mask = np.asarray(pattern.mask, dtype=float).copy()
+            transform_meta = {"mode": "raw", "original_shape": list(transformed.shape)}
+        else:
+            transformed, transformed_mask, transform_meta = transform_pattern(pattern, config, rng)
         target_z_start = _pattern_target_z_start(pattern, transform_meta) if config.preserve_pattern_depth else None
         placed, placed_mask, place_meta = place_pattern(
             clean.shape,
@@ -76,8 +83,17 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
             config.smooth_mask,
             target_z_start=target_z_start,
         )
-        pattern_clutter += placed
-        pattern_mask = np.maximum(pattern_mask, placed_mask)
+        if raw_dominant_mode:
+            pattern_clutter, pattern_mask = merge_raw_dominant_pattern(
+                pattern_clutter,
+                pattern_mask,
+                placed,
+                placed_mask,
+                config.overlay_midpoint,
+            )
+        else:
+            pattern_clutter += placed
+            pattern_mask = np.maximum(pattern_mask, placed_mask)
         placements.append({
             "pattern_id": pattern.pattern_id,
             "source_profile": pattern.source_profile,
@@ -85,22 +101,24 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
             "placement": place_meta,
         })
 
-    pattern_clutter *= float(config.pattern_strength)
+    if not raw_dominant_mode:
+        pattern_clutter *= float(config.pattern_strength)
     synthetic_clutter = np.zeros_like(clean, dtype=float)
     synthetic_mask = np.zeros_like(clean, dtype=float)
     synthetic_meta = None
     if config.mode == "mixed":
         syn_cfg = synthetic_config or SyntheticClutterConfig(seed=config.seed, target_snr_db=None)
         _, synthetic_clutter, synthetic_mask, synthetic_meta = generate_synthetic_clutter(clean, syn_cfg)
-        synthetic_clutter *= float(config.synthetic_strength)
+        if not raw_dominant_mode:
+            synthetic_clutter *= float(config.synthetic_strength)
 
     total_noise = pattern_clutter + synthetic_clutter
     pre_overlay_noise_rms = _rms(total_noise)
-    total_noise, beta = scale_clutter_to_target_snr(clean, total_noise, config.target_snr_db)
+    total_mask = np.maximum(pattern_mask, synthetic_mask)
+    total_noise, beta = scale_clutter_to_target_snr_for_overlay(clean, total_noise, total_mask, config)
     scaled_noise_rms = _rms(total_noise)
     pattern_clutter *= beta
     synthetic_clutter *= beta
-    total_mask = np.maximum(pattern_mask, synthetic_mask)
     noisy, effective_mask = overlay_noise(
         clean,
         total_noise,
@@ -136,10 +154,39 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
     return noisy, effective_clutter, effective_mask, meta
 
 
+def merge_raw_dominant_pattern(base_noise, base_mask, placed_noise, placed_mask, midpoint=128.0):
+    """Merge raw pattern layers without summing or changing amplitudes.
+
+    Raw dominant placement treats every pattern as an already scaled amplitude
+    image. Multiple raw placements therefore must not be added together, because
+    addition would make overlapping identical patterns brighter/darker than the
+    saved source pattern. In overlaps, keep the pixel whose centered amplitude
+    is dominant; outside overlaps, copy the placed raw signal as-is.
+    """
+
+    base = np.asarray(base_noise, dtype=float).copy()
+    base_m = np.asarray(base_mask, dtype=float).copy()
+    placed = np.asarray(placed_noise, dtype=float)
+    placed_m = np.asarray(placed_mask, dtype=float)
+    if base.shape != placed.shape:
+        raise ValueError(f"Placed raw pattern shape {placed.shape} must match base shape {base.shape}.")
+    if base_m.shape != base.shape or placed_m.shape != base.shape:
+        raise ValueError("Raw pattern masks must match raw pattern noise shapes.")
+
+    active = placed_m > 0
+    empty = base_m <= 0
+    midpoint = float(midpoint)
+    placed_dominates = np.abs(placed - midpoint) >= np.abs(base - midpoint)
+    update = active & (empty | placed_dominates)
+    base[update] = placed[update]
+    base_m = np.maximum(base_m, placed_m)
+    return base, base_m
+
+
 def overlay_noise(clean_profile, noise_profile, mask=None, mode="dominant_amplitude", midpoint=128.0, soft_dominance_temperature=12.0):
     """Overlay a noise image using the selected ML Clutter overlay mode."""
 
-    if mode == "dominant_amplitude":
+    if mode in {"raw_dominant_amplitude", "dominant_amplitude"}:
         return overlay_noise_by_dominant_amplitude(clean_profile, noise_profile, mask, midpoint)
     if mode == "soft_dominance":
         return overlay_noise_by_soft_dominance(clean_profile, noise_profile, mask, midpoint, soft_dominance_temperature)
@@ -303,12 +350,79 @@ def place_pattern(clean_shape, pattern, mask, rng, smooth_mask=True, target_z_st
 
 
 def _pattern_target_z_start(pattern, transform_meta):
+    del transform_meta  # Depth is anchored to the extracted pattern bbox, not to random augmentations.
     bbox = getattr(pattern, "bbox", None) or [0, 0, 0, 0]
-    source_z_start = int(bbox[2]) if len(bbox) >= 3 else 0
-    crop = transform_meta.get("crop")
-    if crop is not None and len(crop) == 4:
-        source_z_start += int(crop[2])
-    return source_z_start
+    return int(bbox[2]) if len(bbox) >= 3 else 0
+
+
+def scale_clutter_to_target_snr_for_overlay(clean, clutter, mask, config):
+    """Scale clutter so the final overlaid residual is closest to target SNR.
+
+    Dominant/soft-dominance overlays are nonlinear: the pre-overlay pattern RMS
+    is not the same as the residual left in ``noisy - clean``.  In particular,
+    changing ``num_patterns`` changes mask coverage and overlap, so a single
+    pre-overlay RMS normalization produces visibly different intensities.  This
+    helper chooses a global multiplier against the actual overlay residual,
+    keeping the requested SNR stable for one or many mixed real patterns.
+    """
+
+    target_snr_db = config.target_snr_db
+    if config.overlay_mode == "raw_dominant_amplitude" or target_snr_db is None or not np.any(clutter):
+        return clutter, 1.0
+
+    clean = np.asarray(clean, dtype=float)
+    clutter = np.asarray(clutter, dtype=float)
+    signal_power = float(np.mean(clean ** 2))
+    target_noise_power = signal_power / (10.0 ** (float(target_snr_db) / 10.0))
+    if target_noise_power <= 0:
+        return clutter, 1.0
+
+    def objective(beta):
+        noisy, _ = overlay_noise(
+            clean,
+            clutter * beta,
+            mask,
+            config.overlay_mode,
+            config.overlay_midpoint,
+            soft_dominance_temperature=config.soft_dominance_temperature,
+        )
+        residual = noisy - clean
+        return abs(float(np.mean(residual ** 2)) - target_noise_power)
+
+    # Hard dominance can be non-monotonic around the overlay midpoint.  Use a
+    # bounded log-grid search followed by local golden-section refinement rather
+    # than assuming residual power grows monotonically with beta.
+    candidates = np.concatenate(([0.0], np.geomspace(1e-4, 1e6, num=241)))
+    errors = np.array([objective(float(beta)) for beta in candidates])
+    best_index = int(np.argmin(errors))
+    best = float(candidates[best_index])
+
+    left = float(candidates[max(0, best_index - 1)])
+    right = float(candidates[min(len(candidates) - 1, best_index + 1)])
+    if right > left:
+        inv_phi = (math.sqrt(5.0) - 1.0) / 2.0
+        c = right - inv_phi * (right - left)
+        d = left + inv_phi * (right - left)
+        fc = objective(c)
+        fd = objective(d)
+        for _ in range(48):
+            if fc < fd:
+                right = d
+                d = c
+                fd = fc
+                c = right - inv_phi * (right - left)
+                fc = objective(c)
+            else:
+                left = c
+                c = d
+                fc = fd
+                d = left + inv_phi * (right - left)
+                fd = objective(d)
+        refined = (left + right) / 2.0
+        if objective(refined) < objective(best):
+            best = refined
+
+    return clutter * best, float(best)
 
 
 def scale_clutter_to_target_snr(clean, clutter, target_snr_db):
@@ -325,7 +439,10 @@ def scale_clutter_to_target_snr(clean, clutter, target_snr_db):
 
 def _select_patterns(pattern_library, config, rng):
     patterns = pattern_library.patterns if isinstance(pattern_library, PatternLibrary) else list(pattern_library)
-    if config.pattern_ids:
+    selection_mode = getattr(config, "pattern_selection_mode", "selected")
+    if selection_mode not in {"selected", "random"}:
+        raise ValueError(f"Unsupported pattern selection mode: {selection_mode}")
+    if selection_mode == "selected" and config.pattern_ids:
         allowed = set(config.pattern_ids)
         patterns = [p for p in patterns if p.pattern_id in allowed]
     if not patterns:
