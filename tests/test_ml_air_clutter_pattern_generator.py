@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from ml_air_clutter.pattern_generator import (
     PatternClutterConfig,
     generate_pattern_clutter,
+    merge_raw_dominant_pattern,
     overlay_noise_by_dominant_amplitude,
     overlay_noise_by_soft_dominance,
     transform_pattern,
@@ -84,6 +85,51 @@ def test_raw_dominant_mode_places_untransformed_pattern_without_snr_scaling():
     assert np.max(noisy) == 240.0
     np.testing.assert_allclose(noisy, clean + clutter)
     assert np.count_nonzero(mask) == 12 * 12
+
+
+def test_raw_dominant_mode_does_not_add_overlapping_identical_patterns():
+    base = np.zeros((4, 4), dtype=float)
+    base_mask = np.zeros_like(base)
+    placed = np.full((4, 4), 240.0, dtype=float)
+    placed_mask = np.ones_like(placed)
+
+    merged, merged_mask = merge_raw_dominant_pattern(base, base_mask, placed, placed_mask, midpoint=128.0)
+    merged_again, merged_again_mask = merge_raw_dominant_pattern(merged, merged_mask, placed, placed_mask, midpoint=128.0)
+
+    np.testing.assert_allclose(merged_again, placed)
+    np.testing.assert_allclose(merged_again_mask, placed_mask)
+    assert np.max(merged_again) == 240.0
+
+
+def test_raw_dominant_mode_keeps_multiple_same_pattern_placements_at_source_amplitude():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="raw_dominant_amplitude",
+        target_snr_db=-30.0,
+        random_crop=True,
+        num_patterns=4,
+        pattern_strength=0.0,
+        jitter_std=1.0,
+        fade_probability=1.0,
+        polarity_flip_probability=1.0,
+        amplitude_scale_min=0.1,
+        amplitude_scale_max=0.1,
+        trace_stretch_min=2.0,
+        trace_stretch_max=2.0,
+        sample_stretch_min=2.0,
+        sample_stretch_max=2.0,
+    )
+
+    noisy, _, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    assert len(meta["placements"]) == 4
+    assert meta["target_snr_scale"] == 1.0
+    assert {tuple(p["placement"]["placed_shape"]) for p in meta["placements"]} == {(12, 64)}
+    assert {p["placement"]["z_start"] for p in meta["placements"]} == {100}
+    assert all(p["transform"] == {"mode": "raw", "original_shape": [12, 64]} for p in meta["placements"])
+    assert np.max(noisy) == 240.0
+    assert np.all(noisy[mask > 0] == 240.0)
 
 
 def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations():

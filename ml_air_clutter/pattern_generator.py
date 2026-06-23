@@ -82,8 +82,17 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
             config.smooth_mask,
             target_z_start=target_z_start,
         )
-        pattern_clutter += placed
-        pattern_mask = np.maximum(pattern_mask, placed_mask)
+        if raw_dominant_mode:
+            pattern_clutter, pattern_mask = merge_raw_dominant_pattern(
+                pattern_clutter,
+                pattern_mask,
+                placed,
+                placed_mask,
+                config.overlay_midpoint,
+            )
+        else:
+            pattern_clutter += placed
+            pattern_mask = np.maximum(pattern_mask, placed_mask)
         placements.append({
             "pattern_id": pattern.pattern_id,
             "source_profile": pattern.source_profile,
@@ -142,6 +151,35 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
         },
     }
     return noisy, effective_clutter, effective_mask, meta
+
+
+def merge_raw_dominant_pattern(base_noise, base_mask, placed_noise, placed_mask, midpoint=128.0):
+    """Merge raw pattern layers without summing or changing amplitudes.
+
+    Raw dominant placement treats every pattern as an already scaled amplitude
+    image. Multiple raw placements therefore must not be added together, because
+    addition would make overlapping identical patterns brighter/darker than the
+    saved source pattern. In overlaps, keep the pixel whose centered amplitude
+    is dominant; outside overlaps, copy the placed raw signal as-is.
+    """
+
+    base = np.asarray(base_noise, dtype=float).copy()
+    base_m = np.asarray(base_mask, dtype=float).copy()
+    placed = np.asarray(placed_noise, dtype=float)
+    placed_m = np.asarray(placed_mask, dtype=float)
+    if base.shape != placed.shape:
+        raise ValueError(f"Placed raw pattern shape {placed.shape} must match base shape {base.shape}.")
+    if base_m.shape != base.shape or placed_m.shape != base.shape:
+        raise ValueError("Raw pattern masks must match raw pattern noise shapes.")
+
+    active = placed_m > 0
+    empty = base_m <= 0
+    midpoint = float(midpoint)
+    placed_dominates = np.abs(placed - midpoint) >= np.abs(base - midpoint)
+    update = active & (empty | placed_dominates)
+    base[update] = placed[update]
+    base_m = np.maximum(base_m, placed_m)
+    return base, base_m
 
 
 def overlay_noise(clean_profile, noise_profile, mask=None, mode="dominant_amplitude", midpoint=128.0, soft_dominance_temperature=12.0):
