@@ -212,11 +212,12 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         pair_id = f"pair_{len(self.dataset_pairs) + 1:03d}"
         clean_name = f"{clean_name_prefix}_{pair_id}"
         noisy_name = f"{noisy_name_prefix}_{pair_id}"
-        report = validate_clean_noisy_pair(clean, noisy, self.MIN_NUM_TRACES)
+        clean_0256, noisy_0256 = self._prepare_dataset_amplitude_pair(clean, noisy)
+        report = validate_clean_noisy_pair(clean_0256, noisy_0256, self.MIN_NUM_TRACES)
         pair = {
             "pair_id": pair_id,
-            "clean": np.asarray(clean, dtype=float).copy(),
-            "noisy": np.asarray(noisy, dtype=float).copy(),
+            "clean": clean_0256,
+            "noisy": noisy_0256,
             "clean_name": clean_name,
             "noisy_name": noisy_name,
             "clean_path": clean_name,
@@ -224,21 +225,36 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             "validation": report,
             "normalization": normalization if normalization is not None else (self.experiment_config.get("normalization") or {}),
             "source_label": source_label,
+            "amplitude_range": "0..256",
         }
         self.dataset_pairs.append(pair)
         self._refresh_dataset_pairs_ui()
         self._show_dataset_stats(self._format_pair_validation_report(pair))
-        self._log(f"Dataset pair added from {source_label}: {pair_id} ({'valid' if report['valid'] else 'invalid'})")
+        self._log(f"Dataset pair added from {source_label}: {pair_id} ({'valid' if report['valid'] else 'invalid'}), amplitude_range=0..256")
+
+
+    @staticmethod
+    def _prepare_dataset_amplitude_pair(clean, noisy):
+        clean = np.asarray(clean, dtype=float)
+        noisy = np.asarray(noisy, dtype=float)
+        if clean.shape != noisy.shape:
+            return clean.copy(), noisy.copy()
+        return np.clip(clean, 0.0, 256.0).copy(), np.clip(noisy, 0.0, 256.0).copy()
 
     def preview_selected_pair(self):
         pair = self._selected_dataset_pair()
         if pair is None:
             self._show_dataset_stats("Select a clean/noisy pair before preview.")
             return
-        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean")
-        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy")
-        self._display_profile(pair["noisy"] - pair["clean"], f"ML Clutter dataset {pair['pair_id']} residual")
-        self._show_dataset_stats(self._format_pair_validation_report(pair))
+        residual = pair["noisy"] - pair["clean"]
+        self._display_profile(residual, f"ML Clutter dataset {pair['pair_id']} residual diagnostic")
+        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean target")
+        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy input")
+        self._show_dataset_stats(
+            self._format_pair_validation_report(pair)
+            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
+            + "The main view is left on the noisy input, not on the centered residual."
+        )
 
     def build_dataset(self):
         config = self._current_dataset_config()
@@ -267,10 +283,14 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
         rng = np.random.default_rng(int(self.ui.spinBox_gen_seed.value()))
         split, sample = available[int(rng.integers(0, len(available)))]
-        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._show_dataset_stats(json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False))
+        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual diagnostic {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean target {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy input {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._show_dataset_stats(
+            json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False)
+            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
+            + "The main view is left on the noisy input, not on the centered residual."
+        )
 
     def save_dataset(self):
         if self.dataset_samples is None or self.dataset_summary is None:
@@ -389,6 +409,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             f"Clean source: {pair['clean_name']}",
             f"Noisy source: {pair['noisy_name']}",
             f"Shape: {report['shape']}",
+            f"Amplitude range: {pair.get('amplitude_range', 'source')}",
             f"Validation: {'OK' if report['valid'] else 'ERROR'}",
         ]
         if report["errors"]:
@@ -593,7 +614,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self._log("ML Clutter: clean profile is not loaded for synthetic clutter generation", "red")
             return
 
-        source_profile = self.normalized_clean_profile if self.normalized_clean_profile is not None else self.clean_profile
+        source_profile = self.clean_profile
         mode = self.ui.comboBox_gen_mode.currentData() or "synthetic"
         config = self._current_synthetic_clutter_config()
         try:
