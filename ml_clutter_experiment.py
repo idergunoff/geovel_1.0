@@ -15,6 +15,7 @@ from ml_air_clutter.dataset import (
     save_dataset,
     validate_clean_noisy_pair,
 )
+from ml_air_clutter.experiment_io import make_experiment_run_dir, save_experiment_artifacts
 from ml_air_clutter.inference import InferenceConfig, blend_inference_result, run_full_profile_inference, save_inference_result
 from ml_air_clutter.model import ModelConfig, count_parameters, create_model, save_model_checkpoint
 from ml_air_clutter.noise_patterns import (
@@ -229,6 +230,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_summary = None
         self.metrics_window = None
         self.inference_result = None
+        self.current_experiment_dir = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -257,6 +259,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_run_inference.clicked.connect(self.run_inference)
         self.ui.pushButton_preview_inference.clicked.connect(self.preview_inference_result)
         self.ui.pushButton_save_inference.clicked.connect(self.save_inference_result)
+        self.ui.pushButton_save_experiment_artifacts.clicked.connect(self.save_experiment_artifacts)
         self.ui.horizontalSlider_inference_alpha.valueChanged.connect(self.update_inference_alpha)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
@@ -555,6 +558,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_thread.start()
 
     def _current_training_config(self):
+        run_dir = make_experiment_run_dir(experiment_name="paired_direct_clean")
+        self.current_experiment_dir = run_dir
         return TrainingConfig(
             epochs=int(self.ui.spinBox_train_epochs.value()),
             batch_size=int(self.ui.spinBox_train_batch_size.value()),
@@ -562,6 +567,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             grad_loss_weight=float(self.ui.doubleSpinBox_train_grad_lambda.value()),
             early_stopping_patience=int(self.ui.spinBox_train_patience.value()),
             seed=int(self.ui.spinBox_gen_seed.value()),
+            output_dir=str(run_dir),
         )
 
     def _on_training_epoch_finished(self, metrics):
@@ -588,6 +594,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self._show_training_stats("Training finished.\n" + json.dumps(summary, indent=2, ensure_ascii=False))
         metrics = summary.get("metrics", {})
         self.experiment_config["metrics"] = metrics
+        self._save_current_experiment_artifacts(directory=summary.get("config", {}).get("output_dir"), quiet=True)
         curves = build_training_metric_curves(summary.get("history", []))
         self._show_results_log(build_experiment_log(
             self._format_metrics_report(metrics, summary.get("metrics_report", "")),
@@ -604,6 +611,71 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_thread = None
         self.training_worker = None
         self.ui.pushButton_start_training.setEnabled(True)
+
+    def save_experiment_artifacts(self):
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Save reproducible ML clutter experiment")
+        if not directory:
+            return
+        self._save_current_experiment_artifacts(directory=directory, quiet=False)
+
+    def _save_current_experiment_artifacts(self, directory=None, quiet=False):
+        if self.dataset_samples is None or self.dataset_summary is None:
+            message = "Build the paired dataset before saving reproducible experiment artifacts."
+            if not quiet:
+                self._show_results_log(message)
+            return None
+        target_dir = Path(directory) if directory else (self.current_experiment_dir or make_experiment_run_dir(experiment_name="paired_direct_clean"))
+        self.current_experiment_dir = target_dir
+        config = self._current_reproducibility_config()
+        try:
+            paths = save_experiment_artifacts(
+                target_dir,
+                config=config,
+                dataset_summary=self.dataset_summary,
+                samples=self.dataset_samples,
+                training_summary=self.training_summary,
+                metrics=(self.training_summary or {}).get("metrics", self.experiment_config.get("metrics")),
+            )
+        except OSError as exc:
+            self._show_results_log(f"Failed to save experiment artifacts: {exc}")
+            self._log(f"ML Clutter reproducibility save failed: {exc}", "red")
+            return None
+        message = "Reproducible experiment artifacts saved:\n" + json.dumps(paths, indent=2, ensure_ascii=False)
+        if not quiet:
+            self._show_results_log(message)
+        else:
+            self.ui.textEdit_results_log.append(message)
+        self._log(f"ML Clutter reproducibility bundle saved: {target_dir}")
+        return paths
+
+    def _current_reproducibility_config(self):
+        return {
+            "experiment_schema": "ml_air_clutter_experiment_v1",
+            "seed": int(self.ui.spinBox_gen_seed.value()),
+            "normalization": self.experiment_config.get("normalization"),
+            "synthetic_clutter": self.experiment_config.get("synthetic_clutter"),
+            "pattern_clutter": self.experiment_config.get("pattern_clutter"),
+            "pattern_library": self.experiment_config.get("pattern_library"),
+            "dataset_config": self._current_dataset_config().to_dict(),
+            "dataset_pairs": [self._dataset_pair_manifest(pair) for pair in self.dataset_pairs],
+            "model": self.experiment_config.get("model"),
+            "training_config": (self.training_summary or {}).get("config"),
+            "inference_config": self._current_inference_config().to_dict(),
+        }
+
+    @staticmethod
+    def _dataset_pair_manifest(pair):
+        return {
+            "pair_id": pair.get("pair_id"),
+            "clean_name": pair.get("clean_name"),
+            "noisy_name": pair.get("noisy_name"),
+            "clean_path": pair.get("clean_path"),
+            "noisy_path": pair.get("noisy_path"),
+            "source_label": pair.get("source_label"),
+            "amplitude_range": pair.get("amplitude_range"),
+            "normalization": pair.get("normalization"),
+            "validation": pair.get("validation"),
+        }
 
     @staticmethod
     def _format_metrics_report(metrics, metrics_path=""):
