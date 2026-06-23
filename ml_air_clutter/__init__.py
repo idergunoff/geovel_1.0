@@ -6,8 +6,10 @@ from .pattern_library import NoisePattern, PatternLibrary
 from .pattern_generator import PatternClutterConfig, generate_pattern_clutter
 from .inference import InferenceConfig, blend_inference_result, run_full_profile_inference, save_inference_result
 from .preprocessing import NormalizationResult, Normalizer, build_preprocessing_report
+from .experiment_io import make_experiment_run_dir, save_experiment_artifacts
 from .metrics import paired_cleaning_metrics, summarize_metric_rows
 from .model import ModelConfig, count_parameters, create_model, load_model_checkpoint, save_model_checkpoint
+from .visualization import VisualizationBundle, build_experiment_log, build_paired_visualization, build_training_metric_curves
 
 __all__ = [
     "NormalizationConfig",
@@ -20,6 +22,8 @@ __all__ = [
     "run_full_profile_inference",
     "save_inference_result",
     "generate_pattern_clutter",
+    "make_experiment_run_dir",
+    "save_experiment_artifacts",
     "paired_cleaning_metrics",
     "summarize_metric_rows",
     "ModelConfig",
@@ -30,6 +34,10 @@ __all__ = [
     "NormalizationResult",
     "Normalizer",
     "build_preprocessing_report",
+    "VisualizationBundle",
+    "build_experiment_log",
+    "build_paired_visualization",
+    "build_training_metric_curves",
     "extract_energy_patterns",
     "extract_frequency_band_patterns",
     "extract_pattern_from_bbox",
