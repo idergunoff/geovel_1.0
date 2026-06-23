@@ -12,6 +12,7 @@ from ml_air_clutter.dataset import (
     save_dataset,
     validate_clean_noisy_pair,
 )
+from ml_air_clutter.model import ModelConfig, count_parameters, create_model, save_model_checkpoint
 from ml_air_clutter.noise_patterns import (
     PatternExtractionConfig,
     extract_energy_patterns,
@@ -57,9 +58,12 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.experiment_profiles = {}
         self.synthetic_clutter_result = None
         self.pattern_clutter_result = None
+        self.last_generated_clutter_result = None
         self.dataset_pairs = []
         self.dataset_samples = None
         self.dataset_summary = None
+        self.model = None
+        self.model_config = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -69,6 +73,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
         self.ui.pushButton_generate_synthetic_clutter.clicked.connect(self.generate_synthetic_clutter_preview)
         self.ui.pushButton_add_clean_noisy_pair.clicked.connect(self.add_current_clean_noisy_pair)
+        self.ui.pushButton_add_generated_clean_noisy_pair.clicked.connect(self.add_generated_clean_noisy_pair)
         self.ui.pushButton_preview_pair.clicked.connect(self.preview_selected_pair)
         self.ui.pushButton_build_dataset.clicked.connect(self.build_dataset)
         self.ui.pushButton_preview_random_patch.clicked.connect(self.preview_random_patch)
@@ -81,6 +86,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_clear_pattern_library.clicked.connect(self.clear_pattern_library)
         self.ui.pushButton_save_pattern_library.clicked.connect(self.save_pattern_library)
         self.ui.pushButton_load_pattern_library.clicked.connect(self.load_pattern_library)
+        self.ui.pushButton_create_model.clicked.connect(self.create_baseline_model)
+        self.ui.pushButton_save_untrained_checkpoint.clicked.connect(self.save_untrained_checkpoint)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
         for spin_box in (
@@ -175,38 +182,79 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def add_current_clean_noisy_pair(self):
         if self.clean_profile is None or self.real_noisy_profile is None:
-            self._show_dataset_stats("Load both Clean and Real Noisy profiles before adding a dataset pair.")
+            self._show_dataset_stats("Load both Clean and Real Noisy profiles before adding a loaded dataset pair.")
             self._log("ML Clutter dataset: clean/noisy pair is incomplete", "red")
             return
+        self._append_dataset_pair(
+            self.clean_profile,
+            self.real_noisy_profile,
+            clean_name_prefix="loaded_clean",
+            noisy_name_prefix="loaded_noisy",
+            source_label="loaded clean/noisy",
+        )
+
+    def add_generated_clean_noisy_pair(self):
+        if self.last_generated_clutter_result is None:
+            self._show_dataset_stats("Generate synthetic or real-pattern clutter before adding a generated clean/noisy pair.")
+            self._log("ML Clutter dataset: generated noisy profile is not available", "red")
+            return
+        result = self.last_generated_clutter_result
+        self._append_dataset_pair(
+            result["clean_source"],
+            result["noisy"],
+            clean_name_prefix=f"{result['mode']}_clean",
+            noisy_name_prefix=f"{result['mode']}_noisy",
+            source_label=f"generated {result['mode']} clutter",
+            normalization=result.get("normalization", self.experiment_config.get("normalization") or {}),
+        )
+
+    def _append_dataset_pair(self, clean, noisy, clean_name_prefix, noisy_name_prefix, source_label, normalization=None):
         pair_id = f"pair_{len(self.dataset_pairs) + 1:03d}"
-        clean_name = f"clean_{pair_id}"
-        noisy_name = f"noisy_{pair_id}"
-        report = validate_clean_noisy_pair(self.clean_profile, self.real_noisy_profile, self.MIN_NUM_TRACES)
+        clean_name = f"{clean_name_prefix}_{pair_id}"
+        noisy_name = f"{noisy_name_prefix}_{pair_id}"
+        clean_0256, noisy_0256 = self._prepare_dataset_amplitude_pair(clean, noisy)
+        report = validate_clean_noisy_pair(clean_0256, noisy_0256, self.MIN_NUM_TRACES)
         pair = {
             "pair_id": pair_id,
-            "clean": self.clean_profile.copy(),
-            "noisy": self.real_noisy_profile.copy(),
+            "clean": clean_0256,
+            "noisy": noisy_0256,
             "clean_name": clean_name,
             "noisy_name": noisy_name,
             "clean_path": clean_name,
             "noisy_path": noisy_name,
             "validation": report,
-            "normalization": self.experiment_config.get("normalization") or {},
+            "normalization": normalization if normalization is not None else (self.experiment_config.get("normalization") or {}),
+            "source_label": source_label,
+            "amplitude_range": "0..256",
         }
         self.dataset_pairs.append(pair)
         self._refresh_dataset_pairs_ui()
         self._show_dataset_stats(self._format_pair_validation_report(pair))
-        self._log(f"Dataset pair added: {pair_id} ({'valid' if report['valid'] else 'invalid'})")
+        self._log(f"Dataset pair added from {source_label}: {pair_id} ({'valid' if report['valid'] else 'invalid'}), amplitude_range=0..256")
+
+
+    @staticmethod
+    def _prepare_dataset_amplitude_pair(clean, noisy):
+        clean = np.asarray(clean, dtype=float)
+        noisy = np.asarray(noisy, dtype=float)
+        if clean.shape != noisy.shape:
+            return clean.copy(), noisy.copy()
+        return np.clip(clean, 0.0, 256.0).copy(), np.clip(noisy, 0.0, 256.0).copy()
 
     def preview_selected_pair(self):
         pair = self._selected_dataset_pair()
         if pair is None:
             self._show_dataset_stats("Select a clean/noisy pair before preview.")
             return
-        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean")
-        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy")
-        self._display_profile(pair["noisy"] - pair["clean"], f"ML Clutter dataset {pair['pair_id']} residual")
-        self._show_dataset_stats(self._format_pair_validation_report(pair))
+        residual = pair["noisy"] - pair["clean"]
+        self._display_profile(residual, f"ML Clutter dataset {pair['pair_id']} residual diagnostic")
+        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean target")
+        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy input")
+        self._show_dataset_stats(
+            self._format_pair_validation_report(pair)
+            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
+            + "The main view is left on the noisy input, not on the centered residual."
+        )
 
     def build_dataset(self):
         config = self._current_dataset_config()
@@ -235,10 +283,14 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
         rng = np.random.default_rng(int(self.ui.spinBox_gen_seed.value()))
         split, sample = available[int(rng.integers(0, len(available)))]
-        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._show_dataset_stats(json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False))
+        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual diagnostic {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean target {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy input {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._show_dataset_stats(
+            json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False)
+            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
+            + "The main view is left on the noisy input, not on the centered residual."
+        )
 
     def save_dataset(self):
         if self.dataset_samples is None or self.dataset_summary is None:
@@ -261,6 +313,74 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             seed=int(self.ui.spinBox_gen_seed.value()),
             min_num_traces=self.MIN_NUM_TRACES,
         )
+
+    def _current_model_config(self):
+        channels = []
+        if self.ui.checkBox_model_raw.isChecked():
+            channels.append("raw")
+        if self.ui.checkBox_model_envelope.isChecked():
+            channels.append("envelope")
+        if self.ui.checkBox_model_grad_x.isChecked():
+            channels.append("grad_x")
+        if self.ui.checkBox_model_grad_z.isChecked():
+            channels.append("grad_z")
+        return ModelConfig(
+            model_type=self.ui.comboBox_model_type.currentData() or "baseline_cnn",
+            input_channels=tuple(channels),
+            output_mode="direct_clean",
+            base_channels=int(self.ui.spinBox_model_base_channels.value()),
+            num_layers=int(self.ui.spinBox_model_num_layers.value()),
+        )
+
+    def create_baseline_model(self):
+        config = self._current_model_config()
+        try:
+            model = create_model(config)
+            parameters = count_parameters(model)
+        except (ImportError, ValueError) as exc:
+            self._show_model_summary(f"Failed to create model: {exc}")
+            self._log(f"ML Clutter model creation failed: {exc}", "red")
+            return
+        self.model = model
+        self.model_config = config
+        self.experiment_config["model"] = {"config": config.to_dict(), "num_parameters": parameters}
+        self._show_model_summary(self._format_model_summary(config, parameters))
+        self._log(f"ML Clutter model created: {config.model_type}, channels={len(config.input_channels)}, params={parameters}")
+
+    def save_untrained_checkpoint(self):
+        if self.model is None or self.model_config is None:
+            self.create_baseline_model()
+            if self.model is None or self.model_config is None:
+                return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save untrained ML clutter checkpoint", "ml_clutter_untrained.pt", "PyTorch checkpoint (*.pt *.pth)")
+        if not path:
+            return
+        try:
+            saved_path = save_model_checkpoint(path, self.model, self.model_config)
+        except (ImportError, OSError, ValueError) as exc:
+            self._show_model_summary(f"Failed to save checkpoint: {exc}")
+            self._log(f"ML Clutter checkpoint save failed: {exc}", "red")
+            return
+        self._show_model_summary(self._format_model_summary(self.model_config, count_parameters(self.model)) + f"\n\nCheckpoint saved: {saved_path}")
+        self._log(f"ML Clutter untrained checkpoint saved: {saved_path}")
+
+    @staticmethod
+    def _format_model_summary(config, parameters):
+        return "\n".join([
+            "Baseline model summary",
+            f"Model type: {config.model_type}",
+            "Task: supervised direct-clean (input noisy -> target clean -> output clean_pred)",
+            f"Input channels: {', '.join(config.input_channels)}",
+            "Input patch shape: [channels, width, 512]",
+            "Output patch shape: [1, width, 512]",
+            f"Base channels: {config.base_channels}",
+            f"CNN layers: {config.num_layers}",
+            f"Trainable parameters: {parameters}",
+            "MVP note: residual/clutter targets are not required; residual remains a diagnostic artifact.",
+        ])
+
+    def _show_model_summary(self, text):
+        self.ui.textEdit_model_summary.setPlainText(text)
 
     def _selected_dataset_pair(self):
         row = self.ui.tableWidget_dataset_pairs.currentRow()
@@ -289,6 +409,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             f"Clean source: {pair['clean_name']}",
             f"Noisy source: {pair['noisy_name']}",
             f"Shape: {report['shape']}",
+            f"Amplitude range: {pair.get('amplitude_range', 'source')}",
             f"Validation: {'OK' if report['valid'] else 'ERROR'}",
         ]
         if report["errors"]:
@@ -493,7 +614,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self._log("ML Clutter: clean profile is not loaded for synthetic clutter generation", "red")
             return
 
-        source_profile = self.normalized_clean_profile if self.normalized_clean_profile is not None else self.clean_profile
+        source_profile = self.clean_profile
         mode = self.ui.comboBox_gen_mode.currentData() or "synthetic"
         config = self._current_synthetic_clutter_config()
         try:
@@ -508,11 +629,15 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
 
         result = {
+            "mode": mode,
+            "clean_source": source_profile.copy(),
             "noisy": noisy,
             "clutter": clutter,
             "mask": mask,
             "meta": meta,
+            "normalization": self.experiment_config.get("normalization") or {},
         }
+        self.last_generated_clutter_result = result
         if mode == "synthetic":
             self.synthetic_clutter_result = result
             self.experiment_config["synthetic_clutter"] = meta
