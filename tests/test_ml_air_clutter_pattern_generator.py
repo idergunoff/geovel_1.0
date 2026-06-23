@@ -52,6 +52,40 @@ def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay()
     assert np.all((noisy >= 0.0) & (noisy <= 256.0))
 
 
+def test_raw_dominant_mode_places_untransformed_pattern_without_snr_scaling():
+    clean = np.full((32, 512), 128.0, dtype=float)
+    cfg = PatternClutterConfig(
+        seed=7,
+        overlay_mode="raw_dominant_amplitude",
+        target_snr_db=-30.0,
+        random_crop=True,
+        num_patterns=1,
+        pattern_strength=0.0,
+        jitter_std=1.0,
+        fade_probability=1.0,
+        polarity_flip_probability=1.0,
+        amplitude_scale_min=0.1,
+        amplitude_scale_max=0.1,
+        trace_stretch_min=2.0,
+        trace_stretch_max=2.0,
+        sample_stretch_min=2.0,
+        sample_stretch_max=2.0,
+    )
+
+    noisy, clutter, mask, meta = generate_pattern_clutter(clean, _library(), cfg)
+
+    placement = meta["placements"][0]["placement"]
+    transform = meta["placements"][0]["transform"]
+    assert meta["overlay_mode"] == "raw_dominant_amplitude"
+    assert meta["target_snr_scale"] == 1.0
+    assert transform == {"mode": "raw", "original_shape": [12, 64]}
+    assert placement["z_start"] == 100
+    assert placement["placed_shape"] == [12, 64]
+    assert np.max(noisy) == 240.0
+    np.testing.assert_allclose(noisy, clean + clutter)
+    assert np.count_nonzero(mask) == 12 * 12
+
+
 def test_pattern_transform_is_reproducible_with_seed_and_records_augmentations():
     pattern = _library().get("p1")
     cfg = PatternClutterConfig(seed=3, random_crop=True, jitter_std=0.0, horizontal_flip_probability=1.0)

@@ -228,6 +228,7 @@ class Ui_MLClutterExperiment(object):
         layout.addWidget(self.doubleSpinBox_pattern_strength, 5, 1)
         self.comboBox_pattern_overlay_mode = QtWidgets.QComboBox(tab)
         self.comboBox_pattern_overlay_mode.setObjectName("comboBox_pattern_overlay_mode")
+        self.comboBox_pattern_overlay_mode.addItem("Raw dominant amplitude", "raw_dominant_amplitude")
         self.comboBox_pattern_overlay_mode.addItem("Dominant amplitude", "dominant_amplitude")
         self.comboBox_pattern_overlay_mode.addItem("Soft dominance", "soft_dominance")
         self.comboBox_pattern_overlay_mode.addItem("Additive", "additive")

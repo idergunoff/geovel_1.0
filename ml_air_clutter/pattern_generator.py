@@ -36,7 +36,7 @@ class PatternClutterConfig:
     fade_probability: float = 0.7
     jitter_std: float = 0.01
     smooth_mask: bool = True
-    overlay_mode: str = "dominant_amplitude"  # dominant_amplitude | soft_dominance | additive
+    overlay_mode: str = "dominant_amplitude"  # raw_dominant_amplitude | dominant_amplitude | soft_dominance | additive
     preserve_pattern_depth: bool = True
     overlay_midpoint: float = 128.0
     soft_dominance_temperature: float = 12.0
@@ -65,8 +65,14 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
     pattern_clutter = np.zeros_like(clean, dtype=float)
     pattern_mask = np.zeros_like(clean, dtype=float)
     placements = []
+    raw_dominant_mode = config.overlay_mode == "raw_dominant_amplitude"
     for pattern in patterns:
-        transformed, transformed_mask, transform_meta = transform_pattern(pattern, config, rng)
+        if raw_dominant_mode:
+            transformed = np.asarray(pattern.array, dtype=float).copy()
+            transformed_mask = np.asarray(pattern.mask, dtype=float).copy()
+            transform_meta = {"mode": "raw", "original_shape": list(transformed.shape)}
+        else:
+            transformed, transformed_mask, transform_meta = transform_pattern(pattern, config, rng)
         target_z_start = _pattern_target_z_start(pattern, transform_meta) if config.preserve_pattern_depth else None
         placed, placed_mask, place_meta = place_pattern(
             clean.shape,
@@ -85,14 +91,16 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
             "placement": place_meta,
         })
 
-    pattern_clutter *= float(config.pattern_strength)
+    if not raw_dominant_mode:
+        pattern_clutter *= float(config.pattern_strength)
     synthetic_clutter = np.zeros_like(clean, dtype=float)
     synthetic_mask = np.zeros_like(clean, dtype=float)
     synthetic_meta = None
     if config.mode == "mixed":
         syn_cfg = synthetic_config or SyntheticClutterConfig(seed=config.seed, target_snr_db=None)
         _, synthetic_clutter, synthetic_mask, synthetic_meta = generate_synthetic_clutter(clean, syn_cfg)
-        synthetic_clutter *= float(config.synthetic_strength)
+        if not raw_dominant_mode:
+            synthetic_clutter *= float(config.synthetic_strength)
 
     total_noise = pattern_clutter + synthetic_clutter
     pre_overlay_noise_rms = _rms(total_noise)
@@ -139,7 +147,7 @@ def generate_pattern_clutter(clean_profile, pattern_library, config=None, synthe
 def overlay_noise(clean_profile, noise_profile, mask=None, mode="dominant_amplitude", midpoint=128.0, soft_dominance_temperature=12.0):
     """Overlay a noise image using the selected ML Clutter overlay mode."""
 
-    if mode == "dominant_amplitude":
+    if mode in {"raw_dominant_amplitude", "dominant_amplitude"}:
         return overlay_noise_by_dominant_amplitude(clean_profile, noise_profile, mask, midpoint)
     if mode == "soft_dominance":
         return overlay_noise_by_soft_dominance(clean_profile, noise_profile, mask, midpoint, soft_dominance_temperature)
@@ -320,7 +328,7 @@ def scale_clutter_to_target_snr_for_overlay(clean, clutter, mask, config):
     """
 
     target_snr_db = config.target_snr_db
-    if target_snr_db is None or not np.any(clutter):
+    if config.overlay_mode == "raw_dominant_amplitude" or target_snr_db is None or not np.any(clutter):
         return clutter, 1.0
 
     clean = np.asarray(clean, dtype=float)
