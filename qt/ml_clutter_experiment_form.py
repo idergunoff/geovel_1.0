@@ -20,10 +20,7 @@ class Ui_MLClutterExperiment(object):
         self.tab_generator = self._add_generator_tab()
         self.tab_dataset = self._add_dataset_tab()
         self.tab_model = self._add_model_tab()
-        self.tab_training = self._add_placeholder_tab(
-            "tab_training",
-            "Run training, validation, checkpoints, and training metrics.",
-        )
+        self.tab_training = self._add_training_tab()
         self.tab_inference = self._add_placeholder_tab(
             "tab_inference",
             "Apply trained clutter-removal models to synthetic or real profiles.",
@@ -404,6 +401,59 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.addTab(tab, "")
         return tab
 
+    def _add_training_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_training")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText("Train the supervised direct-clean model off the UI thread: input = noisy patch, target = clean patch.")
+        layout.addWidget(intro, 0, 0, 1, 4)
+        self.spinBox_train_epochs = QtWidgets.QSpinBox(tab)
+        self.spinBox_train_epochs.setObjectName("spinBox_train_epochs")
+        self.spinBox_train_epochs.setRange(1, 100000)
+        self.spinBox_train_epochs.setValue(10)
+        self.spinBox_train_batch_size = QtWidgets.QSpinBox(tab)
+        self.spinBox_train_batch_size.setObjectName("spinBox_train_batch_size")
+        self.spinBox_train_batch_size.setRange(1, 1024)
+        self.spinBox_train_batch_size.setValue(4)
+        self.doubleSpinBox_train_lr = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_train_lr.setObjectName("doubleSpinBox_train_lr")
+        self.doubleSpinBox_train_lr.setDecimals(6)
+        self.doubleSpinBox_train_lr.setRange(0.000001, 1.0)
+        self.doubleSpinBox_train_lr.setValue(0.001)
+        self.doubleSpinBox_train_grad_lambda = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_train_grad_lambda.setObjectName("doubleSpinBox_train_grad_lambda")
+        self.doubleSpinBox_train_grad_lambda.setRange(0.0, 100.0)
+        self.doubleSpinBox_train_grad_lambda.setValue(0.1)
+        self.spinBox_train_patience = QtWidgets.QSpinBox(tab)
+        self.spinBox_train_patience.setObjectName("spinBox_train_patience")
+        self.spinBox_train_patience.setRange(1, 100000)
+        self.spinBox_train_patience.setValue(5)
+        controls = [
+            ("epochs", self.spinBox_train_epochs),
+            ("batch size", self.spinBox_train_batch_size),
+            ("learning rate", self.doubleSpinBox_train_lr),
+            ("gradient λ", self.doubleSpinBox_train_grad_lambda),
+            ("early stop patience", self.spinBox_train_patience),
+        ]
+        for row, (label, widget) in enumerate(controls, start=1):
+            layout.addWidget(QtWidgets.QLabel(label, tab), row, 0)
+            layout.addWidget(widget, row, 1)
+        self.pushButton_start_training = QtWidgets.QPushButton(tab)
+        self.pushButton_start_training.setObjectName("pushButton_start_training")
+        layout.addWidget(self.pushButton_start_training, 1, 2)
+        self.progressBar_training = QtWidgets.QProgressBar(tab)
+        self.progressBar_training.setObjectName("progressBar_training")
+        layout.addWidget(self.progressBar_training, 2, 2, 1, 2)
+        self.textEdit_training_log = QtWidgets.QTextEdit(tab)
+        self.textEdit_training_log.setReadOnly(True)
+        self.textEdit_training_log.setObjectName("textEdit_training_log")
+        layout.addWidget(self.textEdit_training_log, 6, 0, 1, 4)
+        layout.setRowStretch(6, 1)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
     def _add_placeholder_tab(self, object_name, message):
         tab = QtWidgets.QWidget()
         tab.setObjectName(object_name)
@@ -468,6 +518,7 @@ class Ui_MLClutterExperiment(object):
         self.checkBox_model_grad_z.setText(_translate("MLClutterExperiment", "grad_z (optional)"))
         self.pushButton_create_model.setText(_translate("MLClutterExperiment", "Create Model"))
         self.pushButton_save_untrained_checkpoint.setText(_translate("MLClutterExperiment", "Save Untrained Checkpoint"))
+        self.pushButton_start_training.setText(_translate("MLClutterExperiment", "Start Training"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))

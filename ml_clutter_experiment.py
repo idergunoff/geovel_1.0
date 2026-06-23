@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
 from ml_air_clutter.dataset import (
@@ -23,8 +23,47 @@ from ml_air_clutter.pattern_generator import PatternClutterConfig, generate_patt
 from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
 from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
+from ml_air_clutter.train import TrainingConfig, train_model
 from models_db.model import Profile, CurrentProfile, session
 from qt.ml_clutter_experiment_form import Ui_MLClutterExperiment
+
+
+class MLClutterTrainingWorker(QtCore.QObject):
+    epoch_finished = QtCore.pyqtSignal(dict)
+    preview_ready = QtCore.pyqtSignal(dict)
+    log_message = QtCore.pyqtSignal(str)
+    training_finished = QtCore.pyqtSignal(dict)
+    training_error = QtCore.pyqtSignal(str)
+
+    def __init__(self, model, model_config, samples, training_config):
+        super().__init__()
+        self.model = model
+        self.model_config = model_config
+        self.samples = samples
+        self.training_config = training_config
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        try:
+            train_model(
+                self.model,
+                self.model_config,
+                self.samples,
+                self.training_config,
+                progress_callback=self._handle_progress,
+            )
+        except Exception as exc:  # pragma: no cover - UI signal bridge.
+            self.training_error.emit(str(exc))
+
+    def _handle_progress(self, event, payload):
+        if event == "epoch_finished":
+            self.epoch_finished.emit(payload)
+        elif event == "preview_ready":
+            self.preview_ready.emit(payload)
+        elif event == "log_message":
+            self.log_message.emit(str(payload))
+        elif event == "training_finished":
+            self.training_finished.emit(payload)
 
 
 class MLClutterExperimentWindow(QtWidgets.QDialog):
@@ -64,6 +103,9 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.dataset_summary = None
         self.model = None
         self.model_config = None
+        self.training_thread = None
+        self.training_worker = None
+        self.training_summary = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -88,6 +130,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_load_pattern_library.clicked.connect(self.load_pattern_library)
         self.ui.pushButton_create_model.clicked.connect(self.create_baseline_model)
         self.ui.pushButton_save_untrained_checkpoint.clicked.connect(self.save_untrained_checkpoint)
+        self.ui.pushButton_start_training.clicked.connect(self.start_training)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
         for spin_box in (
@@ -346,6 +389,77 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.experiment_config["model"] = {"config": config.to_dict(), "num_parameters": parameters}
         self._show_model_summary(self._format_model_summary(config, parameters))
         self._log(f"ML Clutter model created: {config.model_type}, channels={len(config.input_channels)}, params={parameters}")
+
+    def start_training(self):
+        if self.dataset_samples is None:
+            self._show_training_stats("Build the paired dataset before starting training.")
+            self._log("ML Clutter training: dataset is not built", "red")
+            return
+        if self.model is None or self.model_config is None:
+            self.create_baseline_model()
+            if self.model is None or self.model_config is None:
+                return
+        if self.training_thread is not None:
+            self._show_training_stats("Training is already running.")
+            return
+        config = self._current_training_config()
+        self.ui.progressBar_training.setRange(0, int(config.epochs))
+        self.ui.progressBar_training.setValue(0)
+        self.ui.pushButton_start_training.setEnabled(False)
+        self._show_training_stats("Training started in a background QThread. UI remains responsive.")
+        self.training_thread = QtCore.QThread(self)
+        self.training_worker = MLClutterTrainingWorker(self.model, self.model_config, self.dataset_samples, config)
+        self.training_worker.moveToThread(self.training_thread)
+        self.training_thread.started.connect(self.training_worker.run)
+        self.training_worker.epoch_finished.connect(self._on_training_epoch_finished)
+        self.training_worker.preview_ready.connect(self._on_training_preview_ready)
+        self.training_worker.log_message.connect(lambda text: self._show_training_stats(text, append=True))
+        self.training_worker.training_finished.connect(self._on_training_finished)
+        self.training_worker.training_error.connect(self._on_training_error)
+        self.training_worker.training_finished.connect(self.training_thread.quit)
+        self.training_worker.training_error.connect(self.training_thread.quit)
+        self.training_thread.finished.connect(self.training_worker.deleteLater)
+        self.training_thread.finished.connect(self._cleanup_training_thread)
+        self.training_thread.start()
+
+    def _current_training_config(self):
+        return TrainingConfig(
+            epochs=int(self.ui.spinBox_train_epochs.value()),
+            batch_size=int(self.ui.spinBox_train_batch_size.value()),
+            learning_rate=float(self.ui.doubleSpinBox_train_lr.value()),
+            grad_loss_weight=float(self.ui.doubleSpinBox_train_grad_lambda.value()),
+            early_stopping_patience=int(self.ui.spinBox_train_patience.value()),
+            seed=int(self.ui.spinBox_gen_seed.value()),
+        )
+
+    def _on_training_epoch_finished(self, metrics):
+        epoch = int(metrics.get("epoch", 0))
+        self.ui.progressBar_training.setValue(epoch)
+        self._show_training_stats(
+            f"Epoch {epoch}: train_loss={metrics.get('train_loss'):.6g}, val_loss={metrics.get('val_loss'):.6g}",
+            append=True,
+        )
+
+    def _on_training_preview_ready(self, arrays):
+        self._display_profile(arrays["error"], "ML Clutter validation preview error clean_pred-clean")
+        self._display_profile(arrays["clean_pred"], "ML Clutter validation preview clean_pred")
+        self._display_profile(arrays["noisy"], "ML Clutter validation preview noisy")
+        self._display_profile(arrays["clean"], "ML Clutter validation preview clean")
+
+    def _on_training_finished(self, summary):
+        self.training_summary = summary
+        self.experiment_config["training"] = summary
+        self._show_training_stats("Training finished.\n" + json.dumps(summary, indent=2, ensure_ascii=False))
+        self._log(f"ML Clutter training finished: best_epoch={summary['best_epoch']}, best_val_loss={summary['best_validation_loss']:.6g}")
+
+    def _on_training_error(self, message):
+        self._show_training_stats(f"Training failed: {message}")
+        self._log(f"ML Clutter training failed: {message}", "red")
+
+    def _cleanup_training_thread(self):
+        self.training_thread = None
+        self.training_worker = None
+        self.ui.pushButton_start_training.setEnabled(True)
 
     def save_untrained_checkpoint(self):
         if self.model is None or self.model_config is None:
@@ -954,6 +1068,13 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_dataset_stats(self, text):
         self.ui.textEdit_dataset_summary.setPlainText(text)
+        self.ui.textEdit_results_log.append(text)
+
+    def _show_training_stats(self, text, append=False):
+        if append:
+            self.ui.textEdit_training_log.append(text)
+        else:
+            self.ui.textEdit_training_log.setPlainText(text)
         self.ui.textEdit_results_log.append(text)
 
     def _log(self, text, color="green"):
