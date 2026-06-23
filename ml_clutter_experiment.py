@@ -28,6 +28,7 @@ from ml_air_clutter.pattern_library import NoisePattern, PatternLibrary
 from ml_air_clutter.preprocessing import Normalizer, build_preprocessing_report
 from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
 from ml_air_clutter.train import TrainingConfig, train_model
+from ml_air_clutter.visualization import build_experiment_log, build_paired_visualization, build_training_metric_curves
 from models_db.model import Profile, CurrentProfile, session
 from qt.ml_clutter_experiment_form import Ui_MLClutterExperiment
 
@@ -415,14 +416,16 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         if pair is None:
             self._show_dataset_stats("Select a clean/noisy pair before preview.")
             return
-        residual = pair["noisy"] - pair["clean"]
-        self._display_profile(residual, f"ML Clutter dataset {pair['pair_id']} residual diagnostic")
-        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean target")
-        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy input")
+        bundle = build_paired_visualization(
+            clean=pair["clean"],
+            noisy=pair["noisy"],
+            title=f"ML Clutter dataset {pair['pair_id']} paired preview",
+        )
+        self._display_visualization_bundle(bundle, f"ML Clutter dataset {pair['pair_id']}")
         self._show_dataset_stats(
             self._format_pair_validation_report(pair)
-            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
-            + "The main view is left on the noisy input, not on the centered residual."
+            + "\n\n"
+            + bundle.log_text()
         )
 
     def build_dataset(self):
@@ -452,13 +455,16 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
         rng = np.random.default_rng(int(self.ui.spinBox_gen_seed.value()))
         split, sample = available[int(rng.integers(0, len(available)))]
-        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual diagnostic {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean target {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
-        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy input {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        bundle = build_paired_visualization(
+            clean=sample["clean"],
+            noisy=sample["noisy"],
+            title=f"ML Clutter {split} patch paired preview {sample['pair_id']} {sample['x_start']}:{sample['x_end']}",
+        )
+        self._display_visualization_bundle(bundle, f"ML Clutter {split} patch {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
         self._show_dataset_stats(
             json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False)
-            + "\n\nPreview order: residual diagnostic, clean target, noisy input. "
-            + "The main view is left on the noisy input, not on the centered residual."
+            + "\n\n"
+            + bundle.log_text()
         )
 
     def save_dataset(self):
@@ -567,10 +573,14 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         )
 
     def _on_training_preview_ready(self, arrays):
-        self._display_profile(arrays["error"], "ML Clutter validation preview error clean_pred-clean")
-        self._display_profile(arrays["clean_pred"], "ML Clutter validation preview clean_pred")
-        self._display_profile(arrays["noisy"], "ML Clutter validation preview noisy")
-        self._display_profile(arrays["clean"], "ML Clutter validation preview clean")
+        bundle = build_paired_visualization(
+            clean=arrays["clean"],
+            noisy=arrays["noisy"],
+            clean_pred=arrays["clean_pred"],
+            alpha=float(self.ui.horizontalSlider_inference_alpha.value()) / 100.0,
+            title="ML Clutter validation preview",
+        )
+        self._display_visualization_bundle(bundle, "ML Clutter validation preview")
 
     def _on_training_finished(self, summary):
         self.training_summary = summary
@@ -578,7 +588,11 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self._show_training_stats("Training finished.\n" + json.dumps(summary, indent=2, ensure_ascii=False))
         metrics = summary.get("metrics", {})
         self.experiment_config["metrics"] = metrics
-        self._show_results_log(self._format_metrics_report(metrics, summary.get("metrics_report", "")))
+        curves = build_training_metric_curves(summary.get("history", []))
+        self._show_results_log(build_experiment_log(
+            self._format_metrics_report(metrics, summary.get("metrics_report", "")),
+            "Training metric curves available: " + ", ".join(curves.keys()) if curves else "Training metric curves are not available.",
+        ))
         self._open_metrics_window(summary)
         self._log(f"ML Clutter training finished: best_epoch={summary['best_epoch']}, best_val_loss={summary['best_validation_loss']:.6g}")
 
@@ -652,10 +666,16 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         if self.inference_result is None:
             self._show_inference_log("Run inference before previewing alpha-blended results.")
             return
-        self._display_profile(self.inference_result["residual"], "ML Clutter inference residual noisy-clean_pred")
-        self._display_profile(self.inference_result["cleaned"], "ML Clutter inference cleaned alpha blend")
-        self._display_profile(self.inference_result["clean_pred"], "ML Clutter inference clean_pred")
-        self._display_profile(self.inference_result["noisy"], "ML Clutter inference noisy source")
+        clean = self.clean_profile if self.clean_profile is not None and self.clean_profile.shape == self.inference_result["noisy"].shape else None
+        bundle = build_paired_visualization(
+            clean=clean,
+            noisy=self.inference_result["noisy"],
+            clean_pred=self.inference_result["clean_pred"],
+            alpha=float(self.inference_result.get("meta", {}).get("effective_alpha", 1.0)),
+            title="ML Clutter inference paired visualization",
+        )
+        self._display_visualization_bundle(bundle, "ML Clutter inference")
+        self._show_inference_log(build_experiment_log(self.inference_result.get("meta", {}), bundle.log_text()))
 
     def save_inference_result(self):
         if self.inference_result is None:
@@ -1233,6 +1253,13 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             f"Stats: {json.dumps(pattern.stats, indent=2)}",
         ])
 
+
+    def _display_visualization_bundle(self, bundle, title_prefix):
+        for mode, array in bundle.radarograms.items():
+            self._display_profile(array, f"{title_prefix}: {mode}")
+        trace_lines = [f"{name}: min={float(np.min(trace)):.6g}, max={float(np.max(trace)):.6g}" for name, trace in bundle.traces.items()]
+        if trace_lines:
+            self.ui.textEdit_results_log.append("Trace comparison\n" + "\n".join(trace_lines))
 
     def _display_profile(self, data, title):
         if self.visualization_callback:
