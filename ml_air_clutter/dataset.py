@@ -43,6 +43,32 @@ def _stats(data: np.ndarray) -> Dict[str, float]:
     }
 
 
+def convert_profile_to_amplitude_0256(data) -> np.ndarray:
+    """Return a profile in the unsigned 0..256 amplitude display range.
+
+    ML Clutter stores paired clean/noisy supervised data as amplitude images in
+    ``0..256``. Some source profiles and synthetic generator outputs can still
+    be centered around zero (approximately ``-128..+128``). Those profiles must
+    be shifted by +128 before clipping so previews show the clean signal and the
+    signal with overlaid noise, not the centered residual/noise layer.
+    """
+
+    arr = np.asarray(data, dtype=float)
+    if arr.size and np.nanmin(arr) < 0.0:
+        arr = arr + 128.0
+    return np.clip(arr, 0.0, 256.0).copy()
+
+
+def prepare_amplitude_pair_0256(clean, noisy):
+    """Normalize a clean/noisy pair to the 0..256 ML Clutter amplitude range."""
+
+    clean_arr = np.asarray(clean, dtype=float)
+    noisy_arr = np.asarray(noisy, dtype=float)
+    if clean_arr.shape != noisy_arr.shape:
+        return clean_arr.copy(), noisy_arr.copy()
+    return convert_profile_to_amplitude_0256(clean_arr), convert_profile_to_amplitude_0256(noisy_arr)
+
+
 def validate_clean_noisy_pair(clean, noisy, min_num_traces: int = 1) -> Dict[str, object]:
     """Validate paired arrays and return errors plus diagnostic warnings."""
 

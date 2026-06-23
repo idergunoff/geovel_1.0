@@ -7,6 +7,7 @@ from ml_air_clutter.dataset import (
     PairValidationError,
     PatchDatasetConfig,
     build_paired_patch_dataset,
+    prepare_amplitude_pair_0256,
     save_dataset,
     validate_clean_noisy_pair,
 )
@@ -77,3 +78,23 @@ def test_save_dataset_writes_summary_and_npz_samples(tmp_path):
     loaded_summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert loaded_summary["dataset_schema"] == "paired_clean_noisy_v1"
     assert list((tmp_path / "train").glob("*.npz"))
+
+
+def test_prepare_amplitude_pair_shifts_centered_profiles_to_0256():
+    clean = np.array([[-128.0, 0.0, 127.0, 128.0]])
+    noisy = np.array([[-100.0, 20.0, 128.0, 140.0]])
+
+    clean_0256, noisy_0256 = prepare_amplitude_pair_0256(clean, noisy)
+
+    np.testing.assert_allclose(clean_0256, [[0.0, 128.0, 255.0, 256.0]])
+    np.testing.assert_allclose(noisy_0256, [[28.0, 148.0, 256.0, 256.0]])
+
+
+def test_prepare_amplitude_pair_keeps_existing_0256_profiles():
+    clean = np.array([[0.0, 64.0, 128.0, 256.0]])
+    noisy = np.array([[10.0, 80.0, 140.0, 260.0]])
+
+    clean_0256, noisy_0256 = prepare_amplitude_pair_0256(clean, noisy)
+
+    np.testing.assert_allclose(clean_0256, clean)
+    np.testing.assert_allclose(noisy_0256, [[10.0, 80.0, 140.0, 256.0]])

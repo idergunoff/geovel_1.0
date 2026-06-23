@@ -12,6 +12,7 @@ from ml_air_clutter.dataset import (
     PairValidationError,
     PatchDatasetConfig,
     build_paired_patch_dataset,
+    prepare_amplitude_pair_0256,
     save_dataset,
     validate_clean_noisy_pair,
 )
@@ -408,11 +409,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     @staticmethod
     def _prepare_dataset_amplitude_pair(clean, noisy):
-        clean = np.asarray(clean, dtype=float)
-        noisy = np.asarray(noisy, dtype=float)
-        if clean.shape != noisy.shape:
-            return clean.copy(), noisy.copy()
-        return np.clip(clean, 0.0, 256.0).copy(), np.clip(noisy, 0.0, 256.0).copy()
+        return prepare_amplitude_pair_0256(clean, noisy)
 
     def preview_selected_pair(self):
         pair = self._selected_dataset_pair()
