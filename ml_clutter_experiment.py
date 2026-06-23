@@ -3,6 +3,9 @@ from pathlib import Path
 
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
 from ml_air_clutter.dataset import (
@@ -26,6 +29,122 @@ from ml_air_clutter.synthetic_clutter import generate_synthetic_clutter
 from ml_air_clutter.train import TrainingConfig, train_model
 from models_db.model import Profile, CurrentProfile, session
 from qt.ml_clutter_experiment_form import Ui_MLClutterExperiment
+
+
+class MLClutterMetricsWindow(QtWidgets.QDialog):
+    """Matplotlib dashboard for ML Clutter training and quality metrics."""
+
+    def __init__(self, training_summary, parent=None):
+        super().__init__(parent)
+        self.training_summary = training_summary or {}
+        self.setWindowTitle("ML Clutter Quality Metrics")
+        self.resize(1180, 820)
+        layout = QtWidgets.QVBoxLayout(self)
+        self.figure = Figure(figsize=(11.5, 8.0), dpi=100)
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        layout.addWidget(self.toolbar)
+        layout.addWidget(self.canvas)
+        self._draw()
+
+    def _draw(self):
+        self.figure.clear()
+        metrics = self.training_summary.get("metrics", {})
+        history = self.training_summary.get("history", [])
+        grid = self.figure.add_gridspec(2, 2, hspace=0.38, wspace=0.28)
+        self._draw_loss_curves(self.figure.add_subplot(grid[0, 0]), history)
+        self._draw_before_after_bars(
+            self.figure.add_subplot(grid[0, 1]),
+            metrics,
+            ("mae_before", "mae_after", "rmse_before", "rmse_after"),
+            "Error before/after cleanup",
+            "error",
+        )
+        self._draw_before_after_bars(
+            self.figure.add_subplot(grid[1, 0]),
+            metrics,
+            ("snr_before_db", "snr_after_db", "psnr_before_db", "psnr_after_db"),
+            "SNR / PSNR before/after cleanup",
+            "dB",
+        )
+        self._draw_residual_and_correlation(self.figure.add_subplot(grid[1, 1]), metrics)
+        self.figure.suptitle("ML Clutter quality metrics", fontsize=14, fontweight="bold")
+        self.canvas.draw_idle()
+
+    @staticmethod
+    def _split_summaries(metrics):
+        splits = metrics.get("splits", {}) if isinstance(metrics, dict) else {}
+        return [(split, payload.get("summary", {})) for split, payload in splits.items() if payload.get("summary", {}).get("num_samples", 0)]
+
+    @staticmethod
+    def _finite(value):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return 0.0
+        if not np.isfinite(value):
+            return 0.0
+        return value
+
+    def _draw_loss_curves(self, ax, history):
+        if not history:
+            ax.text(0.5, 0.5, "No training history", ha="center", va="center")
+            ax.set_axis_off()
+            return
+        epochs = [row.get("epoch", idx + 1) for idx, row in enumerate(history)]
+        for key, label in (("train_loss", "train"), ("val_loss", "validation"), ("train_clean_l1", "train L1"), ("val_clean_l1", "validation L1")):
+            values = [self._finite(row.get(key)) for row in history]
+            if values:
+                ax.plot(epochs, values, marker="o", linewidth=1.4, label=label)
+        ax.set_title("Training losses")
+        ax.set_xlabel("epoch")
+        ax.set_ylabel("loss")
+        ax.grid(True, alpha=0.25)
+        ax.legend(fontsize=8)
+
+    def _draw_before_after_bars(self, ax, metrics, keys, title, ylabel):
+        summaries = self._split_summaries(metrics)
+        if not summaries:
+            ax.text(0.5, 0.5, "No paired metrics", ha="center", va="center")
+            ax.set_axis_off()
+            return
+        labels = [split for split, _ in summaries]
+        x = np.arange(len(labels), dtype=float)
+        width = 0.18
+        offsets = np.linspace(-1.5 * width, 1.5 * width, len(keys))
+        for offset, key in zip(offsets, keys):
+            values = [self._finite(summary.get(key)) for _, summary in summaries]
+            ax.bar(x + offset, values, width=width, label=key.replace("_", " "))
+        ax.set_title(title)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=15, ha="right")
+        ax.set_ylabel(ylabel)
+        ax.grid(True, axis="y", alpha=0.25)
+        ax.legend(fontsize=8)
+
+    def _draw_residual_and_correlation(self, ax, metrics):
+        summaries = self._split_summaries(metrics)
+        if not summaries:
+            ax.text(0.5, 0.5, "No residual diagnostics", ha="center", va="center")
+            ax.set_axis_off()
+            return
+        labels = [split for split, _ in summaries]
+        x = np.arange(len(labels), dtype=float)
+        width = 0.22
+        series = [
+            ("changed_energy_ratio", "changed energy"),
+            ("structural_correlation_after", "structural corr after"),
+            ("trace_correlation_after", "trace corr after"),
+        ]
+        for idx, (key, label) in enumerate(series):
+            values = [self._finite(summary.get(key)) for _, summary in summaries]
+            ax.bar(x + (idx - 1) * width, values, width=width, label=label)
+        ax.set_title("Over-cleaning diagnostics")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=15, ha="right")
+        ax.set_ylabel("ratio / correlation")
+        ax.grid(True, axis="y", alpha=0.25)
+        ax.legend(fontsize=8)
 
 
 class MLClutterTrainingWorker(QtCore.QObject):
@@ -106,6 +225,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_thread = None
         self.training_worker = None
         self.training_summary = None
+        self.metrics_window = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -450,6 +570,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_summary = summary
         self.experiment_config["training"] = summary
         self._show_training_stats("Training finished.\n" + json.dumps(summary, indent=2, ensure_ascii=False))
+        metrics = summary.get("metrics", {})
+        self.experiment_config["metrics"] = metrics
+        self._show_results_log(self._format_metrics_report(metrics, summary.get("metrics_report", "")))
+        self._open_metrics_window(summary)
         self._log(f"ML Clutter training finished: best_epoch={summary['best_epoch']}, best_val_loss={summary['best_validation_loss']:.6g}")
 
     def _on_training_error(self, message):
@@ -460,6 +584,32 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_thread = None
         self.training_worker = None
         self.ui.pushButton_start_training.setEnabled(True)
+
+    @staticmethod
+    def _format_metrics_report(metrics, metrics_path=""):
+        if not metrics:
+            return "Quality metrics are not available yet. Train a model to compare noisy-before and clean_pred-after."
+        lines = [
+            "ML Clutter quality metrics report",
+            "Task: paired supervised direct-clean evaluation",
+            "Comparison: noisy vs clean before cleanup; clean_pred vs clean after cleanup",
+        ]
+        if metrics_path:
+            lines.append(f"Saved metrics JSON: {metrics_path}")
+        for split, payload in metrics.get("splits", {}).items():
+            summary = payload.get("summary", {})
+            lines.extend([
+                "",
+                f"[{split}] samples={summary.get('num_samples', 0)}",
+                f"MAE before/after: {summary.get('mae_before', float('nan')):.6g} -> {summary.get('mae_after', float('nan')):.6g}",
+                f"RMSE before/after: {summary.get('rmse_before', float('nan')):.6g} -> {summary.get('rmse_after', float('nan')):.6g}",
+                f"SNR before/after/gain dB: {summary.get('snr_before_db', float('nan')):.6g} -> {summary.get('snr_after_db', float('nan')):.6g} / {summary.get('snr_gain_db', float('nan')):.6g}",
+                f"PSNR before/after dB: {summary.get('psnr_before_db', float('nan')):.6g} -> {summary.get('psnr_after_db', float('nan')):.6g}",
+                f"Structural corr before/after: {summary.get('structural_correlation_before', float('nan')):.6g} -> {summary.get('structural_correlation_after', float('nan')):.6g}",
+                f"Residual changed-energy ratio: {summary.get('changed_energy_ratio', float('nan')):.6g}",
+            ])
+        lines.extend(["", json.dumps(metrics, indent=2, ensure_ascii=False)])
+        return "\n".join(lines)
 
     def save_untrained_checkpoint(self):
         if self.model is None or self.model_config is None:
@@ -495,6 +645,15 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_model_summary(self, text):
         self.ui.textEdit_model_summary.setPlainText(text)
+
+    def _show_results_log(self, text):
+        self.ui.textEdit_results_log.setPlainText(text)
+
+    def _open_metrics_window(self, summary):
+        self.metrics_window = MLClutterMetricsWindow(summary, self)
+        self.metrics_window.show()
+        self.metrics_window.raise_()
+        self.metrics_window.activateWindow()
 
     def _selected_dataset_pair(self):
         row = self.ui.tableWidget_dataset_pairs.currentRow()

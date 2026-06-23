@@ -5,6 +5,7 @@ from .noise_patterns import PatternExtractionConfig, extract_energy_patterns, ex
 from .pattern_library import NoisePattern, PatternLibrary
 from .pattern_generator import PatternClutterConfig, generate_pattern_clutter
 from .preprocessing import NormalizationResult, Normalizer, build_preprocessing_report
+from .metrics import paired_cleaning_metrics, summarize_metric_rows
 from .model import ModelConfig, count_parameters, create_model, load_model_checkpoint, save_model_checkpoint
 
 __all__ = [
@@ -14,6 +15,8 @@ __all__ = [
     "PatternLibrary",
     "PatternClutterConfig",
     "generate_pattern_clutter",
+    "paired_cleaning_metrics",
+    "summarize_metric_rows",
     "ModelConfig",
     "count_parameters",
     "create_model",
