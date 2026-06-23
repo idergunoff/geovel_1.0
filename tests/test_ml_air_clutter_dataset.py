@@ -1,0 +1,79 @@
+import json
+
+import numpy as np
+import pytest
+
+from ml_air_clutter.dataset import (
+    PairValidationError,
+    PatchDatasetConfig,
+    build_paired_patch_dataset,
+    save_dataset,
+    validate_clean_noisy_pair,
+)
+
+
+def test_validate_clean_noisy_pair_accepts_matching_512_sample_arrays():
+    clean = np.zeros((96, 512), dtype=float)
+    noisy = clean + 0.1
+
+    report = validate_clean_noisy_pair(clean, noisy)
+
+    assert report["valid"] is True
+    assert report["shape"] == [96, 512]
+    assert report["errors"] == []
+    assert "difference_stats" in report
+
+
+def test_validate_clean_noisy_pair_rejects_mismatched_shapes():
+    report = validate_clean_noisy_pair(np.zeros((8, 512)), np.zeros((9, 512)))
+
+    assert report["valid"] is False
+    assert any("shapes must match" in error for error in report["errors"])
+
+
+def test_build_paired_patch_dataset_uses_trace_blocks_with_gap_for_single_pair():
+    clean = np.arange(160 * 512, dtype=float).reshape(160, 512)
+    noisy = clean + 5.0
+    config = PatchDatasetConfig(patch_width=16, stride=8, train_fraction=0.6, validation_fraction=0.2, test_fraction=0.2)
+
+    samples, summary = build_paired_patch_dataset([
+        {"pair_id": "pair_a", "clean": clean, "noisy": noisy, "clean_path": "clean.npy", "noisy_path": "noisy.npy"}
+    ], config)
+
+    assert summary["dataset_schema"] == "paired_clean_noisy_v1"
+    assert summary["num_train_patches"] == len(samples["train"])
+    assert summary["num_validation_patches"] == len(samples["validation"])
+    assert summary["num_test_patches"] == len(samples["test"])
+    assert samples["train"]
+    assert samples["validation"]
+    assert samples["test"]
+    train_max = max(sample["x_end"] for sample in samples["train"])
+    val_min = min(sample["x_start"] for sample in samples["validation"])
+    assert val_min - train_max >= config.patch_width
+    first = samples["train"][0]
+    assert np.array_equal(first["noisy"], noisy[first["x_start"]:first["x_end"]])
+    assert np.array_equal(first["clean"], clean[first["x_start"]:first["x_end"]])
+    assert np.array_equal(first["residual"], first["noisy"] - first["clean"])
+
+
+def test_build_paired_patch_dataset_rejects_invalid_pair():
+    config = PatchDatasetConfig(patch_width=8, stride=4)
+
+    with pytest.raises(PairValidationError):
+        build_paired_patch_dataset([{"pair_id": "bad", "clean": np.zeros((8, 256)), "noisy": np.zeros((8, 256))}], config)
+
+
+def test_save_dataset_writes_summary_and_npz_samples(tmp_path):
+    clean = np.zeros((48, 512), dtype=float)
+    noisy = clean + 1.0
+    samples, summary = build_paired_patch_dataset(
+        [{"pair_id": "pair_a", "clean": clean, "noisy": noisy}],
+        PatchDatasetConfig(patch_width=8, stride=8),
+    )
+
+    summary_path = save_dataset(tmp_path, samples, summary)
+
+    assert summary_path.exists()
+    loaded_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert loaded_summary["dataset_schema"] == "paired_clean_noisy_v1"
+    assert list((tmp_path / "train").glob("*.npz"))

@@ -5,6 +5,13 @@ import numpy as np
 from PyQt5 import QtWidgets
 
 from ml_air_clutter.config import NormalizationConfig, SyntheticClutterConfig
+from ml_air_clutter.dataset import (
+    PairValidationError,
+    PatchDatasetConfig,
+    build_paired_patch_dataset,
+    save_dataset,
+    validate_clean_noisy_pair,
+)
 from ml_air_clutter.noise_patterns import (
     PatternExtractionConfig,
     extract_energy_patterns,
@@ -50,6 +57,9 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.experiment_profiles = {}
         self.synthetic_clutter_result = None
         self.pattern_clutter_result = None
+        self.dataset_pairs = []
+        self.dataset_samples = None
+        self.dataset_summary = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -58,6 +68,11 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_apply_preprocessing.clicked.connect(self.normalize_clean_profile)
         self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
         self.ui.pushButton_generate_synthetic_clutter.clicked.connect(self.generate_synthetic_clutter_preview)
+        self.ui.pushButton_add_clean_noisy_pair.clicked.connect(self.add_current_clean_noisy_pair)
+        self.ui.pushButton_preview_pair.clicked.connect(self.preview_selected_pair)
+        self.ui.pushButton_build_dataset.clicked.connect(self.build_dataset)
+        self.ui.pushButton_preview_random_patch.clicked.connect(self.preview_random_patch)
+        self.ui.pushButton_save_dataset.clicked.connect(self.save_dataset)
         self.ui.pushButton_add_noisy_to_library.clicked.connect(self.add_loaded_real_noisy_to_pattern_sources)
         self.ui.pushButton_extract_manual_pattern.clicked.connect(self.extract_manual_pattern)
         self.ui.pushButton_extract_energy_patterns.clicked.connect(self.extract_energy_patterns)
@@ -157,6 +172,135 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self._register_real_noisy_profile(name, prepared, source)
         self._display_profile(prepared, f"ML Clutter {role.replace('_', ' ')}: {name}")
         self._log(f"Profile '{name}' loaded as {role.replace('_', ' ')} and displayed in MainWindow")
+
+    def add_current_clean_noisy_pair(self):
+        if self.clean_profile is None or self.real_noisy_profile is None:
+            self._show_dataset_stats("Load both Clean and Real Noisy profiles before adding a dataset pair.")
+            self._log("ML Clutter dataset: clean/noisy pair is incomplete", "red")
+            return
+        pair_id = f"pair_{len(self.dataset_pairs) + 1:03d}"
+        clean_name = f"clean_{pair_id}"
+        noisy_name = f"noisy_{pair_id}"
+        report = validate_clean_noisy_pair(self.clean_profile, self.real_noisy_profile, self.MIN_NUM_TRACES)
+        pair = {
+            "pair_id": pair_id,
+            "clean": self.clean_profile.copy(),
+            "noisy": self.real_noisy_profile.copy(),
+            "clean_name": clean_name,
+            "noisy_name": noisy_name,
+            "clean_path": clean_name,
+            "noisy_path": noisy_name,
+            "validation": report,
+            "normalization": self.experiment_config.get("normalization") or {},
+        }
+        self.dataset_pairs.append(pair)
+        self._refresh_dataset_pairs_ui()
+        self._show_dataset_stats(self._format_pair_validation_report(pair))
+        self._log(f"Dataset pair added: {pair_id} ({'valid' if report['valid'] else 'invalid'})")
+
+    def preview_selected_pair(self):
+        pair = self._selected_dataset_pair()
+        if pair is None:
+            self._show_dataset_stats("Select a clean/noisy pair before preview.")
+            return
+        self._display_profile(pair["clean"], f"ML Clutter dataset {pair['pair_id']} clean")
+        self._display_profile(pair["noisy"], f"ML Clutter dataset {pair['pair_id']} noisy")
+        self._display_profile(pair["noisy"] - pair["clean"], f"ML Clutter dataset {pair['pair_id']} residual")
+        self._show_dataset_stats(self._format_pair_validation_report(pair))
+
+    def build_dataset(self):
+        config = self._current_dataset_config()
+        try:
+            samples, summary = build_paired_patch_dataset(self.dataset_pairs, config)
+        except PairValidationError as exc:
+            self._show_dataset_stats(str(exc))
+            self._log(f"ML Clutter dataset build failed: {exc}", "red")
+            return
+        self.dataset_samples = samples
+        self.dataset_summary = summary
+        self._show_dataset_stats(json.dumps(summary, indent=2, ensure_ascii=False))
+        self._log(
+            "Dataset built: "
+            f"train={summary['num_train_patches']}, "
+            f"validation={summary['num_validation_patches']}, test={summary['num_test_patches']}"
+        )
+
+    def preview_random_patch(self):
+        if not self.dataset_samples:
+            self._show_dataset_stats("Build the dataset before previewing patches.")
+            return
+        available = [(split, sample) for split, split_samples in self.dataset_samples.items() for sample in split_samples]
+        if not available:
+            self._show_dataset_stats("Dataset has no patches. Check patch width, stride and split fractions.")
+            return
+        rng = np.random.default_rng(int(self.ui.spinBox_gen_seed.value()))
+        split, sample = available[int(rng.integers(0, len(available)))]
+        self._display_profile(sample["clean"], f"ML Clutter {split} patch clean {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["noisy"], f"ML Clutter {split} patch noisy {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._display_profile(sample["residual"], f"ML Clutter {split} patch residual {sample['pair_id']} {sample['x_start']}:{sample['x_end']}")
+        self._show_dataset_stats(json.dumps({k: v for k, v in sample.items() if k not in {"clean", "noisy", "residual"}}, indent=2, ensure_ascii=False))
+
+    def save_dataset(self):
+        if self.dataset_samples is None or self.dataset_summary is None:
+            self._show_dataset_stats("Build the dataset before saving it.")
+            return
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Save paired ML clutter dataset")
+        if not directory:
+            return
+        summary_path = save_dataset(directory, self.dataset_samples, self.dataset_summary)
+        self._show_dataset_stats(f"Dataset saved to {summary_path}\n" + json.dumps(self.dataset_summary, indent=2, ensure_ascii=False))
+        self._log(f"ML Clutter dataset saved: {summary_path}")
+
+    def _current_dataset_config(self):
+        return PatchDatasetConfig(
+            patch_width=int(self.ui.spinBox_dataset_patch_width.value()),
+            stride=int(self.ui.spinBox_dataset_stride.value()),
+            train_fraction=float(self.ui.doubleSpinBox_dataset_train.value()),
+            validation_fraction=float(self.ui.doubleSpinBox_dataset_val.value()),
+            test_fraction=float(self.ui.doubleSpinBox_dataset_test.value()),
+            seed=int(self.ui.spinBox_gen_seed.value()),
+            min_num_traces=self.MIN_NUM_TRACES,
+        )
+
+    def _selected_dataset_pair(self):
+        row = self.ui.tableWidget_dataset_pairs.currentRow()
+        if row < 0 or row >= len(self.dataset_pairs):
+            return None
+        return self.dataset_pairs[row]
+
+    def _refresh_dataset_pairs_ui(self):
+        table = self.ui.tableWidget_dataset_pairs
+        table.setRowCount(len(self.dataset_pairs))
+        for row, pair in enumerate(self.dataset_pairs):
+            report = pair["validation"]
+            values = [
+                pair["pair_id"], pair["clean_name"], pair["noisy_name"], str(tuple(report["shape"])),
+                "OK" if report["valid"] else "ERROR: " + "; ".join(report["errors"]),
+            ]
+            for col, value in enumerate(values):
+                table.setItem(row, col, QtWidgets.QTableWidgetItem(value))
+        table.resizeColumnsToContents()
+
+    @staticmethod
+    def _format_pair_validation_report(pair):
+        report = pair["validation"]
+        lines = [
+            f"Pair id: {pair['pair_id']}",
+            f"Clean source: {pair['clean_name']}",
+            f"Noisy source: {pair['noisy_name']}",
+            f"Shape: {report['shape']}",
+            f"Validation: {'OK' if report['valid'] else 'ERROR'}",
+        ]
+        if report["errors"]:
+            lines.append("Errors: " + "; ".join(report["errors"]))
+        if report["warnings"]:
+            lines.append("Warnings: " + "; ".join(report["warnings"]))
+        lines.extend([
+            "Clean stats:", json.dumps(report["clean_stats"], indent=2),
+            "Noisy stats:", json.dumps(report["noisy_stats"], indent=2),
+            "Difference stats:", json.dumps(report["difference_stats"], indent=2),
+        ])
+        return "\n".join(lines)
 
     def add_loaded_real_noisy_to_pattern_sources(self):
         if self.real_noisy_profile is None:
@@ -681,6 +825,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def _show_pattern_stats(self, text):
         self.ui.textEdit_pattern_library.setPlainText(text)
+        self.ui.textEdit_results_log.append(text)
+
+    def _show_dataset_stats(self, text):
+        self.ui.textEdit_dataset_summary.setPlainText(text)
         self.ui.textEdit_results_log.append(text)
 
     def _log(self, text, color="green"):
