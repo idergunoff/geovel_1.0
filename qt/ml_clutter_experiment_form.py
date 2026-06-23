@@ -21,10 +21,7 @@ class Ui_MLClutterExperiment(object):
         self.tab_dataset = self._add_dataset_tab()
         self.tab_model = self._add_model_tab()
         self.tab_training = self._add_training_tab()
-        self.tab_inference = self._add_placeholder_tab(
-            "tab_inference",
-            "Apply trained clutter-removal models to synthetic or real profiles.",
-        )
+        self.tab_inference = self._add_inference_tab()
         self.tab_results = self._add_results_tab()
 
         self.verticalLayout.addWidget(self.tabWidget)
@@ -454,6 +451,62 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.addTab(tab, "")
         return tab
 
+
+    def _add_inference_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_inference")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText("Run sliding-window full-profile inference, preview noisy / clean_pred / cleaned / residual, tune alpha, and save the result.")
+        layout.addWidget(intro, 0, 0, 1, 4)
+        self.spinBox_inference_patch_width = QtWidgets.QSpinBox(tab)
+        self.spinBox_inference_patch_width.setObjectName("spinBox_inference_patch_width")
+        self.spinBox_inference_patch_width.setRange(1, 100000)
+        self.spinBox_inference_patch_width.setValue(64)
+        self.spinBox_inference_stride = QtWidgets.QSpinBox(tab)
+        self.spinBox_inference_stride.setObjectName("spinBox_inference_stride")
+        self.spinBox_inference_stride.setRange(1, 100000)
+        self.spinBox_inference_stride.setValue(32)
+        self.horizontalSlider_inference_alpha = QtWidgets.QSlider(QtCore.Qt.Horizontal, tab)
+        self.horizontalSlider_inference_alpha.setObjectName("horizontalSlider_inference_alpha")
+        self.horizontalSlider_inference_alpha.setRange(0, 100)
+        self.horizontalSlider_inference_alpha.setValue(100)
+        self.label_inference_alpha_value = QtWidgets.QLabel("1.00", tab)
+        self.label_inference_alpha_value.setObjectName("label_inference_alpha_value")
+        self.comboBox_inference_source = QtWidgets.QComboBox(tab)
+        self.comboBox_inference_source.setObjectName("comboBox_inference_source")
+        self.comboBox_inference_source.addItem("Loaded real noisy profile", "real_noisy")
+        self.comboBox_inference_source.addItem("Generated noisy preview", "generated")
+        self.comboBox_inference_source.addItem("Loaded clean profile", "clean")
+        controls = [
+            ("source profile", self.comboBox_inference_source),
+            ("patch width", self.spinBox_inference_patch_width),
+            ("stride", self.spinBox_inference_stride),
+        ]
+        for row, (label, widget) in enumerate(controls, start=1):
+            layout.addWidget(QtWidgets.QLabel(label, tab), row, 0)
+            layout.addWidget(widget, row, 1)
+        layout.addWidget(QtWidgets.QLabel("alpha", tab), 4, 0)
+        layout.addWidget(self.horizontalSlider_inference_alpha, 4, 1, 1, 2)
+        layout.addWidget(self.label_inference_alpha_value, 4, 3)
+        self.pushButton_run_inference = QtWidgets.QPushButton(tab)
+        self.pushButton_run_inference.setObjectName("pushButton_run_inference")
+        layout.addWidget(self.pushButton_run_inference, 1, 2)
+        self.pushButton_preview_inference = QtWidgets.QPushButton(tab)
+        self.pushButton_preview_inference.setObjectName("pushButton_preview_inference")
+        layout.addWidget(self.pushButton_preview_inference, 2, 2)
+        self.pushButton_save_inference = QtWidgets.QPushButton(tab)
+        self.pushButton_save_inference.setObjectName("pushButton_save_inference")
+        layout.addWidget(self.pushButton_save_inference, 3, 2)
+        self.textEdit_inference_log = QtWidgets.QTextEdit(tab)
+        self.textEdit_inference_log.setReadOnly(True)
+        self.textEdit_inference_log.setObjectName("textEdit_inference_log")
+        layout.addWidget(self.textEdit_inference_log, 5, 0, 1, 4)
+        layout.setRowStretch(5, 1)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
     def _add_placeholder_tab(self, object_name, message):
         tab = QtWidgets.QWidget()
         tab.setObjectName(object_name)
@@ -519,6 +572,9 @@ class Ui_MLClutterExperiment(object):
         self.pushButton_create_model.setText(_translate("MLClutterExperiment", "Create Model"))
         self.pushButton_save_untrained_checkpoint.setText(_translate("MLClutterExperiment", "Save Untrained Checkpoint"))
         self.pushButton_start_training.setText(_translate("MLClutterExperiment", "Start Training"))
+        self.pushButton_run_inference.setText(_translate("MLClutterExperiment", "Run Inference"))
+        self.pushButton_preview_inference.setText(_translate("MLClutterExperiment", "Preview Current Alpha"))
+        self.pushButton_save_inference.setText(_translate("MLClutterExperiment", "Save Result"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))
