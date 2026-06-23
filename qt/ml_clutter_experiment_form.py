@@ -18,10 +18,7 @@ class Ui_MLClutterExperiment(object):
         self.tab_profiles = self._add_profiles_tab()
         self.tab_noise_patterns = self._add_noise_patterns_tab()
         self.tab_generator = self._add_generator_tab()
-        self.tab_dataset = self._add_placeholder_tab(
-            "tab_dataset",
-            "Generate synthetic noisy/clean training pairs and patch datasets.",
-        )
+        self.tab_dataset = self._add_dataset_tab()
         self.tab_model = self._add_placeholder_tab(
             "tab_model",
             "Choose baseline CNN, DnCNN, or U-Net model settings.",
@@ -276,6 +273,78 @@ class Ui_MLClutterExperiment(object):
         self.tabWidget.addTab(tab, "")
         return tab
 
+    def _add_dataset_tab(self):
+        tab = QtWidgets.QWidget()
+        tab.setObjectName("tab_dataset")
+        layout = QtWidgets.QGridLayout(tab)
+        intro = QtWidgets.QLabel(tab)
+        intro.setWordWrap(True)
+        intro.setText("Build the temporary paired clean/noisy supervised dataset: input = noisy, target = clean.")
+        layout.addWidget(intro, 0, 0, 1, 4)
+        self.pushButton_add_clean_noisy_pair = QtWidgets.QPushButton(tab)
+        self.pushButton_add_clean_noisy_pair.setObjectName("pushButton_add_clean_noisy_pair")
+        layout.addWidget(self.pushButton_add_clean_noisy_pair, 1, 0)
+        self.pushButton_preview_pair = QtWidgets.QPushButton(tab)
+        self.pushButton_preview_pair.setObjectName("pushButton_preview_pair")
+        layout.addWidget(self.pushButton_preview_pair, 1, 1)
+        self.pushButton_build_dataset = QtWidgets.QPushButton(tab)
+        self.pushButton_build_dataset.setObjectName("pushButton_build_dataset")
+        layout.addWidget(self.pushButton_build_dataset, 1, 2)
+        self.pushButton_preview_random_patch = QtWidgets.QPushButton(tab)
+        self.pushButton_preview_random_patch.setObjectName("pushButton_preview_random_patch")
+        layout.addWidget(self.pushButton_preview_random_patch, 1, 3)
+        self.tableWidget_dataset_pairs = QtWidgets.QTableWidget(tab)
+        self.tableWidget_dataset_pairs.setObjectName("tableWidget_dataset_pairs")
+        self.tableWidget_dataset_pairs.setColumnCount(5)
+        self.tableWidget_dataset_pairs.setHorizontalHeaderLabels(["Pair id", "Clean", "Noisy", "Shape", "Validation"])
+        self.tableWidget_dataset_pairs.horizontalHeader().setStretchLastSection(True)
+        layout.addWidget(self.tableWidget_dataset_pairs, 2, 0, 1, 4)
+        self.spinBox_dataset_patch_width = QtWidgets.QSpinBox(tab)
+        self.spinBox_dataset_patch_width.setObjectName("spinBox_dataset_patch_width")
+        self.spinBox_dataset_patch_width.setRange(1, 100000)
+        self.spinBox_dataset_patch_width.setValue(64)
+        self.spinBox_dataset_stride = QtWidgets.QSpinBox(tab)
+        self.spinBox_dataset_stride.setObjectName("spinBox_dataset_stride")
+        self.spinBox_dataset_stride.setRange(1, 100000)
+        self.spinBox_dataset_stride.setValue(32)
+        self.doubleSpinBox_dataset_train = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_dataset_train.setObjectName("doubleSpinBox_dataset_train")
+        self.doubleSpinBox_dataset_train.setRange(0.0, 1.0)
+        self.doubleSpinBox_dataset_train.setValue(0.7)
+        self.doubleSpinBox_dataset_val = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_dataset_val.setObjectName("doubleSpinBox_dataset_val")
+        self.doubleSpinBox_dataset_val.setRange(0.0, 1.0)
+        self.doubleSpinBox_dataset_val.setValue(0.15)
+        self.doubleSpinBox_dataset_test = QtWidgets.QDoubleSpinBox(tab)
+        self.doubleSpinBox_dataset_test.setObjectName("doubleSpinBox_dataset_test")
+        self.doubleSpinBox_dataset_test.setRange(0.0, 1.0)
+        self.doubleSpinBox_dataset_test.setValue(0.15)
+        dataset_controls = [
+            ("patch width", self.spinBox_dataset_patch_width),
+            ("stride", self.spinBox_dataset_stride),
+            ("train", self.doubleSpinBox_dataset_train),
+            ("validation", self.doubleSpinBox_dataset_val),
+        ]
+        for col, (label, widget) in enumerate(dataset_controls):
+            layout.addWidget(QtWidgets.QLabel(label, tab), 3, col)
+            layout.addWidget(widget, 4, col)
+        layout.addWidget(QtWidgets.QLabel("test", tab), 5, 2)
+        layout.addWidget(self.doubleSpinBox_dataset_test, 5, 3)
+        self.pushButton_save_dataset = QtWidgets.QPushButton(tab)
+        self.pushButton_save_dataset.setObjectName("pushButton_save_dataset")
+        layout.addWidget(self.pushButton_save_dataset, 5, 0)
+        self.pushButton_load_dataset = QtWidgets.QPushButton(tab)
+        self.pushButton_load_dataset.setObjectName("pushButton_load_dataset")
+        self.pushButton_load_dataset.setEnabled(False)
+        layout.addWidget(self.pushButton_load_dataset, 5, 1)
+        self.textEdit_dataset_summary = QtWidgets.QTextEdit(tab)
+        self.textEdit_dataset_summary.setReadOnly(True)
+        self.textEdit_dataset_summary.setObjectName("textEdit_dataset_summary")
+        layout.addWidget(self.textEdit_dataset_summary, 6, 0, 1, 4)
+        layout.setRowStretch(6, 1)
+        self.tabWidget.addTab(tab, "")
+        return tab
+
     def _add_placeholder_tab(self, object_name, message):
         tab = QtWidgets.QWidget()
         tab.setObjectName(object_name)
@@ -326,6 +395,12 @@ class Ui_MLClutterExperiment(object):
         self.checkBox_gen_vertical_spikes.setText(_translate("MLClutterExperiment", "Vertical spikes"))
         self.checkBox_gen_noise_zones.setText(_translate("MLClutterExperiment", "Wide noise zones"))
         self.pushButton_generate_synthetic_clutter.setText(_translate("MLClutterExperiment", "Generate Clutter Preview"))
+        self.pushButton_add_clean_noisy_pair.setText(_translate("MLClutterExperiment", "Add Clean/Noisy Pair"))
+        self.pushButton_preview_pair.setText(_translate("MLClutterExperiment", "Preview Pair"))
+        self.pushButton_build_dataset.setText(_translate("MLClutterExperiment", "Build Dataset"))
+        self.pushButton_preview_random_patch.setText(_translate("MLClutterExperiment", "Preview Random Patch"))
+        self.pushButton_save_dataset.setText(_translate("MLClutterExperiment", "Save Dataset"))
+        self.pushButton_load_dataset.setText(_translate("MLClutterExperiment", "Load Dataset"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))
