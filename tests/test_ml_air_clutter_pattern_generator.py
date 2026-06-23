@@ -9,6 +9,7 @@ from ml_air_clutter.pattern_generator import (
     PatternClutterConfig,
     generate_pattern_clutter,
     merge_raw_dominant_pattern,
+    _select_patterns,
     overlay_noise_by_dominant_amplitude,
     overlay_noise_by_soft_dominance,
     transform_pattern,
@@ -23,6 +24,15 @@ def _library():
     mask = (arr != 0).astype(float)
     pattern = NoisePattern.create("src", arr, mask, [0, 12, 100, 164], pattern_id="p1", tags=["ringing"])
     return PatternLibrary([pattern])
+
+
+def _two_pattern_library():
+    library = _library()
+    arr = np.zeros((12, 64), dtype=float)
+    arr[:, 20:32] = 220.0
+    mask = (arr != 0).astype(float)
+    library.add_pattern(NoisePattern.create("src2", arr, mask, [0, 12, 140, 204], pattern_id="p2", tags=["ringing"]))
+    return library
 
 
 def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay():
@@ -51,6 +61,36 @@ def test_pattern_generator_places_real_pattern_with_dominant_amplitude_overlay()
     assert meta["placements"][0]["placement"]["z_start"] == 100
     np.testing.assert_allclose(noisy, clean + clutter)
     assert np.all((noisy >= 0.0) & (noisy <= 256.0))
+
+
+class _FixedChoiceRng:
+    def __init__(self, indices):
+        self.indices = indices
+        self.calls = []
+
+    def choice(self, population_size, size, replace):
+        self.calls.append({"population_size": population_size, "size": size, "replace": replace})
+        return self.indices[:size]
+
+
+def test_selected_pattern_mode_repeats_current_selected_pattern():
+    cfg = PatternClutterConfig(pattern_selection_mode="selected", pattern_ids=["p1"], num_patterns=5)
+    rng = _FixedChoiceRng([0, 0, 0, 0, 0])
+
+    selected = _select_patterns(_two_pattern_library(), cfg, rng)
+
+    assert [pattern.pattern_id for pattern in selected] == ["p1"] * 5
+    assert rng.calls == [{"population_size": 1, "size": 5, "replace": True}]
+
+
+def test_random_pattern_mode_ignores_current_selection_and_samples_library():
+    cfg = PatternClutterConfig(pattern_selection_mode="random", pattern_ids=["p1"], num_patterns=4)
+    rng = _FixedChoiceRng([0, 1, 0, 1])
+
+    selected = _select_patterns(_two_pattern_library(), cfg, rng)
+
+    assert [pattern.pattern_id for pattern in selected] == ["p1", "p2", "p1", "p2"]
+    assert rng.calls == [{"population_size": 2, "size": 4, "replace": True}]
 
 
 def test_raw_dominant_mode_places_untransformed_pattern_without_snr_scaling():

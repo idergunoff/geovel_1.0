@@ -19,6 +19,7 @@ class PatternClutterConfig:
     seed: Optional[int] = 42
     mode: str = "pattern"  # pattern | mixed
     pattern_ids: Optional[Sequence[str]] = None
+    pattern_selection_mode: str = "selected"  # selected | random
     num_patterns: int = 1
     amplitude_scale_min: float = 0.8
     amplitude_scale_max: float = 1.2
@@ -438,7 +439,10 @@ def scale_clutter_to_target_snr(clean, clutter, target_snr_db):
 
 def _select_patterns(pattern_library, config, rng):
     patterns = pattern_library.patterns if isinstance(pattern_library, PatternLibrary) else list(pattern_library)
-    if config.pattern_ids:
+    selection_mode = getattr(config, "pattern_selection_mode", "selected")
+    if selection_mode not in {"selected", "random"}:
+        raise ValueError(f"Unsupported pattern selection mode: {selection_mode}")
+    if selection_mode == "selected" and config.pattern_ids:
         allowed = set(config.pattern_ids)
         patterns = [p for p in patterns if p.pattern_id in allowed]
     if not patterns:
