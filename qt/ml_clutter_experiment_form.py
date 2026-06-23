@@ -523,6 +523,9 @@ class Ui_MLClutterExperiment(object):
         tab = QtWidgets.QWidget()
         tab.setObjectName("tab_results")
         layout = QtWidgets.QVBoxLayout(tab)
+        self.pushButton_save_experiment_artifacts = QtWidgets.QPushButton(tab)
+        self.pushButton_save_experiment_artifacts.setObjectName("pushButton_save_experiment_artifacts")
+        layout.addWidget(self.pushButton_save_experiment_artifacts)
         self.textEdit_results_log = QtWidgets.QTextEdit(tab)
         self.textEdit_results_log.setReadOnly(True)
         self.textEdit_results_log.setObjectName("textEdit_results_log")
@@ -575,6 +578,7 @@ class Ui_MLClutterExperiment(object):
         self.pushButton_run_inference.setText(_translate("MLClutterExperiment", "Run Inference"))
         self.pushButton_preview_inference.setText(_translate("MLClutterExperiment", "Preview Current Alpha"))
         self.pushButton_save_inference.setText(_translate("MLClutterExperiment", "Save Result"))
+        self.pushButton_save_experiment_artifacts.setText(_translate("MLClutterExperiment", "Save Experiment Artifacts"))
         tab_names = ["Profiles", "Noise Patterns", "Generator", "Dataset", "Model", "Training", "Inference", "Results"]
         for index, name in enumerate(tab_names):
             self.tabWidget.setTabText(index, _translate("MLClutterExperiment", name))
