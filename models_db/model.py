@@ -1326,6 +1326,7 @@ class GeochemPoint(Base):
     x_coord = Column(Float)
     y_coord = Column(Float)
     fake = Column(Boolean, default=False)
+    # g_point_hash = Column(String)
 
     geochem = relationship("Geochem", back_populates="g_points")
     g_point_values = relationship("GeochemPointValue", back_populates="g_point")

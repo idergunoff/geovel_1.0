@@ -93,7 +93,7 @@ def sync_objects_direction(source_session, target_session, source_obj_model, sou
                 if n % 50 == 0:
                     target_session.flush()
 
-            target_session.commit()
+    target_session.commit()
 
 
     set_info(f'Добавлено: {pluralize(added_objects_count, ["объект", "объекта", "объектов"])}, '

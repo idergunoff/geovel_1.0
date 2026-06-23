@@ -1,7 +1,9 @@
+import pylab as p
 from psycopg2 import OperationalError
 from PyQt5.QtWidgets import QListWidget
 import hashlib
-from remote_db.sync_wells import sync_wells_func
+
+from remote_db.sync_wells import *
 from remote_db.sync_well_relations import load_well_relations, unload_well_relations
 from remote_db.sync_formations import load_formations, unload_formations
 from remote_db.sync_objects import sync_objects_direction
@@ -15,6 +17,9 @@ from remote_db.sync_features.sync_entropy_features import *
 from remote_db.sync_features.sync_entropy_features_profile import *
 from remote_db.deduplicate_wells import *
 from mlp import update_list_mlp
+from geochem import update_combobox_geochem
+from remote_db.sync_geochem import *
+from remote_db.unload_geochem import *
 
 def open_rem_db_window():
     try:
@@ -1573,5 +1578,596 @@ def open_rem_db_window():
     ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
     ui_rdb.pushButton_sync_entropy_profile.clicked.connect(sync_entropy_features_profile)
     ui_rdb.pushButton_remove_dupl_rdb.clicked.connect(remove_duplicate_wells)
+
+    #####################################################
+    #####################  Geochem  #####################
+    #####################################################
+
+    def get_geochem_rdb_id():
+        """ Получение id выбранного объекта геохимических исследований """
+        try:
+            return int(ui_rdb.comboBox_geochem_rdb.currentText().split(' id')[-1])
+        except ValueError:
+            pass
+
+    def get_g_well_rdb_id():
+        """ Получение id выбранной скважины объекта геохимических исследований """
+        try:
+            return int(ui_rdb.comboBox_g_wells.currentText().split(' id')[-1])
+        except ValueError:
+            pass
+
+    def update_geochem_rdb_combobox():
+        """ Обновление списка объектов геохимических данных в выпадающем списке """
+
+        # Очистка выпадающего списка объектов
+        ui_rdb.comboBox_geochem_rdb.clear()
+
+        # Получение всех объектов из базы данных, отсортированных по дате исследования
+        with get_session() as remote_session:
+            try:
+                # Добавление названия объекта в выпадающий список
+                geochems = remote_session.query(GeochemRDB).order_by(GeochemRDB.title).all()
+            except ValueError:
+                return
+            for g in geochems:
+                ui_rdb.comboBox_geochem_rdb.addItem(f'{g.title} id{g.id}')
+        update_g_well_rdb_combobox()
+        update_g_points_rdb()
+        update_g_params_rdb()
+        update_mask_maket_labels()
+
+    def update_g_well_rdb_combobox():
+        """ Обновление списка скважин объекта геохимических данных """
+        # Очистка выпадающего списка скважин
+        ui_rdb.comboBox_g_wells.clear()
+        with get_session() as remote_session:
+            try:
+                g_wells = remote_session.query(GeochemWellRDB.id, GeochemWellRDB.title).filter(
+                    GeochemWellRDB.geochem_id == get_geochem_rdb_id()
+                ).order_by(GeochemWellRDB.title).all()
+            except ValueError:
+                return
+            # Запрос на получение всех скважин, относящихся к объекту, и их добавление в выпадающий список
+            for i in g_wells:
+                ui_rdb.comboBox_g_wells.addItem(f'{i[1]} id{i[0]}')
+        ui_rdb.label_g_wells.setText(f'Wells: {ui_rdb.comboBox_g_wells.count()}')
+        update_g_well_points_rdb()
+
+    def update_g_points_rdb():
+        ui_rdb.listWidget_g_points.clear()
+        with get_session() as remote_session:
+            try:
+                g_points = remote_session.query(GeochemPointRDB).filter(
+                    GeochemPointRDB.geochem_id == get_geochem_rdb_id()
+                ).order_by(GeochemPointRDB.title).all()
+            except ValueError:
+                return
+            g_p_values_count = 0
+            for p in g_points:
+                ui_rdb.listWidget_g_points.addItem(f'{p.title} id{p.id}')
+                g_p_values = remote_session.query(GeochemPointValueRDB).filter(
+                    GeochemPointValueRDB.g_point_id == p.id
+                ).count()
+                g_p_values_count += g_p_values
+            ui_rdb.label_g_p_values.setText(f'Points Values: {g_p_values_count}')
+        ui_rdb.label_g_points.setText(f'Field Points: {ui_rdb.listWidget_g_points.count()}')
+
+    def update_g_well_points_rdb():
+        ui_rdb.listWidget_g_well_points.clear()
+        with get_session() as remote_session:
+            try:
+                g_well_points = remote_session.query(GeochemWellPointRDB).filter(
+                    GeochemWellPointRDB.g_well_id == get_g_well_rdb_id()
+                ).order_by(GeochemWellPointRDB.title).all()
+            except ValueError:
+                return
+            g_w_p_values_count = 0
+            for w_p in g_well_points:
+                ui_rdb.listWidget_g_well_points.addItem(f'{w_p.title} id{w_p.id}')
+                g_w_p_values = remote_session.query(GeochemWellPointValueRDB).filter(
+                    GeochemWellPointValueRDB.g_well_point_id == w_p.id
+                ).count()
+                g_w_p_values_count += g_w_p_values
+            ui_rdb.label_g_w_p_values.setText(f'Well Points Values: {g_w_p_values_count}')
+
+        ui_rdb.label_g_well_points.setText(f'Well Points: {ui_rdb.listWidget_g_well_points.count()}')
+
+    def update_g_params_rdb():
+        ui_rdb.listWidget_g_params.clear()
+        with get_session() as remote_session:
+            try:
+                g_params = remote_session.query(GeochemParameterRDB).filter(
+                    GeochemParameterRDB.geochem_id == get_geochem_rdb_id()
+                ).order_by(GeochemParameterRDB.title).all()
+            except ValueError:
+                return
+            for p in g_params:
+                ui_rdb.listWidget_g_params.addItem(f'{p.title} id{p.id}')
+        ui_rdb.label_g_params.setText(f'Parameters: {ui_rdb.listWidget_g_params.count()}')
+
+    def update_mask_maket_labels():
+        with get_session() as remote_session:
+            # Обновление количества масок
+            masks = remote_session.query(GeochemMaskRDB).filter(
+                GeochemMaskRDB.geochem_id == get_geochem_rdb_id()
+            ).count()
+            ui_rdb.label_g_masks.setText(f'Masks: {masks}')
+
+            # Обновление количества макетов
+            makets = remote_session.query(GeochemMaketRDB).filter(
+                GeochemMaketRDB.geochem_id == get_geochem_rdb_id()
+            ).count()
+            ui_rdb.label_g_makets.setText(f'Makets: {makets}')
+
+    def load_geochem_rdb():
+        """ Загрузка геохимических данных с удаленной БД на локальную """
+
+        with get_session() as remote_session:
+            # Получаем выбранный объект из удаленной базы
+            remote_geochems = remote_session.query(GeochemRDB).filter(GeochemRDB.id == get_geochem_rdb_id())
+
+            loaded_geochem_count = 0
+
+            for remote_geochem in tqdm(remote_geochems, desc='Загрузка объектов геохимических данных'):
+                set_info(f'Загрузка объекта геохимических данных "{remote_geochem.title}"...', 'blue')
+
+                # Проверяем существование объекта в локальной базе
+                local_geochem = session.query(Geochem).filter_by(title = remote_geochem.title).first()
+
+                if not local_geochem:
+                    # Добавляем отстутствующий объект
+                    new_geochem = Geochem(title=remote_geochem.title)
+                    session.add(new_geochem)
+                    session.commit()
+                    local_geochem = new_geochem
+                    set_info(f'Объект загружен с удаленной БД', 'green')
+                    loaded_geochem_count += 1
+                else:
+                    set_info(f'Объект уже есть в локальной БД', 'red')
+
+                set_info("Загрузка связанных геохимических данных...", 'blue')
+
+                # Получаем все параметры для текущего объекта из удаленной базы
+                remote_parameters = remote_session.query(GeochemParameterRDB).filter_by(
+                    geochem_id=remote_geochem.id).all()
+
+                loaded_params_count = 0
+
+                ui.progressBar.setMaximum(len(remote_parameters))
+                for n, remote_parameter in enumerate(remote_parameters):
+                    ui.progressBar.setValue(n+1)
+
+                    # Проверяем существование параметра в локальной базе
+                    local_parameter = session.query(GeochemParameter).filter_by(
+                        geochem_id=local_geochem.id,
+                        title=remote_parameter.title
+                    ).first()
+
+                    if not local_parameter:
+                        # Добавляем отсутствующий параметр
+                        new_parameter = GeochemParameter(
+                            geochem_id=local_geochem.id,
+                            title=remote_parameter.title
+                        )
+                        session.add(new_parameter)
+                        loaded_params_count += 1
+
+                session.commit()
+                if loaded_params_count > 0:
+                    added_word = "Загружена" if loaded_params_count == 1 else "Загружено"
+                    set_info(f'{added_word} {pluralize((loaded_params_count), ["параметр", "параметра", "параметров"])}', 'green')
+                else:
+                    set_info('Все параметры объекта уже есть в локальной БД', 'red')
+
+                # Словарь параметров локальной БД
+                local_params_dict = {
+                    p.title: p.id
+                    for p in session.query(GeochemParameter.id, GeochemParameter.title)
+                    .filter_by(geochem_id=local_geochem.id)
+                    .all()
+                }
+
+                remote_params_dict = {p.id: p.title for p in remote_parameters}
+
+                # Получаем все точки для текущего объекта из удаленной базы
+                remote_points = remote_session.query(GeochemPointRDB).filter_by(geochem_id=remote_geochem.id).all()
+
+                loaded_points_count = 0
+                loaded_p_values_count = 0
+
+                ui.progressBar.setMaximum(len(remote_points))
+                for n, remote_point in enumerate(remote_points):
+                    ui.progressBar.setValue(n+1)
+
+                    # Проверяем существование точки в локальной базе
+                    local_point = session.query(GeochemPoint).filter_by(
+                        geochem_id=local_geochem.id,
+                        title=remote_point.title
+                    ).first()
+
+                    if not local_point:
+                        # Добавляем отсутствующую точку
+                        new_point = GeochemPoint(
+                            geochem_id=local_geochem.id,
+                            title=remote_point.title,
+                            x_coord=remote_point.x_coord,
+                            y_coord=remote_point.y_coord,
+                            fake=remote_point.fake,
+                        )
+                        session.add(new_point)
+                        local_point = new_point
+                        loaded_points_count += 1
+                        session.flush()
+
+                    # Получаем все значения геохимических параметров в точке
+                    remote_p_values = remote_session.query(GeochemPointValueRDB).filter_by(g_point_id=remote_point.id).all()
+
+                    existing_p_values_set = set()
+                    if local_point:
+                        existing_p_values = session.query(
+                            GeochemPointValue.g_point_id,
+                            GeochemPointValue.g_param_id
+                        ).filter_by(g_point_id=local_point.id).all()
+                        existing_p_values_set = {(p_v.g_point_id, p_v.g_param_id) for p_v in existing_p_values}
+
+                    for remote_p_value in remote_p_values:
+                        # Получаем заголовок параметра через словарь
+                        param_title = remote_params_dict.get(remote_p_value.g_param_id)
+
+                        if param_title:
+                            local_param_id = local_params_dict.get(param_title)
+
+                            if local_param_id:
+                                key = (local_point.id, local_param_id)
+                                if key not in existing_p_values_set:
+                                    # Добавляем отсутствующее значение
+                                    new_p_value = GeochemPointValue(
+                                        g_point_id=local_point.id,
+                                        g_param_id=local_param_id,
+                                        value=remote_p_value.value
+                                    )
+                                    session.add(new_p_value)
+                                    loaded_p_values_count += 1
+                                    existing_p_values_set.add(key)
+
+                session.commit()
+                if loaded_points_count > 0:
+                    added_word_point = "Загружена" if loaded_points_count == 1 else "Загружено"
+                    set_info(f'{added_word_point} {pluralize((loaded_points_count), ["точка", "точки", "точек"])}', 'green')
+                else:
+                    set_info('Все точки объекта уже есть в удаленной БД', 'red')
+
+                if loaded_p_values_count > 0:
+                    added_word_p_value = "Загружена" if loaded_p_values_count == 1 else "Загружено"
+                    set_info(f'{added_word_p_value} '
+                             f'{pluralize((loaded_p_values_count), ["значение параметров в точках", "значения параметров в точках", "значений параметров в точках"])}',
+                             'green')
+                else:
+                    set_info('Все значения параметров в точках объекта уже есть в локальной БД', 'red')
+
+                # Получаем все маски для текущего объекта из удаленной базы
+                remote_masks = remote_session.query(GeochemMaskRDB).filter_by(geochem_id=remote_geochem.id).all()
+
+                loaded_masks_count = 0
+
+                ui.progressBar.setMaximum(len(remote_masks))
+                for n, remote_mask in enumerate(remote_masks):
+                    ui.progressBar.setValue(n+1)
+
+                    # Проверяем существование маски в локальной базе
+                    local_mask = session.query(GeochemMask).filter_by(
+                        geochem_id=local_geochem.id,
+                        count_param=remote_mask.count_param,
+                        count_points=remote_mask.count_points
+                    ).first()
+
+                    if not local_mask:
+                        # Добавляем отсутсвующую маску
+                        new_mask = GeochemMask(
+                            geochem_id=local_geochem.id,
+                            count_param=remote_mask.count_param,
+                            count_points=remote_mask.count_points,
+                            mask_param=remote_mask.mask_param,
+                            mask_point=remote_mask.mask_point,
+                            mask_info=remote_mask.mask_info
+                        )
+                        session.add(new_mask)
+                        loaded_masks_count += 1
+
+                session.commit()
+                if loaded_masks_count > 0:
+                    added_word = "Загружена" if loaded_masks_count == 1 else "Загружено"
+                    set_info(f'{added_word} {pluralize((loaded_masks_count), ["маска", "маски", "масок"])}', 'green')
+                else:
+                    set_info('Все маски объекта уже есть в локальной БД', 'red')
+
+                # Получаем все точки для текущего объекта из удаленной базы
+                remote_wells = remote_session.query(GeochemWellRDB).filter_by(geochem_id=remote_geochem.id).all()
+
+                loaded_wells_count = 0
+                loaded_well_points_count = 0
+                loaded_w_p_values_count = 0
+
+                ui.progressBar.setMaximum(len(remote_wells))
+                # Получаем все скважины для текущего объекта из удаленной базы
+                for n, remote_well in enumerate(remote_wells):
+                    ui.progressBar.setValue(n+1)
+
+                    # Проверяем существование скважин в локальной базе
+                    local_well = session.query(GeochemWell).filter_by(
+                        geochem_id=local_geochem.id,
+                        title=remote_well.title
+                    ).first()
+
+                    if not local_well:
+                        # Добавляем отсутствующую скважину
+                        new_well = GeochemWell(
+                            geochem_id=local_geochem.id,
+                            title=remote_well.title,
+                            color=remote_well.color
+                        )
+                        session.add(new_well)
+                        loaded_wells_count += 1
+                        local_well = new_well
+                        session.flush()
+
+                    # Получаем все точки скважины из удаленной базы
+                    remote_well_points = remote_session.query(GeochemWellPointRDB).filter_by(g_well_id=remote_well.id).all()
+
+                    for remote_well_point in remote_well_points:
+
+                        # Проверяем существование точек скважины в локальной базе
+                        local_well_point = session.query(GeochemWellPoint).filter_by(
+                            g_well_id=local_well.id,
+                            title=remote_well_point.title
+                        ).first()
+
+                        if not local_well_point:
+                            # Добавляем отсутствующий точки скважины
+                            new_well_point = GeochemWellPoint(
+                                g_well_id=local_well.id,
+                                title=remote_well_point.title,
+                                x_coord=remote_well_point.x_coord,
+                                y_coord=remote_well_point.y_coord
+                            )
+                            session.add(new_well_point)
+                            local_well_point = new_well_point
+                            loaded_well_points_count += 1
+                            session.flush()
+
+                        # Получаем все значения геохимических параметров в точке скважины
+                        remote_w_p_values = remote_session.query(GeochemWellPointValueRDB).filter_by(
+                            g_well_point_id=remote_well_point.id).all()
+
+                        # Создаем множество сущетсвующих значений для проверки дубликатов
+                        existing_w_p_values_set = set()
+                        if local_well_point:
+                            existing_w_p_values = session.query(
+                                GeochemWellPointValue.g_well_point_id,
+                                GeochemWellPointValue.g_param_id
+                            ).filter_by(g_well_point_id=local_well_point.id).all()
+                            existing_w_p_values_set = {(w_p_v.g_well_point_id, w_p_v.g_param_id) for w_p_v in existing_w_p_values}
+
+                        for remote_w_p_value in remote_w_p_values:
+                            # Получаем заголовок парамера через словарь
+                            param_title = remote_params_dict.get(remote_w_p_value.g_param_id)
+
+                            if param_title:
+                                local_param_id = local_params_dict.get(param_title)
+
+                                if local_param_id:
+                                    # Проверяем существование значения в локальной базе
+                                    key = (local_well_point.id, local_param_id)
+                                    if key not in existing_w_p_values_set:
+                                        # Добавляем отсутствующее значение
+                                        new_w_p_value = GeochemWellPointValue(
+                                            g_well_point_id=local_well_point.id,
+                                            g_param_id=local_param_id,
+                                            value=remote_w_p_value.value
+                                        )
+                                        session.add(new_w_p_value)
+                                        loaded_w_p_values_count += 1
+                                        existing_w_p_values_set.add(key)
+
+                session.commit()
+                if loaded_wells_count > 0:
+                    added_word_well = "Загружена" if loaded_wells_count == 1 else "Загружено"
+                    set_info(
+                        f'{added_word_well} '
+                                f'{pluralize((loaded_wells_count), ["скважина", "скважины", "скважин"])}',
+                            'green')
+                else:
+                    set_info('Все скважины объекта уже есть в локальной БД', 'red')
+                if loaded_well_points_count > 0:
+                    added_word = "Загружена" if loaded_well_points_count == 1 else "Загружено"
+                    set_info(
+                        f'{added_word} '
+                        f'{pluralize((loaded_well_points_count), ["точка скважины", "точки скважины", "точек скважины"])} "{local_well.title}"',
+                        'green')
+                else:
+                    set_info(f'Все точки скважин объекта уже есть в локальной БД', 'red')
+
+                if loaded_w_p_values_count > 0:
+                    added_word_p_value = "Загружена" if loaded_w_p_values_count == 1 else "Загружено"
+                    set_info(
+                        f'{added_word_p_value} '
+                        f'{pluralize((loaded_w_p_values_count), ["значение параметров в точках скважины", "значения параметров в точках скважины", "значений параметров в точках скважины"])}'
+                        f'"{local_well.title}"', 'green')
+                else:
+                    set_info(f'Все значения параметров в точках скважин объекта уже есть в локальной '
+                             f'БД', 'red')
+
+
+                # Получаем все макеты для текущего объекта из удаленной базы
+                remote_makets = remote_session.query(GeochemMaketRDB).filter_by(
+                    geochem_id=remote_geochem.id).all()
+
+                loaded_makets_count = 0
+
+                ui.progressBar.setMaximum(len(remote_makets))
+                for n, remote_maket in enumerate(remote_makets):
+                    ui.progressBar.setValue(n+1)
+
+                    # Проверяем существование макета в локальной базе
+                    local_maket = session.query(GeochemMaket).filter_by(
+                        geochem_id=local_geochem.id,
+                        title=remote_maket.title
+                    ).first()
+
+                    if not local_maket:
+                        # Добавляем отсутствующий макет
+                        new_maket = GeochemMaket(
+                            geochem_id=local_geochem.id,
+                            title=remote_maket.title
+                        )
+                        session.add(new_maket)
+                        loaded_makets_count += 1
+                session.commit()
+                if loaded_makets_count > 0:
+                    added_word = "Загружен" if loaded_makets_count == 1 else "Загружено"
+                    set_info(
+                        f'{added_word} '
+                        f'{pluralize((loaded_makets_count), ["макет", "макета", "макетов"])}',
+                        'green')
+                else:
+                    set_info('Все макеты объекта уже есть в локальной БД', 'red')
+
+        update_combobox_geochem()
+        set_info(f'Загрузка данных с удаленной БД на локальную завершена', 'blue')
+
+    def unload_geochem_rdb():
+        """ Выгрузка геохимических данных с локальной БД на удаленную """
+        unload_geochem_func()
+        update_geochem_rdb_combobox()
+
+
+    def sync_all_geochem():
+        """ Синхронизация всех объектов геохимии и связанных с ними данных """
+        try:
+            with get_session() as remote_session:
+                set_info('Начало синхронизации...', 'blue')
+
+                # Синхронизация объектов (удаленная -> локальная)
+                set_info(f'Обновление геохимических данных в локальной БД...', 'blue')
+                sync_geochem_direction(remote_session, session,
+                                       GeochemRDB, GeochemParameterRDB, GeochemPointRDB, GeochemMaskRDB,
+                                       GeochemWellRDB, GeochemWellPointRDB, GeochemPointValueRDB,
+                                       GeochemWellPointValueRDB, GeochemMaketRDB,
+                                       Geochem, GeochemParameter, GeochemPoint, GeochemMask,
+                                       GeochemWell, GeochemWellPoint, GeochemPointValue,
+                                       GeochemWellPointValue, GeochemMaket)
+
+                update_combobox_geochem()
+                set_info(f'Обновление геохимических в локальной БД завершено', 'blue')
+
+                # Синхронизация объектов (локальная -> удаленная)
+                set_info(f'Обновление геохимических данных в удаленной БД...', 'blue')
+                sync_geochem_direction(session, remote_session,
+                                       Geochem, GeochemParameter, GeochemPoint, GeochemMask,
+                                       GeochemWell, GeochemWellPoint, GeochemPointValue,
+                                       GeochemWellPointValue, GeochemMaket,
+                                       GeochemRDB, GeochemParameterRDB, GeochemPointRDB, GeochemMaskRDB,
+                                       GeochemWellRDB, GeochemWellPointRDB, GeochemPointValueRDB,
+                                       GeochemWellPointValueRDB, GeochemMaketRDB)
+                update_geochem_rdb_combobox()
+                set_info(f'Обновление геохимических данных в удаленной БД завершено', 'blue')
+
+                set_info('Синхронизация завершена', 'blue')
+
+        except Exception as e:
+            # Откат изменений в случае ошибки
+            session.rollback()
+            set_info(f'Синхронизация прервалась: {str(e)}', 'red')
+            raise # Проброс исключения для дальнейшей обработки
+        finally:
+            session.close()
+
+
+    def delete_geochem_rdb():
+        """ Удаление текущего объекта вместе со всеми связанными данными """
+        title_geochem = ui_rdb.comboBox_geochem_rdb.currentText().split('id')[0]
+        geochem_id = get_geochem_rdb_id()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete geochem in RemoteDB',
+            f'Вы уверены, что хотите удалить объект "{title_geochem}" со всеми обучающими скважинами?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
+        if result == QtWidgets.QMessageBox.Yes:
+            with get_session() as remote_session:
+                try:
+                    # Удаляем все маски объекта
+                    remote_session.query(GeochemMaskRDB) \
+                        .filter(GeochemMaskRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все макеты объекта
+                    remote_session.query(GeochemMaketRDB) \
+                        .filter(GeochemMaketRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все значения параметров в точках
+                    remote_session.query(GeochemPointValueRDB) \
+                        .filter(GeochemPointValueRDB.g_point_id == GeochemPointRDB.id) \
+                        .filter(GeochemPointRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все значения параметров в точках скважин
+                    remote_session.query(GeochemWellPointValueRDB) \
+                        .filter(GeochemWellPointValueRDB.g_well_point_id == GeochemWellPointRDB.id) \
+                        .filter(GeochemWellPointRDB.g_well_id == GeochemWellRDB.id) \
+                        .filter(GeochemWellRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все точки скважин объекта
+                    remote_session.query(GeochemWellPointRDB) \
+                        .filter(GeochemWellPointRDB.g_well_id == GeochemWellRDB.id) \
+                        .filter(GeochemWellRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все скважины объекта
+                    remote_session.query(GeochemWellRDB) \
+                        .filter(GeochemWellRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все точки объекта
+                    remote_session.query(GeochemPointRDB) \
+                        .filter(GeochemPointRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем все параметры объекта
+                    remote_session.query(GeochemParameterRDB) \
+                        .filter(GeochemParameterRDB.geochem_id == geochem_id) \
+                        .delete()
+
+                    # Удаляем объект геохимических данных
+                    remote_session.query(GeochemRDB) \
+                        .filter(GeochemRDB.id == geochem_id) \
+                        .delete()
+
+                    remote_session.commit()
+                    set_info(f'Объект геохимических данных "{title_geochem}" удален в удаленной БД', 'green')
+                    update_geochem_rdb_combobox()
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
+
+
+    update_geochem_rdb_combobox()
+    ui_rdb.pushButton_load_geochem.clicked.connect(load_geochem_rdb)
+    ui_rdb.pushButton_unload_geochem.clicked.connect(unload_geochem_rdb)
+    ui_rdb.pushButton_delete_geochem_rdb.clicked.connect(delete_geochem_rdb)
+    ui_rdb.comboBox_geochem_rdb.currentIndexChanged.connect(update_g_well_rdb_combobox)
+    ui_rdb.comboBox_geochem_rdb.currentIndexChanged.connect(update_g_params_rdb)
+    ui_rdb.comboBox_geochem_rdb.currentIndexChanged.connect(update_g_points_rdb)
+    ui_rdb.comboBox_geochem_rdb.currentIndexChanged.connect(update_mask_maket_labels)
+    ui_rdb.comboBox_g_wells.currentIndexChanged.connect(update_g_well_points_rdb)
+    ui_rdb.pushButton_sync_all_geochem.clicked.connect(sync_all_geochem)
+
 
     RemoteDB.exec_()

@@ -735,3 +735,121 @@ class TrainedModelRegRDB(BaseRDB):
 
 
 
+#####################################################
+#####################  Geochem  #####################
+#####################################################
+
+class GeochemRDB(BaseRDB):
+    __tablename__ = 'geochem_rdb'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    g_parameters = relationship("GeochemParameterRDB", back_populates="geochem")
+    g_points = relationship("GeochemPointRDB", back_populates="geochem")
+    g_wells = relationship("GeochemWellRDB", back_populates="geochem")
+    makets = relationship("GeochemMaketRDB", back_populates="geochem")
+    g_masks = relationship("GeochemMaskRDB", back_populates="geochem")
+
+
+class GeochemParameterRDB(BaseRDB):
+    __tablename__ = 'geochem_parameter_rdb'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem_rdb.id'))
+    title = Column(String)
+
+    geochem = relationship("GeochemRDB", back_populates="g_parameters")
+    g_point_values = relationship("GeochemPointValueRDB", back_populates="g_param")
+    g_well_point_values = relationship("GeochemWellPointValueRDB", back_populates="g_param")
+
+
+class GeochemPointRDB(BaseRDB):
+    __tablename__ = 'geochem_point_rdb'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem_rdb.id'))
+    title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+    fake = Column(Boolean, default=False)
+
+    geochem = relationship("GeochemRDB", back_populates="g_points")
+    g_point_values = relationship("GeochemPointValueRDB", back_populates="g_point")
+
+
+class GeochemMaskRDB(BaseRDB):
+    __tablename__ = 'geochem_mask_rdb'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem_rdb.id'))
+    count_param = Column(Integer)
+    count_points = Column(Integer)
+    mask_param = Column(Text)
+    mask_point = Column(Text)
+    mask_info = Column(Text)
+
+    geochem = relationship("GeochemRDB", back_populates="g_masks")
+
+
+class GeochemWellRDB(BaseRDB):
+    __tablename__ = 'geochem_well_rdb'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem_rdb.id'))
+    title = Column(String)
+    color = Column(String)
+
+    geochem = relationship("GeochemRDB", back_populates="g_wells")
+    g_w_points = relationship("GeochemWellPointRDB", back_populates="g_well")
+
+
+class GeochemWellPointRDB(BaseRDB):
+    __tablename__ = 'geochem_well_point_rdb'
+
+    id = Column(Integer, primary_key=True)
+    g_well_id = Column(Integer, ForeignKey('geochem_well_rdb.id'))
+    title = Column(String)
+    x_coord = Column(Float)
+    y_coord = Column(Float)
+
+    g_well = relationship("GeochemWellRDB", back_populates="g_w_points")
+    g_well_point_values = relationship("GeochemWellPointValueRDB", back_populates="g_well_point")
+
+
+class GeochemPointValueRDB(BaseRDB):
+    __tablename__ = 'geochem_point_value_rdb'
+
+    id = Column(Integer, primary_key=True)
+    g_point_id = Column(Integer, ForeignKey('geochem_point_rdb.id'))
+    g_param_id = Column(Integer, ForeignKey('geochem_parameter_rdb.id'))
+    value = Column(Float)
+
+    g_point = relationship("GeochemPointRDB", back_populates="g_point_values")
+    g_param = relationship("GeochemParameterRDB", back_populates="g_point_values")
+
+
+class GeochemWellPointValueRDB(BaseRDB):
+    __tablename__ = 'geochem_well_point_value_rdb'
+
+    id = Column(Integer, primary_key=True)
+    g_well_point_id = Column(Integer, ForeignKey('geochem_well_point_rdb.id'))
+    g_param_id = Column(Integer, ForeignKey('geochem_parameter_rdb.id'))
+    value = Column(Float)
+
+    g_well_point = relationship("GeochemWellPointRDB", back_populates="g_well_point_values")
+    g_param = relationship("GeochemParameterRDB", back_populates="g_well_point_values")
+
+
+
+class GeochemMaketRDB(BaseRDB):
+    __tablename__ = 'geochem_maket_rdb'
+
+    id = Column(Integer, primary_key=True)
+    geochem_id = Column(Integer, ForeignKey('geochem_rdb.id'))
+    title = Column(String)
+
+    geochem = relationship("GeochemRDB", back_populates="makets")
+    # categories = relationship("GeochemCategory", back_populates="maket")
+    # train_params = relationship("GeochemTrainParameter", back_populates="maket")
+    # g_trained_models = relationship("GeochemTrainedModel", back_populates="maket")

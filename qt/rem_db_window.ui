@@ -14,7 +14,7 @@
    <string>RemoteDB</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="1">
+   <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
@@ -24,173 +24,6 @@
        <string>Main</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_8">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_3">
-         <property name="title">
-          <string>Objects</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(191, 255, 191);</string>
-            </property>
-            <property name="text">
-             <string>Профиль:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="pushButton_delete_obj_rem">
-            <property name="toolTip">
-             <string>Удалить объект в удаленной БД</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 181, 182);</string>
-            </property>
-            <property name="text">
-             <string>Delete object</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="4">
-           <widget class="QPushButton" name="pushButton_unload_formations">
-            <property name="toolTip">
-             <string>Выгрузить пласты с локальной БД на удаленную</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 233, 196);</string>
-            </property>
-            <property name="text">
-             <string>LOC -&gt; REM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_object_rem">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="4">
-           <widget class="QPushButton" name="pushButton_sync_objects">
-            <property name="toolTip">
-             <string>Синхронизировать все объекты вместе с исследованиями и профилями</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(201, 196, 255);</string>
-            </property>
-            <property name="text">
-             <string>Sync all objects</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(191, 255, 191);</string>
-            </property>
-            <property name="text">
-             <string>Объект:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QComboBox" name="comboBox_research_rem">
-            <property name="toolTip">
-             <string>Дата исследования</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="3">
-           <widget class="QPushButton" name="pushButton_load_formations">
-            <property name="toolTip">
-             <string>Загрузить пласты с удаленной БД на локальную</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(206, 222, 255);</string>
-            </property>
-            <property name="text">
-             <string>REM -&gt; LOC</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="4">
-           <widget class="QPushButton" name="pushButton_unload_obj_rem">
-            <property name="toolTip">
-             <string>Выгрузить объект с локальной БД на удаленную</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 233, 196);</string>
-            </property>
-            <property name="text">
-             <string>LOC -&gt; REM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="pushButton_load_obj_rem">
-            <property name="toolTip">
-             <string>Загрузить объект с удаленной БД на локальную</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(206, 222, 255);</string>
-            </property>
-            <property name="text">
-             <string>REM -&gt; LOC</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" colspan="2">
-           <widget class="QComboBox" name="comboBox_profile_rem">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="3" colspan="2">
-           <widget class="QPushButton" name="pushButton_sync_entropy_profile">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(231, 227, 255);</string>
-            </property>
-            <property name="text">
-             <string>Sync entropy features profile</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QLabel" name="label_2">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(230, 238, 255);</string>
-            </property>
-            <property name="text">
-             <string>Синхронизировать пласты:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_11">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(231, 227, 255);</string>
-            </property>
-            <property name="text">
-             <string>Энтропия:</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
@@ -473,6 +306,173 @@
          </layout>
         </widget>
        </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Objects</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(191, 255, 191);</string>
+            </property>
+            <property name="text">
+             <string>Профиль:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="pushButton_delete_obj_rem">
+            <property name="toolTip">
+             <string>Удалить объект в удаленной БД</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 181, 182);</string>
+            </property>
+            <property name="text">
+             <string>Delete object</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4">
+           <widget class="QPushButton" name="pushButton_unload_formations">
+            <property name="toolTip">
+             <string>Выгрузить пласты с локальной БД на удаленную</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 233, 196);</string>
+            </property>
+            <property name="text">
+             <string>LOC -&gt; REM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_object_rem">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QPushButton" name="pushButton_sync_objects">
+            <property name="toolTip">
+             <string>Синхронизировать все объекты вместе с исследованиями и профилями</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(201, 196, 255);</string>
+            </property>
+            <property name="text">
+             <string>Sync all objects</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(191, 255, 191);</string>
+            </property>
+            <property name="text">
+             <string>Объект:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QComboBox" name="comboBox_research_rem">
+            <property name="toolTip">
+             <string>Дата исследования</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pushButton_load_formations">
+            <property name="toolTip">
+             <string>Загрузить пласты с удаленной БД на локальную</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(206, 222, 255);</string>
+            </property>
+            <property name="text">
+             <string>REM -&gt; LOC</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="pushButton_unload_obj_rem">
+            <property name="toolTip">
+             <string>Выгрузить объект с локальной БД на удаленную</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(255, 233, 196);</string>
+            </property>
+            <property name="text">
+             <string>LOC -&gt; REM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="pushButton_load_obj_rem">
+            <property name="toolTip">
+             <string>Загрузить объект с удаленной БД на локальную</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(206, 222, 255);</string>
+            </property>
+            <property name="text">
+             <string>REM -&gt; LOC</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBox_profile_rem">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3" colspan="2">
+           <widget class="QPushButton" name="pushButton_sync_entropy_profile">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(231, 227, 255);</string>
+            </property>
+            <property name="text">
+             <string>Sync entropy features profile</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <widget class="QLabel" name="label_2">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(230, 238, 255);</string>
+            </property>
+            <property name="text">
+             <string>Синхронизировать пласты:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_11">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(231, 227, 255);</string>
+            </property>
+            <property name="text">
+             <string>Энтропия:</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_2">
@@ -632,6 +632,208 @@
         </layout>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="tab_9">
+      <attribute name="title">
+       <string>Geochem</string>
+      </attribute>
+      <widget class="QWidget" name="layoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>13</y>
+         <width>561</width>
+         <height>551</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_10">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLabel" name="label_14">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(222, 225, 255);</string>
+            </property>
+            <property name="text">
+             <string>Объект геохимических данных:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QComboBox" name="comboBox_geochem_rdb"/>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QPushButton" name="pushButton_load_geochem">
+                  <property name="toolTip">
+                   <string>Загрузить объект с удаленной БД на локальную</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(206, 222, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>REM -&gt; LOC</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_unload_geochem">
+                  <property name="toolTip">
+                   <string>Выгрузить объект с локальной БД на удаленную</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 233, 196);</string>
+                  </property>
+                  <property name="text">
+                   <string>LOC -&gt; REM</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_4">
+                <item>
+                 <widget class="QPushButton" name="pushButton_delete_geochem_rdb">
+                  <property name="toolTip">
+                   <string>Удалить объект в удаленной БД</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 181, 182);</string>
+                  </property>
+                  <property name="text">
+                   <string>Delete</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_sync_all_geochem">
+                  <property name="toolTip">
+                   <string>Синхронизировать все объекты вместе с исследованиями и профилями</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(201, 196, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>Sync all </string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QLabel" name="label_g_wells">
+              <property name="text">
+               <string>Wells:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_g_wells"/>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <item>
+               <widget class="QLabel" name="label_g_points">
+                <property name="text">
+                 <string>Field Points:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidget_g_points"/>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_5">
+              <item>
+               <widget class="QLabel" name="label_g_well_points">
+                <property name="text">
+                 <string>Well Points:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidget_g_well_points"/>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_6">
+              <item>
+               <widget class="QLabel" name="label_g_params">
+                <property name="text">
+                 <string>Parameters:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListWidget" name="listWidget_g_params"/>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <item>
+               <widget class="QLabel" name="label_g_p_values">
+                <property name="text">
+                 <string>Points Values: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_g_w_p_values">
+                <property name="text">
+                 <string>Wells Points Values: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_g_masks">
+                <property name="text">
+                 <string>Masks:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_g_makets">
+                <property name="text">
+                 <string>Makets:</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </widget>
    </item>
