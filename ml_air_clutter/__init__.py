@@ -8,6 +8,7 @@ from .inference import InferenceConfig, blend_inference_result, run_full_profile
 from .preprocessing import NormalizationResult, Normalizer, build_preprocessing_report
 from .metrics import paired_cleaning_metrics, summarize_metric_rows
 from .model import ModelConfig, count_parameters, create_model, load_model_checkpoint, save_model_checkpoint
+from .visualization import VisualizationBundle, build_experiment_log, build_paired_visualization, build_training_metric_curves
 
 __all__ = [
     "NormalizationConfig",
@@ -30,6 +31,10 @@ __all__ = [
     "NormalizationResult",
     "Normalizer",
     "build_preprocessing_report",
+    "VisualizationBundle",
+    "build_experiment_log",
+    "build_paired_visualization",
+    "build_training_metric_curves",
     "extract_energy_patterns",
     "extract_frequency_band_patterns",
     "extract_pattern_from_bbox",
