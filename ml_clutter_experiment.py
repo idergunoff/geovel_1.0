@@ -15,6 +15,7 @@ from ml_air_clutter.dataset import (
     save_dataset,
     validate_clean_noisy_pair,
 )
+from ml_air_clutter.inference import InferenceConfig, blend_inference_result, run_full_profile_inference, save_inference_result
 from ml_air_clutter.model import ModelConfig, count_parameters, create_model, save_model_checkpoint
 from ml_air_clutter.noise_patterns import (
     PatternExtractionConfig,
@@ -226,6 +227,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.training_worker = None
         self.training_summary = None
         self.metrics_window = None
+        self.inference_result = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -251,6 +253,10 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_create_model.clicked.connect(self.create_baseline_model)
         self.ui.pushButton_save_untrained_checkpoint.clicked.connect(self.save_untrained_checkpoint)
         self.ui.pushButton_start_training.clicked.connect(self.start_training)
+        self.ui.pushButton_run_inference.clicked.connect(self.run_inference)
+        self.ui.pushButton_preview_inference.clicked.connect(self.preview_inference_result)
+        self.ui.pushButton_save_inference.clicked.connect(self.save_inference_result)
+        self.ui.horizontalSlider_inference_alpha.valueChanged.connect(self.update_inference_alpha)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
         for spin_box in (
@@ -610,6 +616,83 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             ])
         lines.extend(["", json.dumps(metrics, indent=2, ensure_ascii=False)])
         return "\n".join(lines)
+
+    def run_inference(self):
+        if self.model is None or self.model_config is None:
+            self._show_inference_log("Create or train a model before running full-profile inference.")
+            return
+        noisy = self._selected_inference_profile()
+        if noisy is None:
+            self._show_inference_log("Load or generate a source profile before inference.")
+            return
+        config = self._current_inference_config()
+        try:
+            self.inference_result = run_full_profile_inference(self.model, self.model_config, noisy, config)
+        except Exception as exc:
+            self._show_inference_log(f"Inference failed: {exc}")
+            self._log(f"ML Clutter inference failed: {exc}", "red")
+            return
+        self.preview_inference_result()
+        self._show_inference_log(json.dumps(self.inference_result["meta"], indent=2, ensure_ascii=False))
+        self._log(f"ML Clutter inference finished: windows={self.inference_result['meta']['num_windows']}, alpha={self.inference_result['meta']['effective_alpha']:.2f}")
+
+    def update_inference_alpha(self):
+        alpha = float(self.ui.horizontalSlider_inference_alpha.value()) / 100.0
+        self.ui.label_inference_alpha_value.setText(f"{alpha:.2f}")
+        if self.inference_result is None:
+            return
+        blended = blend_inference_result(self.inference_result["noisy"], self.inference_result["clean_pred"], alpha)
+        self.inference_result["cleaned"] = blended["cleaned"]
+        self.inference_result["residual"] = blended["residual"]
+        self.inference_result.setdefault("meta", {})["effective_alpha"] = blended["alpha"]
+        self.inference_result.setdefault("meta", {}).setdefault("config", {})["alpha"] = blended["alpha"]
+        self.preview_inference_result()
+
+    def preview_inference_result(self):
+        if self.inference_result is None:
+            self._show_inference_log("Run inference before previewing alpha-blended results.")
+            return
+        self._display_profile(self.inference_result["residual"], "ML Clutter inference residual noisy-clean_pred")
+        self._display_profile(self.inference_result["cleaned"], "ML Clutter inference cleaned alpha blend")
+        self._display_profile(self.inference_result["clean_pred"], "ML Clutter inference clean_pred")
+        self._display_profile(self.inference_result["noisy"], "ML Clutter inference noisy source")
+
+    def save_inference_result(self):
+        if self.inference_result is None:
+            self._show_inference_log("Run inference before saving the result.")
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save ML clutter inference result", "ml_clutter_inference_result.npz", "NumPy compressed archive (*.npz)")
+        if not path:
+            return
+        try:
+            saved_path = save_inference_result(path, self.inference_result)
+        except OSError as exc:
+            self._show_inference_log(f"Failed to save inference result: {exc}")
+            return
+        self._show_inference_log(f"Inference result saved: {saved_path}\n" + json.dumps(self.inference_result.get("meta", {}), indent=2, ensure_ascii=False))
+        self._log(f"ML Clutter inference result saved: {saved_path}")
+
+    def _current_inference_config(self):
+        return InferenceConfig(
+            patch_width=int(self.ui.spinBox_inference_patch_width.value()),
+            stride=int(self.ui.spinBox_inference_stride.value()),
+            alpha=float(self.ui.horizontalSlider_inference_alpha.value()) / 100.0,
+        )
+
+    def _selected_inference_profile(self):
+        source = self.ui.comboBox_inference_source.currentData()
+        if source == "real_noisy":
+            return self.real_noisy_profile
+        if source == "generated":
+            if self.last_generated_clutter_result is None:
+                return None
+            return self.last_generated_clutter_result.get("noisy")
+        if source == "clean":
+            return self.clean_profile
+        return None
+
+    def _show_inference_log(self, text):
+        self.ui.textEdit_inference_log.setPlainText(text)
 
     def save_untrained_checkpoint(self):
         if self.model is None or self.model_config is None:
