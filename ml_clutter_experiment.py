@@ -58,6 +58,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.experiment_profiles = {}
         self.synthetic_clutter_result = None
         self.pattern_clutter_result = None
+        self.last_generated_clutter_result = None
         self.dataset_pairs = []
         self.dataset_samples = None
         self.dataset_summary = None
@@ -72,6 +73,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_inverse_preprocessing.clicked.connect(self.preview_inverse_normalization)
         self.ui.pushButton_generate_synthetic_clutter.clicked.connect(self.generate_synthetic_clutter_preview)
         self.ui.pushButton_add_clean_noisy_pair.clicked.connect(self.add_current_clean_noisy_pair)
+        self.ui.pushButton_add_generated_clean_noisy_pair.clicked.connect(self.add_generated_clean_noisy_pair)
         self.ui.pushButton_preview_pair.clicked.connect(self.preview_selected_pair)
         self.ui.pushButton_build_dataset.clicked.connect(self.build_dataset)
         self.ui.pushButton_preview_random_patch.clicked.connect(self.preview_random_patch)
@@ -180,28 +182,53 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
 
     def add_current_clean_noisy_pair(self):
         if self.clean_profile is None or self.real_noisy_profile is None:
-            self._show_dataset_stats("Load both Clean and Real Noisy profiles before adding a dataset pair.")
+            self._show_dataset_stats("Load both Clean and Real Noisy profiles before adding a loaded dataset pair.")
             self._log("ML Clutter dataset: clean/noisy pair is incomplete", "red")
             return
+        self._append_dataset_pair(
+            self.clean_profile,
+            self.real_noisy_profile,
+            clean_name_prefix="loaded_clean",
+            noisy_name_prefix="loaded_noisy",
+            source_label="loaded clean/noisy",
+        )
+
+    def add_generated_clean_noisy_pair(self):
+        if self.last_generated_clutter_result is None:
+            self._show_dataset_stats("Generate synthetic or real-pattern clutter before adding a generated clean/noisy pair.")
+            self._log("ML Clutter dataset: generated noisy profile is not available", "red")
+            return
+        result = self.last_generated_clutter_result
+        self._append_dataset_pair(
+            result["clean_source"],
+            result["noisy"],
+            clean_name_prefix=f"{result['mode']}_clean",
+            noisy_name_prefix=f"{result['mode']}_noisy",
+            source_label=f"generated {result['mode']} clutter",
+            normalization=result.get("normalization", self.experiment_config.get("normalization") or {}),
+        )
+
+    def _append_dataset_pair(self, clean, noisy, clean_name_prefix, noisy_name_prefix, source_label, normalization=None):
         pair_id = f"pair_{len(self.dataset_pairs) + 1:03d}"
-        clean_name = f"clean_{pair_id}"
-        noisy_name = f"noisy_{pair_id}"
-        report = validate_clean_noisy_pair(self.clean_profile, self.real_noisy_profile, self.MIN_NUM_TRACES)
+        clean_name = f"{clean_name_prefix}_{pair_id}"
+        noisy_name = f"{noisy_name_prefix}_{pair_id}"
+        report = validate_clean_noisy_pair(clean, noisy, self.MIN_NUM_TRACES)
         pair = {
             "pair_id": pair_id,
-            "clean": self.clean_profile.copy(),
-            "noisy": self.real_noisy_profile.copy(),
+            "clean": np.asarray(clean, dtype=float).copy(),
+            "noisy": np.asarray(noisy, dtype=float).copy(),
             "clean_name": clean_name,
             "noisy_name": noisy_name,
             "clean_path": clean_name,
             "noisy_path": noisy_name,
             "validation": report,
-            "normalization": self.experiment_config.get("normalization") or {},
+            "normalization": normalization if normalization is not None else (self.experiment_config.get("normalization") or {}),
+            "source_label": source_label,
         }
         self.dataset_pairs.append(pair)
         self._refresh_dataset_pairs_ui()
         self._show_dataset_stats(self._format_pair_validation_report(pair))
-        self._log(f"Dataset pair added: {pair_id} ({'valid' if report['valid'] else 'invalid'})")
+        self._log(f"Dataset pair added from {source_label}: {pair_id} ({'valid' if report['valid'] else 'invalid'})")
 
     def preview_selected_pair(self):
         pair = self._selected_dataset_pair()
@@ -581,11 +608,15 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             return
 
         result = {
+            "mode": mode,
+            "clean_source": source_profile.copy(),
             "noisy": noisy,
             "clutter": clutter,
             "mask": mask,
             "meta": meta,
+            "normalization": self.experiment_config.get("normalization") or {},
         }
+        self.last_generated_clutter_result = result
         if mode == "synthetic":
             self.synthetic_clutter_result = result
             self.experiment_config["synthetic_clutter"] = meta
