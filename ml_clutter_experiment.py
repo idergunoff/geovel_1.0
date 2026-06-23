@@ -12,6 +12,7 @@ from ml_air_clutter.dataset import (
     save_dataset,
     validate_clean_noisy_pair,
 )
+from ml_air_clutter.model import ModelConfig, count_parameters, create_model, save_model_checkpoint
 from ml_air_clutter.noise_patterns import (
     PatternExtractionConfig,
     extract_energy_patterns,
@@ -60,6 +61,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.dataset_pairs = []
         self.dataset_samples = None
         self.dataset_summary = None
+        self.model = None
+        self.model_config = None
 
         self.ui.pushButton_refresh_profiles.clicked.connect(self.add_current_selected_profile)
         self.ui.pushButton_use_current_profile.clicked.connect(self.use_drawn_current_profile)
@@ -81,6 +84,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
         self.ui.pushButton_clear_pattern_library.clicked.connect(self.clear_pattern_library)
         self.ui.pushButton_save_pattern_library.clicked.connect(self.save_pattern_library)
         self.ui.pushButton_load_pattern_library.clicked.connect(self.load_pattern_library)
+        self.ui.pushButton_create_model.clicked.connect(self.create_baseline_model)
+        self.ui.pushButton_save_untrained_checkpoint.clicked.connect(self.save_untrained_checkpoint)
         self.ui.listWidget_profiles.currentItemChanged.connect(lambda *_: self.show_selected_profile_stats())
         self.ui.listWidget_noisy_profiles.currentItemChanged.connect(lambda *_: self._on_noisy_source_changed())
         for spin_box in (
@@ -261,6 +266,74 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             seed=int(self.ui.spinBox_gen_seed.value()),
             min_num_traces=self.MIN_NUM_TRACES,
         )
+
+    def _current_model_config(self):
+        channels = []
+        if self.ui.checkBox_model_raw.isChecked():
+            channels.append("raw")
+        if self.ui.checkBox_model_envelope.isChecked():
+            channels.append("envelope")
+        if self.ui.checkBox_model_grad_x.isChecked():
+            channels.append("grad_x")
+        if self.ui.checkBox_model_grad_z.isChecked():
+            channels.append("grad_z")
+        return ModelConfig(
+            model_type=self.ui.comboBox_model_type.currentData() or "baseline_cnn",
+            input_channels=tuple(channels),
+            output_mode="direct_clean",
+            base_channels=int(self.ui.spinBox_model_base_channels.value()),
+            num_layers=int(self.ui.spinBox_model_num_layers.value()),
+        )
+
+    def create_baseline_model(self):
+        config = self._current_model_config()
+        try:
+            model = create_model(config)
+            parameters = count_parameters(model)
+        except (ImportError, ValueError) as exc:
+            self._show_model_summary(f"Failed to create model: {exc}")
+            self._log(f"ML Clutter model creation failed: {exc}", "red")
+            return
+        self.model = model
+        self.model_config = config
+        self.experiment_config["model"] = {"config": config.to_dict(), "num_parameters": parameters}
+        self._show_model_summary(self._format_model_summary(config, parameters))
+        self._log(f"ML Clutter model created: {config.model_type}, channels={len(config.input_channels)}, params={parameters}")
+
+    def save_untrained_checkpoint(self):
+        if self.model is None or self.model_config is None:
+            self.create_baseline_model()
+            if self.model is None or self.model_config is None:
+                return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save untrained ML clutter checkpoint", "ml_clutter_untrained.pt", "PyTorch checkpoint (*.pt *.pth)")
+        if not path:
+            return
+        try:
+            saved_path = save_model_checkpoint(path, self.model, self.model_config)
+        except (ImportError, OSError, ValueError) as exc:
+            self._show_model_summary(f"Failed to save checkpoint: {exc}")
+            self._log(f"ML Clutter checkpoint save failed: {exc}", "red")
+            return
+        self._show_model_summary(self._format_model_summary(self.model_config, count_parameters(self.model)) + f"\n\nCheckpoint saved: {saved_path}")
+        self._log(f"ML Clutter untrained checkpoint saved: {saved_path}")
+
+    @staticmethod
+    def _format_model_summary(config, parameters):
+        return "\n".join([
+            "Baseline model summary",
+            f"Model type: {config.model_type}",
+            "Task: supervised direct-clean (input noisy -> target clean -> output clean_pred)",
+            f"Input channels: {', '.join(config.input_channels)}",
+            "Input patch shape: [channels, width, 512]",
+            "Output patch shape: [1, width, 512]",
+            f"Base channels: {config.base_channels}",
+            f"CNN layers: {config.num_layers}",
+            f"Trainable parameters: {parameters}",
+            "MVP note: residual/clutter targets are not required; residual remains a diagnostic artifact.",
+        ])
+
+    def _show_model_summary(self, text):
+        self.ui.textEdit_model_summary.setPlainText(text)
 
     def _selected_dataset_pair(self):
         row = self.ui.tableWidget_dataset_pairs.currentRow()
