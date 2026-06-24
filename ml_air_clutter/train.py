@@ -143,10 +143,23 @@ def _validation_preview(model, sample, channels, device):
     model.eval()
     with torch.no_grad():
         x = torch.from_numpy(make_input_channels(sample["noisy"], channels)[None, ...] / 256.0).to(device)
-        pred = model(x).detach().cpu().numpy()[0, 0] * 256.0
+        pred = _prediction_to_amplitude_0256(model(x).detach().cpu().numpy()[0, 0])
     clean = np.asarray(sample["clean"], dtype=float)
     noisy = np.asarray(sample["noisy"], dtype=float)
     return {"clean": clean, "noisy": noisy, "clean_pred": pred, "error": pred - clean}
+
+
+def _prediction_to_amplitude_0256(prediction: np.ndarray) -> np.ndarray:
+    """Convert normalized model output to display/original ML amplitude range.
+
+    The networks use an unconstrained final convolution, so raw normalized
+    predictions can be below 0 or above 1 while the model is still converging.
+    Downstream previews, metrics and saved inference artifacts should represent
+    the restored clean signal in the same 0..256 amplitude domain as the paired
+    clean/noisy data, not the unconstrained activation domain.
+    """
+
+    return np.clip(np.asarray(prediction, dtype=np.float32) * 256.0, 0.0, 256.0)
 
 
 def train_model(
@@ -271,7 +284,7 @@ def evaluate_model_on_splits(model, model_config: ModelConfig, samples: Dict[str
         for index, sample in enumerate(split_samples):
             with torch.no_grad():
                 x = torch.from_numpy(make_input_channels(sample["noisy"], model_config.input_channels)[None, ...] / 256.0).to(device)
-                prediction = model(x).detach().cpu().numpy()[0, 0] * 256.0
+                prediction = _prediction_to_amplitude_0256(model(x).detach().cpu().numpy()[0, 0])
             metrics = paired_cleaning_metrics(sample["clean"], sample["noisy"], prediction, data_range=256.0)
             metrics.update({
                 "sample_index": index,

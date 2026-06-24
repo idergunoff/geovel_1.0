@@ -97,3 +97,13 @@ def test_prepare_amplitude_pair_keeps_existing_0256_profiles():
 
     np.testing.assert_allclose(clean_0256, clean)
     np.testing.assert_allclose(noisy_0256, [[10.0, 80.0, 140.0, 256.0]])
+
+
+def test_prepare_amplitude_pair_shifts_centered_pair_before_clipping():
+    clean = np.array([[-100.0, 0.0, 100.0]])
+    noisy = np.array([[-120.0, 10.0, 120.0]])
+
+    clean_0256, noisy_0256 = prepare_amplitude_pair_0256(clean, noisy)
+
+    np.testing.assert_allclose(clean_0256, [[28.0, 128.0, 228.0]])
+    np.testing.assert_allclose(noisy_0256, [[8.0, 138.0, 248.0]])
