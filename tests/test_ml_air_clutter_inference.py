@@ -3,6 +3,7 @@ import pytest
 
 from ml_air_clutter.inference import InferenceConfig, blend_inference_result, run_full_profile_inference
 from ml_air_clutter.model import ModelConfig
+from ml_air_clutter.train import _prediction_to_amplitude_0256
 
 
 torch = pytest.importorskip("torch")
@@ -37,3 +38,11 @@ def test_blend_inference_result_uses_alpha_between_noisy_and_prediction():
     np.testing.assert_allclose(blended["cleaned"], 6.0)
     np.testing.assert_allclose(blended["residual"], 8.0)
     assert blended["alpha"] == 0.5
+
+
+def test_prediction_to_amplitude_clips_unconstrained_model_output():
+    normalized_prediction = np.array([[-0.5, 0.25, 1.5]], dtype=np.float32)
+
+    amplitude = _prediction_to_amplitude_0256(normalized_prediction)
+
+    np.testing.assert_allclose(amplitude, [[0.0, 64.0, 256.0]])
