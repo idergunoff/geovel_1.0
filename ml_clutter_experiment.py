@@ -12,6 +12,7 @@ from ml_air_clutter.dataset import (
     PairValidationError,
     PatchDatasetConfig,
     build_paired_patch_dataset,
+    convert_profile_to_amplitude_0256,
     prepare_amplitude_pair_0256,
     save_dataset,
     validate_clean_noisy_pair,
@@ -287,7 +288,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             self._show_stats(f"Profile id{profile_id} was not found in the database.")
             self._log(f"ML Clutter: profile id{profile_id} was not found", "red")
             return
-        data = self._profile_signal_to_array(profile.signal)
+        data = convert_profile_to_amplitude_0256(self._profile_signal_to_array(profile.signal))
         self.experiment_profiles[profile.id] = {"profile": profile, "data": data}
 
         existing_item = self._find_experiment_item(profile.id)
@@ -420,6 +421,7 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
             clean=pair["clean"],
             noisy=pair["noisy"],
             title=f"ML Clutter dataset {pair['pair_id']} paired preview",
+            include_pair_residual=False,
         )
         self._display_visualization_bundle(bundle, f"ML Clutter dataset {pair['pair_id']}")
         self._show_dataset_stats(
@@ -1191,6 +1193,8 @@ class MLClutterExperimentWindow(QtWidgets.QDialog):
                 data = data.T
                 validation = self.validate_profile(data)
                 validation["transposed"] = True
+        if validation["valid"]:
+            data = convert_profile_to_amplitude_0256(data)
         return data, validation
 
     @classmethod

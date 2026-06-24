@@ -49,13 +49,16 @@ def build_paired_visualization(
     alpha: float = 1.0,
     trace_index: Optional[int] = None,
     title: str = "ML Clutter paired visualization",
+    include_pair_residual: bool = True,
 ) -> VisualizationBundle:
     """Build mandatory Stage-12 paired-pipeline visual layers.
 
     Required mode is ``Noisy``.  If ``clean`` is supplied the bundle includes
     ``Clean`` and, when prediction is available, ``Error map predicted-clean``.
     If ``clean_pred`` is supplied it also includes ``Predicted clean``,
-    ``Cleaned with alpha`` and ``Residual noisy-predicted``.
+    ``Cleaned with alpha`` and ``Residual noisy-predicted``. For dataset-pair
+    previews, ``include_pair_residual=False`` keeps the bundle to the actual
+    supervised pair only: clean target and noisy input.
     """
 
     noisy_arr = _as_2d("noisy", noisy)
@@ -63,9 +66,12 @@ def build_paired_visualization(
     pred_arr = _same_shape("noisy", noisy_arr, "clean_pred", clean_pred) if clean_pred is not None else None
     alpha = float(np.clip(alpha, 0.0, 1.0))
 
-    radarograms: Dict[str, np.ndarray] = {"Noisy": noisy_arr.copy()}
-    if clean_arr is not None:
-        radarograms["Clean"] = clean_arr.copy()
+    if clean_arr is not None and not include_pair_residual and pred_arr is None:
+        radarograms: Dict[str, np.ndarray] = {"Clean": clean_arr.copy(), "Noisy": noisy_arr.copy()}
+    else:
+        radarograms = {"Noisy": noisy_arr.copy()}
+        if clean_arr is not None:
+            radarograms["Clean"] = clean_arr.copy()
     if pred_arr is not None:
         cleaned = (1.0 - alpha) * noisy_arr + alpha * pred_arr
         radarograms["Predicted clean"] = pred_arr.copy()
@@ -73,7 +79,7 @@ def build_paired_visualization(
         radarograms["Residual noisy-predicted"] = noisy_arr - pred_arr
         if clean_arr is not None:
             radarograms["Error map predicted-clean"] = pred_arr - clean_arr
-    elif clean_arr is not None:
+    elif clean_arr is not None and include_pair_residual:
         radarograms["Residual noisy-clean"] = noisy_arr - clean_arr
 
     if trace_index is None:
