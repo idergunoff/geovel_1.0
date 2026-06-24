@@ -40,6 +40,18 @@ def test_build_paired_visualization_supports_pair_without_prediction():
     np.testing.assert_allclose(bundle.radarograms["Residual noisy-clean"], 1.0)
 
 
+def test_build_paired_visualization_can_show_dataset_pair_without_residual():
+    clean = np.full((2, 512), 128.0)
+    noisy = clean + 20.0
+
+    bundle = build_paired_visualization(clean=clean, noisy=noisy, include_pair_residual=False)
+
+    assert list(bundle.radarograms) == ["Clean", "Noisy"]
+    np.testing.assert_allclose(bundle.radarograms["Clean"], 128.0)
+    np.testing.assert_allclose(bundle.radarograms["Noisy"], 148.0)
+    assert "Residual noisy-clean" not in bundle.radarograms
+
+
 def test_build_paired_visualization_rejects_shape_mismatch():
     with pytest.raises(ValueError, match="does not match"):
         build_paired_visualization(noisy=np.zeros((2, 512)), clean=np.zeros((3, 512)))
