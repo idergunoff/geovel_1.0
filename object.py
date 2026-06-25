@@ -14,7 +14,7 @@ from models_db.model_cluster import *
 
 import tqdm as tqdm
 from PIL import Image, ImageDraw, ImageFont
-from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtCore import QRect, Qt, QTimer
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QListWidgetItem, QApplication, QMessageBox, QColorDialog, QTableWidget, QTableWidgetItem
 from PyQt5.QtGui import QBrush, QColor, QCursor
 from pyqtgraph.Qt import QtWidgets
@@ -196,7 +196,82 @@ radarogramma.addItem(img)
 
 hist = pg.HistogramLUTItem(gradientPosition='left')
 
+# The radarogram and the profile graph are stacked vertically, but their
+# plotting areas can be narrowed by different decorations and by small
+# GraphicsView/Layout margins.  Keep the large side areas predictable, then
+# measure the real on-screen ViewBox positions after Qt has laid out the
+# widgets and compensate the graph axes so both plotting rectangles start and
+# end at the same pixels.
+RADAROGRAM_COLOR_SCALE_WIDTH = 80
+RADAROGRAM_LEFT_AXIS_WIDTH = 75
+hist.setMaximumWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
+hist.setMinimumWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
 ui.radarogram.addItem(hist)
+
+for graphics_view in (ui.radarogram, ui.graph):
+    graphics_view.setContentsMargins(0, 0, 0, 0)
+    graphics_view.setFrameStyle(QtWidgets.QFrame.NoFrame)
+
+for axis in (radarogramma.getAxis('left'), ui.graph.getAxis('left')):
+    axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+
+graph_right_axis = ui.graph.getAxis('right')
+graph_right_axis.setWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
+graph_right_axis.setStyle(showValues=False)
+graph_right_axis.setPen(pg.mkPen(None))
+ui.graph.showAxis('right', True)
+
+
+def align_graph_to_radarogram():
+    """Align profile graph ViewBox to the radarogram ViewBox in widget pixels.
+
+    Fixed axis widths remove most of the offset, but PyQtGraph's
+    GraphicsLayoutWidget and PlotWidget can still keep slightly different
+    scene/layout margins.  Measuring the actual ViewBox rectangles after Qt
+    layout gives the exact remaining offset and lets us compensate it through
+    the graph's left/right reserved axis space.
+    """
+    try:
+        radar_rect = radarogramma.vb.sceneBoundingRect()
+        graph_rect = ui.graph.plotItem.vb.sceneBoundingRect()
+        if not radar_rect.isValid() or not graph_rect.isValid():
+            return
+
+        radar_left = ui.radarogram.mapFromScene(radar_rect.topLeft()).x()
+        graph_left = ui.graph.mapFromScene(graph_rect.topLeft()).x()
+        radar_right = ui.radarogram.mapFromScene(radar_rect.topRight()).x()
+        graph_right = ui.graph.mapFromScene(graph_rect.topRight()).x()
+
+        graph_left_axis = ui.graph.getAxis('left')
+        graph_right_axis = ui.graph.getAxis('right')
+        left_width = graph_left_axis.width() + radar_left - graph_left
+        right_width = graph_right_axis.width() + graph_right - radar_right
+
+        graph_left_axis.setWidth(max(0, int(round(left_width))))
+        graph_right_axis.setWidth(max(0, int(round(right_width))))
+    except Exception:
+        # Alignment is a visual convenience; never block the application if a
+        # widget is not ready during startup or teardown.
+        pass
+
+def _schedule_graph_alignment():
+    QTimer.singleShot(0, align_graph_to_radarogram)
+
+
+def _wrap_resize_alignment(widget):
+    original_resize_event = widget.resizeEvent
+
+    def resize_event(event):
+        original_resize_event(event)
+        _schedule_graph_alignment()
+
+    widget.resizeEvent = resize_event
+
+
+_wrap_resize_alignment(ui.radarogram)
+_wrap_resize_alignment(ui.graph)
+_schedule_graph_alignment()
+QTimer.singleShot(100, align_graph_to_radarogram)
 
 
 roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), 512], maxBounds=QRect(0, 0, 100000000, 512))
