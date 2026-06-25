@@ -212,8 +212,14 @@ for graphics_view in (ui.radarogram, ui.graph):
     graphics_view.setContentsMargins(0, 0, 0, 0)
     graphics_view.setFrameStyle(QtWidgets.QFrame.NoFrame)
 
+for plot_item in (radarogramma, ui.graph.plotItem):
+    plot_item.setContentsMargins(0, 0, 0, 0)
+    plot_item.layout.setContentsMargins(0, 0, 0, 0)
+    plot_item.layout.setHorizontalSpacing(0)
+
 for axis in (radarogramma.getAxis('left'), ui.graph.getAxis('left')):
     axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+    axis.setStyle(tickTextOffset=5, tickLength=5)
 
 graph_right_axis = ui.graph.getAxis('right')
 graph_right_axis.setWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
