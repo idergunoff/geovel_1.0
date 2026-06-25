@@ -59,12 +59,23 @@ def convert_profile_to_amplitude_0256(data) -> np.ndarray:
 
 
 def prepare_amplitude_pair_0256(clean, noisy):
-    """Clip an already-canonical clean/noisy source pair to 0..256."""
+    """Return a clean/noisy pair in the unsigned 0..256 amplitude range.
+
+    Some source radarograms are stored as centered signed amplitudes
+    (approximately ``-128..+128``), while the ML Clutter training pipeline
+    expects image-like unsigned amplitudes.  For paired data the same affine
+    shift must be applied to both clean and noisy arrays before clipping;
+    otherwise negative half-waves would be flattened to zero and the model would
+    learn a distorted target range.
+    """
 
     clean_arr = np.asarray(clean, dtype=float)
     noisy_arr = np.asarray(noisy, dtype=float)
     if clean_arr.shape != noisy_arr.shape:
-        return clean_arr.copy(), noisy_arr.copy()
+        return convert_profile_to_amplitude_0256(clean_arr), convert_profile_to_amplitude_0256(noisy_arr)
+    if clean_arr.size and noisy_arr.size and (np.nanmin(clean_arr) < 0.0 or np.nanmin(noisy_arr) < 0.0):
+        clean_arr = clean_arr + 128.0
+        noisy_arr = noisy_arr + 128.0
     return np.clip(clean_arr, 0.0, 256.0).copy(), np.clip(noisy_arr, 0.0, 256.0).copy()
 
 

@@ -196,7 +196,24 @@ radarogramma.addItem(img)
 
 hist = pg.HistogramLUTItem(gradientPosition='left')
 
+# The radarogram and the profile graph are stacked vertically, but the
+# radarogram row also contains a HistogramLUTItem (colour scale) to the
+# right of the image.  Without reserving the same horizontal space in
+# ui.graph, both widgets can have the same X range while their plotting
+# areas have different pixel widths, so vertical markers and curves look
+# shifted relative to each other.  Keep the colour scale width fixed and
+# add an invisible right axis with the same width to the graph; this makes
+# the radarogram ViewBox and graph ViewBox parallel on screen.
+RADAROGRAM_COLOR_SCALE_WIDTH = 80
+hist.setMaximumWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
+hist.setMinimumWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
 ui.radarogram.addItem(hist)
+
+graph_right_axis = ui.graph.getAxis('right')
+graph_right_axis.setWidth(RADAROGRAM_COLOR_SCALE_WIDTH)
+graph_right_axis.setStyle(showValues=False)
+graph_right_axis.setPen(pg.mkPen(None))
+ui.graph.showAxis('right', True)
 
 
 roi = pg.ROI(pos=[0, 0], size=[ui.spinBox_roi.value(), 512], maxBounds=QRect(0, 0, 100000000, 512))
