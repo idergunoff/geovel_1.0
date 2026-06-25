@@ -271,6 +271,7 @@ def draw_image(radar):
         radarogramma.getAxis('left').setScale(8)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
+    schedule_graph_alignment()
 
 
 def draw_image_deep_prof(radar, scale):
@@ -351,6 +352,7 @@ def draw_image_deep_prof(radar, scale):
     radarogramma.getAxis('left').setScale(scale)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
+    schedule_graph_alignment()
 
     # radarogramma.removeItem(roi)
 
