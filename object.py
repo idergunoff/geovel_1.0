@@ -260,8 +260,16 @@ def align_graph_to_radarogram():
         # widget is not ready during startup or teardown.
         pass
 
-def _schedule_graph_alignment():
+def schedule_graph_alignment():
     QTimer.singleShot(0, align_graph_to_radarogram)
+
+
+# Backward-compatible aliases: func.py imports object.py with `from object
+# import *`, so leading-underscore helpers are not exported.  Keep the old
+# spelling and the misspelled variant safe for any existing callbacks.
+_schedule_graph_alignment = schedule_graph_alignment
+_schedule_graph_aligment = schedule_graph_alignment
+schedule_graph_aligment = schedule_graph_alignment
 
 
 def _wrap_resize_alignment(widget):
@@ -269,14 +277,14 @@ def _wrap_resize_alignment(widget):
 
     def resize_event(event):
         original_resize_event(event)
-        _schedule_graph_alignment()
+        schedule_graph_alignment()
 
     widget.resizeEvent = resize_event
 
 
 _wrap_resize_alignment(ui.radarogram)
 _wrap_resize_alignment(ui.graph)
-_schedule_graph_alignment()
+schedule_graph_alignment()
 QTimer.singleShot(100, align_graph_to_radarogram)
 
 
