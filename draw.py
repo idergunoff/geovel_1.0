@@ -99,7 +99,8 @@ def change_background():
 
 def on_range_changed():
     X, Y = radarogramma.viewRange()
-    ui.graph.setXRange(X[0], X[1])
+    ui.graph.setXRange(X[0], X[1], padding=0)
+    schedule_graph_alignment()
 
 
 def crop_from_right(image):
