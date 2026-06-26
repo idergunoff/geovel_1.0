@@ -99,7 +99,8 @@ def change_background():
 
 def on_range_changed():
     X, Y = radarogramma.viewRange()
-    ui.graph.setXRange(X[0], X[1])
+    ui.graph.setXRange(X[0], X[1], padding=0)
+    schedule_graph_alignment()
 
 
 def crop_from_right(image):
@@ -131,7 +132,77 @@ def concatenate_images_vertically(image1, image2):
     return new_image
 
 
-def process_images(images, graphs):
+
+def _pixel_differs(pixel, color, tolerance=10):
+    return any(abs(int(pixel[i]) - int(color[i])) > tolerance for i in range(3))
+
+
+def _find_plot_left_border(image, color):
+    """Find the first long vertical plot-border line in an exported image."""
+    rgb_image = image.convert('RGB')
+    width, height = rgb_image.size
+    y_start = max(0, int(height * 0.12))
+    y_end = min(height, int(height * 0.88))
+    min_hits = max(10, int((y_end - y_start) * 0.35))
+    max_x = max(1, int(width * 0.65))
+
+    for x in range(max_x):
+        hits = 0
+        for y in range(y_start, y_end):
+            if _pixel_differs(rgb_image.getpixel((x, y)), color):
+                hits += 1
+        if hits >= min_hits:
+            return x
+    return 0
+
+
+def _find_plot_right_border(image, color):
+    """Find the last long vertical plot-border line in an exported image."""
+    rgb_image = image.convert('RGB')
+    width, height = rgb_image.size
+    y_start = max(0, int(height * 0.12))
+    y_end = min(height, int(height * 0.88))
+    min_hits = max(10, int((y_end - y_start) * 0.35))
+    min_x = min(width - 1, int(width * 0.35))
+
+    for x in range(width - 1, min_x, -1):
+        hits = 0
+        for y in range(y_start, y_end):
+            if _pixel_differs(rgb_image.getpixel((x, y)), color):
+                hits += 1
+        if hits >= min_hits:
+            return x
+    return width - 1
+
+
+def _shift_image_horizontally(image, delta, color):
+    """Move image content right/left by delta pixels while preserving image width."""
+    if delta == 0:
+        return image
+
+    width, height = image.size
+    result = Image.new('RGB', (width, height), color)
+    rgb_image = image.convert('RGB')
+    delta = max(-width + 1, min(width - 1, delta))
+
+    if delta > 0:
+        crop = rgb_image.crop((0, 0, width - delta, height))
+        result.paste(crop, (delta, 0))
+    else:
+        shift = abs(delta)
+        crop = rgb_image.crop((shift, 0, width, height))
+        result.paste(crop, (0, 0))
+    return result
+
+
+def align_graph_export_to_radar(image, graph, color):
+    """Align the saved graph's left plot border with the radarogram border."""
+    radar_left = _find_plot_left_border(image, color)
+    graph_left = _find_plot_left_border(graph, color)
+    return _shift_image_horizontally(graph, radar_left - graph_left, color)
+
+
+def process_images(images, graphs, color_short):
     """
         Изменить размеры изображений в graphs и объединить каждую пару с изображениями из images.
         images - список с основными изображениями
@@ -143,14 +214,15 @@ def process_images(images, graphs):
         graph = graphs[i]
         inx = 1 if len(images) > 1 else 0
 
-        # Обрезаем изображение графика справа, чтобы избиваиься от свободного пространства
-        graph_cropped = crop_from_right(graph)
+        graph_cropped = graph
 
         # Вычисление новой высоты для изменения размера изображения графика
         # Необходимо для того, чтобы длина верхней и нижней картинки были одинаковые
-        aspect_ratio = crop_from_right(graphs[inx]).height / crop_from_right(graphs[inx]).width
+        aspect_ratio = graphs[inx].height / graphs[inx].width
         new_height = int(aspect_ratio * images[inx].width)
         graph_resized = resize_image(graph_cropped, img.width, new_height)
+        if i == 0:
+            graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
         # Склейка изображение вертикально
         combined_image = concatenate_images_vertically(img, graph_resized)
 
@@ -208,6 +280,8 @@ def save_image():
 
     # Создаем объект экспортера PyQtGraph для основного изображения и настраиваем фиксированный размер изображения
     exporter = ImageExporter(radarogramma)
+    export_width = 868
+    exporter.parameters()['width'] = export_width
     exporter.parameters()['height'] = 610
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
@@ -217,9 +291,12 @@ def save_image():
 
     # Сохранение изображения с графиком
     if ui.checkBox_save_graph.isChecked():
-        # Создаем объект экспортера для графика
-        graph_exporter = ImageExporter(ui.graph.scene())
-        graph_exporter.parameters()['width'] = 868
+        # Создаем объект экспортера для графика. Экспортируем именно PlotItem,
+        # а не всю scene(), и используем ту же ширину, что у радарограммы.
+        # Так сохраненное изображение получает те же служебные отступы слева/справа,
+        # что и видимое окно после align_graph_to_radarogram().
+        graph_exporter = ImageExporter(ui.graph.plotItem)
+        graph_exporter.parameters()['width'] = export_width
 
         list_paths = []
         list_graphs = []
@@ -227,15 +304,24 @@ def save_image():
         # В цикле сдвигаем шкалу для смены части изображения, затем
         # сохраняем части основных изображений и графиков в соответствующие списки
         N = (count_measure + 399) // 400
+        original_x_range, original_y_range = radarogramma.viewRange()
+        radarogram_top_label_margin = 45
         for i in range(N):
             n = i * 400
             m = n + 400
             radarogramma.setXRange(n, m, padding=0)
+            radarogramma.setYRange(original_y_range[0] - radarogram_top_label_margin, original_y_range[1], padding=0)
             ui.graph.setXRange(n, m, padding=0)
+            align_graph_to_radarogram()
+            QApplication.processEvents()
             exporter.export(f'{i}_part.png')
             graph_exporter.export(f'{i}_graph.png')
             list_paths.append(f'{i}_part.png')
             list_graphs.append(f'{i}_graph.png')
+
+        radarogramma.setXRange(original_x_range[0], original_x_range[1], padding=0)
+        radarogramma.setYRange(original_y_range[0], original_y_range[1], padding=0)
+        ui.graph.setXRange(original_x_range[0], original_x_range[1], padding=0)
 
         # Открываем изображения с помощью библиотеки PIL для дальнейшей работы
         images = [Image.open(path) for path in list_paths]
@@ -272,26 +358,31 @@ def save_image():
             set_info(f'Некорректные данные: {e}', 'red')
             return
 
-        # Ищем границу смены цвета, чтобы определить индекс для обрезки изображения слева
-        # Нужно для того, чтобы убрать шкалу графика слева на всех изображениях после первого
-        # Для графика
-        graph_break = 0
-        while graphs[0].getpixel((graph_break, 2)) == color:
-            graph_break += 1
-
-        # Обрезаем изображения слева по индексу, найденому ранее (color_break, graph_break)
+        # Обрезаем изображения слева по индексу, найденому ранее (color_break)
         for i in range(len(images)):
             width, height = images[i].size
             left = color_break + 1 if i != 0 else 0
             images[i] = images[i].crop((left, 0, width, height))
 
+        # Для графика обрезаем каждую часть по фактическим границам области построения.
+        # У первой части оставляем левую ось, у следующих частей удаляем левую ось и
+        # служебный отступ, а правый край режем по правой границе plot area. Так соседние
+        # части стыкуются без разрывов.
+        graph_stitch_gap_pixels = 24
         for i in range(len(graphs)):
             width, height = graphs[i].size
-            left = graph_break + 1 if i != 0 else 0
-            graphs[i] = graphs[i].crop((left, 0, width, height))
+            if i == 0:
+                left = 0
+            else:
+                left = _find_plot_left_border(graphs[i], color_short) + graph_stitch_gap_pixels
+            right = _find_plot_right_border(graphs[i], color_short) + 1
+            left = min(max(0, left), width - 1)
+            if right <= left:
+                right = width
+            graphs[i] = graphs[i].crop((left, 0, right, height))
 
         # Объединяем изображения
-        combined_images = process_images(images, graphs)
+        combined_images = process_images(images, graphs, color_short)
 
         # Находим суммарные для всех изображений длину и ширину и создаем объект Image
         total_width = sum(img.width for img in combined_images)
@@ -371,12 +462,19 @@ def save_image():
         # В цикле сохраняем основные изображения в список list_paths
         list_paths = []
         N = (count_measure + 399) // 400
+        original_x_range, original_y_range = radarogramma.viewRange()
+        radarogram_top_label_margin = 45
         for i in range(N):
             n = i * 400
             m = n + 400
             radarogramma.setXRange(n, m, padding=0)
+            radarogramma.setYRange(original_y_range[0] - radarogram_top_label_margin, original_y_range[1], padding=0)
             exporter.export(f'{i}_part.png')
             list_paths.append(f'{i}_part.png')
+
+        radarogramma.setXRange(original_x_range[0], original_x_range[1], padding=0)
+        radarogramma.setYRange(original_y_range[0], original_y_range[1], padding=0)
+
         # Открываем изображения с помощью библиотеки PIL для дальнейшей работы
         images = [Image.open(path) for path in list_paths]
 
