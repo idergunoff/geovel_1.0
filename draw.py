@@ -175,6 +175,25 @@ def _find_plot_right_border(image, color):
     return width - 1
 
 
+def _find_plot_bottom_border(image, color):
+    """Find the bottom horizontal plot-border line in an exported image."""
+    rgb_image = image.convert('RGB')
+    width, height = rgb_image.size
+    x_start = max(0, int(width * 0.12))
+    x_end = min(width, int(width * 0.88))
+    min_hits = max(10, int((x_end - x_start) * 0.35))
+    min_y = min(height - 1, int(height * 0.35))
+
+    for y in range(height - 1, min_y, -1):
+        hits = 0
+        for x in range(x_start, x_end):
+            if _pixel_differs(rgb_image.getpixel((x, y)), color):
+                hits += 1
+        if hits >= min_hits:
+            return y
+    return height - 1
+
+
 def _shift_image_horizontally(image, delta, color):
     """Move image content right/left by delta pixels while preserving image width."""
     if delta == 0:
@@ -308,8 +327,9 @@ def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=Non
         # Отрисовка меток на графике
         # bottom_break это высота, на которой будет располагаться метка на основном изображении
         # bottom_comb это высота, на которой будет располагаться метка на графике
-        draw.text((text_x, bottom_break + 2), text, fill="grey", font=font)
-        if ui.checkBox_save_graph.isChecked():
+        if bottom_break is not None:
+            draw.text((text_x, bottom_break + 2), text, fill="grey", font=font)
+        if ui.checkBox_save_graph.isChecked() and bottom_comb is not None:
             draw.text((text_x, bottom_comb + 2), text, fill="grey", font=font_graph)
     # Возвращается итоговое изображение с метками, готовое к сохранению
     return image
@@ -380,11 +400,14 @@ def save_image():
         color = (255, 255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0, 255)
         color_short = (255, 255, 255) if ui.checkBox_black_white.isChecked() else (0, 0, 0)
 
-        # Обрезаем изображение снизу, чтобы убрать подписи ("Профиль, м")
+        # При сохранении с графиком оставляем единую горизонтальную шкалу только
+        # под графиком. Поэтому у радарограммы обрезаем нижнюю область с X-подписями
+        # по фактической нижней границе plot area.
         cropped_images = []
         for img in images:
             width, height = img.size
-            cropped_img = img.crop((0, 0, width, height - 10))
+            bottom = min(height, _find_plot_bottom_border(img, color_short) + 2)
+            cropped_img = img.crop((0, 0, width, bottom))
             cropped_images.append(cropped_img)
         images = cropped_images
 
@@ -452,9 +475,7 @@ def save_image():
         if len(images) == 1:
             final_image = combined_image
         else:
-            bottom_break = radar_parts[0].height - 1
-            while radar_parts[0].getpixel((radar_parts[0].width - 1, bottom_break)) == color:
-                bottom_break -= 1
+            bottom_break = None
 
             try:
                 bottom_comb = combined_image.height - 1
