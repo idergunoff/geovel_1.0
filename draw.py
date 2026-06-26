@@ -238,6 +238,44 @@ def process_images(images, graphs, color_short):
     return combined_images
 
 
+
+def stitch_images_horizontally(parts, color):
+    total_width = sum(part.width for part in parts)
+    max_height = max(part.height for part in parts)
+    strip = Image.new('RGB', (total_width, max_height), color)
+    x_offset = 0
+    for part in parts:
+        strip.paste(part, (x_offset, 0))
+        x_offset += part.width
+    return strip
+
+
+def process_images_separately(images, graphs, color_short):
+    """Build separate radarogram and graph strips so each uses its own crop width."""
+    radar_parts = []
+    graph_parts = []
+    for i in range(len(images)):
+        img = images[i]
+        graph = graphs[i]
+        inx = 1 if len(images) > 1 else 0
+        aspect_ratio = graphs[inx].height / graphs[inx].width
+        new_height = int(aspect_ratio * images[inx].width)
+        graph_resized = resize_image(graph, img.width, new_height)
+        if i == 0:
+            graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
+        if i < len(images) - 1:
+            radar_right = _find_plot_right_border(img, color_short) + 1
+            graph_right = _find_plot_right_border(graph_resized, color_short) + 1
+            if 0 < radar_right < img.width:
+                img = img.crop((0, 0, radar_right, img.height))
+            if 0 < graph_right < graph_resized.width:
+                graph_resized = graph_resized.crop((0, 0, graph_right, graph_resized.height))
+        radar_parts.append(img)
+        graph_parts.append(graph_resized)
+    radar_strip = stitch_images_horizontally(radar_parts, color_short)
+    graph_strip = stitch_images_horizontally(graph_parts, color_short)
+    return radar_parts, graph_parts, concatenate_images_vertically(radar_strip, graph_strip)
+
 def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=None):
     """
         Установка недостающих меток на график.
@@ -385,19 +423,9 @@ def save_image():
                 right = width
             graphs[i] = graphs[i].crop((left, 0, right, height))
 
-        # Объединяем изображения
-        combined_images = process_images(images, graphs, color_short)
-
-        # Находим суммарные для всех изображений длину и ширину и создаем объект Image
-        total_width = sum(img.width for img in combined_images)
-        max_height = max(img.height for img in combined_images)
-        combined_image = Image.new('RGB', (total_width, max_height), color_short)
-
-        # Склеиваем изображения из combined_images последовательно в большую итоговую картинку
-        x_offset = 0
-        for img in combined_images:
-            combined_image.paste(img, (x_offset, 0))
-            x_offset += img.width
+        # Объединяем радарограмму и график раздельно по горизонтали, чтобы
+        # у каждого слоя была своя измеренная правая граница без взаимной обрезки.
+        radar_parts, graph_parts, combined_image = process_images_separately(images, graphs, color_short)
 
         # Отрезка итогового изображения справа, чтобы убрать лишнее пустое пространство после графика
         # (back_break + 23) нужен для того, чтобы был небольшой отступ и изображение обрезалось не вплотную
@@ -422,8 +450,8 @@ def save_image():
         if len(images) == 1:
             final_image = combined_image
         else:
-            bottom_break = images[0].height - 1
-            while images[0].getpixel((images[0].width - 1, bottom_break)) == color:
+            bottom_break = radar_parts[0].height - 1
+            while radar_parts[0].getpixel((radar_parts[0].width - 1, bottom_break)) == color:
                 bottom_break -= 1
 
             try:
@@ -440,8 +468,8 @@ def save_image():
             # Функция для проставления недостающих меток.
             # Передаются: само изображение, ширина первой части изображения, ширина второй части,
             # количество частей изображения, индексы по высоте изображения для проставления меток.
-            final_image = set_marks_scale(combined_image, combined_images[0].width, combined_images[1].width,
-                                      len(combined_images), bottom_break, bottom_comb)
+            final_image = set_marks_scale(combined_image, radar_parts[0].width, radar_parts[1].width,
+                                      len(radar_parts), bottom_break, bottom_comb)
 
         save_path, _ = QFileDialog.getSaveFileName(
             MainWindow,
