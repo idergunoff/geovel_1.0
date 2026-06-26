@@ -156,6 +156,25 @@ def _find_plot_left_border(image, color):
     return 0
 
 
+def _find_plot_right_border(image, color):
+    """Find the last long vertical plot-border line in an exported image."""
+    rgb_image = image.convert('RGB')
+    width, height = rgb_image.size
+    y_start = max(0, int(height * 0.12))
+    y_end = min(height, int(height * 0.88))
+    min_hits = max(10, int((y_end - y_start) * 0.35))
+    min_x = min(width - 1, int(width * 0.35))
+
+    for x in range(width - 1, min_x, -1):
+        hits = 0
+        for y in range(y_start, y_end):
+            if _pixel_differs(rgb_image.getpixel((x, y)), color):
+                hits += 1
+        if hits >= min_hits:
+            return x
+    return width - 1
+
+
 def _shift_image_horizontally(image, delta, color):
     """Move image content right/left by delta pixels while preserving image width."""
     if delta == 0:
@@ -195,14 +214,11 @@ def process_images(images, graphs, color_short):
         graph = graphs[i]
         inx = 1 if len(images) > 1 else 0
 
-        # Обрезаем свободное пространство справа только у последней части.
-        # Если обрезать правый край каждого фрагмента графика, при последующей
-        # горизонтальной склейке появляется разрыв между соседними фрагментами.
-        graph_cropped = crop_from_right(graph) if i == len(images) - 1 else graph
+        graph_cropped = graph
 
         # Вычисление новой высоты для изменения размера изображения графика
         # Необходимо для того, чтобы длина верхней и нижней картинки были одинаковые
-        aspect_ratio = crop_from_right(graphs[inx]).height / crop_from_right(graphs[inx]).width
+        aspect_ratio = graphs[inx].height / graphs[inx].width
         new_height = int(aspect_ratio * images[inx].width)
         graph_resized = resize_image(graph_cropped, img.width, new_height)
         if i == 0:
@@ -342,23 +358,23 @@ def save_image():
             set_info(f'Некорректные данные: {e}', 'red')
             return
 
-        # Ищем границу смены цвета, чтобы определить индекс для обрезки изображения слева
-        # Нужно для того, чтобы убрать шкалу графика слева на всех изображениях после первого
-        # Для графика
-        graph_break = 0
-        while graphs[0].getpixel((graph_break, 2)) == color:
-            graph_break += 1
-
-        # Обрезаем изображения слева по индексу, найденому ранее (color_break, graph_break)
+        # Обрезаем изображения слева по индексу, найденому ранее (color_break)
         for i in range(len(images)):
             width, height = images[i].size
             left = color_break + 1 if i != 0 else 0
             images[i] = images[i].crop((left, 0, width, height))
 
+        # Для графика обрезаем каждую часть по фактическим границам области построения.
+        # У первой части оставляем левую ось, у следующих частей удаляем левую ось и
+        # служебный отступ, а правый край режем по правой границе plot area. Так соседние
+        # части стыкуются без разрывов.
         for i in range(len(graphs)):
             width, height = graphs[i].size
-            left = graph_break + 1 if i != 0 else 0
-            graphs[i] = graphs[i].crop((left, 0, width, height))
+            left = 0 if i == 0 else _find_plot_left_border(graphs[i], color_short)
+            right = _find_plot_right_border(graphs[i], color_short) + 1
+            if right <= left:
+                right = width
+            graphs[i] = graphs[i].crop((left, 0, right, height))
 
         # Объединяем изображения
         combined_images = process_images(images, graphs, color_short)
