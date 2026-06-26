@@ -216,6 +216,7 @@ for plot_item in (radarogramma, ui.graph.plotItem):
     plot_item.setContentsMargins(0, 0, 0, 0)
     plot_item.layout.setContentsMargins(0, 0, 0, 0)
     plot_item.layout.setHorizontalSpacing(0)
+    plot_item.vb.setDefaultPadding(0)
 
 for axis in (radarogramma.getAxis('left'), ui.graph.getAxis('left')):
     axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
