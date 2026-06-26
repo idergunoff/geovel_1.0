@@ -209,6 +209,8 @@ def save_image():
 
     # Создаем объект экспортера PyQtGraph для основного изображения и настраиваем фиксированный размер изображения
     exporter = ImageExporter(radarogramma)
+    export_width = 868
+    exporter.parameters()['width'] = export_width
     exporter.parameters()['height'] = 610
     count_measure = len(
         json.loads(session.query(Profile.signal).filter(Profile.id == get_profile_id()).first()[0]))
@@ -218,9 +220,12 @@ def save_image():
 
     # Сохранение изображения с графиком
     if ui.checkBox_save_graph.isChecked():
-        # Создаем объект экспортера для графика
-        graph_exporter = ImageExporter(ui.graph.scene())
-        graph_exporter.parameters()['width'] = 868
+        # Создаем объект экспортера для графика. Экспортируем именно PlotItem,
+        # а не всю scene(), и используем ту же ширину, что у радарограммы.
+        # Так сохраненное изображение получает те же служебные отступы слева/справа,
+        # что и видимое окно после align_graph_to_radarogram().
+        graph_exporter = ImageExporter(ui.graph.plotItem)
+        graph_exporter.parameters()['width'] = export_width
 
         list_paths = []
         list_graphs = []
@@ -233,6 +238,8 @@ def save_image():
             m = n + 400
             radarogramma.setXRange(n, m, padding=0)
             ui.graph.setXRange(n, m, padding=0)
+            align_graph_to_radarogram()
+            QApplication.processEvents()
             exporter.export(f'{i}_part.png')
             graph_exporter.export(f'{i}_graph.png')
             list_paths.append(f'{i}_part.png')
