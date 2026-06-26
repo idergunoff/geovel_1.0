@@ -225,9 +225,12 @@ def process_images(images, graphs, color_short):
             graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
         if i < len(images) - 1:
             graph_right = _find_plot_right_border(graph_resized, color_short) + 1
-            if 0 < graph_right < graph_resized.width:
-                img = img.crop((0, 0, graph_right, img.height))
-                graph_resized = graph_resized.crop((0, 0, graph_right, graph_resized.height))
+            radar_right = _find_plot_right_border(img, color_short) + 1
+            tile_right = max(graph_right, radar_right)
+            tile_right = min(tile_right, img.width, graph_resized.width)
+            if 0 < tile_right < img.width or 0 < tile_right < graph_resized.width:
+                img = img.crop((0, 0, tile_right, img.height))
+                graph_resized = graph_resized.crop((0, 0, tile_right, graph_resized.height))
         # Склейка изображение вертикально
         combined_image = concatenate_images_vertically(img, graph_resized)
 
