@@ -274,6 +274,8 @@ def process_images_separately(images, graphs, color_short):
         graph_parts.append(graph_resized)
     radar_strip = stitch_images_horizontally(radar_parts, color_short)
     graph_strip = stitch_images_horizontally(graph_parts, color_short)
+    if graph_strip.width != radar_strip.width:
+        graph_strip = resize_image(graph_strip, radar_strip.width, graph_strip.height)
     return radar_parts, graph_parts, concatenate_images_vertically(radar_strip, graph_strip)
 
 def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=None):
