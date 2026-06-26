@@ -195,15 +195,18 @@ def process_images(images, graphs, color_short):
         graph = graphs[i]
         inx = 1 if len(images) > 1 else 0
 
-        # Обрезаем изображение графика справа, чтобы избиваиься от свободного пространства
-        graph_cropped = crop_from_right(graph)
+        # Обрезаем свободное пространство справа только у последней части.
+        # Если обрезать правый край каждого фрагмента графика, при последующей
+        # горизонтальной склейке появляется разрыв между соседними фрагментами.
+        graph_cropped = crop_from_right(graph) if i == len(images) - 1 else graph
 
         # Вычисление новой высоты для изменения размера изображения графика
         # Необходимо для того, чтобы длина верхней и нижней картинки были одинаковые
         aspect_ratio = crop_from_right(graphs[inx]).height / crop_from_right(graphs[inx]).width
         new_height = int(aspect_ratio * images[inx].width)
         graph_resized = resize_image(graph_cropped, img.width, new_height)
-        graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
+        if i == 0:
+            graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
         # Склейка изображение вертикально
         combined_image = concatenate_images_vertically(img, graph_resized)
 
