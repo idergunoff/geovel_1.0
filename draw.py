@@ -223,6 +223,11 @@ def process_images(images, graphs, color_short):
         graph_resized = resize_image(graph_cropped, img.width, new_height)
         if i == 0:
             graph_resized = align_graph_export_to_radar(img, graph_resized, color_short)
+        if i < len(images) - 1:
+            graph_right = _find_plot_right_border(graph_resized, color_short) + 1
+            if 0 < graph_right < graph_resized.width:
+                img = img.crop((0, 0, graph_right, img.height))
+                graph_resized = graph_resized.crop((0, 0, graph_right, graph_resized.height))
         # Склейка изображение вертикально
         combined_image = concatenate_images_vertically(img, graph_resized)
 
@@ -368,13 +373,9 @@ def save_image():
         # У первой части оставляем левую ось, у следующих частей удаляем левую ось и
         # служебный отступ, а правый край режем по правой границе plot area. Так соседние
         # части стыкуются без разрывов.
-        graph_stitch_gap_pixels = 24
         for i in range(len(graphs)):
             width, height = graphs[i].size
-            if i == 0:
-                left = 0
-            else:
-                left = _find_plot_left_border(graphs[i], color_short) + graph_stitch_gap_pixels
+            left = 0 if i == 0 else _find_plot_left_border(graphs[i], color_short)
             right = _find_plot_right_border(graphs[i], color_short) + 1
             left = min(max(0, left), width - 1)
             if right <= left:
