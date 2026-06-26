@@ -254,7 +254,10 @@ def draw_image(radar):
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
-    img.setImage(np.array(radar))
+    radar_array = np.array(radar)
+    img.setImage(radar_array)
+    radarogramma.setXRange(0, radar_array.shape[0], padding=0)
+    radarogramma.setYRange(0, radar_array.shape[1], padding=0)
 
     radarogramma.getAxis('bottom').setLabel('Профиль, м')
     radarogramma.getAxis('bottom').setScale(2.5)
@@ -271,6 +274,7 @@ def draw_image(radar):
         radarogramma.getAxis('left').setScale(8)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
+    schedule_graph_alignment()
 
 
 def draw_image_deep_prof(radar, scale):
@@ -342,7 +346,10 @@ def draw_image_deep_prof(radar, scale):
     cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, len(colors)), color=colors)
     img.setColorMap(cmap)
     hist.gradient.setColorMap(cmap)
-    img.setImage(np.array(radar))
+    radar_array = np.array(radar)
+    img.setImage(radar_array)
+    radarogramma.setXRange(0, radar_array.shape[0], padding=0)
+    radarogramma.setYRange(0, radar_array.shape[1], padding=0)
 
     radarogramma.getAxis('bottom').setLabel('Профиль, м')
     radarogramma.getAxis('bottom').setScale(2.5)
@@ -351,6 +358,7 @@ def draw_image_deep_prof(radar, scale):
     radarogramma.getAxis('left').setScale(scale)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
+    schedule_graph_alignment()
 
     # radarogramma.removeItem(roi)
 
