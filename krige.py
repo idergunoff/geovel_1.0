@@ -751,29 +751,44 @@ def _get_profiles_for_display():
     return profiles
 
 
-def _get_profile_label(profile, show_object_name):
-    """Build label for profile start/end markers."""
-    if not show_object_name:
-        return profile.title
-
-    object_title = profile.research.object.title if profile.research and profile.research.object else ''
-    if object_title:
-        return f'{object_title}: {profile.title}'
-    return profile.title
-
-
-def _draw_profile_label(profile, show_object_name):
+def _draw_profile_label(profile):
     try:
         profile_x = json.loads(profile.x_pulc)
         profile_y = json.loads(profile.y_pulc)
-        label = _get_profile_label(profile, show_object_name)
 
-        plt.text(profile_x[0] + 20, profile_y[0] + 20, label, fontsize=10, color='green')
+        plt.text(profile_x[0] + 20, profile_y[0] + 20, profile.title, fontsize=10, color='green')
         plt.scatter(profile_x[0], profile_y[0], marker='o', color='green', s=25)
-        plt.text(profile_x[-10] + 20, profile_y[-10] + 20, label, fontsize=10, color='orange')
+        plt.text(profile_x[-10] + 20, profile_y[-10] + 20, profile.title, fontsize=10, color='orange')
         plt.scatter(profile_x[-1], profile_y[-1], marker='o', color='orange', s=25)
     except (TypeError, IndexError):
         pass
+
+
+def _draw_object_labels(profiles):
+    object_points = {}
+
+    for profile in profiles:
+        if not profile.research or not profile.research.object:
+            continue
+
+        try:
+            profile_x = json.loads(profile.x_pulc)
+            profile_y = json.loads(profile.y_pulc)
+        except TypeError:
+            continue
+
+        object_title = profile.research.object.title
+        object_points.setdefault(object_title, {'x': [], 'y': []})
+        object_points[object_title]['x'].extend(profile_x)
+        object_points[object_title]['y'].extend(profile_y)
+
+    for object_title, points in object_points.items():
+        if not points['x'] or not points['y']:
+            continue
+
+        label_x = max(points['x']) + 100
+        label_y = (min(points['y']) + max(points['y'])) / 2
+        plt.text(label_x, label_y, object_title, fontsize=12, color='black', fontweight='bold')
 
 
 def show_profiles():
@@ -833,10 +848,12 @@ def show_profiles():
 
 
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
-    show_object_name = ui.checkBox_prof_all.isChecked() or ui.checkBox_profile_year.isChecked()
-    if ui.checkBox_profile_title.isChecked() or show_object_name:
+    if ui.checkBox_profile_title.isChecked():
         for profile in profiles:
-            _draw_profile_label(profile, show_object_name)
+            _draw_profile_label(profile)
+
+    if ui.checkBox_prof_all.isChecked() or ui.checkBox_profile_year.isChecked():
+        _draw_object_labels(profiles)
 
     if ui.checkBox_profile_well.isChecked():
         for profile in profiles:
