@@ -730,28 +730,63 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     Draw_Map.exec_()
 
 
-def show_profiles():
+def _get_profiles_for_display():
+    """Return profiles according to all/year/current profile drawing mode."""
     r_id = get_research_id()
-    list_x, list_y = [], []
-    if ui.checkBox_prof_all.isChecked():
-       for r in session.query(Research).all():
-           for profile in r.profiles:
-               try:
-                   list_x += (json.loads(profile.x_pulc))
-                   list_y += (json.loads(profile.y_pulc))
-               except TypeError:
-                   set_info(f'Не загружены координаты {profile.title}', 'red')
-                   pass
-    else:
 
-        r = session.query(Research).filter_by(id=r_id).first()
-        for profile in r.profiles:
-            try:
-                list_x += (json.loads(profile.x_pulc))
-                list_y += (json.loads(profile.y_pulc))
-            except TypeError:
-                set_info(f'Не загружены координаты {profile.title}', 'red')
-                pass
+    if ui.checkBox_prof_all.isChecked():
+        researches = session.query(Research).all()
+    elif ui.checkBox_profile_year.isChecked():
+        year = get_year_research()
+        researches = (session.query(Research)
+                      .filter(func.strftime('%Y', Research.date_research) == year)
+                      .all())
+    else:
+        research = session.query(Research).filter_by(id=r_id).first()
+        researches = [research] if research else []
+
+    profiles = []
+    for research in researches:
+        profiles.extend(research.profiles)
+    return profiles
+
+
+def _get_profile_label(profile, show_object_name):
+    """Build label for profile start/end markers."""
+    if not show_object_name:
+        return profile.title
+
+    object_title = profile.research.object.title if profile.research and profile.research.object else ''
+    if object_title:
+        return f'{object_title}: {profile.title}'
+    return profile.title
+
+
+def _draw_profile_label(profile, show_object_name):
+    try:
+        profile_x = json.loads(profile.x_pulc)
+        profile_y = json.loads(profile.y_pulc)
+        label = _get_profile_label(profile, show_object_name)
+
+        plt.text(profile_x[0] + 20, profile_y[0] + 20, label, fontsize=10, color='green')
+        plt.scatter(profile_x[0], profile_y[0], marker='o', color='green', s=25)
+        plt.text(profile_x[-10] + 20, profile_y[-10] + 20, label, fontsize=10, color='orange')
+        plt.scatter(profile_x[-1], profile_y[-1], marker='o', color='orange', s=25)
+    except (TypeError, IndexError):
+        pass
+
+
+def show_profiles():
+    profiles = _get_profiles_for_display()
+    list_x, list_y = [], []
+
+    for profile in profiles:
+        try:
+            list_x += json.loads(profile.x_pulc)
+            list_y += json.loads(profile.y_pulc)
+        except TypeError:
+            set_info(f'Не загружены координаты {profile.title}', 'red')
+            pass
 
     x = np.array(list_x)
     y = np.array(list_y)
@@ -798,19 +833,13 @@ def show_profiles():
 
 
     plt.scatter(x, y, marker='.', edgecolors='k', s=0.1)
-    if ui.checkBox_profile_title.isChecked():
-        r = session.query(Research).filter_by(id=r_id).first()
-        for profile in r.profiles:
-            try:
-                plt.text(json.loads(profile.x_pulc)[0] + 20, json.loads(profile.y_pulc)[0] + 20, profile.title, fontsize=10, color='green')
-                plt.scatter(json.loads(profile.x_pulc)[0], json.loads(profile.y_pulc)[0], marker='o', color='green', s=25)
-                plt.text(json.loads(profile.x_pulc)[-10] + 20, json.loads(profile.y_pulc)[-10] + 20, profile.title, fontsize=10, color='orange')
-                plt.scatter(json.loads(profile.x_pulc)[-1], json.loads(profile.y_pulc)[-1], marker='o', color='orange', s=25)
-            except TypeError:
-                pass
+    show_object_name = ui.checkBox_prof_all.isChecked() or ui.checkBox_profile_year.isChecked()
+    if ui.checkBox_profile_title.isChecked() or show_object_name:
+        for profile in profiles:
+            _draw_profile_label(profile, show_object_name)
 
     if ui.checkBox_profile_well.isChecked():
-        for profile in r.profiles:
+        for profile in profiles:
             wells = get_list_nearest_well(profile.id)
             if not wells:
                 continue
