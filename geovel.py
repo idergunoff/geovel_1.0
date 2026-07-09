@@ -436,6 +436,21 @@ ui.pushButton_import_model_f_ai.clicked.connect(import_model_formation_ai)
 
 ui.pushButton_map.clicked.connect(show_map)
 ui.pushButton_profiles.clicked.connect(show_profiles)
+
+
+def set_exclusive_profile_mode(checked_checkbox, unchecked_checkbox):
+    if checked_checkbox.isChecked() and unchecked_checkbox.isChecked():
+        unchecked_checkbox.blockSignals(True)
+        unchecked_checkbox.setChecked(False)
+        unchecked_checkbox.blockSignals(False)
+
+
+ui.checkBox_prof_all.stateChanged.connect(
+    lambda _: set_exclusive_profile_mode(ui.checkBox_prof_all, ui.checkBox_profile_year)
+)
+ui.checkBox_profile_year.stateChanged.connect(
+    lambda _: set_exclusive_profile_mode(ui.checkBox_profile_year, ui.checkBox_prof_all)
+)
 ui.pushButton_get_attributes.clicked.connect(get_attributes)
 
 roi.sigRegionChanged.connect(updatePlot)
