@@ -1514,7 +1514,12 @@ def calc_geochem_classification():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        working_sample = data_test[list_param_model].values.tolist()
+        working_sample = data_test.reindex(columns=list_param_model)
+        working_sample = working_sample.replace([np.inf, -np.inf], np.nan)
+
+        if working_sample.empty:
+            set_info('Нет геохимических данных для расчёта по выбранной модели', 'red')
+            return
 
         list_cat = list(class_model.classes_)
 
@@ -1522,15 +1527,12 @@ def calc_geochem_classification():
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
         except ValueError:
-            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
             data = imputer.fit_transform(working_sample)
             mark = class_model.predict(data)
             probability = class_model.predict_proba(data)
 
             for i in working_sample.index:
-                p_nan = [working_sample.columns[ic + 3] for ic, v in
-                         enumerate(working_sample.iloc[i, 3:].tolist()) if
-                         np.isnan(v)]
+                p_nan = [col for col, v in working_sample.loc[i].items() if pd.isna(v)]
                 if len(p_nan) > 0:
                     set_info(
                         f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
