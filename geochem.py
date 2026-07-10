@@ -1486,6 +1486,82 @@ def build_geochem_table_field():
 
 
 
+
+def build_geochem_table_model_points():
+    geochem_id = get_geochem_id()
+
+    params = (
+        session.query(GeochemParameter.id, GeochemParameter.title)
+        .filter_by(geochem_id=geochem_id)
+        .all()
+    )
+    param_map = dict(params)
+    param_titles = [title for _, title in params]
+
+    default_params = {title: None for title in param_titles}
+    data_rows = []
+    field_point_id_to_index = {}
+    well_point_id_to_index = {}
+
+    field_points = (
+        session.query(GeochemPoint)
+        .filter_by(geochem_id=geochem_id, fake=False)
+        .all()
+    )
+    for point in field_points:
+        field_point_id_to_index[point.id] = len(data_rows)
+        data_rows.append({
+            'title': point.title,
+            'X': point.x_coord,
+            'Y': point.y_coord,
+            'well': 'field',
+            **default_params
+        })
+
+    well_points = (
+        session.query(GeochemWellPoint)
+        .join(GeochemWell)
+        .filter(GeochemWell.geochem_id == geochem_id)
+        .all()
+    )
+    for point in well_points:
+        well_point_id_to_index[point.id] = len(data_rows)
+        data_rows.append({
+            'title': point.title,
+            'X': point.x_coord,
+            'Y': point.y_coord,
+            'well': point.g_well.title,
+            **default_params
+        })
+
+    if field_point_id_to_index:
+        point_values = (
+            session.query(GeochemPointValue)
+            .filter(GeochemPointValue.g_point_id.in_(list(field_point_id_to_index.keys())))
+            .all()
+        )
+        for pv in point_values:
+            param_title = param_map.get(pv.g_param_id)
+            row_idx = field_point_id_to_index.get(pv.g_point_id)
+            if param_title is not None and row_idx is not None:
+                data_rows[row_idx][param_title] = pv.value
+
+    if well_point_id_to_index:
+        well_point_values = (
+            session.query(GeochemWellPointValue)
+            .filter(GeochemWellPointValue.g_well_point_id.in_(list(well_point_id_to_index.keys())))
+            .all()
+        )
+        for pv in well_point_values:
+            param_title = param_map.get(pv.g_param_id)
+            row_idx = well_point_id_to_index.get(pv.g_well_point_id)
+            if param_title is not None and row_idx is not None:
+                data_rows[row_idx][param_title] = pv.value
+
+    data = pd.DataFrame(data_rows, columns=['title', 'X', 'Y', 'well'] + param_titles)
+    return data, param_titles
+
+
 def train_model_geochem():
     data_train, list_param = build_geochem_table()
     colors = {}
@@ -1496,7 +1572,7 @@ def train_model_geochem():
 
 
 def calc_geochem_classification():
-    data_test, list_param = build_geochem_table_field()
+    data_test, list_param = build_geochem_table_model_points()
 
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
@@ -1515,7 +1591,7 @@ def calc_geochem_classification():
             class_model = pickle.load(f)
 
         if data_test.empty:
-            set_info('Нет полевых геохимических точек для расчёта по выбранной модели', 'red')
+            set_info('Нет геохимических точек для расчёта по выбранной модели', 'red')
             return
 
         if not list_param_model:
@@ -1546,7 +1622,7 @@ def calc_geochem_classification():
         empty_value_params = [param for param in list_param_model if working_sample[param].isna().all()]
         if empty_value_params:
             set_info(
-                f'Для параметров выбранной модели нет ни одного значения в полевых точках: '
+                f'Для параметров выбранной модели нет ни одного значения в геохимических точках: '
                 f'{", ".join(empty_value_params)}',
                 'red'
             )
