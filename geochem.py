@@ -1514,26 +1514,64 @@ def calc_geochem_classification():
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
 
-        working_sample = data_test[list_param_model].values.tolist()
+        if data_test.empty:
+            set_info('Нет полевых геохимических точек для расчёта по выбранной модели', 'red')
+            return
+
+        if not list_param_model:
+            set_info('В выбранной модели не сохранён список параметров для расчёта', 'red')
+            return
+
+        missing_model_params = [param for param in list_param_model if param not in data_test.columns]
+        if missing_model_params:
+            set_info(
+                f'В текущем геохимическом объекте отсутствуют параметры, необходимые выбранной модели: '
+                f'{", ".join(missing_model_params)}',
+                'red'
+            )
+            return
+
+        n_features_model = getattr(class_model, 'n_features_in_', None)
+        if n_features_model is not None and n_features_model != len(list_param_model):
+            set_info(
+                f'Количество параметров выбранной модели ({n_features_model}) не совпадает с сохранённым списком '
+                f'параметров ({len(list_param_model)}). Возможно, запись модели повреждена или создана в старой версии.',
+                'red'
+            )
+            return
+
+        working_sample = data_test[list_param_model].copy()
+        working_sample = working_sample.replace([np.inf, -np.inf], np.nan)
+
+        empty_value_params = [param for param in list_param_model if working_sample[param].isna().all()]
+        if empty_value_params:
+            set_info(
+                f'Для параметров выбранной модели нет ни одного значения в полевых точках: '
+                f'{", ".join(empty_value_params)}',
+                'red'
+            )
 
         list_cat = list(class_model.classes_)
 
         try:
             mark = class_model.predict(working_sample)
             probability = class_model.predict_proba(working_sample)
-        except ValueError:
-            working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample]
-            data = imputer.fit_transform(working_sample)
-            mark = class_model.predict(data)
-            probability = class_model.predict_proba(data)
+        except ValueError as err:
+            try:
+                data = imputer.fit_transform(working_sample)
+                mark = class_model.predict(data)
+                probability = class_model.predict_proba(data)
+            except ValueError as impute_err:
+                set_info(f'Не удалось рассчитать модель: {impute_err}', 'red')
+                return
 
+            set_info(f'Расчёт выполнен после заполнения пропусков. Исходная ошибка модели: {err}', 'red')
             for i in working_sample.index:
-                p_nan = [working_sample.columns[ic + 3] for ic, v in
-                         enumerate(working_sample.iloc[i, 3:].tolist()) if
-                         np.isnan(v)]
+                p_nan = [col for col, v in working_sample.loc[i].items() if pd.isna(v)]
                 if len(p_nan) > 0:
+                    point_title = data_test.loc[i, 'title'] if 'title' in data_test.columns else i
                     set_info(
-                        f'Внимание для измерения "{i}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
+                        f'Внимание для измерения "{point_title}" отсутствуют параметры "{", ".join(p_nan)}", поэтому расчёт для'
                         f' этого измерения может быть не корректен', 'red')
 
         # Добавление предсказанных меток и вероятностей в рабочие данные
