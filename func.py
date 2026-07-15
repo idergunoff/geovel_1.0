@@ -216,13 +216,18 @@ def _reset_radarogram_left_axis_ticks(axis):
     if hasattr(axis, '_geovel_default_tick_strings'):
         axis.tickStrings = axis._geovel_default_tick_strings
         delattr(axis, '_geovel_default_tick_strings')
+    axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+    axis.setStyle(tickTextOffset=5, tickLength=5, tickFont=QtGui.QFont('Arial', 9))
 
 
 def _set_depth_axis_with_absolute_marks(scale):
     """Show depth labels with absolute elevation marks in parentheses."""
     axis = radarogramma.getAxis('left')
     _reset_radarogram_left_axis_ticks(axis)
-    axis.setLabel('Глубина, м (абс. отм., м)')
+    depth_axis_font = QtGui.QFont('Arial', 7)
+    axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+    axis.setStyle(tickTextOffset=2, tickLength=3, tickFont=depth_axis_font)
+    axis.setLabel('Глуб., м\n(абс., м)', **{'font-size': '7pt'})
     axis.setScale(scale)
 
     profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
