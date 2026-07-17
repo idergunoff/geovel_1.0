@@ -212,6 +212,7 @@ def push_random_param():
         return labels
 
     def build_torch_model(pipe_steps, x_train):
+        require_torch_stack()
         labels = set_marks()
         output_dim = 1
 
