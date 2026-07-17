@@ -1,4 +1,5 @@
 import pylab as p
+from numba.np.ufunc.workqueue import synchronize
 from psycopg2 import OperationalError
 from PyQt5.QtWidgets import QListWidget
 import hashlib
@@ -1432,9 +1433,68 @@ def open_rem_db_window():
 
                 ui_rdb.listWidget_wells.addItem(item)
 
+        # show_data_well_rdb()
+        # update_boundaries_rdb()
+
     def get_well_id_rdb():
         if ui_rdb.listWidget_wells.currentItem():
             return ui_rdb.listWidget_wells.currentItem().text().split(' id')[-1]
+
+
+    def remove_well_rdb():
+        """Удаление выбранной скважины и всех связанных с ней данных"""
+        name_well = ui_rdb.listWidget_wells.currentItem().text()
+        well_id = get_well_id_rdb()
+
+        result = QtWidgets.QMessageBox.question(
+            RemoteDB,
+            'Delete well in RemoteDB',
+            f'Вы уверены, что хотите удалить скважину "{name_well}" со всеми её границами, данными и каротажами?',
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No
+        )
+
+        if result == QtWidgets.QMessageBox.Yes:
+            with get_session() as remote_session:
+                try:
+                    # Удаляем все границы скважины
+                    remote_session.query(BoundaryRDB) \
+                        .filter(BoundaryRDB.well_id == well_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все данные скважины
+                    remote_session.query(WellOptionallyRDB) \
+                        .filter(WellOptionallyRDB.well_id == well_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все каротажи скважины
+                    remote_session.query(WellLogRDB) \
+                        .filter(WellLogRDB.well_id == well_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все markups mlp, связанные со скважиной
+                    remote_session.query(MarkupMLPRDB) \
+                        .filter(MarkupMLPRDB.well_id == well_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем все markups reg, связанные со скважиной
+                    remote_session.query(MarkupRegRDB) \
+                        .filter(MarkupRegRDB.well_id == well_id) \
+                        .delete(synchronize_session=False)
+
+                    # Удаляем саму скважину
+                    remote_session.query(WellRDB) \
+                        .filter(WellRDB.id == well_id) \
+                        .delete()
+
+                    remote_session.commit()
+                    set_info(f'Скважина "{name_well}" и все её данные удалены в удаленной БД', 'green')
+                    update_list_well_rdb()
+
+
+                except Exception as e:
+                    remote_session.rollback()
+                    set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
     def filter_wells():
         """Фильтрация с подсветкой и автопрокруткой к первому совпадению"""
@@ -1578,6 +1638,7 @@ def open_rem_db_window():
     ui_rdb.lineEdit_well_search.textChanged.connect(filter_wells)
     ui_rdb.pushButton_sync_entropy_profile.clicked.connect(sync_entropy_features_profile)
     ui_rdb.pushButton_remove_dupl_rdb.clicked.connect(remove_duplicate_wells)
+    ui_rdb.pushButton_remove_well_rdb.clicked.connect(remove_well_rdb)
 
     #####################################################
     #####################  Geochem  #####################
