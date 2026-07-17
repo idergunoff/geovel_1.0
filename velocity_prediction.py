@@ -2,7 +2,6 @@ import json
 import random
 import statistics
 
-from torch.cuda import graph
 
 from func import *
 from velocity_model import check_intersection
