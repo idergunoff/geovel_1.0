@@ -682,6 +682,7 @@ def push_random_param_reg():
             update_list_test_well()
 
     def build_torch_model(pipe_steps, x_train):
+        require_torch_stack()
         output_dim = 1
 
         epochs = ui_r.spinBox_epochs_torch.value()
