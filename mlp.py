@@ -8,7 +8,6 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, draw_fil
 from formation_ai import get_model_id
 from func import *
 from build_table import *
-from nn_torch_classifier import *
 from krige import draw_map
 from qt.choose_formation_lda import *
 from random_search import push_random_search
