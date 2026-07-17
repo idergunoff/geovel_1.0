@@ -19,8 +19,6 @@ from geochem import *
 from velocity_model import *
 from velocity_prediction import *
 from test_model import *
-from nn_torch_classifier import *
-from nn_torch_regression import *
 from feature_selection import *
 from index_productivity import *
 from pareto import *
@@ -266,9 +264,35 @@ ui.toolButton_rm_well_fake.clicked.connect(remove_fake_current_markup)
 ui.toolButton_cls_upgrade_model.clicked.connect(cls_model_prediction_upgrade)
 ui.toolButton_dist_well.clicked.connect(calc_object_training_well_distances_mlp)
 
+def _show_optional_torch_error(error):
+    QtWidgets.QMessageBox.warning(
+        MainWindow,
+        'PyTorch не установлен',
+        f'Для этой функции нужно установить PyTorch/skorch.\n\n{error}'
+    )
+
+
+def open_torch_classifier_train():
+    try:
+        from nn_torch_classifier import torch_classifier_train
+    except ImportError as exc:
+        _show_optional_torch_error(exc)
+        return
+    torch_classifier_train()
+
+
+def open_torch_regressor_train():
+    try:
+        from nn_torch_regression import torch_regressor_train
+    except ImportError as exc:
+        _show_optional_torch_error(exc)
+        return
+    torch_regressor_train()
+
+
 # torch
-ui.pushButton_add_torch.clicked.connect(torch_classifier_train)
-ui.pushButton_torch.clicked.connect(torch_regressor_train)
+ui.pushButton_add_torch.clicked.connect(open_torch_classifier_train)
+ui.pushButton_torch.clicked.connect(open_torch_regressor_train)
 
 
 #   regression

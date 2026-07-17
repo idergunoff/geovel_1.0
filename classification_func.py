@@ -153,6 +153,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     def build_torch_model(training_sample_train):
         """ Сборка модели PyTorch"""
 
+        require_torch_stack()
         output_dim = 1
 
         epochs = ui_cls.spinBox_epochs_torch.value()
