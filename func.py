@@ -2,6 +2,7 @@
 import os.path
 import numpy as np
 import re
+import types
 from object import *
 
 
@@ -184,6 +185,69 @@ def is_invalid(value, threshold=1.7e38):
     return math.isnan(value) or math.isinf(value) or value > threshold
 
 
+def _format_axis_number(value):
+    """Format axis values compactly while keeping useful decimal precision."""
+    if abs(value) >= 100:
+        return f'{value:.0f}'
+    if abs(value) >= 10:
+        return f'{value:.1f}'
+    return f'{value:.2f}'
+
+
+def _get_profile_abs_relief_reference(profile):
+    """Return the absolute relief mark used as zero depth on the depth scale."""
+    if not profile or not profile.abs_relief:
+        return None
+
+    try:
+        abs_relief = [float(i) for i in json.loads(profile.abs_relief)]
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+    if not abs_relief:
+        return None
+
+    if ui.checkBox_relief.isChecked():
+        return max(abs_relief)
+    return float(np.mean(abs_relief))
+
+
+def _reset_radarogram_left_axis_ticks(axis):
+    if hasattr(axis, '_geovel_default_tick_strings'):
+        axis.tickStrings = axis._geovel_default_tick_strings
+        delattr(axis, '_geovel_default_tick_strings')
+    axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+    axis.setStyle(tickTextOffset=5, tickLength=5, tickFont=QtGui.QFont('Arial', 9))
+
+
+def _set_depth_axis_with_absolute_marks(scale):
+    """Show depth labels with absolute elevation marks in parentheses."""
+    axis = radarogramma.getAxis('left')
+    _reset_radarogram_left_axis_ticks(axis)
+    depth_axis_font = QtGui.QFont('Arial', 7)
+    axis.setWidth(RADAROGRAM_LEFT_AXIS_WIDTH)
+    axis.setStyle(tickTextOffset=2, tickLength=3, tickFont=depth_axis_font)
+    axis.setLabel('Глуб., м\n(абс., м)', **{'font-size': '7pt'})
+    axis.setScale(scale)
+
+    profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
+    abs_zero_mark = _get_profile_abs_relief_reference(profile)
+    if abs_zero_mark is None:
+        return
+
+    axis._geovel_default_tick_strings = axis.tickStrings
+
+    def tick_strings(self, values, scale_arg, spacing):
+        labels = []
+        for value in values:
+            depth = value * scale_arg
+            abs_mark = abs_zero_mark - depth
+            labels.append(f'{_format_axis_number(depth)} ({_format_axis_number(abs_mark)})')
+        return labels
+
+    axis.tickStrings = types.MethodType(tick_strings, axis)
+
+
 # Функция отображения радарограммы
 def draw_image(radar):
     hist.setImageItem(img)
@@ -262,16 +326,18 @@ def draw_image(radar):
     radarogramma.getAxis('bottom').setLabel('Профиль, м')
     radarogramma.getAxis('bottom').setScale(2.5)
 
-    radarogramma.getAxis('left').setLabel('Время, нсек')
+    left_axis = radarogramma.getAxis('left')
+    _reset_radarogram_left_axis_ticks(left_axis)
+    left_axis.setLabel('Время, нсек')
     # отображение радораграммы с рельефом, вычисление коэффициента для натсройки шкалы по глубине профиля
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:
             depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
             coeff = 512 / (512 + np.max(depth))
-            radarogramma.getAxis('left').setScale(8 / coeff)
+            left_axis.setScale(8 / coeff)
     else:
-        radarogramma.getAxis('left').setScale(8)
+        left_axis.setScale(8)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
     schedule_graph_alignment()
@@ -354,8 +420,7 @@ def draw_image_deep_prof(radar, scale):
     radarogramma.getAxis('bottom').setLabel('Профиль, м')
     radarogramma.getAxis('bottom').setScale(2.5)
 
-    radarogramma.getAxis('left').setLabel('Глубина, м')
-    radarogramma.getAxis('left').setScale(scale)
+    _set_depth_axis_with_absolute_marks(scale)
     if ui.checkBox_grid.isChecked():
         radarogramma.showGrid(x=True, y=True)
     schedule_graph_alignment()
