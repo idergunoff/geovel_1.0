@@ -1047,6 +1047,7 @@ def train_regression_model():
     def build_torch_model(training_sample_train):
         """ Сбор модели PyTorch """
 
+        require_torch_stack()
         output_dim = 1
 
         epochs = ui_r.spinBox_epochs_torch.value()
