@@ -143,13 +143,45 @@ from collections import defaultdict
 
 from difflib import SequenceMatcher
 
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
-from skorch import NeuralNetClassifier, NeuralNetRegressor
+try:
+    import torch
+    import torch.nn as nn
+    from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split, RandomSampler, SubsetRandomSampler
+except ImportError as exc:
+    torch = None
+    _TORCH_IMPORT_ERROR = exc
 
-from skorch.dataset import ValidSplit
-from skorch.callbacks import EarlyStopping
+    class _OptionalTorchNN:
+        class Module:
+            pass
+
+        def __getattr__(self, name):
+            raise ImportError("PyTorch is required for this neural-network action.") from _TORCH_IMPORT_ERROR
+
+    nn = _OptionalTorchNN()
+    Dataset = object
+    DataLoader = TensorDataset = random_split = RandomSampler = SubsetRandomSampler = None
+else:
+    _TORCH_IMPORT_ERROR = None
+
+try:
+    from skorch import NeuralNetClassifier, NeuralNetRegressor
+    from skorch.dataset import ValidSplit
+    from skorch.callbacks import EarlyStopping
+except ImportError as exc:
+    NeuralNetClassifier = NeuralNetRegressor = ValidSplit = EarlyStopping = None
+    _SKORCH_IMPORT_ERROR = exc
+else:
+    _SKORCH_IMPORT_ERROR = None
+
+
+def require_torch_stack():
+    """Ensure optional PyTorch/skorch dependencies are available before Torch actions."""
+
+    if torch is None:
+        raise ImportError("PyTorch is required for this neural-network action.") from _TORCH_IMPORT_ERROR
+    if NeuralNetClassifier is None or NeuralNetRegressor is None or ValidSplit is None or EarlyStopping is None:
+        raise ImportError("skorch is required for this neural-network action.") from _SKORCH_IMPORT_ERROR
 
 from yellowbrick.classifier import DiscriminationThreshold
 
