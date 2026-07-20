@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from kriging_utils import prepare_variogram_data
+from kriging_utils import inverse_distance_interpolation, prepare_variogram_data
 
 
 def test_prepare_variogram_data_averages_coincident_coordinates():
@@ -27,3 +27,12 @@ def test_prepare_variogram_data_discards_non_finite_samples():
 def test_prepare_variogram_data_requires_distinct_coordinates():
     with pytest.raises(ValueError, match="distinct coordinates"):
         prepare_variogram_data([[0, 0], [0, 0]], [1, 2])
+
+
+def test_inverse_distance_interpolation_preserves_source_values():
+    grid_x = np.array([[0.0, 1.0]])
+    grid_y = np.array([[0.0, 0.0]])
+
+    result = inverse_distance_interpolation([[0, 0], [1, 0]], [2, 6], grid_x, grid_y)
+
+    np.testing.assert_allclose(result, [[2, 6]])

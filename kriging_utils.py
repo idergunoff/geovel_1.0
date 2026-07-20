@@ -36,3 +36,37 @@ def prepare_variogram_data(coordinates, values, min_unique_points=2):
         )
 
     return unique_coords, unique_values, int(len(data) - len(unique_coords))
+
+
+def inverse_distance_interpolation(coordinates, values, grid_x, grid_y, power=2.0):
+    """Interpolate a grid with inverse-distance weighting.
+
+    This is a deterministic fallback when a variogram cannot be fitted.  It
+    also handles a grid cell that exactly matches a source coordinate without
+    a division by zero.
+    """
+    coords = np.asarray(coordinates, dtype=float)
+    data = np.asarray(values, dtype=float).reshape(-1)
+    flat_grid = np.column_stack([np.ravel(grid_x), np.ravel(grid_y)])
+    result = np.empty(len(flat_grid), dtype=float)
+    exponent = max(float(power), np.finfo(float).eps)
+
+    # Process chunks so a large map does not allocate a full grid-by-points
+    # distance matrix at once.
+    chunk_size = 10_000
+    for start in range(0, len(flat_grid), chunk_size):
+        stop = min(start + chunk_size, len(flat_grid))
+        delta = flat_grid[start:stop, np.newaxis, :] - coords[np.newaxis, :, :]
+        squared_distance = np.einsum("ijk,ijk->ij", delta, delta)
+        exact_match = squared_distance == 0.0
+        weights = 1.0 / np.maximum(squared_distance, np.finfo(float).eps) ** (exponent / 2.0)
+        weighted_values = weights @ data
+        interpolated = weighted_values / weights.sum(axis=1)
+        if np.any(exact_match):
+            exact_rows = np.any(exact_match, axis=1)
+            interpolated[exact_rows] = (
+                exact_match[exact_rows] @ data / exact_match[exact_rows].sum(axis=1)
+            )
+        result[start:stop] = interpolated
+
+    return result.reshape(np.shape(grid_x))
