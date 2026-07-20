@@ -9,7 +9,11 @@ from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
-from kriging_utils import inverse_distance_interpolation, prepare_variogram_data
+from kriging_utils import (
+    inverse_distance_interpolation,
+    prepare_variogram_data,
+    savgol_parameters,
+)
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
 
@@ -680,11 +684,17 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # print(z_interp)
         filt_checkbox = _get_control("checkBox_filt")
         if filt_checkbox is not None and filt_checkbox.isChecked():
-            try:
-                z_interp = savgol_filter(z_interp, filt_power, 3)
-            except ValueError:
-                set_info('ValueError in savgol filter', 'red')
-                return
+            parameters = savgol_parameters(filt_power, z_interp.shape[-1])
+            if parameters is None:
+                set_info('Сглаживание пропущено: размер сетки меньше 3 точек.', 'brown')
+            else:
+                window_length, polyorder = parameters
+                if window_length != filt_power:
+                    set_info(
+                        f'Окно сглаживания уменьшено с {filt_power} до {window_length} под размер сетки.',
+                        'brown'
+                    )
+                z_interp = savgol_filter(z_interp, window_length, polyorder)
 
         # интерполяция значений на сетке gstools
         #

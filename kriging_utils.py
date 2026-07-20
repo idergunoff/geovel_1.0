@@ -70,3 +70,13 @@ def inverse_distance_interpolation(coordinates, values, grid_x, grid_y, power=2.
         result[start:stop] = interpolated
 
     return result.reshape(np.shape(grid_x))
+
+
+def savgol_parameters(requested_window, data_length, polyorder=3):
+    """Return valid Savitzky-Golay parameters or ``None`` when smoothing is impossible."""
+    window = min(int(requested_window), int(data_length))
+    if window % 2 == 0:
+        window -= 1
+    if window < 3:
+        return None
+    return window, min(int(polyorder), window - 1)

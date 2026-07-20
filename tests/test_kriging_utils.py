@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from kriging_utils import inverse_distance_interpolation, prepare_variogram_data
+from kriging_utils import (
+    inverse_distance_interpolation,
+    prepare_variogram_data,
+    savgol_parameters,
+)
 
 
 def test_prepare_variogram_data_averages_coincident_coordinates():
@@ -36,3 +40,11 @@ def test_inverse_distance_interpolation_preserves_source_values():
     result = inverse_distance_interpolation([[0, 0], [1, 0]], [2, 6], grid_x, grid_y)
 
     np.testing.assert_allclose(result, [[2, 6]])
+
+
+def test_savgol_parameters_clamps_window_to_odd_data_length():
+    assert savgol_parameters(13, 8) == (7, 3)
+
+
+def test_savgol_parameters_skips_too_short_data():
+    assert savgol_parameters(13, 2) is None
