@@ -670,7 +670,7 @@ def calculate_envelope(signal):
 
 
 def area_under_envelope(envelope):
-    return np.trapz(envelope)
+    return np.trapezoid(envelope)
 
 
 def envelope_max(envelope):
@@ -778,7 +778,7 @@ def autocorrelation_decay(acf, num_points=10):
 
 
 def acf_integral(acf):
-    return np.trapz(acf)
+    return np.trapezoid(acf)
 
 
 def acf_main_peak_width(acf, height_ratio=0.5):
