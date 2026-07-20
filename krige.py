@@ -9,6 +9,7 @@ from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
+from kriging_utils import inverse_distance_interpolation, prepare_variogram_data
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
 
@@ -624,29 +625,57 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # z_interp = z_interp.reshape(gridx.shape)
         # ok.display_variogram_model()
 
-        # Интерполяция значений на сетке scikit-gstat
+        # Интерполяция значений на сетке scikit-gstat.  A Variogram rejects
+        # coincident points (zero-distance pairs); model output can contain
+        # several values for the same coordinate, therefore merge them first.
         try:
-            variogram = Variogram(coordinates=coord, values=z, estimator=estimator, dist_func=dist_func, bin_func=bin_func, fit_sigma='exp')
+            coord, z, merged_points = prepare_variogram_data(coord, z, min_unique_points=1)
+            x, y = coord[:, 0], coord[:, 1]
+            if merged_points:
+                set_info(
+                    f'Для вариограммы усреднены значения в {merged_points} совпадающих точках.',
+                    'brown'
+                )
         except MemoryError:
             set_info('MemoryError', 'red')
             return
-        except ValueError:
-            set_info('ValueError: variogram', 'red')
-            return
-        except AttributeError:
-            set_info('AttributeError', 'red')
-            return
-        except:
-            set_info('Variogram error', 'red')
+        except ValueError as exc:
+            set_info(
+                f'Невозможно подготовить данные карты: {exc}.',
+                'red'
+            )
             return
 
-        # variogram.fit()
-        kriging = OrdinaryKriging(variogram=variogram, min_points=5, max_points=20, mode='exact')
-        try:
-            z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
-        except LinAlgError:
-            set_info('LinAlgError: Singular matrix', 'red')
-            return
+        if len(coord) == 1 or np.allclose(z, z[0]):
+            z_interp = np.full(xx.shape, z[0], dtype=float)
+            set_info('Все значения карты одинаковы: построена постоянная поверхность.', 'brown')
+        else:
+            try:
+                variogram = Variogram(
+                    coordinates=coord,
+                    values=z,
+                    model=var_model,
+                    n_lags=min(nlags, len(coord) - 1),
+                    estimator=estimator,
+                    dist_func=dist_func,
+                    bin_func=bin_func,
+                    fit_sigma='exp'
+                )
+                kriging = OrdinaryKriging(
+                    variogram=variogram,
+                    min_points=min(5, len(coord)),
+                    max_points=min(20, len(coord)),
+                    mode='exact'
+                )
+                z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+            except Exception as exc:
+                set_info(
+                    f'Вариограмма не построена ({dist_func}, {bin_func}; '
+                    f'{type(exc).__name__}: {exc}). '
+                    'Карта построена резервным методом IDW.',
+                    'brown'
+                )
+                z_interp = inverse_distance_interpolation(coord, z, xx, yy)
         # print(len(z_interp))
         # print(z_interp)
         filt_checkbox = _get_control("checkBox_filt")
