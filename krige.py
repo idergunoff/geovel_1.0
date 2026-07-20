@@ -9,6 +9,7 @@ from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
+from kriging_utils import prepare_variogram_data
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
 
@@ -624,14 +625,37 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # z_interp = z_interp.reshape(gridx.shape)
         # ok.display_variogram_model()
 
-        # Интерполяция значений на сетке scikit-gstat
+        # Интерполяция значений на сетке scikit-gstat.  A Variogram rejects
+        # coincident points (zero-distance pairs); model output can contain
+        # several values for the same coordinate, therefore merge them first.
         try:
-            variogram = Variogram(coordinates=coord, values=z, estimator=estimator, dist_func=dist_func, bin_func=bin_func, fit_sigma='exp')
+            coord, z, merged_points = prepare_variogram_data(coord, z)
+            x, y = coord[:, 0], coord[:, 1]
+            if merged_points:
+                set_info(
+                    f'Для вариограммы усреднены значения в {merged_points} совпадающих точках.',
+                    'brown'
+                )
+            variogram = Variogram(
+                coordinates=coord,
+                values=z,
+                model=var_model,
+                n_lags=nlags,
+                estimator=estimator,
+                dist_func=dist_func,
+                bin_func=bin_func,
+                fit_sigma='exp'
+            )
         except MemoryError:
             set_info('MemoryError', 'red')
             return
-        except ValueError:
-            set_info('ValueError: variogram', 'red')
+        except ValueError as exc:
+            set_info(
+                f'Ошибка вариограммы ({dist_func}, {bin_func}): {exc}. '
+                'Проверьте, что есть минимум две точки с разными координатами '
+                'и выбрана поддерживаемая функция расстояния.',
+                'red'
+            )
             return
         except AttributeError:
             set_info('AttributeError', 'red')
