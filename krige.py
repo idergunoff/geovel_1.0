@@ -672,6 +672,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     mode='exact'
                 )
                 z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
+                non_finite_count = int(z_interp.size - np.isfinite(z_interp).sum())
+                if non_finite_count:
+                    raise ValueError(
+                        f'kriging returned {non_finite_count} cells without enough neighbours'
+                    )
             except Exception as exc:
                 set_info(
                     f'Вариограмма не построена ({dist_func}, {bin_func}; '
@@ -684,17 +689,25 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # print(z_interp)
         filt_checkbox = _get_control("checkBox_filt")
         if filt_checkbox is not None and filt_checkbox.isChecked():
-            parameters = savgol_parameters(filt_power, z_interp.shape[-1])
-            if parameters is None:
-                set_info('Сглаживание пропущено: размер сетки меньше 3 точек.', 'brown')
+            if not np.isfinite(z_interp).all():
+                # Savitzky-Golay uses a least-squares fit and cannot accept
+                # NaN/inf. The map remains useful without this optional step.
+                set_info('Сглаживание пропущено: интерполяция содержит NaN или inf.', 'brown')
             else:
-                window_length, polyorder = parameters
-                if window_length != filt_power:
-                    set_info(
-                        f'Окно сглаживания уменьшено с {filt_power} до {window_length} под размер сетки.',
-                        'brown'
-                    )
-                z_interp = savgol_filter(z_interp, window_length, polyorder)
+                parameters = savgol_parameters(filt_power, z_interp.shape[-1])
+                if parameters is None:
+                    set_info('Сглаживание пропущено: размер сетки меньше 3 точек.', 'brown')
+                else:
+                    window_length, polyorder = parameters
+                    if window_length != filt_power:
+                        set_info(
+                            f'Окно сглаживания уменьшено с {filt_power} до {window_length} под размер сетки.',
+                            'brown'
+                        )
+                    try:
+                        z_interp = savgol_filter(z_interp, window_length, polyorder)
+                    except ValueError as exc:
+                        set_info(f'Сглаживание пропущено: {exc}', 'brown')
 
         # интерполяция значений на сетке gstools
         #
