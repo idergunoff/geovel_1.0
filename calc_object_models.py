@@ -221,11 +221,8 @@ def calc_object():
                 update_co_models_list()
 
 
-    def start_co_class():
+    def start_co_class(co_cls):
         """ Расчет объекта по модели """
-
-        co_cls = session.query(CalcObject).filter_by(
-            id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
 
         model = session.query(TrainedModelClass).filter_by(
             id=co_cls.model_id).first()
@@ -276,15 +273,12 @@ def calc_object():
                 research = session.query(Research).filter(Research.id == prof.research_id).first()
                 object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
                 set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
-                break
+                continue
 
         update_list_model_prediction()
 
-    def start_co_reg():
+    def start_co_reg(co_reg):
         """ Расчет объекта обученной моделью """
-
-        co_reg = session.query(CalcObject).filter_by(
-            id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
 
         model = session.query(TrainedModelReg).filter_by(
             id=co_reg.model_id).first()
@@ -331,7 +325,7 @@ def calc_object():
                 research = session.query(Research).filter(Research.id == prof.research_id).first()
                 object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
                 set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
-                break
+                continue
 
         update_list_model_prediction()
 
@@ -349,9 +343,9 @@ def calc_object():
                 continue
 
             if co.type_ml == 'cls':
-                start_co_class()
+                start_co_class(co)
             if co.type_ml == 'reg':
-                start_co_reg()
+                start_co_reg(co)
 
             session.delete(co)
             session.commit()
