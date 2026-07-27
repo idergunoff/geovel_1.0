@@ -4,6 +4,12 @@ import numpy as np
 import re
 import types
 from object import *
+from mapinfo_export import (
+    ProfileExportError,
+    determine_export_zone,
+    prepare_export_profile,
+    write_mif_mid,
+)
 
 
 list_param_geovel = [
@@ -149,6 +155,71 @@ def get_research_name():
 # Функция получения имени выбранного объекта
 def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
+
+
+def export_current_object_profiles_to_mapinfo():
+    """Export every profile of the selected object to MapInfo MIF/MID files."""
+    object_id = get_object_id()
+    if object_id is None:
+        QMessageBox.warning(MainWindow, "Экспорт MapInfo", "Сначала выберите объект.")
+        return
+
+    profiles = (
+        session.query(Profile)
+        .join(Research, Profile.research_id == Research.id)
+        .filter(Research.object_id == object_id)
+        .order_by(Profile.research_id, Profile.id)
+        .all()
+    )
+    try:
+        export_profiles = [prepare_export_profile(profile) for profile in profiles]
+        zone = determine_export_zone(export_profiles)
+    except ProfileExportError as exc:
+        QMessageBox.critical(MainWindow, "Экспорт MapInfo", str(exc))
+        return
+
+    object_name = re.sub(r"[^\w.-]+", "_", get_object_name(), flags=re.UNICODE).strip("._")
+    default_name = f"{object_name or 'profiles'}_profiles.mif"
+    output_path, _ = QFileDialog.getSaveFileName(
+        MainWindow,
+        "Экспорт профилей объекта в MapInfo MIF/MID",
+        default_name,
+        "MapInfo Interchange Format (*.mif)",
+    )
+    if not output_path:
+        return
+    if not output_path.lower().endswith(".mif"):
+        output_path += ".mif"
+
+    confirmation = QMessageBox.question(
+        MainWindow,
+        "Экспорт MapInfo",
+        f"Будет экспортировано профилей: {len(export_profiles)}\n"
+        f"Система координат: Pulkovo 1942 / Gauss-Kruger zone {zone}\n"
+        f"EPSG:{28400 + zone}\n\n"
+        "Зона определена по WGS 84 и сверена с зональным префиксом СК-42. Продолжить?",
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.Yes,
+    )
+    if confirmation != QMessageBox.Yes:
+        return
+
+    try:
+        saved_mif, saved_mid = write_mif_mid(output_path, export_profiles, zone)
+    except (ProfileExportError, OSError, RuntimeError) as exc:
+        QMessageBox.critical(MainWindow, "Экспорт MapInfo", f"Не удалось создать MIF/MID:\n{exc}")
+        return
+    set_info(
+        f'Профили текущего объекта экспортированы в MapInfo MIF/MID: "{saved_mif}"',
+        "green",
+    )
+    QMessageBox.information(
+        MainWindow,
+        "Экспорт MapInfo",
+        f"Экспортировано профилей: {len(export_profiles)}\n"
+        f"MIF: {saved_mif}\nMID: {saved_mid}\n\n"
+        "Открывайте в MapInfo файл MIF.",
+    )
 
 
 # Функция получения имени выбранного объекта мониторинга

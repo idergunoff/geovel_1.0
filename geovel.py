@@ -460,6 +460,7 @@ ui.pushButton_import_model_f_ai.clicked.connect(import_model_formation_ai)
 
 ui.pushButton_map.clicked.connect(show_map)
 ui.pushButton_profiles.clicked.connect(show_profiles)
+ui.pushButton_profiles_to_mapinfo.clicked.connect(export_current_object_profiles_to_mapinfo)
 
 
 def set_exclusive_profile_mode(checked_checkbox, unchecked_checkbox):
