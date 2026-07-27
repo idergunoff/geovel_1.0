@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
-
-
-DEFAULT_ZONE = 9
-WGS_MATCH_TOLERANCE_METERS = 100.0
 
 
 class ProfileExportError(ValueError):
@@ -125,6 +123,91 @@ def profile_length(points: Iterable[tuple[float, float]]) -> float:
     return sum(math.dist(first, second) for first, second in zip(point_list, point_list[1:]))
 
 
-def tab_sidecar_paths(tab_path: str | Path) -> tuple[Path, ...]:
-    path = Path(tab_path).with_suffix(".tab")
-    return tuple(path.with_suffix(suffix) for suffix in (".tab", ".dat", ".map", ".id", ".ind"))
+def _mif_number(value: float) -> str:
+    return format(value, ".15g")
+
+
+def _mif_points(profile: ExportProfile, zone: int) -> tuple[tuple[float, float], ...]:
+    """Return EPSG-style points, adding the zone prefix when it is absent."""
+    result = []
+    for easting, northing in profile.projected_points:
+        if gauss_kruger_zone_from_easting(easting) is None:
+            easting += math.copysign(zone * 1_000_000, easting)
+        result.append((easting, northing))
+    return tuple(result)
+
+
+def _mid_text(value: object) -> str:
+    text = str(value).replace('"', '""').replace("\r", " ").replace("\n", " ")
+    return f'"{text}"'
+
+
+def _mif_header(zone: int) -> str:
+    central_meridian = zone * 6 - 3
+    false_easting = zone * 1_000_000 + 500_000
+    # MapInfo projection 8 is Transverse Mercator; datum 1001 is Pulkovo 1942.
+    return (
+        'Version 300\n'
+        'Charset "UTF-8"\n'
+        'Delimiter ";"\n'
+        f'CoordSys Earth Projection 8, 1001, "m", {central_meridian}, 0, 1, '
+        f'{false_easting}, 0\n'
+        'Columns 7\n'
+        '  PROFILE_ID Integer\n'
+        '  RESEARCH_ID Integer\n'
+        '  TITLE Char(254)\n'
+        '  POINTS Integer\n'
+        '  LENGTH_M Float\n'
+        '  ZONE Integer\n'
+        '  EPSG Integer\n'
+        'Data\n'
+    )
+
+
+def write_mif_mid(
+    mif_path: str | Path,
+    profiles: Sequence[ExportProfile],
+    zone: int,
+) -> tuple[Path, Path]:
+    """Write MapInfo Interchange geometry and attributes without GIS dependencies."""
+    output_mif = Path(mif_path).with_suffix(".mif")
+    output_mid = output_mif.with_suffix(".mid")
+    output_mif.parent.mkdir(parents=True, exist_ok=True)
+    temp_paths: list[Path] = []
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", newline="\n", dir=output_mif.parent, delete=False
+        ) as mif_file, tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", newline="\n", dir=output_mid.parent, delete=False
+        ) as mid_file:
+            temp_mif = Path(mif_file.name)
+            temp_mid = Path(mid_file.name)
+            temp_paths.extend((temp_mif, temp_mid))
+            mif_file.write(_mif_header(zone))
+            for profile in profiles:
+                points = _mif_points(profile, zone)
+                mif_file.write(f"Pline {len(points)}\n")
+                for easting, northing in points:
+                    mif_file.write(f"{_mif_number(easting)} {_mif_number(northing)}\n")
+                mid_file.write(
+                    ";".join(
+                        (
+                            str(profile.profile_id),
+                            str(profile.research_id),
+                            _mid_text(profile.title),
+                            str(len(points)),
+                            _mif_number(profile_length(points)),
+                            str(zone),
+                            str(28400 + zone),
+                        )
+                    )
+                    + "\n"
+                )
+        os.replace(temp_mif, output_mif)
+        temp_paths.remove(temp_mif)
+        os.replace(temp_mid, output_mid)
+        temp_paths.remove(temp_mid)
+    finally:
+        for temp_path in temp_paths:
+            temp_path.unlink(missing_ok=True)
+    return output_mif, output_mid

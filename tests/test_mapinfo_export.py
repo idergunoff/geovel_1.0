@@ -10,6 +10,7 @@ from mapinfo_export import (
     gauss_kruger_zone_from_longitude,
     prepare_export_profile,
     profile_length,
+    write_mif_mid,
 )
 
 
@@ -57,3 +58,27 @@ def test_all_four_coordinate_arrays_must_have_equal_lengths():
 
 def test_profile_length_uses_all_polyline_segments():
     assert profile_length([(0, 0), (3, 4), (6, 8)]) == 10
+
+
+def test_write_mif_mid_creates_zone_9_polylines_and_attributes(tmp_path):
+    profile = prepare_export_profile(make_profile(title='P-7 "main"'))
+
+    mif_path, mid_path = write_mif_mid(tmp_path / "profiles.mif", [profile], 9)
+
+    mif = mif_path.read_text(encoding="utf-8")
+    mid = mid_path.read_text(encoding="utf-8")
+    assert 'CoordSys Earth Projection 8, 1001, "m", 51, 0, 1, 9500000, 0' in mif
+    assert "Pline 2\n9500000 6100000\n9500003 6100004\n" in mif
+    assert '7;3;"P-7 ""main""";2;5;9;28409\n' == mid
+
+
+def test_write_mif_mid_adds_missing_zone_prefix(tmp_path):
+    profile = prepare_export_profile(
+        make_profile(x_pulc=json.dumps([500_000.0, 500_003.0]))
+    )
+
+    mif_path, _ = write_mif_mid(tmp_path / "profiles.mif", [profile], 9)
+
+    assert "Pline 2\n9500000 6100000\n9500003 6100004\n" in mif_path.read_text(
+        encoding="utf-8"
+    )
