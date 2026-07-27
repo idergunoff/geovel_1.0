@@ -562,7 +562,7 @@
                    <string notr="true">background-color: rgb(148, 255, 232);</string>
                   </property>
                   <property name="text">
-                   <string>Найти нефть</string>
+                   <string>MEDFILT 19x19</string>
                   </property>
                  </widget>
                 </item>
@@ -1346,8 +1346,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>46</width>
-                       <height>26</height>
+                       <width>676</width>
+                       <height>213</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
