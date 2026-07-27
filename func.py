@@ -6,7 +6,12 @@ import numpy as np
 import re
 import types
 from object import *
-from mapinfo_export import ProfileExportError, determine_export_zone, prepare_export_profile
+from mapinfo_export import (
+    ProfileExportError,
+    determine_export_zone,
+    prepare_export_profile,
+    write_mif_mid,
+)
 
 
 list_param_geovel = [
@@ -155,7 +160,7 @@ def get_object_name():
 
 
 def export_current_object_profiles_to_mapinfo():
-    """Export every profile of the selected object to a native MapInfo TAB layer."""
+    """Export every profile of the selected object to MapInfo MIF/MID files."""
     object_id = get_object_id()
     if object_id is None:
         QMessageBox.warning(MainWindow, "Экспорт MapInfo", "Сначала выберите объект.")
@@ -175,27 +180,18 @@ def export_current_object_profiles_to_mapinfo():
         QMessageBox.critical(MainWindow, "Экспорт MapInfo", str(exc))
         return
 
-    if importlib.util.find_spec("osgeo") is None:
-        QMessageBox.critical(
-            MainWindow,
-            "Экспорт MapInfo",
-            "Для создания нативного TAB требуется GDAL/OGR с драйвером MapInfo File. "
-            "Установите пакет GDAL в окружение приложения.",
-        )
-        return
-
     object_name = re.sub(r"[^\w.-]+", "_", get_object_name(), flags=re.UNICODE).strip("._")
-    default_name = f"{object_name or 'profiles'}_profiles.tab"
+    default_name = f"{object_name or 'profiles'}_profiles.mif"
     output_path, _ = QFileDialog.getSaveFileName(
         MainWindow,
-        "Экспорт профилей объекта в MapInfo TAB",
+        "Экспорт профилей объекта в MapInfo MIF/MID",
         default_name,
-        "MapInfo TAB (*.tab)",
+        "MapInfo Interchange Format (*.mif)",
     )
     if not output_path:
         return
-    if not output_path.lower().endswith(".tab"):
-        output_path += ".tab"
+    if not output_path.lower().endswith(".mif"):
+        output_path += ".mif"
 
     confirmation = QMessageBox.question(
         MainWindow,
@@ -203,7 +199,7 @@ def export_current_object_profiles_to_mapinfo():
         f"Будет экспортировано профилей: {len(export_profiles)}\n"
         f"Система координат: Pulkovo 1942 / Gauss-Kruger zone {zone}\n"
         f"EPSG:{28400 + zone}\n\n"
-        "Зона определена по WGS 84 и сверена с координатами СК-42. Продолжить?",
+        "Зона определена по WGS 84 и сверена с зональным префиксом СК-42. Продолжить?",
         QMessageBox.Yes | QMessageBox.No,
         QMessageBox.Yes,
     )
@@ -211,19 +207,20 @@ def export_current_object_profiles_to_mapinfo():
         return
 
     try:
-        writer = importlib.import_module("mapinfo_gdal")
-        saved_path = writer.write_native_tab(output_path, export_profiles, zone)
+        saved_mif, saved_mid = write_mif_mid(output_path, export_profiles, zone)
     except (ProfileExportError, OSError, RuntimeError) as exc:
-        QMessageBox.critical(MainWindow, "Экспорт MapInfo", f"Не удалось создать TAB:\n{exc}")
+        QMessageBox.critical(MainWindow, "Экспорт MapInfo", f"Не удалось создать MIF/MID:\n{exc}")
         return
     set_info(
-        f'Профили текущего объекта экспортированы в MapInfo TAB: "{saved_path}"',
+        f'Профили текущего объекта экспортированы в MapInfo MIF/MID: "{saved_mif}"',
         "green",
     )
     QMessageBox.information(
         MainWindow,
         "Экспорт MapInfo",
-        f"Экспортировано профилей: {len(export_profiles)}\nФайл: {saved_path}",
+        f"Экспортировано профилей: {len(export_profiles)}\n"
+        f"MIF: {saved_mif}\nMID: {saved_mid}\n\n"
+        "Открывайте в MapInfo файл MIF.",
     )
 
 
