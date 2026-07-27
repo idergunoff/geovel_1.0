@@ -1,9 +1,12 @@
 # from torch.cuda import graph
 import os.path
+import importlib
+import importlib.util
 import numpy as np
 import re
 import types
 from object import *
+from mapinfo_export import ProfileExportError, determine_export_zone, prepare_export_profile
 
 
 list_param_geovel = [
@@ -149,6 +152,79 @@ def get_research_name():
 # Функция получения имени выбранного объекта
 def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
+
+
+def export_current_object_profiles_to_mapinfo():
+    """Export every profile of the selected object to a native MapInfo TAB layer."""
+    object_id = get_object_id()
+    if object_id is None:
+        QMessageBox.warning(MainWindow, "Экспорт MapInfo", "Сначала выберите объект.")
+        return
+
+    profiles = (
+        session.query(Profile)
+        .join(Research, Profile.research_id == Research.id)
+        .filter(Research.object_id == object_id)
+        .order_by(Profile.research_id, Profile.id)
+        .all()
+    )
+    try:
+        export_profiles = [prepare_export_profile(profile) for profile in profiles]
+        zone = determine_export_zone(export_profiles)
+    except ProfileExportError as exc:
+        QMessageBox.critical(MainWindow, "Экспорт MapInfo", str(exc))
+        return
+
+    if importlib.util.find_spec("osgeo") is None:
+        QMessageBox.critical(
+            MainWindow,
+            "Экспорт MapInfo",
+            "Для создания нативного TAB требуется GDAL/OGR с драйвером MapInfo File. "
+            "Установите пакет GDAL в окружение приложения.",
+        )
+        return
+
+    object_name = re.sub(r"[^\w.-]+", "_", get_object_name(), flags=re.UNICODE).strip("._")
+    default_name = f"{object_name or 'profiles'}_profiles.tab"
+    output_path, _ = QFileDialog.getSaveFileName(
+        MainWindow,
+        "Экспорт профилей объекта в MapInfo TAB",
+        default_name,
+        "MapInfo TAB (*.tab)",
+    )
+    if not output_path:
+        return
+    if not output_path.lower().endswith(".tab"):
+        output_path += ".tab"
+
+    confirmation = QMessageBox.question(
+        MainWindow,
+        "Экспорт MapInfo",
+        f"Будет экспортировано профилей: {len(export_profiles)}\n"
+        f"Система координат: Pulkovo 1942 / Gauss-Kruger zone {zone}\n"
+        f"EPSG:{28400 + zone}\n\n"
+        "Зона определена по WGS 84 и сверена с координатами СК-42. Продолжить?",
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.Yes,
+    )
+    if confirmation != QMessageBox.Yes:
+        return
+
+    try:
+        writer = importlib.import_module("mapinfo_gdal")
+        saved_path = writer.write_native_tab(output_path, export_profiles, zone)
+    except (ProfileExportError, OSError, RuntimeError) as exc:
+        QMessageBox.critical(MainWindow, "Экспорт MapInfo", f"Не удалось создать TAB:\n{exc}")
+        return
+    set_info(
+        f'Профили текущего объекта экспортированы в MapInfo TAB: "{saved_path}"',
+        "green",
+    )
+    QMessageBox.information(
+        MainWindow,
+        "Экспорт MapInfo",
+        f"Экспортировано профилей: {len(export_profiles)}\nФайл: {saved_path}",
+    )
 
 
 # Функция получения имени выбранного объекта мониторинга
