@@ -72,6 +72,37 @@ def inverse_distance_interpolation(coordinates, values, grid_x, grid_y, power=2.
     return result.reshape(np.shape(grid_x))
 
 
+def fill_kriging_gaps(kriging_grid, coordinates, values, grid_x, grid_y, power=2.0):
+    """Fill only non-finite kriging cells with inverse-distance estimates.
+
+    ``OrdinaryKriging`` can leave a few edge cells uncovered when fewer than
+    its configured minimum number of samples lie inside the variogram range.
+    Replacing the entire surface in that case discards all successful kriging
+    estimates, so limit the deterministic IDW fallback to those gaps.
+
+    Returns a filled copy and the number of repaired cells.
+    """
+    result = np.asarray(kriging_grid, dtype=float).copy()
+    grid_x = np.asarray(grid_x, dtype=float)
+    grid_y = np.asarray(grid_y, dtype=float)
+    if result.shape != grid_x.shape or result.shape != grid_y.shape:
+        raise ValueError("kriging grid and coordinate grids must have the same shape")
+
+    missing = ~np.isfinite(result)
+    missing_count = int(np.count_nonzero(missing))
+    if missing_count == 0:
+        return result, 0
+
+    result[missing] = inverse_distance_interpolation(
+        coordinates,
+        values,
+        grid_x[missing],
+        grid_y[missing],
+        power=power,
+    )
+    return result, missing_count
+
+
 def savgol_parameters(requested_window, data_length, polyorder=3):
     """Return valid Savitzky-Golay parameters or ``None`` when smoothing is impossible."""
     window = min(int(requested_window), int(data_length))
