@@ -10,6 +10,7 @@ from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
 from func import *
 from kriging_utils import (
+    fill_kriging_gaps,
     inverse_distance_interpolation,
     prepare_variogram_data,
     savgol_parameters,
@@ -672,10 +673,14 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     mode='exact'
                 )
                 z_interp = kriging.transform(xx.flatten(), yy.flatten()).reshape(xx.shape)
-                non_finite_count = int(z_interp.size - np.isfinite(z_interp).sum())
-                if non_finite_count:
-                    raise ValueError(
-                        f'kriging returned {non_finite_count} cells without enough neighbours'
+                z_interp, filled_cell_count = fill_kriging_gaps(
+                    z_interp, coord, z, xx, yy
+                )
+                if filled_cell_count:
+                    set_info(
+                        f'Кригинг построен; {filled_cell_count} ячеек без достаточного '
+                        'числа соседей локально заполнены методом IDW.',
+                        'brown'
                     )
             except Exception as exc:
                 set_info(

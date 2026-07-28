@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from kriging_utils import (
+    fill_kriging_gaps,
     inverse_distance_interpolation,
     prepare_variogram_data,
     savgol_parameters,
@@ -40,6 +41,36 @@ def test_inverse_distance_interpolation_preserves_source_values():
     result = inverse_distance_interpolation([[0, 0], [1, 0]], [2, 6], grid_x, grid_y)
 
     np.testing.assert_allclose(result, [[2, 6]])
+
+
+def test_fill_kriging_gaps_preserves_successful_kriging_cells():
+    grid_x, grid_y = np.meshgrid([0.0, 1.0], [0.0, 1.0])
+    kriging_grid = np.array([[10.0, np.nan], [np.inf, 40.0]])
+
+    result, filled_count = fill_kriging_gaps(
+        kriging_grid,
+        [[0.0, 0.0], [1.0, 1.0]],
+        [2.0, 6.0],
+        grid_x,
+        grid_y,
+    )
+
+    assert filled_count == 2
+    np.testing.assert_allclose(result[[0, 1], [0, 1]], [10.0, 40.0])
+    assert np.isfinite(result).all()
+
+
+def test_fill_kriging_gaps_does_not_modify_complete_grid():
+    grid_x, grid_y = np.meshgrid([0.0, 1.0], [0.0, 1.0])
+    kriging_grid = np.array([[10.0, 20.0], [30.0, 40.0]])
+
+    result, filled_count = fill_kriging_gaps(
+        kriging_grid, [[0.0, 0.0]], [2.0], grid_x, grid_y
+    )
+
+    assert filled_count == 0
+    np.testing.assert_array_equal(result, kriging_grid)
+    assert result is not kriging_grid
 
 
 def test_savgol_parameters_clamps_window_to_odd_data_length():
