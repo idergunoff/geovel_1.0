@@ -657,10 +657,19 @@ def _snapshot_batch_export_settings():
     selected_prediction = None
     if ui.listWidget_model_pred.currentItem() is not None:
         selected_prediction = ui.listWidget_model_pred.currentItem().text()
+    selected_nn_model_id = None
+    nn_item = ui.listWidget_model_nn.currentItem()
+    if nn_item is not None:
+        nn_prediction = session.query(ProfileModelPrediction).filter_by(
+            id=nn_item.text().split(' id')[-1]
+        ).first()
+        if nn_prediction is not None:
+            selected_nn_model_id = nn_prediction.model_id
     return {
         'checks': checks,
         'combos': combos,
         'prediction': selected_prediction,
+        'nn_model_id': selected_nn_model_id,
         'crop_index': ui.spinBox_save_img.value(),
     }
 
@@ -692,6 +701,25 @@ def _restore_batch_export_settings(settings, render=False):
             ui.listWidget_model_pred.setCurrentItem(matches[0])
             prediction_found = True
 
+    nn_model_found = not settings['checks'].get('checkBox_model_nn')
+    if settings['checks'].get('checkBox_model_nn'):
+        list_blocker = QSignalBlocker(ui.listWidget_model_nn)
+        update_list_model_nn()
+        for row in range(ui.listWidget_model_nn.count()):
+            item = ui.listWidget_model_nn.item(row)
+            prediction = session.query(ProfileModelPrediction).filter_by(
+                id=item.text().split(' id')[-1]
+            ).first()
+            if prediction is not None and prediction.model_id == settings.get('nn_model_id'):
+                ui.listWidget_model_nn.setCurrentItem(item)
+                nn_model_found = True
+                break
+        del list_blocker
+        if not nn_model_found:
+            blocker = QSignalBlocker(ui.checkBox_model_nn)
+            ui.checkBox_model_nn.setChecked(False)
+            del blocker
+
     warnings = []
     if not render:
         return warnings
@@ -700,6 +728,8 @@ def _restore_batch_export_settings(settings, render=False):
         show_grid()
         if settings['checks'].get('checkBox_minmax'):
             choose_minmax()
+        if settings['checks'].get('checkBox_model_nn') and not nn_model_found:
+            warnings.append('выбранная регрессионная модель отсутствует')
         if settings['checks'].get('checkBox_relief') or settings['checks'].get('checkBox_vel'):
             draw_relief()
         if settings['checks'].get('checkBox_velmod'):
@@ -1213,7 +1243,9 @@ def draw_relief():
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
 
-                if ui.checkBox_model_nn.isChecked() and n == 0:
+                if (ui.checkBox_model_nn.isChecked()
+                        and ui.listWidget_model_nn.currentItem() is not None
+                        and n == 0):
                     predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                     ).first()
@@ -1269,7 +1301,9 @@ def draw_relief():
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
 
-                if ui.checkBox_model_nn.isChecked() and n == 0:
+                if (ui.checkBox_model_nn.isChecked()
+                        and ui.listWidget_model_nn.currentItem() is not None
+                        and n == 0):
                     predict = session.query(ProfileModelPrediction).filter_by(
                         id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                     ).first()
@@ -1354,7 +1388,8 @@ def draw_profile_model_prediction():
                 set_info('Отрисуйте профиль (draw)', 'red')
                 return
 
-            if ui.checkBox_model_nn.isChecked():
+            if (ui.checkBox_model_nn.isChecked()
+                    and ui.listWidget_model_nn.currentItem() is not None):
                 predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                 ).first()
@@ -1379,7 +1414,8 @@ def draw_profile_model_prediction():
             list_up = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[0].prediction.prediction), 175)]
             list_down = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[1].prediction.prediction), 175)]
 
-            if ui.checkBox_model_nn.isChecked():
+            if (ui.checkBox_model_nn.isChecked()
+                    and ui.listWidget_model_nn.currentItem() is not None):
                 predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                 ).first()
@@ -1708,4 +1744,3 @@ def draw_noise(label_lof):
         y_up = [list_y1[i] for i in list_dupl]
         y_down = [list_y2[i] for i in list_dupl]
         draw_fill_result(list_dupl, y_up, y_down, ui.pushButton_color.text())
-
