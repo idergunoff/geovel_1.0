@@ -5,6 +5,7 @@ import importlib.util
 import numpy as np
 import re
 import types
+from matplotlib import font_manager
 from object import *
 from mapinfo_export import (
     ProfileExportError,
@@ -3168,6 +3169,8 @@ def get_system_font(size):
         # Linux
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
         # Windows
         "C:\\Windows\\Fonts\\arial.ttf",
         # MacOS
@@ -3183,7 +3186,16 @@ def get_system_font(size):
         except Exception:
             continue
 
-    print("Warning: Using default font")
+    # Matplotlib ships DejaVu Sans with Cyrillic glyphs even on systems where
+    # the operating system has no fonts installed in the conventional paths.
+    try:
+        bundled_font = font_manager.findfont("DejaVu Sans", fallback_to_default=True)
+        if bundled_font and os.path.exists(bundled_font):
+            return ImageFont.truetype(bundled_font, size)
+    except Exception:
+        pass
+
+    print("Warning: Using default font; Cyrillic profile titles may be unavailable")
     return ImageFont.load_default()
 
 
