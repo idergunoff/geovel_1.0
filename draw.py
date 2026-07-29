@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from fileinput import filename
 
 import matplotlib.pyplot as plt
@@ -9,9 +11,11 @@ from sympy.physics.units import velocity
 from func import *
 from pyqtgraph.exporters import ImageExporter
 from PIL import Image
+from PIL import ImageDraw, ImageFont
+from PyQt5.QtCore import QSignalBlocker
 
 from krige import draw_map
-from velocity_prediction import calc_deep_predict_current_profile, calc_list_velocity
+from velocity_prediction import calc_deep_predict_current_profile, calc_list_velocity, update_list_model_nn
 
 
 def draw_radarogram():
@@ -335,7 +339,7 @@ def set_marks_scale(image, width, width_2, length, bottom_break, bottom_comb=Non
     return image
 
 
-def save_image():
+def save_image(export_path=None):
     """
         Сохранение изображения при нажатии кнопки pushButton_save_img.
         Логика: при сохранении изображения сохраняется только часть, которая отображается на экране
@@ -345,6 +349,11 @@ def save_image():
         При выборе сохранения изображения с графиком, сначала соответственно склеиваются верхняя и нижняя картинки,
         после чего скомбинированные изображения склеиваются последовательно друг с другом в итоговое изображение.
     """
+
+    # QPushButton.clicked passes its checked state to Python callables. Treat that
+    # boolean as a regular interactive save, not as a filesystem path.
+    if isinstance(export_path, bool):
+        export_path = None
 
     # Создаем объект экспортера PyQtGraph для основного изображения и настраиваем фиксированный размер изображения
     exporter = ImageExporter(radarogramma)
@@ -494,11 +503,13 @@ def save_image():
             final_image = set_marks_scale(combined_image, radar_parts[0].width, radar_parts[1].width,
                                       len(radar_parts), bottom_break, bottom_comb)
 
-        save_path, _ = QFileDialog.getSaveFileName(
-            MainWindow,
-            caption='Сохранить изображение',
-            directory=get_profile_name(),
-            filter='PNG (*.png)')
+        save_path = export_path
+        if save_path is None:
+            save_path, _ = QFileDialog.getSaveFileName(
+                MainWindow,
+                caption='Сохранить изображение',
+                directory=get_profile_name(),
+                filter='PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
@@ -609,11 +620,13 @@ def save_image():
             # количество частей изображения, индексы по высоте изображения для проставления меток.
             final_image = set_marks_scale(combined_image, images[0].width, images[1].width,
                                       len(images), bottom_break)
-        save_path, _ = QFileDialog.getSaveFileName(
-            MainWindow,
-            caption='Сохранить изображение',
-            directory=get_profile_name(),
-            filter='PNG (*.png)')
+        save_path = export_path
+        if save_path is None:
+            save_path, _ = QFileDialog.getSaveFileName(
+                MainWindow,
+                caption='Сохранить изображение',
+                directory=get_profile_name(),
+                filter='PNG (*.png)')
         if save_path == '':
             return
         if not save_path.endswith('.png'):
@@ -623,6 +636,317 @@ def save_image():
         # Удаляем сохраненные части изображений, потому что больше они нам не нужны
         for file in list_paths:
             os.remove(file)
+
+
+_BATCH_EXPORT_CHECKBOXES = (
+    'checkBox_black_white', 'checkBox_save_graph', 'checkBox_grid',
+    'checkBox_minmax', 'checkBox_draw_layer', 'checkBox_relief',
+    'checkBox_vel', 'checkBox_velmod', 'checkBox_model_nn',
+    'checkBox_corr_pred', 'checkBox_filter_cls', 'checkBox_use_land',
+    'checkBox_vel_color', 'checkBox_profile_well', 'checkBox_prof_intersect',
+)
+
+_BATCH_REQUIRED_CHECKBOXES = (
+    'checkBox_relief', 'checkBox_vel', 'checkBox_profile_well',
+    'checkBox_prof_intersect', 'checkBox_model_nn',
+)
+
+
+def _snapshot_batch_export_settings():
+    """Capture the display choices which must survive switching profiles."""
+    checks = {
+        name: getattr(ui, name).isChecked()
+        for name in _BATCH_EXPORT_CHECKBOXES
+        if hasattr(ui, name)
+    }
+    combos = {}
+    for name in ('comboBox_atrib', 'comboBox_plast'):
+        widget = getattr(ui, name, None)
+        if widget is not None:
+            combos[name] = widget.currentText()
+    selected_prediction_model_id = None
+    selected_prediction_type = None
+    prediction_item = ui.listWidget_model_pred.currentItem()
+    if prediction_item is not None:
+        selected_prediction = session.query(ProfileModelPrediction).filter_by(
+            id=prediction_item.text().split(' id')[-1]
+        ).first()
+        if selected_prediction is not None:
+            selected_prediction_model_id = selected_prediction.model_id
+            selected_prediction_type = selected_prediction.type_model
+    selected_nn_model_id = None
+    nn_item = ui.listWidget_model_nn.currentItem()
+    if nn_item is not None:
+        nn_prediction = session.query(ProfileModelPrediction).filter_by(
+            id=nn_item.text().split(' id')[-1]
+        ).first()
+        if nn_prediction is not None:
+            selected_nn_model_id = nn_prediction.model_id
+    return {
+        'checks': checks,
+        'combos': combos,
+        'prediction_model_id': selected_prediction_model_id,
+        'prediction_type': selected_prediction_type,
+        'nn_model_id': selected_nn_model_id,
+        'crop_index': ui.spinBox_save_img.value(),
+    }
+
+
+def _set_combo_text(widget, text):
+    index = widget.findText(text)
+    if index >= 0:
+        widget.setCurrentIndex(index)
+        return True
+    return False
+
+
+def _restore_batch_export_settings(settings, render=False, force_required=False):
+    """Restore controls and optionally redraw optional overlays for a profile."""
+    for name, checked in settings['checks'].items():
+        widget = getattr(ui, name, None)
+        if widget is not None:
+            blocker = QSignalBlocker(widget)
+            # Required controls are deliberately left off here. In batch mode
+            # they are switched on below with click(), exactly like a user does,
+            # so all connected redraw handlers run in their normal order.
+            desired = False if force_required and name in _BATCH_REQUIRED_CHECKBOXES else checked
+            widget.setChecked(desired)
+            del blocker
+    ui.spinBox_save_img.setValue(settings['crop_index'])
+    _set_combo_text(ui.comboBox_atrib, settings['combos'].get('comboBox_atrib', ''))
+    formation_found = _set_combo_text(ui.comboBox_plast, settings['combos'].get('comboBox_plast', ''))
+    prediction_found = settings.get('prediction_model_id') is None
+    prediction_item_to_select = None
+    prediction_list_blocker = QSignalBlocker(ui.listWidget_model_pred)
+    update_list_model_prediction()
+    for row in range(ui.listWidget_model_pred.count()):
+        item = ui.listWidget_model_pred.item(row)
+        prediction = session.query(ProfileModelPrediction).filter_by(
+            id=item.text().split(' id')[-1]
+        ).first()
+        if (prediction is not None
+                and prediction.model_id == settings.get('prediction_model_id')
+                and prediction.type_model == settings.get('prediction_type')):
+            prediction_item_to_select = item
+            prediction_found = True
+            break
+    del prediction_list_blocker
+
+    nn_enabled = settings['checks'].get('checkBox_model_nn') or force_required
+    nn_model_found = not nn_enabled
+    nn_item_to_select = None
+    if nn_enabled and not force_required:
+        list_blocker = QSignalBlocker(ui.listWidget_model_nn)
+        update_list_model_nn()
+        for row in range(ui.listWidget_model_nn.count()):
+            item = ui.listWidget_model_nn.item(row)
+            prediction = session.query(ProfileModelPrediction).filter_by(
+                id=item.text().split(' id')[-1]
+            ).first()
+            if prediction is not None and prediction.model_id == settings.get('nn_model_id'):
+                nn_item_to_select = item
+                ui.listWidget_model_nn.setCurrentItem(item)
+                nn_model_found = True
+                break
+        del list_blocker
+        if not nn_model_found:
+            blocker = QSignalBlocker(ui.checkBox_model_nn)
+            ui.checkBox_model_nn.setChecked(False)
+            del blocker
+
+    warnings = []
+    if not render:
+        return warnings
+    try:
+        change_background()
+        show_grid()
+        if settings['checks'].get('checkBox_minmax'):
+            choose_minmax()
+        if force_required:
+            # Reproduce the working manual sequence. click() is important here:
+            # setChecked() alone does not emit the clicked signals used by Relief,
+            # Velocity and Model NN to redraw/repopulate their data.
+            for checkbox in (
+                    ui.checkBox_relief,
+                    ui.checkBox_vel,
+                    ui.checkBox_profile_well,
+                    ui.checkBox_prof_intersect):
+                checkbox.click()
+                QApplication.processEvents()
+
+            ui.checkBox_model_nn.click()
+            QApplication.processEvents()
+            for row in range(ui.listWidget_model_nn.count()):
+                item = ui.listWidget_model_nn.item(row)
+                prediction = session.query(ProfileModelPrediction).filter_by(
+                    id=item.text().split(' id')[-1]
+                ).first()
+                if prediction is not None and prediction.model_id == settings.get('nn_model_id'):
+                    nn_item_to_select = item
+                    break
+            nn_model_found = nn_item_to_select is not None
+            if nn_model_found:
+                ui.listWidget_model_nn.setCurrentItem(nn_item_to_select)
+                QApplication.processEvents()
+            else:
+                blocker = QSignalBlocker(ui.checkBox_model_nn)
+                ui.checkBox_model_nn.setChecked(False)
+                del blocker
+
+            if prediction_item_to_select is not None:
+                ui.listWidget_model_pred.setCurrentItem(prediction_item_to_select)
+                QApplication.processEvents()
+
+        if not nn_model_found:
+            warnings.append('выбранная регрессионная модель отсутствует')
+        if not force_required and (ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked()):
+            draw_relief()
+        if settings['checks'].get('checkBox_velmod'):
+            draw_velocity_model_color()
+        if settings['checks'].get('checkBox_draw_layer'):
+            draw_layers()
+        if settings['combos'].get('comboBox_plast') not in (None, '', '-----'):
+            if formation_found:
+                draw_formation()
+            else:
+                warnings.append('выбранный пласт отсутствует')
+        if not force_required and settings.get('prediction_model_id') is not None:
+            if prediction_found:
+                draw_profile_model_prediction()
+            else:
+                warnings.append('результаты выбранной модели отсутствуют')
+        if ui.checkBox_profile_well.isChecked():
+            update_list_well()
+        if ui.checkBox_prof_intersect.isChecked():
+            draw_profile_intersection()
+        QApplication.processEvents()
+    except Exception as exc:
+        warnings.append(f'не удалось применить часть настроек: {exc}')
+    return warnings
+
+
+def _add_profile_title(image, title, title_height=34):
+    background = 'white' if ui.checkBox_black_white.isChecked() else 'black'
+    foreground = 'black' if background == 'white' else 'white'
+    titled = Image.new('RGB', (image.width, image.height + title_height), background)
+    titled.paste(image.convert('RGB'), (0, title_height))
+    draw = ImageDraw.Draw(titled)
+    font = ImageFont.load_default()
+    draw.text((10, 10), title, fill=foreground, font=font)
+    return titled
+
+
+def compose_profile_sheet(images, background='white', gap=16):
+    """Pack profile images into rows bounded by the widest profile."""
+    if not images:
+        raise ValueError('Нет изображений для компоновки')
+    sheet_width = max(image.width for image in images)
+    rows, current, occupied = [], [], 0
+    for image in images:
+        required = image.width + (gap if current else 0)
+        if current and occupied + required > sheet_width:
+            rows.append(current)
+            current, occupied = [], 0
+            required = image.width
+        current.append(image)
+        occupied += required
+    if current:
+        rows.append(current)
+    sheet_height = sum(max(image.height for image in row) for row in rows) + gap * (len(rows) - 1)
+    sheet = Image.new('RGB', (sheet_width, sheet_height), background)
+    y = 0
+    for row in rows:
+        x = 0
+        row_height = max(image.height for image in row)
+        for image in row:
+            sheet.paste(image, (x, y))
+            x += image.width + gap
+        y += row_height + gap
+    return sheet
+
+
+def save_all_profile_images():
+    """Export all profiles of the selected object using the current display settings."""
+    object_id = get_object_id()
+    if not object_id or not get_profile_id():
+        QMessageBox.warning(MainWindow, 'Экспорт радарограмм', 'Сначала выберите объект и профиль.')
+        return
+    output_path, _ = QFileDialog.getSaveFileName(
+        MainWindow, 'Сохранить радарограммы объекта',
+        f'{get_object_name()}_radarograms.png', 'PNG (*.png)')
+    if not output_path:
+        return
+    if not output_path.lower().endswith('.png'):
+        output_path += '.png'
+
+    settings = _snapshot_batch_export_settings()
+    original_research = ui.comboBox_research.currentText()
+    original_profile_id = get_profile_id()
+    profiles = (
+        session.query(Profile).join(Research)
+        .filter(Research.object_id == object_id).order_by(Research.id, Profile.id).all()
+    )
+    images, warnings, skipped = [], [], []
+    ui.pushButton_save_img_all.setEnabled(False)
+    try:
+        with tempfile.TemporaryDirectory(prefix='geovel_radarograms_') as temp_dir:
+            for number, profile in enumerate(profiles, start=1):
+                try:
+                    research_text = next(
+                        (ui.comboBox_research.itemText(i) for i in range(ui.comboBox_research.count())
+                         if ui.comboBox_research.itemText(i).endswith(f' id{profile.research_id}')),
+                        None,
+                    )
+                    if research_text and ui.comboBox_research.currentText() != research_text:
+                        ui.comboBox_research.setCurrentText(research_text)
+                        update_profile_combobox()
+                    profile_index = next(
+                        (i for i in range(ui.comboBox_profile.count())
+                         if ui.comboBox_profile.itemText(i).endswith(f' id{profile.id}')),
+                        -1,
+                    )
+                    if profile_index < 0:
+                        raise ValueError('профиль отсутствует в списке текущего исследования')
+                    ui.comboBox_profile.setCurrentIndex(profile_index)
+                    draw_radarogram()
+                    update_list_model_prediction()
+                    profile_warnings = _restore_batch_export_settings(
+                        settings, render=True, force_required=True
+                    )
+                    temp_path = os.path.join(temp_dir, f'profile_{profile.id}.png')
+                    save_image(temp_path)
+                    with Image.open(temp_path) as rendered:
+                        images.append(_add_profile_title(rendered.copy(), profile.title))
+                    if profile_warnings:
+                        warnings.append(f'{profile.title}: {"; ".join(profile_warnings)}')
+                except Exception as exc:
+                    skipped.append(f'{profile.title}: {exc}')
+                ui.progressBar.setMaximum(len(profiles))
+                ui.progressBar.setValue(number)
+                QApplication.processEvents()
+        background = 'white' if settings['checks'].get('checkBox_black_white') else 'black'
+        compose_profile_sheet(images, background=background).save(output_path)
+    except Exception as exc:
+        QMessageBox.critical(MainWindow, 'Экспорт радарограмм', f'Не удалось создать изображение:\n{exc}')
+        return
+    finally:
+        _set_combo_text(ui.comboBox_research, original_research)
+        update_profile_combobox()
+        for i in range(ui.comboBox_profile.count()):
+            if ui.comboBox_profile.itemText(i).endswith(f' id{original_profile_id}'):
+                ui.comboBox_profile.setCurrentIndex(i)
+                break
+        draw_radarogram()
+        update_list_model_prediction()
+        _restore_batch_export_settings(settings, render=True)
+        ui.pushButton_save_img_all.setEnabled(True)
+
+    details = [f'Экспортировано профилей: {len(images)} из {len(profiles)}.', f'Файл: {output_path}']
+    if warnings:
+        details.append('\nПредупреждения:\n• ' + '\n• '.join(warnings))
+    if skipped:
+        details.append('\nПропущены:\n• ' + '\n• '.join(skipped))
+    QMessageBox.information(MainWindow, 'Экспорт радарограмм', '\n'.join(details))
 
 
 
@@ -990,7 +1314,9 @@ def draw_relief():
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
 
-                if ui.checkBox_model_nn.isChecked() and n == 0:
+                if (ui.checkBox_model_nn.isChecked()
+                        and ui.listWidget_model_nn.currentItem() is not None
+                        and n == 0):
                     predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                     ).first()
@@ -1046,7 +1372,9 @@ def draw_relief():
                 radarogramma.addItem(curve)
                 globals()[f'curve_fake_{n}'] = curve
 
-                if ui.checkBox_model_nn.isChecked() and n == 0:
+                if (ui.checkBox_model_nn.isChecked()
+                        and ui.listWidget_model_nn.currentItem() is not None
+                        and n == 0):
                     predict = session.query(ProfileModelPrediction).filter_by(
                         id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                     ).first()
@@ -1131,7 +1459,8 @@ def draw_profile_model_prediction():
                 set_info('Отрисуйте профиль (draw)', 'red')
                 return
 
-            if ui.checkBox_model_nn.isChecked():
+            if (ui.checkBox_model_nn.isChecked()
+                    and ui.listWidget_model_nn.currentItem() is not None):
                 predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                 ).first()
@@ -1156,7 +1485,8 @@ def draw_profile_model_prediction():
             list_up = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[0].prediction.prediction), 175)]
             list_down = [i / (l_max / 512) for i in savgol_line(json.loads(bindings[1].prediction.prediction), 175)]
 
-            if ui.checkBox_model_nn.isChecked():
+            if (ui.checkBox_model_nn.isChecked()
+                    and ui.listWidget_model_nn.currentItem() is not None):
                 predict = session.query(ProfileModelPrediction).filter_by(
                     id=ui.listWidget_model_nn.currentItem().text().split(' id')[-1]
                 ).first()
@@ -1485,7 +1815,3 @@ def draw_noise(label_lof):
         y_up = [list_y1[i] for i in list_dupl]
         y_down = [list_y2[i] for i in list_dupl]
         draw_fill_result(list_dupl, y_up, y_down, ui.pushButton_color.text())
-
-
-
-
