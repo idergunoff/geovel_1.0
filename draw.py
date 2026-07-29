@@ -15,7 +15,7 @@ from PIL import ImageDraw, ImageFont
 from PyQt5.QtCore import QSignalBlocker
 
 from krige import draw_map
-from velocity_prediction import calc_deep_predict_current_profile, calc_list_velocity
+from velocity_prediction import calc_deep_predict_current_profile, calc_list_velocity, update_list_model_nn
 
 
 def draw_radarogram():
