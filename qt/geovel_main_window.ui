@@ -1356,8 +1356,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>46</width>
-                       <height>26</height>
+                       <width>676</width>
+                       <height>213</height>
                       </rect>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18" columnstretch="4">
@@ -1406,7 +1406,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="2">
+                <item row="0" column="3">
                  <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0,0">
                   <item row="0" column="4">
                    <widget class="QSpinBox" name="spinBox_well_distance">
@@ -1463,7 +1463,7 @@
                   </item>
                  </layout>
                 </item>
-                <item row="0" column="1">
+                <item row="0" column="2">
                  <widget class="QCheckBox" name="checkBox_prof_intersect">
                   <property name="font">
                    <font>
@@ -1472,6 +1472,13 @@
                   </property>
                   <property name="text">
                    <string>prof-prof</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QCheckBox" name="checkBox_object_well">
+                  <property name="text">
+                   <string>object wells</string>
                   </property>
                  </widget>
                 </item>
@@ -7028,9 +7035,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
