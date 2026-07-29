@@ -17,6 +17,7 @@ from kriging_utils import (
 )
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
+from well_map_style import well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
             'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu', 'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn',
@@ -741,7 +742,13 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 r = session.query(Research).filter_by(id=get_research_id()).first()
                 wells = [well for profile in r.profiles for well in (get_list_nearest_well(profile.id) or [])]
             for well in wells:
-                plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+                plt.scatter(
+                    well[0].x_coord,
+                    well[0].y_coord,
+                    marker='o',
+                    color=well_marker_color(well[0]),
+                    s=50,
+                )
                 plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
 
         plt.xlabel('X')
@@ -918,7 +925,13 @@ def show_profiles():
         else:
             wells = [well for profile in profiles for well in (get_list_nearest_well(profile.id) or [])]
         for well in wells:
-            plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+            plt.scatter(
+                well[0].x_coord,
+                well[0].y_coord,
+                marker='o',
+                color=well_marker_color(well[0]),
+                s=50,
+            )
             plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
 
     plt.xlabel('X')
