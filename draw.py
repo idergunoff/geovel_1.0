@@ -882,10 +882,10 @@ def save_all_profile_images():
     settings = _snapshot_batch_export_settings()
     original_research = ui.comboBox_research.currentText()
     original_profile_id = get_profile_id()
-    profiles = (
+    profiles = sorted((
         session.query(Profile).join(Research)
-        .filter(Research.object_id == object_id).order_by(Research.id, Profile.id).all()
-    )
+        .filter(Research.object_id == object_id).all()
+    ), key=get_profile_sort_key)
     images, warnings, skipped = [], [], []
     ui.pushButton_save_img_all.setEnabled(False)
     try:
