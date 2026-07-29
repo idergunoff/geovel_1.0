@@ -734,15 +734,15 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             for n_ix in range(len(list_name)):
                 plt.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
 
-        if ui.checkBox_profile_well.isChecked():
-            r = session.query(Research).filter_by(id=get_research_id()).first()
-            for profile in r.profiles:
-                wells = get_list_nearest_well(profile.id)
-                if not wells:
-                    continue
-                for well in wells:
-                    plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
-                    plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
+        if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
+            if ui.checkBox_object_well.isChecked():
+                wells = get_list_nearest_well_for_object(get_object_id())
+            else:
+                r = session.query(Research).filter_by(id=get_research_id()).first()
+                wells = [well for profile in r.profiles for well in (get_list_nearest_well(profile.id) or [])]
+            for well in wells:
+                plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+                plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
 
         plt.xlabel('X')
         plt.ylabel('Y')
@@ -912,14 +912,14 @@ def show_profiles():
     if ui.checkBox_prof_all.isChecked() or ui.checkBox_profile_year.isChecked():
         _draw_object_labels(profiles)
 
-    if ui.checkBox_profile_well.isChecked():
-        for profile in profiles:
-            wells = get_list_nearest_well(profile.id)
-            if not wells:
-                continue
-            for well in wells:
-                plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
-                plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
+    if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
+        if ui.checkBox_object_well.isChecked():
+            wells = get_list_nearest_well_for_object(get_object_id())
+        else:
+            wells = [well for profile in profiles for well in (get_list_nearest_well(profile.id) or [])]
+        for well in wells:
+            plt.scatter(well[0].x_coord, well[0].y_coord, marker='o', color='r', s=50)
+            plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
 
     plt.xlabel('X')
     plt.ylabel('Y')
