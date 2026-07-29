@@ -11,7 +11,7 @@ from sympy.physics.units import velocity
 from func import *
 from pyqtgraph.exporters import ImageExporter
 from PIL import Image
-from PIL import ImageDraw, ImageFont
+from PIL import ImageDraw
 from PyQt5.QtCore import QSignalBlocker
 
 from krige import draw_map
@@ -825,13 +825,13 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
     return warnings
 
 
-def _add_profile_title(image, title, title_height=34):
+def _add_profile_title(image, title, title_height=42):
     background = 'white' if ui.checkBox_black_white.isChecked() else 'black'
     foreground = 'black' if background == 'white' else 'white'
     titled = Image.new('RGB', (image.width, image.height + title_height), background)
     titled.paste(image.convert('RGB'), (0, title_height))
     draw = ImageDraw.Draw(titled)
-    font = ImageFont.load_default()
+    font = get_system_font(18)
     draw.text((10, 10), title, fill=foreground, font=font)
     return titled
 
