@@ -5,6 +5,7 @@ import importlib.util
 import numpy as np
 import re
 import types
+from matplotlib import font_manager
 from object import *
 from mapinfo_export import (
     ProfileExportError,
@@ -677,33 +678,34 @@ def idw_interpolation(tree, x, y, grid):
     return idw
 
 
+def get_profile_sort_key(profile):
+    """Return the shared ordering key used by profile UI and batch export."""
+    title = profile.title.lower()  # Для регистронезависимого поиска
+    numbers = list(map(int, re.findall(r'\d+', title)))  # Все числа в строке
+
+    # Ищем позицию 'п' (уже в нижнем регистре)
+    p_pos = title.find('п')
+
+    if p_pos != -1 and numbers:
+        # Находим первое число после 'п'
+        for i, num_pos in enumerate(re.finditer(r'\d+', title)):
+            if num_pos.start() > p_pos:
+                first_num = numbers[i]
+                # Проверяем есть ли следующие числа для сравнения
+                if len(numbers) > i + 1:
+                    return (first_num, numbers[i + 1])
+                return (first_num, 0)  # Если следующего числа нет
+        # Если числа после 'п' не найдены
+        return (0, profile.id)
+    # Нет 'п' - сортируем по id
+    return (0, profile.id)
+
+
 def update_profile_combobox():
     """ Обновление списка профилей в выпадающем списке """
     n_measures = calc_object_measures()
     ui.label_4.setText(f'Объект ({n_measures} изм)')
     ui.label_4.setToolTip(f'{str(n_measures * 2.5)} м')
-
-    def get_sort_key(profile):
-        title = profile.title.lower()  # Для регистронезависимого поиска
-        numbers = list(map(int, re.findall(r'\d+', title)))  # Все числа в строке
-
-        # Ищем позицию 'п' (уже в нижнем регистре)
-        p_pos = title.find('п')
-
-        if p_pos != -1 and numbers:
-            # Находим первое число после 'п'
-            for i, num_pos in enumerate(re.finditer(r'\d+', title)):
-                if num_pos.start() > p_pos:
-                    first_num = numbers[i]
-                    # Проверяем есть ли следующие числа для сравнения
-                    if len(numbers) > i + 1:
-                        return (first_num, numbers[i + 1])
-                    return (first_num, 0)  # Если следующего числа нет
-            # Если числа после 'п' не найдены
-            return (0, profile.id)
-        else:
-            # Нет 'п' - сортируем по id
-            return (0, profile.id)
 
     ui.comboBox_profile.clear()
     try:
@@ -712,7 +714,7 @@ def update_profile_combobox():
         return
 
     # Сортируем по составному ключу
-    sorted_profiles = sorted(profiles, key=get_sort_key)
+    sorted_profiles = sorted(profiles, key=get_profile_sort_key)
 
     # Добавляем в выпадающий список
     for profile in sorted_profiles:
@@ -3168,6 +3170,8 @@ def get_system_font(size):
         # Linux
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
         # Windows
         "C:\\Windows\\Fonts\\arial.ttf",
         # MacOS
@@ -3183,7 +3187,16 @@ def get_system_font(size):
         except Exception:
             continue
 
-    print("Warning: Using default font")
+    # Matplotlib ships DejaVu Sans with Cyrillic glyphs even on systems where
+    # the operating system has no fonts installed in the conventional paths.
+    try:
+        bundled_font = font_manager.findfont("DejaVu Sans", fallback_to_default=True)
+        if bundled_font and os.path.exists(bundled_font):
+            return ImageFont.truetype(bundled_font, size)
+    except Exception:
+        pass
+
+    print("Warning: Using default font; Cyrillic profile titles may be unavailable")
     return ImageFont.load_default()
 
 
