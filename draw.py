@@ -643,7 +643,7 @@ _BATCH_EXPORT_CHECKBOXES = (
     'checkBox_minmax', 'checkBox_draw_layer', 'checkBox_relief',
     'checkBox_vel', 'checkBox_velmod', 'checkBox_model_nn',
     'checkBox_corr_pred', 'checkBox_filter_cls', 'checkBox_use_land',
-    'checkBox_vel_color', 'checkBox_profile_well', 'checkBox_object_well', 'checkBox_prof_intersect',
+    'checkBox_vel_color', 'checkBox_profile_well', 'checkBox_prof_intersect',
 )
 
 _BATCH_REQUIRED_CHECKBOXES = (
@@ -706,12 +706,17 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
         widget = getattr(ui, name, None)
         if widget is not None:
             blocker = QSignalBlocker(widget)
-            widget.setChecked(checked or (force_required and name in _BATCH_REQUIRED_CHECKBOXES))
+            # Required controls are deliberately left off here. In batch mode
+            # they are switched on below with click(), exactly like a user does,
+            # so all connected redraw handlers run in their normal order.
+            desired = False if force_required and name in _BATCH_REQUIRED_CHECKBOXES else checked
+            widget.setChecked(desired)
             del blocker
     ui.spinBox_save_img.setValue(settings['crop_index'])
     _set_combo_text(ui.comboBox_atrib, settings['combos'].get('comboBox_atrib', ''))
     formation_found = _set_combo_text(ui.comboBox_plast, settings['combos'].get('comboBox_plast', ''))
     prediction_found = settings.get('prediction_model_id') is None
+    prediction_item_to_select = None
     prediction_list_blocker = QSignalBlocker(ui.listWidget_model_pred)
     update_list_model_prediction()
     for row in range(ui.listWidget_model_pred.count()):
@@ -722,14 +727,15 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
         if (prediction is not None
                 and prediction.model_id == settings.get('prediction_model_id')
                 and prediction.type_model == settings.get('prediction_type')):
-            ui.listWidget_model_pred.setCurrentItem(item)
+            prediction_item_to_select = item
             prediction_found = True
             break
     del prediction_list_blocker
 
     nn_enabled = settings['checks'].get('checkBox_model_nn') or force_required
     nn_model_found = not nn_enabled
-    if nn_enabled:
+    nn_item_to_select = None
+    if nn_enabled and not force_required:
         list_blocker = QSignalBlocker(ui.listWidget_model_nn)
         update_list_model_nn()
         for row in range(ui.listWidget_model_nn.count()):
@@ -738,6 +744,7 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
                 id=item.text().split(' id')[-1]
             ).first()
             if prediction is not None and prediction.model_id == settings.get('nn_model_id'):
+                nn_item_to_select = item
                 ui.listWidget_model_nn.setCurrentItem(item)
                 nn_model_found = True
                 break
@@ -755,9 +762,44 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
         show_grid()
         if settings['checks'].get('checkBox_minmax'):
             choose_minmax()
+        if force_required:
+            # Reproduce the working manual sequence. click() is important here:
+            # setChecked() alone does not emit the clicked signals used by Relief,
+            # Velocity and Model NN to redraw/repopulate their data.
+            for checkbox in (
+                    ui.checkBox_relief,
+                    ui.checkBox_vel,
+                    ui.checkBox_profile_well,
+                    ui.checkBox_prof_intersect):
+                checkbox.click()
+                QApplication.processEvents()
+
+            ui.checkBox_model_nn.click()
+            QApplication.processEvents()
+            for row in range(ui.listWidget_model_nn.count()):
+                item = ui.listWidget_model_nn.item(row)
+                prediction = session.query(ProfileModelPrediction).filter_by(
+                    id=item.text().split(' id')[-1]
+                ).first()
+                if prediction is not None and prediction.model_id == settings.get('nn_model_id'):
+                    nn_item_to_select = item
+                    break
+            nn_model_found = nn_item_to_select is not None
+            if nn_model_found:
+                ui.listWidget_model_nn.setCurrentItem(nn_item_to_select)
+                QApplication.processEvents()
+            else:
+                blocker = QSignalBlocker(ui.checkBox_model_nn)
+                ui.checkBox_model_nn.setChecked(False)
+                del blocker
+
+            if prediction_item_to_select is not None:
+                ui.listWidget_model_pred.setCurrentItem(prediction_item_to_select)
+                QApplication.processEvents()
+
         if not nn_model_found:
             warnings.append('выбранная регрессионная модель отсутствует')
-        if ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked():
+        if not force_required and (ui.checkBox_relief.isChecked() or ui.checkBox_vel.isChecked()):
             draw_relief()
         if settings['checks'].get('checkBox_velmod'):
             draw_velocity_model_color()
@@ -768,12 +810,12 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
                 draw_formation()
             else:
                 warnings.append('выбранный пласт отсутствует')
-        if settings.get('prediction_model_id') is not None:
+        if not force_required and settings.get('prediction_model_id') is not None:
             if prediction_found:
                 draw_profile_model_prediction()
             else:
                 warnings.append('результаты выбранной модели отсутствуют')
-        if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
+        if ui.checkBox_profile_well.isChecked():
             update_list_well()
         if ui.checkBox_prof_intersect.isChecked():
             draw_profile_intersection()
