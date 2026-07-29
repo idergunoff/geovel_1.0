@@ -385,7 +385,10 @@ ui.comboBox_param_plast.activated.connect(draw_param)
 ui.checkBox_minmax.stateChanged.connect(choose_minmax)
 ui.checkBox_draw_layer.stateChanged.connect(draw_layers)
 ui.checkBox_all_formation.stateChanged.connect(draw_param)
-ui.checkBox_profile_well.stateChanged.connect(update_list_well)
+ui.checkBox_profile_well.stateChanged.connect(
+    lambda state: update_well_filter_mode(state, 'profile'))
+ui.checkBox_object_well.stateChanged.connect(
+    lambda state: update_well_filter_mode(state, 'object'))
 ui.checkBox_prof_intersect.stateChanged.connect(draw_profile_intersection)
 ui.checkBox_show_bound.stateChanged.connect(update_list_well)
 ui.checkBox_profile_intersec.stateChanged.connect(update_list_well)
