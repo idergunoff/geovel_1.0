@@ -643,7 +643,7 @@ _BATCH_EXPORT_CHECKBOXES = (
     'checkBox_minmax', 'checkBox_draw_layer', 'checkBox_relief',
     'checkBox_vel', 'checkBox_velmod', 'checkBox_model_nn',
     'checkBox_corr_pred', 'checkBox_filter_cls', 'checkBox_use_land',
-    'checkBox_vel_color', 'checkBox_profile_well', 'checkBox_prof_intersect',
+    'checkBox_vel_color', 'checkBox_profile_well', 'checkBox_object_well', 'checkBox_prof_intersect',
 )
 
 _BATCH_REQUIRED_CHECKBOXES = (
@@ -773,7 +773,7 @@ def _restore_batch_export_settings(settings, render=False, force_required=False)
                 draw_profile_model_prediction()
             else:
                 warnings.append('результаты выбранной модели отсутствуют')
-        if ui.checkBox_profile_well.isChecked():
+        if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
             update_list_well()
         if ui.checkBox_prof_intersect.isChecked():
             draw_profile_intersection()
