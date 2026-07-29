@@ -1462,7 +1462,7 @@ def update_formation_combobox():
         ui.comboBox_plast.addItem(f'{form.title} id{form.id}')
     # Обновляем список выбора параметров для выбранного пласта
     update_param_combobox()
-    if ui.checkBox_profile_well.isChecked():
+    if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
         update_list_well()
 
 
@@ -1662,9 +1662,18 @@ def update_list_well(select_well=False, selected_well_id=None):
     else:
         if ui.checkBox_profile_well.isChecked():
             wells = get_list_nearest_well(get_profile_id())
+            wells = [(well, index, distance, None) for well, index, distance in (wells or [])]
+        elif ui.checkBox_object_well.isChecked():
+            wells = get_list_nearest_well_for_object(get_object_id())
+        else:
+            wells = None
+
+        if wells is not None:
             if wells:
                 for w in wells:
-                    item_text = f'скв.№ {w[0].name} - ({w[1]}) {round(w[2], 2)} м. id{w[0].id}'
+                    profile_text = f' [{w[3].title}]' if w[3] is not None else ''
+                    item_text = (f'скв.№ {w[0].name}{profile_text} - ({w[1]}) '
+                                 f'{round(w[2], 2)} м. id{w[0].id}')
                     item = QListWidgetItem(item_text)
 
                     # Обновляем максимальный ID скважины (если нужно выбрать новую)
@@ -1736,6 +1745,41 @@ def get_list_nearest_well(profile_id):
             ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
     except TypeError:
         pass
+
+
+def get_list_nearest_well_for_object(object_id):
+    """Return unique wells near any profile of the selected object.
+
+    If a well is near several profiles, the closest profile is retained so that
+    the list and map contain the well only once.
+    """
+    if object_id is None:
+        return []
+
+    profiles = (session.query(Profile)
+                .join(Research)
+                .filter(Research.object_id == object_id)
+                .order_by(Profile.title)
+                .all())
+    nearest_by_well = {}
+    for profile in profiles:
+        for well, index, distance in get_list_nearest_well(profile.id) or []:
+            current = nearest_by_well.get(well.id)
+            if current is None or distance < current[2]:
+                nearest_by_well[well.id] = (well, index, distance, profile)
+
+    return sorted(nearest_by_well.values(), key=lambda item: (item[0].name, item[0].id))
+
+
+def update_well_filter_mode(checked, source):
+    """Keep the profile/object well filters mutually exclusive and refresh."""
+    if checked:
+        other = (ui.checkBox_object_well
+                 if source == 'profile' else ui.checkBox_profile_well)
+        blocker = QSignalBlocker(other)
+        other.setChecked(False)
+        del blocker
+    update_list_well()
 
 
 def set_title_list_widget_wells():

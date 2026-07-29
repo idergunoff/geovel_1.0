@@ -78,18 +78,54 @@
               <string>Main</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_7">
-              <item row="24" column="0">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
+              <item row="21" column="0">
+               <layout class="QGridLayout" name="gridLayout_94" columnstretch="2,2,0,0,0,0,0">
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_profiles">
+                  <property name="text">
+                   <string>PROFILES</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QCheckBox" name="checkBox_prof_all">
+                  <property name="text">
+                   <string>all</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="6">
+                 <widget class="QCheckBox" name="checkBox_common_grid_for_map">
+                  <property name="text">
+                   <string>common grid</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="5">
+                 <widget class="QCheckBox" name="checkBox_profile_title">
+                  <property name="text">
+                   <string>profile title</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QCheckBox" name="checkBox_profile_year">
+                  <property name="text">
+                   <string>year</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_profiles_to_mapinfo">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 217, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>PROFILES TO MAPINFO</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item row="16" column="0">
                <layout class="QGridLayout" name="gridLayout_9">
@@ -137,31 +173,6 @@
                 </item>
                </layout>
               </item>
-              <item row="13" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_13">
-                <item>
-                 <widget class="QPushButton" name="pushButton_slide">
-                  <property name="text">
-                   <string>moving avg</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QSpinBox" name="spinBox_window">
-                  <property name="value">
-                   <number>3</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="Line" name="line_7">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item row="19" column="0">
                <widget class="QLabel" name="label_26">
                 <property name="font">
@@ -181,21 +192,126 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_8">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_7">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
                   <italic>true</italic>
+                  <underline>false</underline>
+                  <strikeout>false</strikeout>
+                  <kerning>true</kerning>
                  </font>
                 </property>
                 <property name="text">
-                 <string>Другие</string>
+                 <string>Фурье</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
                 </property>
                </widget>
+              </item>
+              <item row="22" column="0">
+               <layout class="QGridLayout" name="gridLayout_26">
+                <item row="0" column="3">
+                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save all well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
+                  <property name="toolTip">
+                   <string>Сохранить данные профилей и скважин для текущего объекта в таблице Excel</string>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(204, 188, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save well</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="5">
+                 <widget class="QPushButton" name="pushButton_save_prof_sig">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(175, 150, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>save slices</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="text">
+                   <string>Save Image</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QSpinBox" name="spinBox_save_img">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(153, 193, 241);</string>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>1000</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>20</number>
+                  </property>
+                  <property name="value">
+                   <number>450</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QSpinBox" name="spinBox_save_prod_sig">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>512</number>
+                  </property>
+                  <property name="value">
+                   <number>30</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_ml_clutter">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 255, 137);</string>
+                  </property>
+                  <property name="text">
+                   <string>ML Clutter</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pushButton_save_img_all">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(123, 178, 241);</string>
+                  </property>
+                  <property name="text">
+                   <string>Image All</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item row="6" column="0">
                <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,0,0,0,0,0">
@@ -441,6 +557,31 @@
                 </item>
                </layout>
               </item>
+              <item row="13" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_13">
+                <item>
+                 <widget class="QPushButton" name="pushButton_slide">
+                  <property name="text">
+                   <string>moving avg</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_window">
+                  <property name="value">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="Line" name="line_7">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="15" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
@@ -467,74 +608,6 @@
                  <widget class="QPushButton" name="pushButton_ceps_koef">
                   <property name="text">
                    <string>koef</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_7">
-                <property name="font">
-                 <font>
-                  <pointsize>9</pointsize>
-                  <italic>true</italic>
-                  <underline>false</underline>
-                  <strikeout>false</strikeout>
-                  <kerning>true</kerning>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Фурье</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="21" column="0">
-               <layout class="QGridLayout" name="gridLayout_94" columnstretch="2,2,0,0,0,0,0">
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_profiles">
-                  <property name="text">
-                   <string>PROFILES</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QCheckBox" name="checkBox_prof_all">
-                  <property name="text">
-                   <string>all</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="6">
-                 <widget class="QCheckBox" name="checkBox_common_grid_for_map">
-                  <property name="text">
-                   <string>common grid</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="5">
-                 <widget class="QCheckBox" name="checkBox_profile_title">
-                  <property name="text">
-                   <string>profile title</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="4">
-                 <widget class="QCheckBox" name="checkBox_profile_year">
-                  <property name="text">
-                   <string>year</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_profiles_to_mapinfo">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 217, 185);</string>
-                  </property>
-                  <property name="text">
-                   <string>PROFILES TO MAPINFO</string>
                   </property>
                  </widget>
                 </item>
@@ -620,129 +693,50 @@
                 </item>
                </layout>
               </item>
-              <item row="20" column="0">
-               <layout class="QGridLayout" name="gridLayout_88">
+              <item row="18" column="0">
+               <layout class="QGridLayout" name="gridLayout_31">
                 <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_map">
+                 <widget class="QPushButton" name="pushButton_secret_filter">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 163, 72);</string>
+                  </property>
                   <property name="text">
-                   <string>MAP</string>
+                   <string>CRL-filter</string>
                   </property>
                  </widget>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_get_attributes">
+                 <widget class="QPushButton" name="pushButton_save_signal">
                   <property name="text">
-                   <string>GET ATTRIBUTES</string>
+                   <string>Выгрузить</string>
                   </property>
                  </widget>
                 </item>
                </layout>
               </item>
-              <item row="22" column="0">
-               <layout class="QGridLayout" name="gridLayout_26">
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="pushButton_all_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин для всех объектов в таблице Excel</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 188, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save all well</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_prof_wells_excel">
-                  <property name="toolTip">
-                   <string>Сохранить данные профилей и скважин для текущего объекта в таблице Excel</string>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(204, 188, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save well</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="5">
-                 <widget class="QPushButton" name="pushButton_save_prof_sig">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(175, 150, 255);</string>
-                  </property>
-                  <property name="text">
-                   <string>save slices</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_save_img">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(153, 193, 241);</string>
-                  </property>
-                  <property name="text">
-                   <string>Save Image</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QSpinBox" name="spinBox_save_img">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(153, 193, 241);</string>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>1000</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>20</number>
-                  </property>
-                  <property name="value">
-                   <number>450</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="4">
-                 <widget class="QSpinBox" name="spinBox_save_prod_sig">
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="maximum">
-                   <number>512</number>
-                  </property>
-                  <property name="value">
-                   <number>30</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QPushButton" name="pushButton_ml_clutter">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 255, 137);</string>
-                  </property>
-                  <property name="text">
-                   <string>ML Clutter</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
+              <item row="24" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
-              <item row="14" column="0">
-               <widget class="QLabel" name="label_9">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_8">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
                   <italic>true</italic>
                  </font>
                 </property>
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
                 <property name="text">
-                 <string>Кепструм</string>
+                 <string>Другие</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -764,6 +758,83 @@
                 </property>
                 <property name="text">
                  <string>Фильтрация</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <layout class="QGridLayout" name="gridLayout_32">
+                <item row="0" column="0">
+                 <widget class="QSpinBox" name="spinBox_lof_noise">
+                  <property name="minimum">
+                   <number>5</number>
+                  </property>
+                  <property name="maximum">
+                   <number>5000</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>5</number>
+                  </property>
+                  <property name="value">
+                   <number>100</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_noise_profile">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 166, 166);</string>
+                  </property>
+                  <property name="text">
+                   <string>NOISE_PROFILE</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_noise_object">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 146, 166);</string>
+                  </property>
+                  <property name="text">
+                   <string>NOISE_OBJECT</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="20" column="0">
+               <layout class="QGridLayout" name="gridLayout_88">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_map">
+                  <property name="text">
+                   <string>MAP</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_get_attributes">
+                  <property name="text">
+                   <string>GET ATTRIBUTES</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="14" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="font">
+                 <font>
+                  <pointsize>9</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Кепструм</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
@@ -1104,67 +1175,6 @@
                 </item>
                </layout>
               </item>
-              <item row="18" column="0">
-               <layout class="QGridLayout" name="gridLayout_31">
-                <item row="0" column="0">
-                 <widget class="QPushButton" name="pushButton_secret_filter">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 163, 72);</string>
-                  </property>
-                  <property name="text">
-                   <string>CRL-filter</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_save_signal">
-                  <property name="text">
-                   <string>Выгрузить</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="0">
-               <layout class="QGridLayout" name="gridLayout_32">
-                <item row="0" column="0">
-                 <widget class="QSpinBox" name="spinBox_lof_noise">
-                  <property name="minimum">
-                   <number>5</number>
-                  </property>
-                  <property name="maximum">
-                   <number>5000</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>5</number>
-                  </property>
-                  <property name="value">
-                   <number>100</number>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_noise_profile">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 166, 166);</string>
-                  </property>
-                  <property name="text">
-                   <string>NOISE_PROFILE</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="pushButton_noise_object">
-                  <property name="styleSheet">
-                   <string notr="true">background-color: rgb(255, 146, 166);</string>
-                  </property>
-                  <property name="text">
-                   <string>NOISE_OBJECT</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="tab_4">
@@ -1396,7 +1406,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="2">
+                <item row="0" column="3">
                  <layout class="QGridLayout" name="gridLayout_22" columnstretch="2,0,0,0,0">
                   <item row="0" column="4">
                    <widget class="QSpinBox" name="spinBox_well_distance">
@@ -1453,7 +1463,7 @@
                   </item>
                  </layout>
                 </item>
-                <item row="0" column="1">
+                <item row="0" column="2">
                  <widget class="QCheckBox" name="checkBox_prof_intersect">
                   <property name="font">
                    <font>
@@ -1462,6 +1472,13 @@
                   </property>
                   <property name="text">
                    <string>prof-prof</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QCheckBox" name="checkBox_object_well">
+                  <property name="text">
+                   <string>object wells</string>
                   </property>
                  </widget>
                 </item>
@@ -7018,9 +7035,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
+  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_3"/>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
