@@ -1776,9 +1776,7 @@ def update_well_filter_mode(checked, source):
     if checked:
         other = (ui.checkBox_object_well
                  if source == 'profile' else ui.checkBox_profile_well)
-        blocker = QSignalBlocker(other)
         other.setChecked(False)
-        del blocker
     update_list_well()
 
 
