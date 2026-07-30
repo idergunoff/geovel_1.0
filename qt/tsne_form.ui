@@ -355,6 +355,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="checkBox_log">
+           <property name="text">
+            <string>log</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBox_power_trans">
            <property name="text">
             <string>powerT</string>
