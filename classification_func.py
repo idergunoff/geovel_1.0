@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
+from sklearn.preprocessing import FunctionTransformer
 
 from draw import plot_groups_with_smoothed_hull
 from func import *
@@ -895,6 +896,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         # Нормализация данных
 
+        if ui_cls.checkBox_log.isChecked():
+            log_transformer = FunctionTransformer(np.log10, validate=True)
+            pipe_steps.append(('log10', log_transformer))
+            text_scaler += '\nLog10'
         if ui_cls.checkBox_power_trans.isChecked():
             power_t = PowerTransformer(method='yeo-johnson')
             pipe_steps.append(('power_t', power_t))
@@ -2020,7 +2025,6 @@ def get_text_train_param_geochem(list_param):
     text = '\nПараметры модели:\n'
     text += ", ".join(list_param)
     return text
-
 
 
 

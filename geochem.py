@@ -491,6 +491,8 @@ def tsne_geochem():
 
         try:
             data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
+            if ui_tsne.checkBox_log.isChecked():
+                data_tsne = np.log10(data_tsne)
             if ui_tsne.checkBox_power_trans.isChecked():
                 power_t = PowerTransformer(method='yeo-johnson', standardize=False)
                 data_tsne = power_t.fit_transform(data_tsne)
@@ -593,6 +595,9 @@ def tsne_geochem():
             data_meta = data_plot_new[exclude_cols].copy()
 
             # Применяем преобразования только к числовым столбцам
+            if ui_tsne.checkBox_log.isChecked():
+                data_numeric = np.log10(data_numeric)
+
             if ui_tsne.checkBox_power_trans.isChecked():
                 power_t = PowerTransformer(method='yeo-johnson', standardize=False)
                 data_numeric = power_t.fit_transform(data_numeric)
@@ -947,6 +952,8 @@ def tsne_geochem():
 
     def distance_between_centers(data, well1, well2, params):
         data_param = data[params]
+        if ui_tsne.checkBox_log.isChecked():
+            data_param = np.log10(data_param)
         if ui_tsne.checkBox_standart.isChecked():
             scaler = StandardScaler()
             data_param = scaler.fit_transform(data_param)
@@ -1019,6 +1026,8 @@ def tsne_geochem():
         data_param.reset_index(inplace=True, drop=True)
         data_point = data_plot.loc[data_plot['point'].isin(list_point)]
         data_point.reset_index(inplace=True, drop=True)
+        if ui_tsne.checkBox_log.isChecked():
+            data_param = np.log10(data_param)
         scaler = StandardScaler()
         data_param = scaler.fit_transform(data_param)
         if ui_tsne.radioButton_tsne.isChecked():
@@ -2516,7 +2525,6 @@ def clear_fake_point():
     session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).update({'fake': False}, synchronize_session='fetch')
     session.commit()
     update_listwidget_geochem_point()
-
 
 
 
