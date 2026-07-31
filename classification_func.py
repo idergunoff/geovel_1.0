@@ -1930,6 +1930,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_feature_selection.clicked.connect(call_feature_selection)
     ui_cls.pushButton_cov.clicked.connect(calc_cov)
     ui_cls.pushButton_gen.clicked.connect(genetic_algorithm)
+    from app_settings import bind_form
+    bind_form(Classifier, "classifier_form")
     Classifier.exec_()
 
 

@@ -215,6 +215,9 @@ from functools import lru_cache
 
 
 app = QtWidgets.QApplication(sys.argv)
+from app_settings import install_file_dialog_history
+
+install_file_dialog_history()
 MainWindow = QtWidgets.QMainWindow()
 ui = Ui_MainWindow()
 ui.setupUi(MainWindow)

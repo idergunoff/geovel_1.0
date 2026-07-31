@@ -711,6 +711,13 @@ update_list_clust_analys()
 update_list_clust_object()
 update_cluster_well_dataset_combobox()
 
+# The cluster controls live on the main window rather than in a separate form.
+# Persist only that section and save it during normal application shutdown.
+from app_settings import restore_form, save_form
+_cluster_setting = lambda name: "clust" in name.lower()
+restore_form(MainWindow, "cluster", _cluster_setting)
+app.aboutToQuit.connect(lambda: save_form(MainWindow, "cluster", _cluster_setting))
+
 
 time2 = datetime.datetime.now() - time
 print(time2)
