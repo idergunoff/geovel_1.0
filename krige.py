@@ -791,6 +791,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         draw_button.clicked.connect(form_lda_ok)
     else:
         set_info("В форме карты не найдена кнопка DRAW (pushButton_map).", "brown")
+    from app_settings import bind_form
+    bind_form(Draw_Map, "draw_map_form")
     Draw_Map.exec_()
 
 
