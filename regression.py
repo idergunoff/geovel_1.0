@@ -3365,6 +3365,8 @@ def train_regression_model():
     ui_r.pushButton_cov.clicked.connect(calc_cov)
     ui_r.pushButton_gen_alg.clicked.connect(genetic_algorithm)
     ui_r.pushButton_cvw.clicked.connect(calc_model_regression_by_cvw)
+    from app_settings import bind_form
+    bind_form(Regressor, "regressor_form")
     Regressor.exec_()
 
 
