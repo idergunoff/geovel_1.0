@@ -12,6 +12,7 @@ from PyQt5 import QtCore, QtWidgets
 ORGANIZATION = "GeoVel"
 APPLICATION = "GeoVel"
 _DIALOG_KEY = "files/last_directory"
+_FORMS_GROUP = "forms_v2"
 
 
 def settings():
@@ -48,6 +49,23 @@ def _widget_value(widget):
     return None
 
 
+def _widget_key(root, widget):
+    """Return a stable, unambiguous key for a widget inside *root*.
+
+    Object names are usually unique in a Qt Designer form, but that is not a
+    Qt requirement.  Using only ``objectName`` made different spin boxes share
+    one QSettings entry in forms containing repeated/nested controls.  Include
+    the named parent hierarchy and the widget type to prevent such collisions.
+    """
+    parts = [f"{type(widget).__name__}:{widget.objectName()}"]
+    parent = widget.parentWidget()
+    while parent is not None and parent is not root:
+        if parent.objectName():
+            parts.append(f"{type(parent).__name__}:{parent.objectName()}")
+        parent = parent.parentWidget()
+    return "/".join(reversed(parts))
+
+
 def _restore_widget(widget, value):
     if isinstance(widget, QtWidgets.QAbstractButton) and widget.isCheckable():
         widget.setChecked(str(value).lower() in ("1", "true", "yes"))
@@ -68,13 +86,13 @@ def _restore_widget(widget, value):
 def save_form(root, group, name_filter=None):
     """Save editable child widgets of *root* under a stable settings group."""
     store = settings()
-    store.beginGroup(f"forms/{group}")
+    store.beginGroup(f"{_FORMS_GROUP}/{group}")
     for widget in _editable_widgets(root):
         if name_filter is not None and not name_filter(widget.objectName()):
             continue
         value = _widget_value(widget)
         if value is not None:
-            store.setValue(widget.objectName(), value)
+            store.setValue(_widget_key(root, widget), value)
     store.endGroup()
     store.sync()
 
@@ -82,16 +100,16 @@ def save_form(root, group, name_filter=None):
 def restore_form(root, group, name_filter=None):
     """Restore values which are still valid for the current version of a form."""
     store = settings()
-    store.beginGroup(f"forms/{group}")
+    store.beginGroup(f"{_FORMS_GROUP}/{group}")
     for widget in _editable_widgets(root):
         if name_filter is not None and not name_filter(widget.objectName()):
             continue
-        name = widget.objectName()
-        if not store.contains(name):
+        key = _widget_key(root, widget)
+        if not store.contains(key):
             continue
         blocker = QtCore.QSignalBlocker(widget)
         try:
-            _restore_widget(widget, store.value(name))
+            _restore_widget(widget, store.value(key))
         except (TypeError, ValueError):
             # Obsolete/corrupt values must not prevent a window from opening.
             pass

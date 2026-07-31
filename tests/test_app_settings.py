@@ -66,5 +66,35 @@ def test_name_filter_limits_persisted_widgets(app):
     app_settings.save_form(root, "filtered", lambda name: "cluster" in name)
 
     store = app_settings.settings()
-    assert store.contains("forms/filtered/spinBox_cluster_count")
-    assert not store.contains("forms/filtered/spinBox_other")
+    store.beginGroup(f"{app_settings._FORMS_GROUP}/filtered")
+    assert store.contains(app_settings._widget_key(root, kept))
+    assert not store.contains(app_settings._widget_key(root, skipped))
+    store.endGroup()
+
+
+def test_widgets_with_repeated_object_names_have_independent_values(app):
+    root = QtWidgets.QWidget()
+    left_group = QtWidgets.QGroupBox(root, objectName="left_settings")
+    right_group = QtWidgets.QGroupBox(root, objectName="right_settings")
+    left = QtWidgets.QSpinBox(left_group, objectName="spinBox_count")
+    right = QtWidgets.QSpinBox(right_group, objectName="spinBox_count")
+    left.setValue(3)
+    right.setValue(17)
+
+    app_settings.save_form(root, "duplicates")
+    left.setValue(0)
+    right.setValue(0)
+    app_settings.restore_form(root, "duplicates")
+
+    assert left.value() == 3
+    assert right.value() == 17
+
+
+def test_legacy_flat_values_are_not_restored(app):
+    root = QtWidgets.QWidget()
+    spin = QtWidgets.QSpinBox(root, objectName="spinBox_count")
+    app_settings.settings().setValue("forms/test/spinBox_count", 99)
+
+    app_settings.restore_form(root, "test")
+
+    assert spin.value() == 0
