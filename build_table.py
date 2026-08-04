@@ -1,3 +1,5 @@
+from collections import Counter
+
 from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, \
     calc_entropy_features_profile, calc_nonlinear_features_profile, calc_morphology_features_profile, \
     calc_frequency_features_profile, calc_envelope_feature_profile, calc_autocorr_feature_profile, \
@@ -7,6 +9,10 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
                                       calc_envelope_feature, calc_frequency_features, calc_morphology_features,
                                       calc_entropy_features, calc_fractal_features,
                                       calc_wavelet_features)
+
+
+# Ограничивает количество тяжёлых Python-словарей, одновременно находящихся в памяти.
+TRAIN_TABLE_ROW_CHUNK_SIZE = 1000
 
 
 def _stored_feature_source(param):
@@ -182,9 +188,10 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
     # Не расширяем DataFrame по одной строке: каждый pd.concat копирует уже
     # собранную таблицу, из-за чего время сборки квадратично растёт с числом
-    # измерений. Сначала накапливаем записи как обычные словари, а DataFrame
-    # создаём одним вызовом после обработки всех разметок.
+    # измерений. Записи преобразуются в DataFrame ограниченными порциями: так
+    # ускорение сохраняется без неограниченного роста списка Python-словарей.
     data_train_rows = []
+    data_train_chunks = []
     except_param = False
     # Получаем размеченные участки
     if analisis == 'mlp':
@@ -195,6 +202,8 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         except_param = session.query(ExceptionReg).filter_by(analysis_id=analisis_id).first()
 
     stored_feature_cache = _prefetch_stored_features(markups, list_param)
+    remaining_formations = Counter(markup.formation_id for markup in markups)
+    remaining_profiles = Counter(markup.profile_id for markup in markups)
     profile_data_cache = _prefetch_profile_data(markups, list_param)
     formation_layer_cache = _prefetch_formation_layers(markups)
 
@@ -209,106 +218,110 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     skipped_measurements = []
 
     for nm, markup in enumerate(tqdm(markups)):
+        # Держим только рабочие массивы текущей разметки. Раньше они добавлялись
+        # в locals() под динамическими именами и оставались в памяти до конца
+        # всей сборки, включая особенно объёмные signal/CRL массивы.
+        runtime_values = {}
         # Получение списка фиктивных меток и границ слоев из разметки
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
         list_up, list_down = formation_layer_cache[markup.formation_id]
         cached_signal = profile_data_cache.get((markup.profile_id, 'signal'))
         if cached_signal is not None:
-            locals()[str(markup.profile_id) + '_signal'] = cached_signal
+            runtime_values[str(markup.profile_id) + '_signal'] = cached_signal
         for param in (item for item in list_param if item.startswith('model_')):
             cached_prediction = profile_data_cache.get((markup.profile_id, param))
             if cached_prediction is not None:
-                locals()[str(markup.profile_id) + '_' + param] = cached_prediction
+                runtime_values[str(markup.profile_id) + '_' + param] = cached_prediction
 
         # Загрузка сигналов из профилей, необходимых для параметров 'distr', 'sep' и 'mfcc'
         for param in list_param:
             entity_id = markup.profile_id if param.startswith('prof') else markup.formation_id
             cache_key = (param, entity_id)
             if cache_key in stored_feature_cache:
-                locals()[f'list_{param}'] = stored_feature_cache[cache_key]
+                runtime_values[f'list_{param}'] = stored_feature_cache[cache_key]
                 continue
             # Если параметр является расчётным
             if param.startswith('Signal') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 # Проверка, есть ли уже загруженный сигнал в локальных переменных
-                if not str(markup.profile_id) + '_signal' in locals():
+                if not str(markup.profile_id) + '_signal' in runtime_values:
                     # Загрузка сигнала из профиля
-                    locals()[str(markup.profile_id) + '_signal'] = profile_data_cache[(markup.profile_id, 'signal')]
+                    runtime_values[str(markup.profile_id) + '_signal'] = profile_data_cache[(markup.profile_id, 'signal')]
                 if param.split('_')[1] == 'SigCRL':
-                    if not str(markup.profile_id) + '_CRL' in locals():
-                        locals()[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
-                            locals()[str(markup.profile_id) + '_signal']
+                    if not str(markup.profile_id) + '_CRL' in runtime_values:
+                        runtime_values[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
+                            runtime_values[str(markup.profile_id) + '_signal']
                         )
             elif param.startswith('model_'):
-                if not str(markup.profile_id) + '_' + param in locals():
+                if not str(markup.profile_id) + '_' + param in runtime_values:
                     model_id = int(param.split('_id')[-1])
                     predict = session.query(ProfileModelPrediction).filter_by(profile_id=markup.profile_id,
                                                                               model_id=model_id).first()
                     if predict:
-                        locals()[str(markup.profile_id) + '_' + param] = json.loads(predict.prediction)
+                        runtime_values[str(markup.profile_id) + '_' + param] = json.loads(predict.prediction)
                     else:
                         calc_profile_model_predict(param, markup.formation)
-                        locals()[str(markup.profile_id) + '_' + param] = json.loads(
+                        runtime_values[str(markup.profile_id) + '_' + param] = json.loads(
                             session.query(ProfileModelPrediction.prediction).filter_by(profile_id=markup.profile_id,
                                                                               model_id=model_id).first()[0])
             elif param == 'CRL':
-                if not str(markup.profile_id) + '_CRL' in locals():
-                    locals()[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
-                        locals()[str(markup.profile_id) + '_signal']
+                if not str(markup.profile_id) + '_CRL' in runtime_values:
+                    runtime_values[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
+                        runtime_values[str(markup.profile_id) + '_signal']
                     )
             elif param == 'CRL_NF':
-                if not str(markup.profile_id) + '_CRL_NF' in locals():
-                    locals()[str(markup.profile_id) + '_CRL_NF'] = calc_CRL(
-                        locals()[str(markup.profile_id) + '_signal']
+                if not str(markup.profile_id) + '_CRL_NF' in runtime_values:
+                    runtime_values[str(markup.profile_id) + '_CRL_NF'] = calc_CRL(
+                        runtime_values[str(markup.profile_id) + '_signal']
                     )
             elif param == 'X':
-                locals()['list_X'] = profile_data_cache[(markup.profile_id, 'X')]
+                runtime_values['list_X'] = profile_data_cache[(markup.profile_id, 'X')]
             elif param == 'Y':
-                locals()['list_Y'] = profile_data_cache[(markup.profile_id, 'Y')]
+                runtime_values['list_Y'] = profile_data_cache[(markup.profile_id, 'Y')]
             elif param.startswith('prof'):
                 if param[5:] in list_wavelet_features:
                     calc_wavelet_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature_profile.{param[5:]}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature_profile.{param[5:]}')).filter(
                         WaveletFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_fractal_features:
                     calc_fractal_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature_profile.{param[5:]}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature_profile.{param[5:]}')).filter(
                         FractalFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_entropy_features:
                     calc_entropy_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature_profile.{param[5:]}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature_profile.{param[5:]}')).filter(
                         EntropyFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_nonlinear_features:
                     calc_nonlinear_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(
+                    runtime_values[f'list_{param}'] = json.loads(
                         session.query(literal_column(f'nonlinear_feature_profile.{param[5:]}')).filter(
                             NonlinearFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_morphology_feature:
                     calc_morphology_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(
+                    runtime_values[f'list_{param}'] = json.loads(
                         session.query(literal_column(f'morphology_feature_profile.{param[5:]}')).filter(
                             MorphologyFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_frequency_feature:
                     calc_frequency_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(
+                    runtime_values[f'list_{param}'] = json.loads(
                         session.query(literal_column(f'frequency_feature_profile.{param[5:]}')).filter(
                             FrequencyFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_envelope_feature:
                     calc_envelope_feature_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(
+                    runtime_values[f'list_{param}'] = json.loads(
                         session.query(literal_column(f'envelope_feature_profile.{param[5:]}')).filter(
                             EnvelopeFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_autocorr_feature:
                     calc_autocorr_feature_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(
+                    runtime_values[f'list_{param}'] = json.loads(
                         session.query(literal_column(f'autocorr_feature_profile.{param[5:]}')).filter(
                             AutocorrFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_emd_feature:
                     calc_emd_feature_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature_profile.{param[5:]}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature_profile.{param[5:]}')).filter(
                         EMDFeatureProfile.profile_id == markup.profile_id).first()[0])
                 elif param[5:] in list_hht_feature:
                     calc_hht_features_profile(markup.profile_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature_profile.{param[5:]}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature_profile.{param[5:]}')).filter(
                         HHTFeatureProfile.profile_id == markup.profile_id).first()[0])
                 else:
                     pass
@@ -316,47 +329,47 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             else:
                 if param in list_wavelet_features:
                     calc_wavelet_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'wavelet_feature.{param}')).filter(
                         WaveletFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_fractal_features:
                     calc_fractal_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'fractal_feature.{param}')).filter(
                         FractalFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_entropy_features:
                     calc_entropy_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'entropy_feature.{param}')).filter(
                         EntropyFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_nonlinear_features:
                     calc_nonlinear_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'nonlinear_feature.{param}')).filter(
                         NonlinearFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_morphology_feature:
                     calc_morphology_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'morphology_feature.{param}')).filter(
                         MorphologyFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_frequency_feature:
                     calc_frequency_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'frequency_feature.{param}')).filter(
                         FrequencyFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_envelope_feature:
                     calc_envelope_feature(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'envelope_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'envelope_feature.{param}')).filter(
                         EnvelopeFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_autocorr_feature:
                     calc_autocorr_feature(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'autocorr_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'autocorr_feature.{param}')).filter(
                         AutocorrFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_emd_feature:
                     calc_emd_feature(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'emd_feature.{param}')).filter(
                         EMDFeature.formation_id == markup.formation_id).first()[0])
                 elif param in list_hht_feature:
                     calc_hht_features(markup.formation_id)
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'hht_feature.{param}')).filter(
                         HHTFeature.formation_id == markup.formation_id).first()[0])
                 else:
                     # Загрузка значений параметра из формации
-                    locals()[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
+                    runtime_values[f'list_{param}'] = json.loads(session.query(literal_column(f'Formation.{param}')).filter(
                         Formation.id == markup.formation_id).first()[0])
 
 
@@ -392,17 +405,17 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                     if param.startswith('Signal'):
                         # Обработка параметра 'Signal'
                         p, atr = param.split('_')[0], param.split('_')[1]
-                        sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
+                        sig_measure = calc_atrib_measure(runtime_values[str(markup.profile_id) + '_signal'][measure], atr)
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_signal:
                                 dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
                     elif param == 'CRL':
-                        sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
+                        sig_measure = runtime_values[str(markup.profile_id) + '_CRL'][measure]
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_crl:
                                 dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
                     elif param == 'CRL_NF':
-                        sig_measure = locals()[str(markup.profile_id) + '_CRL_NF'][measure]
+                        sig_measure = runtime_values[str(markup.profile_id) + '_CRL_NF'][measure]
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_crl:
                                 dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
@@ -410,9 +423,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'distr'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
+                            sig_measure = runtime_values[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(runtime_values[str(markup.profile_id) + '_signal'][measure], atr)
                         distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
@@ -420,9 +433,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'sep'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
+                            sig_measure = runtime_values[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(runtime_values[str(markup.profile_id) + '_signal'][measure], atr)
                         sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
@@ -430,23 +443,41 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'mfcc'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
+                            sig_measure = runtime_values[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(runtime_values[str(markup.profile_id) + '_signal'][measure], atr)
                         mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
                     elif param.startswith('model_'):
-                        dict_value[param] = locals()[str(markup.profile_id) + '_' + param][measure]
+                        dict_value[param] = runtime_values[str(markup.profile_id) + '_' + param][measure]
                     else:
                         # Загрузка значения параметра из списка значений
-                        dict_value[param] = locals()[f'list_{param}'][measure]
+                        dict_value[param] = runtime_values[f'list_{param}'][measure]
 
             except IndexError:
                 skipped_measurements.append((markup, measure, failed_param))
                 continue
 
             data_train_rows.append(dict_value)
+            if len(data_train_rows) >= TRAIN_TABLE_ROW_CHUNK_SIZE:
+                data_train_chunks.append(pd.DataFrame.from_records(data_train_rows))
+                data_train_rows.clear()
+
+        # Как только профиль/пласт больше не понадобится следующим разметкам,
+        # освобождаем его предварительно загруженные массивы. Это не даёт кэшу
+        # суммироваться с уже собранной таблицей до самого конца операции.
+        remaining_formations[markup.formation_id] -= 1
+        if remaining_formations[markup.formation_id] == 0:
+            formation_layer_cache.pop(markup.formation_id, None)
+            for key in [key for key in stored_feature_cache if key[1] == markup.formation_id and not key[0].startswith('prof')]:
+                stored_feature_cache.pop(key, None)
+        remaining_profiles[markup.profile_id] -= 1
+        if remaining_profiles[markup.profile_id] == 0:
+            for key in [key for key in profile_data_cache if key[0] == markup.profile_id]:
+                profile_data_cache.pop(key, None)
+            for key in [key for key in stored_feature_cache if key[1] == markup.profile_id and key[0].startswith('prof')]:
+                stored_feature_cache.pop(key, None)
 
         ui.progressBar.setValue(nm + 1)
 
@@ -469,7 +500,11 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         QMessageBox.warning(MainWindow, 'Неполные данные обучающей выборки', message)
 
     if data_train_rows:
-        data_train = pd.DataFrame.from_records(data_train_rows)
+        data_train_chunks.append(pd.DataFrame.from_records(data_train_rows))
+        data_train_rows.clear()
+    if data_train_chunks:
+        data_train = pd.concat(data_train_chunks, ignore_index=True, copy=False)
+        data_train_chunks.clear()
     # data_train_to_db = json.dumps(data_train.to_dict())
     p_sep = os.path.sep
     if analisis == 'mlp':
