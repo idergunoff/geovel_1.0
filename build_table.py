@@ -49,6 +49,11 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         data_train = pd.DataFrame(columns=['prof_well_index', 'target_value'])
     else:
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
+    # Не расширяем DataFrame по одной строке: каждый pd.concat копирует уже
+    # собранную таблицу, из-за чего время сборки квадратично растёт с числом
+    # измерений. Сначала накапливаем записи как обычные словари, а DataFrame
+    # создаём одним вызовом после обработки всех разметок.
+    data_train_rows = []
     except_param = False
     # Получаем размеченные участки
     if analisis == 'mlp':
@@ -66,6 +71,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             list_except_crl = parse_range_exception(except_param.except_crl)
 
     ui.progressBar.setMaximum(len(markups))
+    skipped_measurements = []
 
     for nm, markup in enumerate(tqdm(markups)):
         # Получение списка фиктивных меток и границ слоев из разметки
@@ -214,6 +220,13 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             if measure in list_fake:
                 continue
 
+            # Отрицательный индекс в Python обращается к данным с конца списка и
+            # поэтому особенно опасен: таблица была бы собрана без ошибки, но с
+            # данными другого измерения.
+            if not isinstance(measure, int) or measure < 0:
+                skipped_measurements.append((markup, measure, 'индекс измерения'))
+                continue
+
             dict_value = {}
             dict_value['prof_well_index'] = f'{markup.profile_id}_{markup.well_id}_{measure}'
             if analisis == 'regmod':
@@ -221,65 +234,96 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             else:
                 dict_value['mark'] = markup.marker.title
 
-            # Обработка каждого параметра в списке параметров
-            for param in list_param:
-                if param.startswith('Signal'):
-                    # Обработка параметра 'Signal'
-                    p, atr = param.split('_')[0], param.split('_')[1]
-                    sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
-                    for i_sig in range(len(sig_measure)):
-                        if i_sig + 1 not in list_except_signal:
-                            dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
-                elif param == 'CRL':
-                    sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
-                    for i_sig in range(len(sig_measure)):
-                        if i_sig + 1 not in list_except_crl:
-                            dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
-                elif param == 'CRL_NF':
-                    sig_measure = locals()[str(markup.profile.id) + '_CRL_NF'][measure]
-                    for i_sig in range(len(sig_measure)):
-                        if i_sig + 1 not in list_except_crl:
-                            dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
-                elif param.startswith('distr'):
-                    # Обработка параметра 'distr'
-                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    if atr == 'SigCRL':
-                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
-                    else:
+            # Обработка каждого параметра в списке параметров. Некоторые старые
+            # или не полностью рассчитанные наборы признаков могут быть короче
+            # списка измерений разметки. Не прерываем из-за этого длительный
+            # сбор всей таблицы: неконсистентное измерение будет пропущено, а
+            # пользователю ниже будет показано, где именно не хватило данных.
+            failed_param = 'границы пласта'
+            try:
+                for param in list_param:
+                    failed_param = param
+                    if param.startswith('Signal'):
+                        # Обработка параметра 'Signal'
+                        p, atr = param.split('_')[0], param.split('_')[1]
                         sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
-                    distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
-                    for num in range(n):
-                        dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
-                elif param.startswith('sep'):
-                    # Обработка параметра 'sep'
-                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    if atr == 'SigCRL':
+                        for i_sig in range(len(sig_measure)):
+                            if i_sig + 1 not in list_except_signal:
+                                dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
+                    elif param == 'CRL':
                         sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                        for i_sig in range(len(sig_measure)):
+                            if i_sig + 1 not in list_except_crl:
+                                dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+                    elif param == 'CRL_NF':
+                        sig_measure = locals()[str(markup.profile.id) + '_CRL_NF'][measure]
+                        for i_sig in range(len(sig_measure)):
+                            if i_sig + 1 not in list_except_crl:
+                                dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
+                    elif param.startswith('distr'):
+                        # Обработка параметра 'distr'
+                        p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                        if atr == 'SigCRL':
+                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                        else:
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                        distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
+                        for num in range(n):
+                            dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
+                    elif param.startswith('sep'):
+                        # Обработка параметра 'sep'
+                        p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                        if atr == 'SigCRL':
+                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                        else:
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                        sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
+                        for num in range(n):
+                            dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
+                    elif param.startswith('mfcc'):
+                        # Обработка параметра 'mfcc'
+                        p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
+                        if atr == 'SigCRL':
+                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                        else:
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                        mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
+                        for num in range(n):
+                            dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
+                    elif param.startswith('model_'):
+                        dict_value[param] = locals()[str(markup.profile.id) + '_' + param][measure]
                     else:
-                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
-                    sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
-                    for num in range(n):
-                        dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
-                elif param.startswith('mfcc'):
-                    # Обработка параметра 'mfcc'
-                    p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
-                    if atr == 'SigCRL':
-                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
-                    else:
-                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
-                    mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
-                    for num in range(n):
-                        dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
-                elif param.startswith('model_'):
-                    dict_value[param] = locals()[str(markup.profile.id) + '_' + param][measure]
-                else:
-                    # Загрузка значения параметра из списка значений
-                    dict_value[param] = locals()[f'list_{param}'][measure]
+                        # Загрузка значения параметра из списка значений
+                        dict_value[param] = locals()[f'list_{param}'][measure]
 
-            # Добавление данных в обучающую выборку
-            data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
+            except IndexError:
+                skipped_measurements.append((markup, measure, failed_param))
+                continue
+
+            data_train_rows.append(dict_value)
 
         ui.progressBar.setValue(nm + 1)
+
+    if skipped_measurements:
+        examples = []
+        for markup, measure, param in skipped_measurements[:10]:
+            examples.append(
+                f'профиль {markup.profile_id}, скважина {markup.well_id}, '
+                f'измерение {measure}, параметр {param}'
+            )
+        extra = len(skipped_measurements) - len(examples)
+        details = '\n'.join(examples)
+        if extra:
+            details += f'\n... и ещё {extra}'
+        message = (
+            f'Пропущено измерений: {len(skipped_measurements)}. Для них отсутствуют '
+            f'рассчитанные данные или индекс выходит за границы массива.\n\n{details}'
+        )
+        set_info(message.replace('\n', ' '), 'orange')
+        QMessageBox.warning(MainWindow, 'Неполные данные обучающей выборки', message)
+
+    if data_train_rows:
+        data_train = pd.DataFrame.from_records(data_train_rows)
     # data_train_to_db = json.dumps(data_train.to_dict())
     p_sep = os.path.sep
     if analisis == 'mlp':
@@ -609,5 +653,3 @@ def calc_profile_model_predict(param, formation):
     session.add(new_prof_model_pred)
     session.commit()
     set_info(f'Результат расчета модели "{model.title}" для профиля {formation.profile.title} сохранен', 'green')
-
-
