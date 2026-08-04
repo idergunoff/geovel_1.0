@@ -9,6 +9,137 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
                                       calc_wavelet_features)
 
 
+def _stored_feature_source(param):
+    """Return model, id column and SQL value column for a stored parameter."""
+    profile_sources = (
+        (list_wavelet_features, WaveletFeatureProfile, 'wavelet_feature_profile'),
+        (list_fractal_features, FractalFeatureProfile, 'fractal_feature_profile'),
+        (list_entropy_features, EntropyFeatureProfile, 'entropy_feature_profile'),
+        (list_nonlinear_features, NonlinearFeatureProfile, 'nonlinear_feature_profile'),
+        (list_morphology_feature, MorphologyFeatureProfile, 'morphology_feature_profile'),
+        (list_frequency_feature, FrequencyFeatureProfile, 'frequency_feature_profile'),
+        (list_envelope_feature, EnvelopeFeatureProfile, 'envelope_feature_profile'),
+        (list_autocorr_feature, AutocorrFeatureProfile, 'autocorr_feature_profile'),
+        (list_emd_feature, EMDFeatureProfile, 'emd_feature_profile'),
+        (list_hht_feature, HHTFeatureProfile, 'hht_feature_profile'),
+    )
+    formation_sources = (
+        (list_wavelet_features, WaveletFeature, 'wavelet_feature'),
+        (list_fractal_features, FractalFeature, 'fractal_feature'),
+        (list_entropy_features, EntropyFeature, 'entropy_feature'),
+        (list_nonlinear_features, NonlinearFeature, 'nonlinear_feature'),
+        (list_morphology_feature, MorphologyFeature, 'morphology_feature'),
+        (list_frequency_feature, FrequencyFeature, 'frequency_feature'),
+        (list_envelope_feature, EnvelopeFeature, 'envelope_feature'),
+        (list_autocorr_feature, AutocorrFeature, 'autocorr_feature'),
+        (list_emd_feature, EMDFeature, 'emd_feature'),
+        (list_hht_feature, HHTFeature, 'hht_feature'),
+    )
+
+    if param.startswith('prof'):
+        feature_name = param[5:]
+        for feature_names, model, table_name in profile_sources:
+            if feature_name in feature_names:
+                return model, model.profile_id, f'{table_name}.{feature_name}', True
+        return None
+
+    for feature_names, model, table_name in formation_sources:
+        if param in feature_names:
+            return model, model.formation_id, f'{table_name}.{param}', False
+    return Formation, Formation.id, f'Formation.{param}', False
+
+
+def _prefetch_stored_features(markups, list_param):
+    """Load requested parameters in one query per feature storage table."""
+    formation_ids = {markup.formation_id for markup in markups}
+    profile_ids = {markup.profile_id for markup in markups}
+    cache = {}
+    grouped_columns = {}
+    calculated_prefixes = ('Signal', 'distr', 'sep', 'mfcc', 'model_')
+
+    for param in list_param:
+        if param in ('CRL', 'CRL_NF', 'X', 'Y') or param.startswith(calculated_prefixes):
+            continue
+        source = _stored_feature_source(param)
+        if source is None:
+            continue
+        model, id_column, value_column, is_profile = source
+        group_key = (model, id_column, is_profile)
+        grouped_columns.setdefault(group_key, []).append((param, value_column))
+
+    for (_, id_column, is_profile), param_columns in grouped_columns.items():
+        entity_ids = profile_ids if is_profile else formation_ids
+        if not entity_ids:
+            continue
+        columns = [id_column]
+        columns.extend(literal_column(value_column) for _, value_column in param_columns)
+        rows = session.query(*columns).filter(id_column.in_(entity_ids)).all()
+        for row in rows:
+            entity_id = row[0]
+            for (param, _), value in zip(param_columns, row[1:]):
+                if value is not None:
+                    cache[(param, entity_id)] = json.loads(value)
+    return cache
+
+
+def _prefetch_profile_data(markups, list_param):
+    """Batch-load raw profile arrays used directly while assembling rows."""
+    profile_ids = {markup.profile_id for markup in markups}
+    cache = {}
+    if not profile_ids:
+        return cache
+
+    needs_signal = any(
+        param in ('CRL', 'CRL_NF')
+        or param.startswith(('Signal', 'distr', 'sep', 'mfcc'))
+        for param in list_param
+    )
+    if needs_signal:
+        for profile_id, signal in session.query(Profile.id, Profile.signal).filter(Profile.id.in_(profile_ids)).all():
+            if signal is not None:
+                cache[(profile_id, 'signal')] = json.loads(signal)
+
+    direct_columns = [param for param in ('X', 'Y') if param in list_param]
+    if direct_columns:
+        columns = [Profile.id]
+        columns.extend(Profile.x_pulc if param == 'X' else Profile.y_pulc for param in direct_columns)
+        for row in session.query(*columns).filter(Profile.id.in_(profile_ids)).all():
+            for param, value in zip(direct_columns, row[1:]):
+                if value is not None:
+                    cache[(row[0], param)] = json.loads(value)
+
+    for param in (item for item in list_param if item.startswith('model_')):
+        model_id = int(param.split('_id')[-1])
+        rows = session.query(
+            ProfileModelPrediction.profile_id,
+            ProfileModelPrediction.prediction,
+        ).filter(
+            ProfileModelPrediction.profile_id.in_(profile_ids),
+            ProfileModelPrediction.model_id == model_id,
+        ).all()
+        for profile_id, prediction in rows:
+            if prediction is not None:
+                cache[(profile_id, param)] = json.loads(prediction)
+    return cache
+
+
+def _prefetch_formation_layers(markups):
+    """Load formation boundary arrays without lazy-loading ORM relationships."""
+    formation_ids = {markup.formation_id for markup in markups}
+    formation_layers = session.query(Formation.id, Formation.up, Formation.down).filter(
+        Formation.id.in_(formation_ids)
+    ).all()
+    layer_ids = {layer_id for row in formation_layers for layer_id in row[1:] if layer_id is not None}
+    layer_lines = {
+        layer_id: json.loads(layer_line)
+        for layer_id, layer_line in session.query(Layers.id, Layers.layer_line).filter(Layers.id.in_(layer_ids)).all()
+    }
+    return {
+        formation_id: (layer_lines[up_id], layer_lines[down_id])
+        for formation_id, up_id, down_id in formation_layers
+    }
+
+
 def build_table_train(db=False, analisis='lda'):
     # Получение списка параметров
     if analisis == 'mlp':
@@ -63,6 +194,10 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
         except_param = session.query(ExceptionReg).filter_by(analysis_id=analisis_id).first()
 
+    stored_feature_cache = _prefetch_stored_features(markups, list_param)
+    profile_data_cache = _prefetch_profile_data(markups, list_param)
+    formation_layer_cache = _prefetch_formation_layers(markups)
+
     list_except_signal, list_except_crl = [], []
     if except_param:
         if except_param.except_signal:
@@ -76,48 +211,59 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     for nm, markup in enumerate(tqdm(markups)):
         # Получение списка фиктивных меток и границ слоев из разметки
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
-        list_up = json.loads(markup.formation.layer_up.layer_line)
-        list_down = json.loads(markup.formation.layer_down.layer_line)
+        list_up, list_down = formation_layer_cache[markup.formation_id]
+        cached_signal = profile_data_cache.get((markup.profile_id, 'signal'))
+        if cached_signal is not None:
+            locals()[str(markup.profile_id) + '_signal'] = cached_signal
+        for param in (item for item in list_param if item.startswith('model_')):
+            cached_prediction = profile_data_cache.get((markup.profile_id, param))
+            if cached_prediction is not None:
+                locals()[str(markup.profile_id) + '_' + param] = cached_prediction
 
         # Загрузка сигналов из профилей, необходимых для параметров 'distr', 'sep' и 'mfcc'
         for param in list_param:
+            entity_id = markup.profile_id if param.startswith('prof') else markup.formation_id
+            cache_key = (param, entity_id)
+            if cache_key in stored_feature_cache:
+                locals()[f'list_{param}'] = stored_feature_cache[cache_key]
+                continue
             # Если параметр является расчётным
             if param.startswith('Signal') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
                 # Проверка, есть ли уже загруженный сигнал в локальных переменных
-                if not str(markup.profile.id) + '_signal' in locals():
+                if not str(markup.profile_id) + '_signal' in locals():
                     # Загрузка сигнала из профиля
-                    locals()[str(markup.profile.id) + '_signal'] = json.loads(
-                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0])
+                    locals()[str(markup.profile_id) + '_signal'] = profile_data_cache[(markup.profile_id, 'signal')]
                 if param.split('_')[1] == 'SigCRL':
-                    if not str(markup.profile.id) + '_CRL' in locals():
-                        locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
-                            session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+                    if not str(markup.profile_id) + '_CRL' in locals():
+                        locals()[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
+                            locals()[str(markup.profile_id) + '_signal']
+                        )
             elif param.startswith('model_'):
-                if not str(markup.profile.id) + '_' + param in locals():
+                if not str(markup.profile_id) + '_' + param in locals():
                     model_id = int(param.split('_id')[-1])
                     predict = session.query(ProfileModelPrediction).filter_by(profile_id=markup.profile_id,
                                                                               model_id=model_id).first()
                     if predict:
-                        locals()[str(markup.profile.id) + '_' + param] = json.loads(predict.prediction)
+                        locals()[str(markup.profile_id) + '_' + param] = json.loads(predict.prediction)
                     else:
                         calc_profile_model_predict(param, markup.formation)
-                        locals()[str(markup.profile.id) + '_' + param] = json.loads(
+                        locals()[str(markup.profile_id) + '_' + param] = json.loads(
                             session.query(ProfileModelPrediction.prediction).filter_by(profile_id=markup.profile_id,
                                                                               model_id=model_id).first()[0])
             elif param == 'CRL':
-                if not str(markup.profile.id) + '_CRL' in locals():
-                    locals()[str(markup.profile.id) + '_CRL'] = calc_CRL_filter(json.loads(
-                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+                if not str(markup.profile_id) + '_CRL' in locals():
+                    locals()[str(markup.profile_id) + '_CRL'] = calc_CRL_filter(
+                        locals()[str(markup.profile_id) + '_signal']
+                    )
             elif param == 'CRL_NF':
-                if not str(markup.profile.id) + '_CRL_NF' in locals():
-                    locals()[str(markup.profile.id) + '_CRL_NF'] = calc_CRL(json.loads(
-                        session.query(Profile.signal).filter(Profile.id == markup.profile_id).first()[0]))
+                if not str(markup.profile_id) + '_CRL_NF' in locals():
+                    locals()[str(markup.profile_id) + '_CRL_NF'] = calc_CRL(
+                        locals()[str(markup.profile_id) + '_signal']
+                    )
             elif param == 'X':
-                locals()['list_X'] = json.loads(session.query(Profile.x_pulc).filter(
-                        Profile.id == markup.profile_id).first()[0])
+                locals()['list_X'] = profile_data_cache[(markup.profile_id, 'X')]
             elif param == 'Y':
-                locals()['list_Y'] = json.loads(session.query(Profile.y_pulc).filter(
-                        Profile.id == markup.profile_id).first()[0])
+                locals()['list_Y'] = profile_data_cache[(markup.profile_id, 'Y')]
             elif param.startswith('prof'):
                 if param[5:] in list_wavelet_features:
                     calc_wavelet_features_profile(markup.profile_id)
@@ -246,17 +392,17 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                     if param.startswith('Signal'):
                         # Обработка параметра 'Signal'
                         p, atr = param.split('_')[0], param.split('_')[1]
-                        sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                        sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_signal:
                                 dict_value[f'{p}_{atr}_{i_sig + 1}'] = sig_measure[i_sig]
                     elif param == 'CRL':
-                        sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                        sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_crl:
                                 dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
                     elif param == 'CRL_NF':
-                        sig_measure = locals()[str(markup.profile.id) + '_CRL_NF'][measure]
+                        sig_measure = locals()[str(markup.profile_id) + '_CRL_NF'][measure]
                         for i_sig in range(len(sig_measure)):
                             if i_sig + 1 not in list_except_crl:
                                 dict_value[f'{param}_{i_sig + 1}'] = sig_measure[i_sig]
@@ -264,9 +410,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'distr'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
                         distr = get_distribution(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = distr[num]
@@ -274,9 +420,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'sep'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
                         sep = get_interpolate_list(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = sep[num]
@@ -284,14 +430,14 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         # Обработка параметра 'mfcc'
                         p, atr, n = param.split('_')[0], param.split('_')[1], int(param.split('_')[2])
                         if atr == 'SigCRL':
-                            sig_measure = locals()[str(markup.profile.id) + '_CRL'][measure]
+                            sig_measure = locals()[str(markup.profile_id) + '_CRL'][measure]
                         else:
-                            sig_measure = calc_atrib_measure(locals()[str(markup.profile.id) + '_signal'][measure], atr)
+                            sig_measure = calc_atrib_measure(locals()[str(markup.profile_id) + '_signal'][measure], atr)
                         mfcc = get_mfcc(sig_measure[list_up[measure]: list_down[measure]], n)
                         for num in range(n):
                             dict_value[f'{p}_{atr}_{num + 1}'] = mfcc[num]
                     elif param.startswith('model_'):
-                        dict_value[param] = locals()[str(markup.profile.id) + '_' + param][measure]
+                        dict_value[param] = locals()[str(markup.profile_id) + '_' + param][measure]
                     else:
                         # Загрузка значения параметра из списка значений
                         dict_value[param] = locals()[f'list_{param}'][measure]
