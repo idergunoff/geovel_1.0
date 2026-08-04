@@ -49,6 +49,11 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         data_train = pd.DataFrame(columns=['prof_well_index', 'target_value'])
     else:
         data_train = pd.DataFrame(columns=['prof_well_index', 'mark'])
+    # Не расширяем DataFrame по одной строке: каждый pd.concat копирует уже
+    # собранную таблицу, из-за чего время сборки квадратично растёт с числом
+    # измерений. Сначала накапливаем записи как обычные словари, а DataFrame
+    # создаём одним вызовом после обработки всех разметок.
+    data_train_rows = []
     except_param = False
     # Получаем размеченные участки
     if analisis == 'mlp':
@@ -295,8 +300,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                 skipped_measurements.append((markup, measure, failed_param))
                 continue
 
-            # Добавление данных в обучающую выборку
-            data_train = pd.concat([data_train, pd.DataFrame([dict_value])], ignore_index=True)
+            data_train_rows.append(dict_value)
 
         ui.progressBar.setValue(nm + 1)
 
@@ -317,6 +321,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         )
         set_info(message.replace('\n', ' '), 'orange')
         QMessageBox.warning(MainWindow, 'Неполные данные обучающей выборки', message)
+
+    if data_train_rows:
+        data_train = pd.DataFrame.from_records(data_train_rows)
     # data_train_to_db = json.dumps(data_train.to_dict())
     p_sep = os.path.sep
     if analisis == 'mlp':
@@ -646,4 +653,3 @@ def calc_profile_model_predict(param, formation):
     session.add(new_prof_model_pred)
     session.commit()
     set_info(f'Результат расчета модели "{model.title}" для профиля {formation.profile.title} сохранен', 'green')
-
