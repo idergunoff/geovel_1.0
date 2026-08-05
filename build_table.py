@@ -484,8 +484,10 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     if skipped_measurements:
         examples = []
         for markup, measure, param in skipped_measurements[:10]:
+            profile_title = getattr(getattr(markup, 'profile', None), 'title', None) or f'id {markup.profile_id}'
+            well_name = getattr(getattr(markup, 'well', None), 'name', None) or f'id {markup.well_id}'
             examples.append(
-                f'профиль {markup.profile_id}, скважина {markup.well_id}, '
+                f'профиль {profile_title}, скважина {well_name}, '
                 f'измерение {measure}, параметр {param}'
             )
         extra = len(skipped_measurements) - len(examples)
