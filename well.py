@@ -7,7 +7,13 @@ from qt.add_well_dialog import *
 from qt.add_boundary_dialog import *
 from qt.well_loader import *
 from velocity_model import update_list_binding
-from well_import import is_confident_match, parse_number, rank_well_candidates
+from well_import import (
+    WellLookupIndex,
+    is_confident_match,
+    parse_number,
+    rank_well_candidates,
+    requires_confirmation,
+)
 
 
 def add_well():
@@ -178,6 +184,7 @@ def add_wells():
 
         # One initial read replaces database queries for every spreadsheet row.
         all_wells = session.query(Well).all()
+        well_index = WellLookupIndex(all_wells)
         all_options = session.query(WellOptionally).all()
         areas_by_well = {}
         option_keys = set()
@@ -213,10 +220,23 @@ def add_wells():
 
         n_new = n_update = n_skipped = 0
         errors = []
+        progress_step = max(1, row_count // 100)
+        ui.progressBar.setRange(0, row_count)
+        ui.progressBar.setValue(0)
+        ui.progressBar.setFormat('Загрузка скважин: %v из %m (%p%)')
+        print(f'[Импорт скважин] Начало: строк={row_count}, скважин в БД={len(all_wells)}', flush=True)
         try:
             for position, (_, row) in enumerate(pd_wells.iterrows(), start=1):
                 ui.progressBar.setValue(position)
-                QApplication.processEvents()
+                if position == 1 or position == row_count or position % progress_step == 0:
+                    ui.progressBar.repaint()
+                    QApplication.processEvents()
+                    percent = position * 100 / row_count if row_count else 100
+                    print(
+                        f'[Импорт скважин] {position}/{row_count} ({percent:5.1f}%): '
+                        f'добавлено={n_new}, обновлено={n_update}, пропущено={n_skipped}',
+                        flush=True,
+                    )
                 try:
                     name = str(row[name_cell]).strip()
                     if not name or name.casefold() == 'nan':
@@ -230,9 +250,20 @@ def add_wells():
                         if has_value(row[layer]):
                             parsed_layers[layer] = parse_number(row[layer], field=f'граница «{layer}»')
 
-                    candidates = rank_well_candidates(all_wells, name, x, y, area, areas_by_well)
-                    curr_well = candidates[0].well if candidates and is_confident_match(candidates[0]) else None
-                    if candidates and curr_well is None:
+                    possible_wells = well_index.candidates(name, x, y)
+                    candidates = rank_well_candidates(possible_wells, name, x, y, area, areas_by_well)
+                    curr_well = (
+                        candidates[0].well
+                        if candidates and is_confident_match(candidates[0], area)
+                        else None
+                    )
+                    if candidates and curr_well is None and requires_confirmation(candidates[0], area):
+                        print(
+                            f'[Импорт скважин] Строка {position + 1}: требуется решение пользователя; '
+                            f'«{name}» ↔ «{candidates[0].well.name}», расстояние '
+                            f'{candidates[0].distance:.1f} м',
+                            flush=True,
+                        )
                         decision = ask_about_candidate(name, x, y, area, candidates[0])
                         if decision == QMessageBox.Cancel:
                             n_skipped += 1
@@ -245,6 +276,7 @@ def add_wells():
                         session.add(curr_well)
                         session.flush()
                         all_wells.append(curr_well)
+                        well_index.add(curr_well)
                         n_new += 1
                     else:
                         curr_well.alt = alt
@@ -271,7 +303,9 @@ def add_wells():
                 except (TypeError, ValueError, OverflowError) as error:
                     n_skipped += 1
                     errors.append(f'строка {position + 1}: {error}')
+                    print(f'[Импорт скважин] Ошибка в строке {position + 1}: {error}', flush=True)
 
+            print('[Импорт скважин] Сохранение изменений в БД…', flush=True)
             session.commit()
         except Exception:
             session.rollback()
@@ -279,6 +313,8 @@ def add_wells():
 
         update_list_well(select_well=True)
         summary = f'Добавлено: {n_new}; обновлено: {n_update}; пропущено: {n_skipped}'
+        ui.progressBar.setValue(row_count)
+        print(f'[Импорт скважин] Завершено. {summary}', flush=True)
         set_info(summary, 'green' if not errors else 'rgb(188, 160, 3)')
         if errors:
             details = '\n'.join(errors[:20])

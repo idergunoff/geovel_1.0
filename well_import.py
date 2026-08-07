@@ -5,6 +5,7 @@ from datetime import date, datetime
 from difflib import SequenceMatcher
 import math
 import re
+from collections import defaultdict
 
 
 def parse_number(value, *, field="значение"):
@@ -55,6 +56,35 @@ class WellCandidate:
     score: float
 
 
+class WellLookupIndex:
+    """Small in-memory index that avoids comparing every imported row to every well."""
+
+    def __init__(self, wells=(), *, cell_size=100.0):
+        self.cell_size = cell_size
+        self._by_cell = defaultdict(list)
+        self._by_name = defaultdict(list)
+        for well in wells:
+            self.add(well)
+
+    def _cell(self, x, y):
+        return math.floor(x / self.cell_size), math.floor(y / self.cell_size)
+
+    def add(self, well):
+        self._by_name[normalize_text(well.name)].append(well)
+        if well.x_coord is not None and well.y_coord is not None:
+            self._by_cell[self._cell(well.x_coord, well.y_coord)].append(well)
+
+    def candidates(self, name, x, y):
+        """Return exact-name wells plus wells in neighbouring coordinate cells."""
+        result = {well.id: well for well in self._by_name.get(normalize_text(name), ())}
+        cell_x, cell_y = self._cell(x, y)
+        for offset_x in (-1, 0, 1):
+            for offset_y in (-1, 0, 1):
+                for well in self._by_cell.get((cell_x + offset_x, cell_y + offset_y), ()):
+                    result[well.id] = well
+        return result.values()
+
+
 def rank_well_candidates(wells, name, x, y, area="", areas_by_well=None, *, max_distance=100.0):
     """Rank plausible duplicates using number/name, area and nearby coordinates."""
     areas_by_well = areas_by_well or {}
@@ -82,6 +112,18 @@ def rank_well_candidates(wells, name, x, y, area="", areas_by_well=None, *, max_
     return sorted(ranked, key=lambda item: (-item.score, item.distance))
 
 
-def is_confident_match(candidate):
-    """Only suppress the question for an effectively certain duplicate."""
-    return candidate.distance <= 1.0 and candidate.name_similarity >= 0.98
+def other_fields_match(candidate, area=""):
+    """Check the well number/name and, when supplied, the area."""
+    return candidate.name_similarity >= 0.9 and (
+        not normalize_text(area) or candidate.area_similarity >= 0.8
+    )
+
+
+def is_confident_match(candidate, area=""):
+    """Matching fields and coordinates within 50 m are safe to merge automatically."""
+    return candidate.distance <= 50.0 and other_fields_match(candidate, area)
+
+
+def requires_confirmation(candidate, area=""):
+    """Ask the user only when other fields match but coordinates differ by over 50 m."""
+    return candidate.distance > 50.0 and other_fields_match(candidate, area)
