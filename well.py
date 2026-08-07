@@ -7,6 +7,13 @@ from qt.add_well_dialog import *
 from qt.add_boundary_dialog import *
 from qt.well_loader import *
 from velocity_model import update_list_binding
+from well_import import (
+    WellLookupIndex,
+    is_confident_match,
+    parse_number,
+    rank_well_candidates,
+    requires_confirmation,
+)
 
 
 def add_well():
@@ -163,127 +170,157 @@ def add_wells():
             ui_wl.lineEdit_opt.setText('/'.join(list_opt))
 
     def load_wells():
-        ui.progressBar.setMaximum(len(pd_wells.index))
+        row_count = len(pd_wells.index)
+        ui.progressBar.setMaximum(row_count)
         name_cell = ui_wl.comboBox_name.currentText()
         x_cell = ui_wl.comboBox_x.currentText()
         y_cell = ui_wl.comboBox_y.currentText()
         alt_cell = ui_wl.comboBox_alt.currentText()
-        empty_value = '' if ui_wl.lineEdit_empty.text() == '' else int(ui_wl.lineEdit_empty.text())
-        list_layers = [] if ui_wl.lineEdit_layers.text() == '' else ui_wl.lineEdit_layers.text().split('/')
-        list_opt = [] if ui_wl.lineEdit_opt.text() == '' else ui_wl.lineEdit_opt.text().split('/')
+        empty_text = ui_wl.lineEdit_empty.text().strip()
+        empty_value = None if not empty_text else empty_text
+        list_layers = [] if not ui_wl.lineEdit_layers.text() else ui_wl.lineEdit_layers.text().split('/')
+        list_opt = [] if not ui_wl.lineEdit_opt.text() else ui_wl.lineEdit_opt.text().split('/')
+        area_column = next((column for column in list_opt if 'площад' in column.casefold() or 'area' in column.casefold()), None)
 
-        distance_threshold = 5.0   # метры
-        name_ratio = 0.5           # доля совпадения названий
-        n_new, n_update = 0, 0
+        # One initial read replaces database queries for every spreadsheet row.
+        all_wells = session.query(Well).all()
+        well_index = WellLookupIndex(all_wells)
+        all_options = session.query(WellOptionally).all()
+        areas_by_well = {}
+        option_keys = set()
+        for option in all_options:
+            option_keys.add((option.well_id, option.option, option.value))
+            if 'площад' in option.option.casefold() or 'area' in option.option.casefold():
+                areas_by_well.setdefault(option.well_id, []).append(option.value)
+        boundary_keys = {
+            (boundary.well_id, boundary.title)
+            for boundary in session.query(Boundary).filter(Boundary.title.in_(list_layers)).all()
+        } if list_layers else set()
 
-        for i in pd_wells.index:
-            try:
-                name = str(pd_wells[name_cell][i])
-                x = float(process_string(pd_wells[x_cell][i]))
-                y = float(process_string(pd_wells[y_cell][i]))
-            except ValueError:
-                continue
+        def has_value(value):
+            if pd.isna(value):
+                return False
+            return empty_value is None or str(value).strip() != empty_value
 
-            # поиск кандидатов поблизости
-            candidates = session.query(Well).filter(
-                Well.x_coord.between(x - distance_threshold, x + distance_threshold),
-                Well.y_coord.between(y - distance_threshold, y + distance_threshold)
-            ).all()
+        def ask_about_candidate(imported_name, x, y, area, candidate):
+            well = candidate.well
+            area_line = f'\nПлощадь из файла: {area}' if area else ''
+            message = (
+                f'Возможный дубль скважины «{imported_name}» ({x:.2f}; {y:.2f}).{area_line}\n\n'
+                f'В базе: «{well.name}» ({well.x_coord:.2f}; {well.y_coord:.2f})\n'
+                f'Расстояние: {candidate.distance:.1f} м; сходство номера/названия: '
+                f'{candidate.name_similarity:.0%}; площади: {candidate.area_similarity:.0%}.\n\n'
+                'Обновить найденную скважину?\n'
+                '«Нет» — создать новую, «Отмена» — пропустить строку.'
+            )
+            return QMessageBox.question(
+                WellLoader, 'Проверка возможного дубля', message,
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, QMessageBox.Yes
+            )
 
-            curr_well = None
-            for cand in candidates:
-                dist = math.hypot((cand.x_coord or 0) - x, (cand.y_coord or 0) - y)
-                name_sim = SequenceMatcher(None, cand.name or "", name).ratio()
-                if dist <= distance_threshold and name_sim >= name_ratio:
-                    curr_well = cand
-                    break
-
-            if curr_well:
-                n_update += 1
-                set_info(f'Скважина {curr_well.name} уже есть в БД', 'red')
-                alt = 0 if pd_wells[alt_cell][i] == '' else float(process_string(pd_wells[alt_cell][i]))
-                session.query(Well).filter_by(id=curr_well.id).update(
-                    {'alt': alt},
-                    synchronize_session="fetch"
-                )
-                for lr in list_layers:
-                    try:
-                        if pd_wells[lr][i] != empty_value:
-                            bound = session.query(Boundary).filter(
-                                Boundary.well_id == curr_well.id,
-                                Boundary.title == str(lr)
-                            ).first()
-                            if not bound:
-                                if ui_wl.checkBox_deep.isChecked():
-                                    depth = round(float(process_string(pd_wells[lr][i])), 2)
-                                else:
-                                    depth = round(curr_well.alt - float(process_string(pd_wells[lr][i])), 2)
-                                session.add(Boundary(
-                                    well_id=curr_well.id,
-                                    depth=depth,
-                                    title=str(lr)
-                                ))
-                                session.commit()
-                    except ValueError:
-                        continue
-                for opt in list_opt:
-                    try:
-                        if pd_wells[opt][i] != empty_value:
-                            well_opt = session.query(WellOptionally).filter(
-                                WellOptionally.well_id == curr_well.id,
-                                WellOptionally.option == opt,
-                                WellOptionally.value == str(pd_wells[opt][i])
-                            ).first()
-                            if not well_opt:
-                                session.add(WellOptionally(
-                                    well_id=curr_well.id,
-                                    option=opt,
-                                    value=str(pd_wells[opt][i])
-                                ))
-                                session.commit()
-                    except ValueError:
-                        continue
-            else:
-                try:
-                    n_new += 1
-                    new_well = Well(
-                        name=name,
-                        x_coord=x,
-                        y_coord=y,
-                        alt=round(float(process_string(pd_wells[alt_cell][i])), 2),
+        n_new = n_update = n_skipped = 0
+        errors = []
+        progress_step = max(1, row_count // 100)
+        ui.progressBar.setRange(0, row_count)
+        ui.progressBar.setValue(0)
+        ui.progressBar.setFormat('Загрузка скважин: %v из %m (%p%)')
+        print(f'[Импорт скважин] Начало: строк={row_count}, скважин в БД={len(all_wells)}', flush=True)
+        try:
+            for position, (_, row) in enumerate(pd_wells.iterrows(), start=1):
+                ui.progressBar.setValue(position)
+                if position == 1 or position == row_count or position % progress_step == 0:
+                    ui.progressBar.repaint()
+                    QApplication.processEvents()
+                    percent = position * 100 / row_count if row_count else 100
+                    print(
+                        f'[Импорт скважин] {position}/{row_count} ({percent:5.1f}%): '
+                        f'добавлено={n_new}, обновлено={n_update}, пропущено={n_skipped}',
+                        flush=True,
                     )
-                    session.add(new_well)
-                    session.commit()
-                    for lr in list_layers:
-                        if pd_wells[lr][i] != empty_value:
-                            if ui_wl.checkBox_deep.isChecked():
-                                depth = round(float(process_string(pd_wells[lr][i])), 2)
-                            else:
-                                depth = round(new_well.alt - float(process_string(pd_wells[lr][i])), 2)
-                            session.add(Boundary(
-                                well_id=new_well.id,
-                                depth=depth,
-                                title=str(lr)
-                            ))
-                except ValueError:
-                    continue
-                for opt in list_opt:
-                    try:
-                        if pd_wells[opt][i] != empty_value:
-                            session.add(WellOptionally(
-                                well_id=new_well.id,
-                                option=opt,
-                                value=str(pd_wells[opt][i])
-                            ))
-                    except ValueError:
-                        continue
+                try:
+                    name = str(row[name_cell]).strip()
+                    if not name or name.casefold() == 'nan':
+                        raise ValueError('номер скважины: пустое значение')
+                    x = parse_number(row[x_cell], field='координата X')
+                    y = parse_number(row[y_cell], field='координата Y')
+                    alt = 0.0 if not has_value(row[alt_cell]) else round(parse_number(row[alt_cell], field='альтитуда'), 2)
+                    area = str(row[area_column]).strip() if area_column and has_value(row[area_column]) else ''
+                    parsed_layers = {}
+                    for layer in list_layers:
+                        if has_value(row[layer]):
+                            parsed_layers[layer] = parse_number(row[layer], field=f'граница «{layer}»')
 
+                    possible_wells = well_index.candidates(name, x, y)
+                    candidates = rank_well_candidates(possible_wells, name, x, y, area, areas_by_well)
+                    curr_well = (
+                        candidates[0].well
+                        if candidates and is_confident_match(candidates[0], area)
+                        else None
+                    )
+                    if candidates and curr_well is None and requires_confirmation(candidates[0], area):
+                        print(
+                            f'[Импорт скважин] Строка {position + 1}: требуется решение пользователя; '
+                            f'«{name}» ↔ «{candidates[0].well.name}», расстояние '
+                            f'{candidates[0].distance:.1f} м',
+                            flush=True,
+                        )
+                        decision = ask_about_candidate(name, x, y, area, candidates[0])
+                        if decision == QMessageBox.Cancel:
+                            n_skipped += 1
+                            continue
+                        if decision == QMessageBox.Yes:
+                            curr_well = candidates[0].well
+
+                    if curr_well is None:
+                        curr_well = Well(name=name, x_coord=x, y_coord=y, alt=alt)
+                        session.add(curr_well)
+                        session.flush()
+                        all_wells.append(curr_well)
+                        well_index.add(curr_well)
+                        n_new += 1
+                    else:
+                        curr_well.alt = alt
+                        n_update += 1
+
+                    for layer in list_layers:
+                        if layer not in parsed_layers or (curr_well.id, str(layer)) in boundary_keys:
+                            continue
+                        value = parsed_layers[layer]
+                        depth = round(value if ui_wl.checkBox_deep.isChecked() else curr_well.alt - value, 2)
+                        session.add(Boundary(well_id=curr_well.id, depth=depth, title=str(layer)))
+                        boundary_keys.add((curr_well.id, str(layer)))
+
+                    for option in list_opt:
+                        if not has_value(row[option]):
+                            continue
+                        value = str(row[option])
+                        key = (curr_well.id, option, value)
+                        if key not in option_keys:
+                            session.add(WellOptionally(well_id=curr_well.id, option=option, value=value))
+                            option_keys.add(key)
+                            if 'площад' in option.casefold() or 'area' in option.casefold():
+                                areas_by_well.setdefault(curr_well.id, []).append(value)
+                except (TypeError, ValueError, OverflowError) as error:
+                    n_skipped += 1
+                    errors.append(f'строка {position + 1}: {error}')
+                    print(f'[Импорт скважин] Ошибка в строке {position + 1}: {error}', flush=True)
+
+            print('[Импорт скважин] Сохранение изменений в БД…', flush=True)
             session.commit()
-            ui.progressBar.setValue(i + 1)
+        except Exception:
+            session.rollback()
+            raise
 
-        session.commit()
         update_list_well(select_well=True)
-        set_info(f'Добавлено {n_new} скважин, обновлено {n_update} скважин', 'green')
+        summary = f'Добавлено: {n_new}; обновлено: {n_update}; пропущено: {n_skipped}'
+        ui.progressBar.setValue(row_count)
+        print(f'[Импорт скважин] Завершено. {summary}', flush=True)
+        set_info(summary, 'green' if not errors else 'rgb(188, 160, 3)')
+        if errors:
+            details = '\n'.join(errors[:20])
+            if len(errors) > 20:
+                details += f'\n… и ещё {len(errors) - 20}'
+            QMessageBox.warning(WellLoader, 'Загрузка завершена с замечаниями', f'{summary}\n\n{details}')
 
     def cancel_load():
         WellLoader.close()
