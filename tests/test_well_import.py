@@ -40,6 +40,7 @@ def test_candidate_ranking_combines_name_area_and_coordinate_tolerance():
     assert [item.well.id for item in ranked] == [1]
     assert ranked[0].distance == 5
     assert ranked[0].area_similarity > 0.7
+    assert ranked[0].matched_area == "пл. Северная"
     assert is_confident_match(ranked[0], "Северная площадь")
 
 

@@ -53,6 +53,7 @@ class WellCandidate:
     distance: float
     name_similarity: float
     area_similarity: float
+    matched_area: str
     score: float
 
 
@@ -94,10 +95,11 @@ def rank_well_candidates(wells, name, x, y, area="", areas_by_well=None, *, max_
             continue
         distance = math.hypot(well.x_coord - x, well.y_coord - y)
         name_similarity = text_similarity(well.name, name)
-        area_similarity = max(
-            (text_similarity(candidate_area, area) for candidate_area in areas_by_well.get(well.id, ())),
-            default=0.0,
-        )
+        area_matches = [
+            (text_similarity(candidate_area, area), candidate_area)
+            for candidate_area in areas_by_well.get(well.id, ())
+        ]
+        area_similarity, matched_area = max(area_matches, default=(0.0, ""), key=lambda item: item[0])
         # Do not show unrelated records. A number match may compensate for
         # shifted coordinates; close coordinates may compensate for spelling.
         if distance > max_distance and name_similarity < 0.9:
@@ -108,7 +110,7 @@ def rank_well_candidates(wells, name, x, y, area="", areas_by_well=None, *, max_
             available.append((area_similarity, 0.15))
         score = sum(value * weight for value, weight in available) / sum(weight for _, weight in available)
         if score >= 0.45:
-            ranked.append(WellCandidate(well, distance, name_similarity, area_similarity, score))
+            ranked.append(WellCandidate(well, distance, name_similarity, area_similarity, matched_area, score))
     return sorted(ranked, key=lambda item: (-item.score, item.distance))
 
 

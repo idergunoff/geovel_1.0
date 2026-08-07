@@ -13,6 +13,7 @@ from well_import import (
     parse_number,
     rank_well_candidates,
     requires_confirmation,
+    normalize_text,
 )
 
 
@@ -204,7 +205,14 @@ def add_wells():
 
         def ask_about_candidate(imported_name, x, y, area, candidate):
             well = candidate.well
-            area_line = f'\nПлощадь из файла: {area}' if area else ''
+            if area:
+                database_area = candidate.matched_area or 'не указана'
+                area_line = (
+                    f'\nПлощадь из файла: «{area}»'
+                    f'\nПлощадь в базе: «{database_area}»'
+                )
+            else:
+                area_line = '\nПлощадь из файла: не указана'
             message = (
                 f'Возможный дубль скважины «{imported_name}» ({x:.2f}; {y:.2f}).{area_line}\n\n'
                 f'В базе: «{well.name}» ({well.x_coord:.2f}; {well.y_coord:.2f})\n'
@@ -213,13 +221,23 @@ def add_wells():
                 'Обновить найденную скважину?\n'
                 '«Нет» — создать новую, «Отмена» — пропустить строку.'
             )
-            return QMessageBox.question(
-                WellLoader, 'Проверка возможного дубля', message,
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, QMessageBox.Yes
+            dialog = QMessageBox(WellLoader)
+            dialog.setWindowTitle('Проверка возможного дубля')
+            dialog.setIcon(QMessageBox.Question)
+            dialog.setText(message)
+            dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            dialog.setDefaultButton(QMessageBox.Yes)
+            apply_to_area = QtWidgets.QCheckBox(
+                f'Применить это решение ко всем скважинам площади «{area}»'
             )
+            apply_to_area.setEnabled(bool(area))
+            dialog.setCheckBox(apply_to_area)
+            decision = dialog.exec_()
+            return decision, apply_to_area.isChecked() and bool(area)
 
         n_new = n_update = n_skipped = 0
         errors = []
+        area_decisions = {}
         progress_step = max(1, row_count // 100)
         ui.progressBar.setRange(0, row_count)
         ui.progressBar.setValue(0)
@@ -264,7 +282,18 @@ def add_wells():
                             f'{candidates[0].distance:.1f} м',
                             flush=True,
                         )
-                        decision = ask_about_candidate(name, x, y, area, candidates[0])
+                        area_key = normalize_text(area)
+                        decision = area_decisions.get(area_key) if area_key else None
+                        if decision is not None:
+                            print(
+                                f'[Импорт скважин] Строка {position + 1}: для площади «{area}» '
+                                f'автоматически применено ранее выбранное решение',
+                                flush=True,
+                            )
+                        else:
+                            decision, apply_to_area = ask_about_candidate(name, x, y, area, candidates[0])
+                            if apply_to_area and decision in (QMessageBox.Yes, QMessageBox.No):
+                                area_decisions[area_key] = decision
                         if decision == QMessageBox.Cancel:
                             n_skipped += 1
                             continue
