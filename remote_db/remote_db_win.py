@@ -1586,7 +1586,10 @@ def open_rem_db_window():
 
     def remove_duplicate_wells():
         with get_session() as remote_session:
-            deduplicate_wells(remote_session)
+            deduplicate_wells(
+                remote_session,
+                distance_threshold=ui.spinBox_well_distance.value(),
+            )
         ui_rdb.label_wells.setText(f'Wells: {ui_rdb.listWidget_wells.count()}')
         update_list_well_rdb()
 
