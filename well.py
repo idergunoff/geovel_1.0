@@ -942,7 +942,12 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
 
 
 def remove_duplicate_wells():
-    deduplicate_wells(session)
+    # Используем тот же порог, который пользователь задаёт в поле
+    # «max distance, m» на вкладке скважин.
+    deduplicate_wells(
+        session,
+        distance_threshold=ui.spinBox_well_distance.value(),
+    )
 
 
 def find_nearest_profiles(well_id: int, max_distance: float) -> dict[int, float]:
