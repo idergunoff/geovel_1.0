@@ -1,5 +1,6 @@
 import numpy as np
 from PyQt5.QtWidgets import QListWidget
+from sqlalchemy.orm import selectinload
 
 from func import *
 from monitoring import update_list_h_well
@@ -15,6 +16,7 @@ from well_import import (
     requires_confirmation,
     normalize_text,
 )
+from well_deduplication import build_spatial_index, nearby_wells
 
 
 def add_well():
@@ -829,8 +831,17 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
         distance_threshold – максимально допустимое расстояние между координатами (метры);
         name_ratio         – минимальная доля совпадения названий (0..1).
     """
-    wells = session.query(Well).order_by(Well.id).all()  # все скважины по возрастанию id
+    # Загружаем зависимости пакетами: без этого обращение к пяти relationship в
+    # цикле порождает несколько дополнительных SELECT на каждую скважину.
+    wells = (session.query(Well).options(
+        selectinload(Well.boundaries),
+        selectinload(Well.well_optionally),
+        selectinload(Well.well_logs),
+        selectinload(Well.markups_mlp),
+        selectinload(Well.markups_reg),
+    ).order_by(Well.id).all())
     removed_ids = set()                                  # id скважин, помеченных на удаление
+    spatial_index, cell_size = build_spatial_index(wells, distance_threshold)
 
     # Счётчики для итоговой статистики
     processed = duplicates = 0
@@ -843,8 +854,10 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
         if well.id in removed_ids:                       # пропускаем уже удалённые
             continue
 
-        for other in wells:
-            if other.id in removed_ids or other.id <= well.id:
+        # Пространственная сетка заменяет полный O(n²)-перебор проверкой только
+        # текущей и соседних ячеек размером distance_threshold.
+        for other in nearby_wells(well, spatial_index, cell_size, distance_threshold):
+            if other.id in removed_ids:
                 continue
 
             # Расстояние между координатами
@@ -865,48 +878,49 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
                         boundary_moved += 1
 
                 # --- WellOptionally ---
+                optional_keys = {(o.option, o.value) for o in well.well_optionally}
                 for opt in list(other.well_optionally):
-                    if not any(opt.option == o.option and opt.value == o.value
-                               for o in well.well_optionally):
+                    key = (opt.option, opt.value)
+                    if key not in optional_keys:
                         opt.well = well
+                        optional_keys.add(key)
                         optional_moved += 1
 
                 # --- WellLog ---
+                log_keys = {log.curve_name for log in well.well_logs}
                 for log in list(other.well_logs):
-                    if not any(log.curve_name == l.curve_name for l in well.well_logs):
+                    if log.curve_name not in log_keys:
                         log.well = well
+                        log_keys.add(log.curve_name)
                         logs_moved += 1
 
                 # --- MarkupMLP ---
+                mlp_keys = {(m.analysis_id, m.profile_id, m.formation_id, m.type_markup)
+                            for m in well.markups_mlp}
                 for m in list(other.markups_mlp):
-                    if not any(
-                        m.analysis_id == ex.analysis_id and
-                        m.profile_id == ex.profile_id and
-                        m.formation_id == ex.formation_id and
-                        m.type_markup == ex.type_markup
-                        for ex in well.markups_mlp
-                    ):
+                    key = (m.analysis_id, m.profile_id, m.formation_id, m.type_markup)
+                    if key not in mlp_keys:
                         m.well = well
+                        mlp_keys.add(key)
                         mlp_moved += 1
 
                 # --- MarkupReg ---
+                reg_keys = {(m.analysis_id, m.profile_id, m.formation_id, m.type_markup)
+                            for m in well.markups_reg}
                 for m in list(other.markups_reg):
-                    if not any(
-                        m.analysis_id == ex.analysis_id and
-                        m.profile_id == ex.profile_id and
-                        m.formation_id == ex.formation_id and
-                        m.type_markup == ex.type_markup
-                        for ex in well.markups_reg
-                    ):
+                    key = (m.analysis_id, m.profile_id, m.formation_id, m.type_markup)
+                    if key not in reg_keys:
                         m.well = well
+                        reg_keys.add(key)
                         reg_moved += 1
 
                 removed_ids.add(other.id)                # помечаем дубликат
                 session.delete(other)                    # удаляем из сессии
 
-        # Промежуточный коммит и отчёт каждые 500 скважин
+        # flush сохраняет размер транзакции управляемым, но, в отличие от commit,
+        # не инвалидирует уже загруженные ORM-объекты и их relationship.
         if processed % 500 == 0:
-            session.commit()
+            session.flush()
             summary = (
                 f"Обработано {processed} скважин, найдено {duplicates} дублей; "
                 f"Boundary: {boundary_moved}, WellOptionally: {optional_moved}, "
@@ -928,7 +942,12 @@ def deduplicate_wells(session, distance_threshold: float = 5.0,
 
 
 def remove_duplicate_wells():
-    deduplicate_wells(session)
+    # Используем тот же порог, который пользователь задаёт в поле
+    # «max distance, m» на вкладке скважин.
+    deduplicate_wells(
+        session,
+        distance_threshold=ui.spinBox_well_distance.value(),
+    )
 
 
 def find_nearest_profiles(well_id: int, max_distance: float) -> dict[int, float]:
