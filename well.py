@@ -1,5 +1,4 @@
 import numpy as np
-from PyQt5.QtWidgets import QListWidget
 from sqlalchemy.orm import selectinload
 
 from func import *
@@ -51,28 +50,19 @@ def add_well():
 
 
 def search_well():
-    """Фильтрация скважин с подсветкой и автопрокруткой к первому совпадению"""
-    search_text = ui.lineEdit_well_search.text().lower().strip()
-    first_match = None  # Для хранения первого совпадения
+    """Оставить в списке скважины, содержащие введённый текст."""
+    search_text = ui.lineEdit_well_search.text().strip().casefold()
 
     ui.listWidget_well.setUpdatesEnabled(False)
     try:
         for i in range(ui.listWidget_well.count()):
             item = ui.listWidget_well.item(i)
-            item_text = item.text().split(' id')[0].lower()
-            matches = search_text in item_text if search_text else False
+            item_text = item.text().split(' id')[0].casefold()
+            item.setHidden(bool(search_text) and search_text not in item_text)
 
-            # Запоминаем первое совпадение
-            if matches and first_match is None:
-                first_match = item
-
-        # Прокручиваем к первому совпадению
-        if first_match:
-            ui.listWidget_well.scrollToItem(
-                first_match,
-                QListWidget.PositionAtTop  # Прокрутить чтобы элемент был сверху
-            )
-            ui.listWidget_well.setCurrentItem(first_match)  # Опционально: выделить элемент
+        current_item = ui.listWidget_well.currentItem()
+        if current_item is not None and current_item.isHidden():
+            ui.listWidget_well.setCurrentItem(None)
     finally:
         ui.listWidget_well.setUpdatesEnabled(True)
 
