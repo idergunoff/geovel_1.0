@@ -887,7 +887,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if type_case == 'georadar':
             save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save, ui_cls)
         if type_case == 'geochem':
-            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param_save, data_train)
+            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train)
 
 
     def build_pipeline(markup_train, training_sample_train):
