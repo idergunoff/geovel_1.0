@@ -1,7 +1,6 @@
 import pylab as p
 from numba.np.ufunc.workqueue import synchronize
 from psycopg2 import OperationalError
-from PyQt5.QtWidgets import QListWidget
 import hashlib
 
 from remote_db.sync_wells import *
@@ -1497,34 +1496,19 @@ def open_rem_db_window():
                     set_info(f'Ошибка при удалении: {str(e)}', 'red')
 
     def filter_wells():
-        """Фильтрация с подсветкой и автопрокруткой к первому совпадению"""
-        search_text = ui_rdb.lineEdit_well_search.text().lower().strip()
-        first_match = None  # Для хранения первого совпадения
+        """Оставить в списке скважины, содержащие введённый текст."""
+        search_text = ui_rdb.lineEdit_well_search.text().strip().casefold()
 
         ui_rdb.listWidget_wells.setUpdatesEnabled(False)
         try:
-            highlight_brush = QBrush(QColor(230, 255, 230))  # Cветло-зеленый фон
-            default_brush = QBrush(QColor(255, 255, 255))  # Белый фон
-
             for i in range(ui_rdb.listWidget_wells.count()):
                 item = ui_rdb.listWidget_wells.item(i)
-                item_text = item.text().lower()
-                matches = search_text in item_text if search_text else False
+                item_text = item.text().casefold()
+                item.setHidden(bool(search_text) and search_text not in item_text)
 
-                # Визуальное выделение
-                item.setBackground(highlight_brush if matches else default_brush)
-
-                # Запоминаем первое совпадение
-                if matches and first_match is None:
-                    first_match = item
-
-            # Прокручиваем к первому совпадению
-            if first_match:
-                ui_rdb.listWidget_wells.scrollToItem(
-                    first_match,
-                    QListWidget.PositionAtTop  # Прокрутить чтобы элемент был сверху
-                )
-                ui_rdb.listWidget_wells.setCurrentItem(first_match)  # Опционально: выделить элемент
+            current_item = ui_rdb.listWidget_wells.currentItem()
+            if current_item is not None and current_item.isHidden():
+                ui_rdb.listWidget_wells.setCurrentItem(None)
         finally:
             ui_rdb.listWidget_wells.setUpdatesEnabled(True)
 
