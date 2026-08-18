@@ -2079,13 +2079,13 @@
                   </item>
                   <item row="0" column="1">
                    <layout class="QGridLayout" name="gridLayout_160">
-                    <item row="0" column="0">
-                     <widget class="QPushButton" name="pushButton_model_pred_rmv">
+                    <item row="2" column="0">
+                     <widget class="QPushButton" name="pushButton_save_excel_predict">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 153, 153);</string>
+                       <string notr="true">background-color: rgb(153, 193, 241);</string>
                       </property>
                       <property name="text">
-                       <string>remove</string>
+                       <string>excel</string>
                       </property>
                      </widget>
                     </item>
@@ -2099,16 +2099,6 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="2" column="0">
-                     <widget class="QPushButton" name="pushButton_save_excel_predict">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(153, 193, 241);</string>
-                      </property>
-                      <property name="text">
-                       <string>excel</string>
-                      </property>
-                     </widget>
-                    </item>
                     <item row="3" column="0">
                      <widget class="QPushButton" name="pushButton_correct_predict">
                       <property name="styleSheet">
@@ -2116,6 +2106,16 @@
                       </property>
                       <property name="text">
                        <string>correct</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="0">
+                     <widget class="QPushButton" name="pushButton_model_pred_rmv">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 153, 153);</string>
+                      </property>
+                      <property name="text">
+                       <string>remove</string>
                       </property>
                      </widget>
                     </item>
@@ -2131,7 +2131,7 @@
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0,0,0,0">
+                 <layout class="QGridLayout" name="gridLayout_156" columnstretch="1,0,0,0,0,0">
                   <item row="0" column="2">
                    <widget class="QCheckBox" name="checkBox_corr_pred">
                     <property name="text">
@@ -2139,17 +2139,23 @@
                     </property>
                    </widget>
                   </item>
+                  <item row="0" column="1">
+                   <widget class="QToolButton" name="toolButton_check_uf">
+                    <property name="toolTip">
+                     <string>check uf</string>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: rgb(5, 244, 215);</string>
+                    </property>
+                    <property name="text">
+                     <string>?</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="4">
                    <widget class="QCheckBox" name="checkBox_use_land">
                     <property name="text">
                      <string>land</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="QCheckBox" name="checkBox_filter_cls">
-                    <property name="text">
-                     <string>filter cls</string>
                     </property>
                    </widget>
                   </item>
@@ -2169,16 +2175,23 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1">
-                   <widget class="QToolButton" name="toolButton_check_uf">
+                  <item row="0" column="3">
+                   <widget class="QCheckBox" name="checkBox_filter_cls">
+                    <property name="text">
+                     <string>filter cls</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="5">
+                   <widget class="QPushButton" name="pushButton_unite_object">
                     <property name="toolTip">
-                     <string>check uf</string>
+                     <string>Собрать несколько объектов для построения</string>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(5, 244, 215);</string>
+                     <string notr="true">background-color: rgb(255, 174, 101);</string>
                     </property>
                     <property name="text">
-                     <string>?</string>
+                     <string>unite</string>
                     </property>
                    </widget>
                   </item>
@@ -7035,9 +7048,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_4"/>
-  <buttongroup name="buttonGroup_3"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup_4"/>
+  <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>

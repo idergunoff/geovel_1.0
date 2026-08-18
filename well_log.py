@@ -912,7 +912,11 @@ def show_well_log():
                                 print(f'AttributeError {wl.well_id}')
                                 continue
                         median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
-                        print(well.name, bound.depth, median_value)
+                        try:
+                            print(well.name, bound.depth, median_value)
+                        except AttributeError:
+                            print(f'AttributeError name{wl.well_id}')
+                            continue
                         if median_value:
                             list_well_name.append(well.name)
                             list_x.append(well.x_coord)
@@ -957,7 +961,10 @@ def show_well_log():
                             if well.x_coord < min_x or well.x_coord > max_x or well.y_coord < min_y or well.y_coord > max_y:
                                 continue
                         median_value = get_median_value_from_interval(wl.id, bound.depth, value_int)
-                        print(well.name, bound.depth, median_value)
+                        try:
+                            print(well.name, bound.depth, median_value)
+                        except AttributeError:
+                            continue
                         if median_value:
                             list_for_pd.append([well.name, well.x_coord, well.y_coord, median_value])
 
