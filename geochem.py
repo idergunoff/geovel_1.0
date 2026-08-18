@@ -9,6 +9,7 @@ from scipy import stats
 
 from func import *
 from classification_func import train_classifier
+from geochem_preprocessing import transform_components
 from krige import draw_map
 from qt.mask_info_form import Ui_Form_Mask_Info
 
@@ -490,18 +491,13 @@ def tsne_geochem():
         data_plot_new = data_plot_new.drop(list_drop_param, axis=1)
 
         try:
-            data_tsne = data_plot_new.drop(['well', 'point', 'color'], axis=1)
-            if ui_tsne.checkBox_log.isChecked():
-                data_tsne = np.log10(data_tsne)
-            if ui_tsne.checkBox_power_trans.isChecked():
-                power_t = PowerTransformer(method='yeo-johnson', standardize=False)
-                data_tsne = power_t.fit_transform(data_tsne)
-            if ui_tsne.checkBox_norm_l1.isChecked():
-                norm_l1 = Normalizer(norm='l1')
-                data_tsne = norm_l1.fit_transform(data_tsne)
-            if ui_tsne.checkBox_standart.isChecked():
-                scaler = StandardScaler()
-                data_tsne = scaler.fit_transform(data_tsne)
+            data_tsne = transform_components(
+                data_plot_new.drop(['well', 'point', 'color'], axis=1),
+                logarithm=ui_tsne.checkBox_log.isChecked(),
+                power_transform=ui_tsne.checkBox_power_trans.isChecked(),
+                normalize_l1=ui_tsne.checkBox_norm_l1.isChecked(),
+                standardize=ui_tsne.checkBox_standart.isChecked(),
+            )
 
             name_graph = ''
             if ui_tsne.radioButton_tsne.isChecked():
@@ -587,37 +583,19 @@ def tsne_geochem():
 
             data_plot_new.reset_index(inplace=True, drop=True)
 
-            # Список столбцов, которые нужно исключить из преобразований
-            exclude_cols = ['well', 'point', 'color']
+            selected_params = get_list_check_checkbox(ui_tsne.listWidget_check_param)
+            # Нормируем только выбранные компоненты: при изменении маски сумма
+            # должна быть пересчитана по новому набору.
+            data_numeric = data_plot_new[selected_params]
+            data_numeric = transform_components(
+                data_numeric,
+                logarithm=ui_tsne.checkBox_log.isChecked(),
+                power_transform=ui_tsne.checkBox_power_trans.isChecked(),
+                normalize_l1=ui_tsne.checkBox_norm_l1.isChecked(),
+                standardize=ui_tsne.checkBox_standart.isChecked(),
+            )
 
-            # Разделяем данные на столбцы для преобразования и исключённые
-            data_numeric = data_plot_new.drop(columns=exclude_cols)
-            data_meta = data_plot_new[exclude_cols].copy()
-
-            # Применяем преобразования только к числовым столбцам
-            if ui_tsne.checkBox_log.isChecked():
-                data_numeric = np.log10(data_numeric)
-
-            if ui_tsne.checkBox_power_trans.isChecked():
-                power_t = PowerTransformer(method='yeo-johnson', standardize=False)
-                data_numeric = power_t.fit_transform(data_numeric)
-                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                            index=data_plot_new.index)
-
-            if ui_tsne.checkBox_norm_l1.isChecked():
-                norm_l1 = Normalizer(norm='l1')
-                data_numeric = norm_l1.fit_transform(data_numeric)
-                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                            index=data_plot_new.index)
-
-            if ui_tsne.checkBox_standart.isChecked():
-                scaler = StandardScaler()
-                data_numeric = scaler.fit_transform(data_numeric)
-                data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                            index=data_plot_new.index)
-
-            # Объединяем обратно
-            data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+            data_plot_new.loc[:, selected_params] = data_numeric
 
             if ui_tsne.listWidget_param.currentItem():
                 param = ui_tsne.listWidget_param.currentItem().text()
@@ -1731,36 +1709,17 @@ def draw_point_graph():
 
     def calc_mean_well(well_name: str, list_param: list, list_point: list):
 
-        # Список столбцов, которые нужно исключить из преобразований
-        exclude_cols = ['well', 'point', 'color']
-
         data_plot_new = data_plot.copy()
 
-        # Разделяем данные на столбцы для преобразования и исключённые
-        data_numeric = data_plot_new.drop(columns=exclude_cols)
-        data_meta = data_plot_new[exclude_cols].copy()
-
-        # Применяем преобразования только к числовым столбцам
-        if ui_pg.checkBox_power_trans.isChecked():
-            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
-            data_numeric = power_t.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_norm_l1.isChecked():
-            norm_l1 = Normalizer(norm='l1')
-            data_numeric = norm_l1.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_standart.isChecked():
-            scaler = StandardScaler()
-            data_numeric = scaler.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        # Объединяем обратно
-        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+        # Все преобразования, включая L1, считаются по текущему набору
+        # компонентов, а не по скрытым столбцам исходной таблицы.
+        data_numeric = transform_components(
+            data_plot_new[list_param],
+            power_transform=ui_pg.checkBox_power_trans.isChecked(),
+            normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            standardize=ui_pg.checkBox_standart.isChecked(),
+        )
+        data_plot_new.loc[:, list_param] = data_numeric
 
         if ui_pg.checkBox_only_check.isChecked():
             data_mean = data_plot_new.loc[(data_plot_new['well'] == well_name) & (data_plot_new['point'].isin(list_point))][list_param]
@@ -1776,36 +1735,17 @@ def draw_point_graph():
 
     def calc_conf_interval_well(well_name: str, list_param: list):
 
-        # Список столбцов, которые нужно исключить из преобразований
-        exclude_cols = ['well', 'point', 'color']
-
         data_plot_new = data_plot.copy()
 
-        # Разделяем данные на столбцы для преобразования и исключённые
-        data_numeric = data_plot_new.drop(columns=exclude_cols)
-        data_meta = data_plot_new[exclude_cols].copy()
-
-        # Применяем преобразования только к числовым столбцам
-        if ui_pg.checkBox_power_trans.isChecked():
-            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
-            data_numeric = power_t.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_norm_l1.isChecked():
-            norm_l1 = Normalizer(norm='l1')
-            data_numeric = norm_l1.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_standart.isChecked():
-            scaler = StandardScaler()
-            data_numeric = scaler.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        # Объединяем обратно
-        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+        # Все преобразования, включая L1, считаются по текущему набору
+        # компонентов, а не по скрытым столбцам исходной таблицы.
+        data_numeric = transform_components(
+            data_plot_new[list_param],
+            power_transform=ui_pg.checkBox_power_trans.isChecked(),
+            normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            standardize=ui_pg.checkBox_standart.isChecked(),
+        )
+        data_plot_new.loc[:, list_param] = data_numeric
 
         data_mean =  data_plot_new.loc[data_plot_new['well'] == well_name][list_param]
         list_conf_top, list_conf_bottom = [], []
@@ -1910,36 +1850,17 @@ def draw_point_graph():
         list_param = get_list_check_checkbox(ui_pg.listWidget_param)
         list_well_graph = get_list_check_checkbox(ui_pg.listWidget_well_graph)
 
-        # Список столбцов, которые нужно исключить из преобразований
-        exclude_cols = ['well', 'point', 'color']
-
         data_plot_new = data_plot.copy()
 
-        # Разделяем данные на столбцы для преобразования и исключённые
-        data_numeric = data_plot_new.drop(columns=exclude_cols)
-        data_meta = data_plot_new[exclude_cols].copy()
-
-        # Применяем преобразования только к числовым столбцам
-        if ui_pg.checkBox_power_trans.isChecked():
-            power_t = PowerTransformer(method='yeo-johnson', standardize=False)
-            data_numeric = power_t.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_norm_l1.isChecked():
-            norm_l1 = Normalizer(norm='l1')
-            data_numeric = norm_l1.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        if ui_pg.checkBox_standart.isChecked():
-            scaler = StandardScaler()
-            data_numeric = scaler.fit_transform(data_numeric)
-            data_numeric = pd.DataFrame(data_numeric, columns=data_plot_new.drop(columns=exclude_cols).columns,
-                                        index=data_plot_new.index)
-
-        # Объединяем обратно
-        data_plot_new = pd.concat([data_numeric, data_meta], axis=1)
+        # Все преобразования, включая L1, считаются по текущему набору
+        # компонентов, а не по скрытым столбцам исходной таблицы.
+        data_numeric = transform_components(
+            data_plot_new[list_param],
+            power_transform=ui_pg.checkBox_power_trans.isChecked(),
+            normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            standardize=ui_pg.checkBox_standart.isChecked(),
+        )
+        data_plot_new.loc[:, list_param] = data_numeric
 
         # Рисуем на существующих осях
         if not ui_pg.checkBox_only_mean.isChecked():
@@ -2525,9 +2446,6 @@ def clear_fake_point():
     session.query(GeochemPoint).filter_by(geochem_id=get_geochem_id()).update({'fake': False}, synchronize_session='fetch')
     session.commit()
     update_listwidget_geochem_point()
-
-
-
 
 
 
