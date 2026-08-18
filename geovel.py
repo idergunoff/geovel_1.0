@@ -31,6 +31,7 @@ from slice import *
 from calc_object_models import *
 from cluster import *
 from ml_clutter_experiment import MLClutterExperimentWindow
+from unite_objects import open_unite_objects_dialog
 
 MainWindow.show()
 
@@ -596,6 +597,7 @@ ui.pushButton_add_predict_mlp.clicked.connect(add_predict_mlp)
 ui.pushButton_add_predict_reg.clicked.connect(add_predict_reg)
 ui.pushButton_draw_predict.clicked.connect(draw_profile_model_predict)
 ui.pushButton_save_excel_predict.clicked.connect(save_excel_profile_model_predict)
+ui.pushButton_unite_object.clicked.connect(open_unite_objects_dialog)
 ui.pushButton_correct_predict.clicked.connect(correct_profile_model_predict)
 ui.checkBox_corr_pred.clicked.connect(draw_profile_model_prediction)
 ui.checkBox_corr_pred.stateChanged.connect(draw_profile_model_prediction)
