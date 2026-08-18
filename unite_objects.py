@@ -51,8 +51,10 @@ class UniteObjectsDialog(QtWidgets.QDialog):
         self.clear_button.clicked.connect(self.clear_profiles)
         self.draw_button.clicked.connect(self.draw)
         self.excel_button.clicked.connect(self.export_excel)
+        ui.listWidget_model_pred.currentItemChanged.connect(self.refresh_model_label)
 
-    def refresh_model_label(self):
+    def refresh_model_label(self, *_):
+        """Keep the caption synchronized with the Model Prediction selection."""
         item = ui.listWidget_model_pred.currentItem()
         text = item.text().rsplit(" id", 1)[0] if item else "не выбрана"
         self.model_label.setText(f"Выбранная модель: <b>{text}</b>")
