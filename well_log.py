@@ -12,6 +12,11 @@ from canonical_well_log_service import (
     remove_alias_from_canonical,
     resolve_canonical,
 )
+from canonical_name_service import (
+    BOUNDARIES, WELL_DATA, CanonicalNameError, add_alias, create_canonical,
+    delete_canonical, list_aliases, list_canonicals, list_source_names,
+    remove_alias, wells_for_name,
+)
 from filter_well import get_names_boundary
 from func import *
 from krige import draw_map
@@ -22,14 +27,19 @@ from well import show_data_well
 def show_canonical_aliases_manager():
     """Открывает модальную форму управления canonical/alias из раздела скважин."""
     dialog = QtWidgets.QDialog(MainWindow)
-    dialog.setWindowTitle('Управление canonical/alias каротажа')
+    dialog.setWindowTitle('Управление каноническими названиями и алиасами')
     dialog.setModal(False)
     dialog.setWindowModality(Qt.NonModal)
     dialog.setAttribute(Qt.WA_DeleteOnClose)
 
     root_layout = QtWidgets.QVBoxLayout(dialog)
+    tabs = QtWidgets.QTabWidget()
+    root_layout.addWidget(tabs)
+    log_page = QtWidgets.QWidget()
+    tabs.addTab(log_page, 'Каротаж')
+    log_layout = QtWidgets.QVBoxLayout(log_page)
     content_layout = QtWidgets.QHBoxLayout()
-    root_layout.addLayout(content_layout)
+    log_layout.addLayout(content_layout)
 
     canonical_box = QtWidgets.QGroupBox('Канонические названия')
     canonical_layout = QtWidgets.QVBoxLayout(canonical_box)
@@ -92,6 +102,165 @@ def show_canonical_aliases_manager():
     content_layout.addWidget(alias_box, 1)
     content_layout.addWidget(curves_box, 1)
     content_layout.addWidget(wells_box, 1)
+
+    def add_universal_tab(title, kind, source_title):
+        page = QtWidgets.QWidget()
+        tabs.addTab(page, title)
+        layout = QtWidgets.QHBoxLayout(page)
+
+        canonical_group = QtWidgets.QGroupBox('Канонические названия')
+        canonical_layout = QtWidgets.QVBoxLayout(canonical_group)
+        canonical_names = QtWidgets.QListWidget()
+        canonical_layout.addWidget(canonical_names)
+        canonical_input = QtWidgets.QLineEdit()
+        canonical_input.setPlaceholderText('Новое каноническое название')
+        canonical_layout.addWidget(canonical_input)
+        canonical_actions = QtWidgets.QHBoxLayout()
+        add_canonical_button = QtWidgets.QPushButton('Добавить')
+        delete_canonical_button = QtWidgets.QPushButton('Удалить')
+        canonical_actions.addWidget(add_canonical_button)
+        canonical_actions.addWidget(delete_canonical_button)
+        canonical_layout.addLayout(canonical_actions)
+
+        alias_group = QtWidgets.QGroupBox('Алиасы выбранного названия')
+        alias_layout = QtWidgets.QVBoxLayout(alias_group)
+        aliases = QtWidgets.QListWidget()
+        alias_layout.addWidget(aliases)
+        alias_input_widget = QtWidgets.QLineEdit()
+        alias_input_widget.setPlaceholderText('Алиас из списка или вручную')
+        alias_layout.addWidget(alias_input_widget)
+        alias_actions = QtWidgets.QHBoxLayout()
+        add_alias_button = QtWidgets.QPushButton('Добавить алиас')
+        delete_alias_button = QtWidgets.QPushButton('Удалить алиас')
+        alias_actions.addWidget(add_alias_button)
+        alias_actions.addWidget(delete_alias_button)
+        alias_layout.addLayout(alias_actions)
+
+        source_group = QtWidgets.QGroupBox(source_title)
+        source_layout = QtWidgets.QVBoxLayout(source_group)
+        search = QtWidgets.QLineEdit()
+        search.setPlaceholderText('Поиск по названию')
+        source_layout.addWidget(search)
+        unassigned_only = QtWidgets.QCheckBox('Только нераспределенные')
+        source_layout.addWidget(unassigned_only)
+        source_names = QtWidgets.QListWidget()
+        source_layout.addWidget(source_names)
+
+        wells_group = QtWidgets.QGroupBox('Скважины выбранного названия')
+        wells_layout = QtWidgets.QVBoxLayout(wells_group)
+        wells = QtWidgets.QListWidget()
+        wells_layout.addWidget(wells)
+
+        for widget in (canonical_group, alias_group, source_group, wells_group):
+            layout.addWidget(widget, 1)
+
+        def canonical_id():
+            item = canonical_names.currentItem()
+            return item.data(Qt.UserRole) if item else None
+
+        def refresh_alias_list():
+            aliases.clear()
+            if canonical_id() is not None:
+                aliases.addItems(list_aliases(kind, canonical_id()))
+
+        def refresh_sources():
+            selected_name = source_names.currentItem().data(Qt.UserRole) if source_names.currentItem() else None
+            assigned = {name.casefold() for row in list_canonicals(kind) for name in list_aliases(kind, row['id'])}
+            query = search.text().strip().casefold()
+            source_names.clear()
+            for row in list_source_names(kind):
+                name = row['name']
+                is_assigned = name.strip().casefold() in assigned
+                if query and query not in name.casefold() or unassigned_only.isChecked() and is_assigned:
+                    continue
+                status = 'распределен' if is_assigned else 'не распределен'
+                item = QtWidgets.QListWidgetItem(f"{name} | частота: {row['usage_count']} | {status}")
+                item.setData(Qt.UserRole, name)
+                if not is_assigned:
+                    item.setBackground(QtGui.QColor(255, 228, 196))
+                source_names.addItem(item)
+                if name == selected_name:
+                    source_names.setCurrentItem(item)
+
+        def refresh_wells():
+            wells.clear()
+            item = source_names.currentItem()
+            if item:
+                for well_id, well_name in wells_for_name(kind, item.data(Qt.UserRole)):
+                    well_item = QtWidgets.QListWidgetItem(f'{well_name} id{well_id}')
+                    well_item.setData(Qt.UserRole, well_id)
+                    wells.addItem(well_item)
+
+        def refresh(keep_id=None):
+            canonical_names.clear()
+            for row in list_canonicals(kind):
+                item = QtWidgets.QListWidgetItem(row['canonical_name'])
+                item.setData(Qt.UserRole, row['id'])
+                item.setToolTip(f"Алиасов: {row['alias_count']}")
+                canonical_names.addItem(item)
+                if row['id'] == keep_id:
+                    canonical_names.setCurrentItem(item)
+            if canonical_names.currentItem() is None and canonical_names.count():
+                canonical_names.setCurrentRow(0)
+            refresh_alias_list()
+            refresh_sources()
+            refresh_wells()
+
+        def report_error(exc):
+            QMessageBox.critical(dialog, 'Ошибка', str(exc))
+
+        def create_item():
+            try:
+                row = create_canonical(kind, canonical_input.text())
+                canonical_input.clear()
+                refresh(row.id)
+            except CanonicalNameError as exc:
+                report_error(exc)
+
+        def delete_item():
+            item = canonical_names.currentItem()
+            if not item:
+                return
+            if QMessageBox.question(dialog, 'Подтверждение',
+                    f'Удалить "{item.text()}" вместе с алиасами?', QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                try:
+                    delete_canonical(kind, item.data(Qt.UserRole))
+                    refresh()
+                except CanonicalNameError as exc:
+                    report_error(exc)
+
+        def add_alias_item():
+            name = alias_input_widget.text().strip()
+            if not name and source_names.currentItem():
+                name = source_names.currentItem().data(Qt.UserRole)
+            try:
+                add_alias(kind, canonical_id(), name)
+                alias_input_widget.clear()
+                refresh(canonical_id())
+            except CanonicalNameError as exc:
+                report_error(exc)
+
+        def delete_alias_item():
+            if aliases.currentItem():
+                try:
+                    remove_alias(kind, canonical_id(), aliases.currentItem().text())
+                    refresh(canonical_id())
+                except CanonicalNameError as exc:
+                    report_error(exc)
+
+        canonical_names.itemSelectionChanged.connect(refresh_alias_list)
+        source_names.itemSelectionChanged.connect(refresh_wells)
+        source_names.itemDoubleClicked.connect(lambda item: alias_input_widget.setText(item.data(Qt.UserRole)))
+        search.textChanged.connect(refresh_sources)
+        unassigned_only.toggled.connect(refresh_sources)
+        add_canonical_button.clicked.connect(create_item)
+        delete_canonical_button.clicked.connect(delete_item)
+        add_alias_button.clicked.connect(add_alias_item)
+        delete_alias_button.clicked.connect(delete_alias_item)
+        refresh()
+
+    add_universal_tab('Границы', BOUNDARIES, 'Все названия границ из БД')
+    add_universal_tab('Данные скважин', WELL_DATA, 'Все названия признаков из БД')
 
     close_button = QtWidgets.QPushButton('Закрыть')
     close_button.clicked.connect(dialog.accept)
