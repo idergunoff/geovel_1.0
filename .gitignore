@@ -1,0 +1,7 @@
+# Python bytecode and caches
+pycache/
+*.py[cod]
+*$py.class
+
+# Pytest cache
+.pytest_cache/
