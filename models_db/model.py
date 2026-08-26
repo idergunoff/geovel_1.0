@@ -777,6 +777,28 @@ class Boundary(Base):
     bindings = relationship("Binding", back_populates='boundary')
 
 
+class CanonicalBoundary(Base):
+    __tablename__ = 'canonical_boundary'
+
+    id = Column(Integer, primary_key=True)
+    canonical_name = Column(String, nullable=False, unique=True, index=True)
+    canonical_name_norm = Column(String, nullable=False, unique=True, index=True)
+    description = Column(String)
+
+    aliases = relationship('AliasBoundary', back_populates='canonical', cascade='all, delete-orphan')
+
+
+class AliasBoundary(Base):
+    __tablename__ = 'alias_boundary'
+
+    id = Column(Integer, primary_key=True)
+    alias_name = Column(String, nullable=False, unique=True, index=True)
+    alias_name_norm = Column(String, nullable=False, unique=True, index=True)
+    canonical_id = Column(Integer, ForeignKey('canonical_boundary.id'), nullable=False, index=True)
+
+    canonical = relationship('CanonicalBoundary', back_populates='aliases')
+
+
 class WellOptionally(Base):
     __tablename__ = 'well_optionally'
 
@@ -786,6 +808,47 @@ class WellOptionally(Base):
     value = Column(String)
 
     well = relationship("Well", back_populates="well_optionally")
+
+
+class CanonicalWellOption(Base):
+    __tablename__ = 'canonical_well_option'
+
+    id = Column(Integer, primary_key=True)
+    canonical_name = Column(String, nullable=False, unique=True, index=True)
+    canonical_name_norm = Column(String, nullable=False, unique=True, index=True)
+    description = Column(String)
+
+    aliases = relationship('AliasWellOption', back_populates='canonical', cascade='all, delete-orphan')
+
+
+class AliasWellOption(Base):
+    __tablename__ = 'alias_well_option'
+
+    id = Column(Integer, primary_key=True)
+    alias_name = Column(String, nullable=False, unique=True, index=True)
+    alias_name_norm = Column(String, nullable=False, unique=True, index=True)
+    canonical_id = Column(Integer, ForeignKey('canonical_well_option.id'), nullable=False, index=True)
+
+    canonical = relationship('CanonicalWellOption', back_populates='aliases')
+
+
+def _normalize_canonical_name(value):
+    return value.strip().casefold() if value is not None else None
+
+
+def _sync_universal_name(_mapper, _connection, target):
+    field = 'canonical_name' if hasattr(target, 'canonical_name') else 'alias_name'
+    value = getattr(target, field)
+    if value is None or not value.strip():
+        raise ValueError(f'{field} cannot be empty')
+    value = value.strip()
+    setattr(target, field, value)
+    setattr(target, f'{field}_norm', _normalize_canonical_name(value))
+
+
+for _universal_name_model in (CanonicalBoundary, AliasBoundary, CanonicalWellOption, AliasWellOption):
+    event.listen(_universal_name_model, 'before_insert', _sync_universal_name)
+    event.listen(_universal_name_model, 'before_update', _sync_universal_name)
 
 
 class WellLog(Base):
@@ -1499,5 +1562,4 @@ class ParameterMask(Base):
 
     model_mask = relationship("TrainedModelClassMask", back_populates="mask")
     model_mask_reg = relationship("TrainedModelRegMask", back_populates="mask")
-
 
