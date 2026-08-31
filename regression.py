@@ -252,7 +252,8 @@ def add_all_well_markup_reg():
         selected = details.get('selected', {}).get('details', {}) if details else {}
         show_well_log(selected_curve_id=selected.get('well_log_id'),
                       selected_depth=selected.get('depth'),
-                      selected_interval=(selected.get('interval') or [None, None]))
+                      selected_interval=(selected.get('interval') or [None, None]),
+                      parent=dialog)
 
     dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log)
     if dialog.exec_() != QtWidgets.QDialog.Accepted:
