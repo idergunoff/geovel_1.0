@@ -150,6 +150,8 @@ def show_canonical_aliases_manager():
         wells_layout = QtWidgets.QVBoxLayout(wells_group)
         wells = QtWidgets.QListWidget()
         wells_layout.addWidget(wells)
+        open_well_log_button = QtWidgets.QPushButton('Открыть well logging form')
+        wells_layout.addWidget(open_well_log_button)
 
         for widget in (canonical_group, alias_group, source_group, wells_group):
             layout.addWidget(widget, 1)
@@ -190,6 +192,13 @@ def show_canonical_aliases_manager():
                     well_item = QtWidgets.QListWidgetItem(f'{well_name} id{well_id}')
                     well_item.setData(Qt.UserRole, well_id)
                     wells.addItem(well_item)
+
+        def open_selected_source_well():
+            item = wells.currentItem()
+            if item is None:
+                QMessageBox.information(dialog, 'Скважины', 'Выберите скважину из списка')
+                return
+            show_well_log(well_id=item.data(Qt.UserRole), parent=dialog)
 
         def refresh(keep_id=None):
             canonical_names.clear()
@@ -250,6 +259,8 @@ def show_canonical_aliases_manager():
 
         canonical_names.itemSelectionChanged.connect(refresh_alias_list)
         source_names.itemSelectionChanged.connect(refresh_wells)
+        open_well_log_button.clicked.connect(open_selected_source_well)
+        wells.itemDoubleClicked.connect(lambda _: open_selected_source_well())
         source_names.itemDoubleClicked.connect(lambda item: alias_input_widget.setText(item.data(Qt.UserRole)))
         search.textChanged.connect(refresh_sources)
         unassigned_only.toggled.connect(refresh_sources)
@@ -371,14 +382,7 @@ def show_canonical_aliases_manager():
             QMessageBox.information(dialog, 'Скважины', 'Выберите скважину из списка')
             return
 
-        target_well_id = str(selected.data(Qt.UserRole))
-        for row in range(ui.listWidget_well.count()):
-            if ui.listWidget_well.item(row).text().split(' id')[-1] == target_well_id:
-                ui.listWidget_well.setCurrentRow(row)
-                show_well_log()
-                return
-
-        QMessageBox.warning(dialog, 'Скважины', 'Скважина не найдена в текущем фильтре списка скважин')
+        show_well_log(well_id=selected.data(Qt.UserRole), parent=dialog)
 
     def refresh_all(keep_canonical_id=None):
         canonical_list.clear()
@@ -508,9 +512,12 @@ def show_canonical_aliases_manager():
     dialog.show()
 
 
-def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval=None, parent=None):
+def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval=None, parent=None, well_id=None):
+    """Open logging for the explicitly supplied well or the main-list selection."""
+    selected_well_id = well_id or get_well_id()
+    selected_well = session.query(Well).filter_by(id=selected_well_id).first() if selected_well_id else None
 
-    if not get_well_id():
+    if selected_well is None:
         set_info('Скважина не выбрана', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
     else:
@@ -527,7 +534,11 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
         m_width, m_height = get_width_height_monitor()
         WellLogForm.resize(int(m_width/4), m_height - 200)
 
-        ui_wl.label.setText(f'Каротажные кривые скважины {get_well_name()}')
+        ui_wl.label.setText(f'Каротажные кривые скважины {selected_well.name}')
+        ui_wl.label_well_name.setText(str(selected_well.name or '—'))
+        ui_wl.label_well_x.setText(str(selected_well.x_coord if selected_well.x_coord is not None else '—'))
+        ui_wl.label_well_y.setText(str(selected_well.y_coord if selected_well.y_coord is not None else '—'))
+        ui_wl.label_well_alt.setText(str(selected_well.alt if selected_well.alt is not None else '—'))
 
         def set_spinbox_value_expanding_range(spinbox, value):
             value = float(value)
@@ -543,7 +554,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                 return False
 
             dataset_id = cluster_combo.currentData()
-            well_id = get_well_id()
+            well_id = selected_well_id
             if dataset_id is None or not well_id:
                 return False
 
@@ -567,7 +578,22 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_interval, interval)
             return True
 
-        boundaries = session.query(Boundary).filter_by(well_id=get_well_id()).all()
+        boundaries = session.query(Boundary).filter_by(well_id=selected_well_id).all()
+        for boundary in sorted(boundaries, key=lambda row: (row.depth is None, row.depth or 0, row.title or '')):
+            if boundary.depth is None:
+                continue
+            item = QtWidgets.QListWidgetItem(f'{boundary.title or "Без названия"}: {boundary.depth:g} м')
+            item.setData(Qt.UserRole, float(boundary.depth))
+            item.setToolTip(f'ID {boundary.id}')
+            ui_wl.listWidget_boundaries.addItem(item)
+
+        def select_boundary(item):
+            if item is not None:
+                set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_depth, item.data(Qt.UserRole))
+
+        ui_wl.listWidget_boundaries.currentItemChanged.connect(
+            lambda current, previous: select_boundary(current)
+        )
         for b in boundaries:
             if 'uf' in b.title or 'уф' in b.title or 'ss' in b.title:
                 ui_wl.doubleSpinBox_depth.setValue(b.depth)
@@ -575,7 +601,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
         load_selected_cluster_interval_to_spinboxes()
 
         def update_list_well_log():
-            well_log = session.query(WellLog).filter(WellLog.well_id == get_well_id()).all()
+            well_log = session.query(WellLog).filter(WellLog.well_id == selected_well_id).all()
             ui_wl.listWidget_well_log.clear()
             for log in well_log:
                 item = QtWidgets.QListWidgetItem(f'{log.curve_name} ID{log.id}')
@@ -643,7 +669,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             if filename:
                 add_well_log_xls_to_db(filename)
             update_list_well_log()
-            update_list_well(select_well=True, selected_well_id=get_well_id())
+            update_list_well(select_well=True, selected_well_id=selected_well_id)
 
 
         def load_well_log_by_dir():
@@ -674,7 +700,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                                    f'Площ.:' f'{las.well["FLD"].value}\n'
                                    f'Дата: {las.well["DATE"].value}')
                 new_well_log = WellLog(
-                    well_id=get_well_id(),
+                    well_id=selected_well_id,
                     curve_name=curve,
                     curve_data=json.dumps(list(las[curve])),
                     begin=las.well["STRT"].value,
@@ -697,7 +723,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                 description = well_name
 
                 new_well_log = WellLog(
-                    well_id=get_well_id(),
+                    well_id=selected_well_id,
                     curve_name=name,
                     curve_data=json.dumps(data),
                     begin=bound[name]['start'],
@@ -709,7 +735,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
 
             for age_name, age_depth in age.items():
                 new_bound = Boundary(
-                    well_id=get_well_id(),
+                    well_id=selected_well_id,
                     depth=age_depth,
                     title=f'{age_name}-scan'
                 )
@@ -954,17 +980,17 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                 session.query(WellLog).filter_by(id=ui_wl.listWidget_well_log.currentItem().text().split(' ID')[-1]).delete()
                 session.commit()
                 update_list_well_log()
-                update_list_well(select_well=True, selected_well_id=get_well_id())
+                update_list_well(select_well=True, selected_well_id=selected_well_id)
             except AttributeError:
                 set_info(f'Необходимо выбрать каротаж для удаления', 'red')
                 return
 
 
         def remove_all_well_log():
-            session.query(WellLog).filter_by(well_id=get_well_id()).delete()
+            session.query(WellLog).filter_by(well_id=selected_well_id).delete()
             session.commit()
             update_list_well_log()
-            update_list_well(select_well=True, selected_well_id=get_well_id())
+            update_list_well(select_well=True, selected_well_id=selected_well_id)
 
         def draw_depth_spinbox():
             """ Добавление линий глубины и интервала на график """
@@ -1179,17 +1205,17 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                     dict_well_log[log.id] = log.well.name
                 ui.progressBar.setValue(n+1)
             session.commit()
-            update_list_well(select_well=True, selected_well_id=get_well_id())
+            update_list_well(select_well=True, selected_well_id=selected_well_id)
             set_info(f'Удалено {n_rem} дублей каротажей.', 'blue')
 
         def uf_to_well_boundary():
-            new_bound = Boundary(well_id=get_well_id(), depth=ui_wl.doubleSpinBox_depth.value(), title='P2uf GK')
+            new_bound = Boundary(well_id=selected_well_id, depth=ui_wl.doubleSpinBox_depth.value(), title='P2uf GK')
             session.add(new_bound)
             session.commit()
             update_boundaries()
 
         def m_ss_to_well_data():
-            new_well_opt = WellOptionally(well_id=get_well_id(), option='мощн песч GK', value=str(ui_wl.doubleSpinBox_interval.value()))
+            new_well_opt = WellOptionally(well_id=selected_well_id, option='мощн песч GK', value=str(ui_wl.doubleSpinBox_interval.value()))
             session.add(new_well_opt)
             session.commit()
             show_data_well()
@@ -1205,7 +1231,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                 QMessageBox.warning(WellLogForm, 'CLUSTER INTERVAL', 'Сначала выберите набор каротажа во вкладке Cluster.')
                 return
 
-            well_id = get_well_id()
+            well_id = selected_well_id
             row = (
                 session.query(WellForCluster)
                 .filter(WellForCluster.dataset_id == int(dataset_id), WellForCluster.well_id == int(well_id))
@@ -1233,7 +1259,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
                 pass
             session.commit()
 
-            update_list_well(select_well=True, selected_well_id=get_well_id())
+            update_list_well(select_well=True, selected_well_id=selected_well_id)
             try:
                 from cluster import load_cluster_well_dataset_state_to_form
                 load_cluster_well_dataset_state_to_form(int(dataset_id))
