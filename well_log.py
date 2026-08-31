@@ -532,13 +532,27 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
         WellLogForm.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
         m_width, m_height = get_width_height_monitor()
-        WellLogForm.resize(int(m_width/4), m_height - 200)
+        # The logging graph and the duplicated well data need more horizontal
+        # room than the original narrow tool window.
+        WellLogForm.resize(int((m_width / 4) * 1.3), m_height - 200)
 
         ui_wl.label.setText(f'Каротажные кривые скважины {selected_well.name}')
-        ui_wl.label_well_name.setText(str(selected_well.name or '—'))
-        ui_wl.label_well_x.setText(str(selected_well.x_coord if selected_well.x_coord is not None else '—'))
-        ui_wl.label_well_y.setText(str(selected_well.y_coord if selected_well.y_coord is not None else '—'))
-        ui_wl.label_well_alt.setText(str(selected_well.alt if selected_well.alt is not None else '—'))
+        count_well_log = session.query(WellLog).filter_by(well_id=selected_well_id).count()
+        well_data_html = []
+        if count_well_log > 0:
+            well_data_html.append(
+                f'<p style="background-color:#ADFCDF">'
+                f'<b>Количество каротажных кривых:</b> {count_well_log}</p>'
+            )
+        well_data_html.extend([
+            f'<p><b>Скважина №</b> {selected_well.name}</p>',
+            f'<p><b>X:</b> {selected_well.x_coord}</p>',
+            f'<p><b>Y:</b> {selected_well.y_coord}</p>',
+            f'<p><b>Альтитуда:</b> {selected_well.alt} м.</p>',
+        ])
+        for option in session.query(WellOptionally).filter_by(well_id=selected_well_id):
+            well_data_html.append(f'<p><b>{option.option}:</b> {option.value}</p>')
+        ui_wl.textEdit_datawell.setHtml(''.join(well_data_html))
 
         def set_spinbox_value_expanding_range(spinbox, value):
             value = float(value)
@@ -595,7 +609,8 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             lambda current, previous: select_boundary(current)
         )
         for b in boundaries:
-            if 'uf' in b.title or 'уф' in b.title or 'ss' in b.title:
+            boundary_title = (b.title or '').casefold()
+            if 'uf' in boundary_title or 'уф' in boundary_title or 'ss' in boundary_title:
                 ui_wl.doubleSpinBox_depth.setValue(b.depth)
                 break
         load_selected_cluster_interval_to_spinboxes()

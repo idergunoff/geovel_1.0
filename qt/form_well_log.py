@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form_well_log(object):
     def setupUi(self, Form_well_log):
         Form_well_log.setObjectName("Form_well_log")
-        Form_well_log.resize(605, 780)
+        Form_well_log.resize(787, 780)
         self.gridLayout_3 = QtWidgets.QGridLayout(Form_well_log)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.label = QtWidgets.QLabel(Form_well_log)
@@ -178,21 +178,12 @@ class Ui_Form_well_log(object):
         self.verticalLayout_well_info.setObjectName("verticalLayout_well_info")
         self.groupBox_well_info = QtWidgets.QGroupBox(self.tab_well_info)
         self.groupBox_well_info.setObjectName("groupBox_well_info")
-        self.formLayout_well_info = QtWidgets.QFormLayout(self.groupBox_well_info)
-        self.formLayout_well_info.setObjectName("formLayout_well_info")
-        for row, (caption, name) in enumerate((
-            ("Название:", "well_name"), ("X:", "well_x"),
-            ("Y:", "well_y"), ("Альтитуда:", "well_alt"),
-        )):
-            caption_label = QtWidgets.QLabel(self.groupBox_well_info)
-            caption_label.setObjectName("label_" + name + "_caption")
-            caption_label.setText(caption)
-            self.formLayout_well_info.setWidget(row, QtWidgets.QFormLayout.LabelRole, caption_label)
-            value_label = QtWidgets.QLabel(self.groupBox_well_info)
-            value_label.setObjectName("label_" + name)
-            value_label.setText("—")
-            setattr(self, "label_" + name, value_label)
-            self.formLayout_well_info.setWidget(row, QtWidgets.QFormLayout.FieldRole, value_label)
+        self.verticalLayout_well_data = QtWidgets.QVBoxLayout(self.groupBox_well_info)
+        self.verticalLayout_well_data.setObjectName("verticalLayout_well_data")
+        self.textEdit_datawell = QtWidgets.QTextEdit(self.groupBox_well_info)
+        self.textEdit_datawell.setReadOnly(True)
+        self.textEdit_datawell.setObjectName("textEdit_datawell")
+        self.verticalLayout_well_data.addWidget(self.textEdit_datawell)
         self.verticalLayout_well_info.addWidget(self.groupBox_well_info)
         self.label_boundaries = QtWidgets.QLabel(self.tab_well_info)
         self.label_boundaries.setObjectName("label_boundaries")
