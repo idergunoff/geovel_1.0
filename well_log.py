@@ -508,13 +508,17 @@ def show_canonical_aliases_manager():
     dialog.show()
 
 
-def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval=None):
+def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval=None, parent=None):
 
     if not get_well_id():
         set_info('Скважина не выбрана', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
     else:
-        WellLogForm = QtWidgets.QDialog()
+        # Keep the form in the window hierarchy of the dialog that opened it.
+        # This is important when the caller is modal (for example, the regression
+        # target wizard): an unparented dialog is blocked by that modal window and
+        # can be placed behind it by the window manager.
+        WellLogForm = QtWidgets.QDialog(parent)
         ui_wl = Ui_Form_well_log()
         ui_wl.setupUi(WellLogForm)
         WellLogForm.show()
