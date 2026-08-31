@@ -1,0 +1,126 @@
+import json
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from models_db.model import (
+    AliasBoundary,
+    AliasWellOption,
+    Base,
+    Boundary,
+    CanonicalBoundary,
+    CanonicalWellOption,
+    Well,
+    WellLog,
+    WellOptionally,
+)
+from models_db.model_cluster import AliasWellLog, CanonicalWellLog
+from regression_target.service import TargetSettings, parse_numeric_value, resolve_target
+
+
+@pytest.fixture()
+def db():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def _well(db):
+    row = Well(name="W-1", x_coord=0, y_coord=0)
+    db.add(row); db.flush()
+    return row
+
+
+@pytest.mark.parametrize(("raw", "status", "value"), [
+    ("125,4 м3/сут", "resolved", 125.4),
+    ("1 250 м", "resolved", 1250.0),
+    ("100 + 25 м", "resolved", 125.0),
+    ("100/125", "ambiguous", None),
+    ("100-125", "ambiguous", None),
+    ("< 0.5", "ambiguous", None),
+    ("нет данных", "missing", None),
+])
+def test_numeric_parser_is_conservative(raw, status, value):
+    result = parse_numeric_value(raw)
+    assert result.status == status
+    assert result.value == value
+
+
+def test_boundary_resolution_requires_manual_choice_for_alias_duplicates(db):
+    well = _well(db)
+    canonical = CanonicalBoundary(canonical_name="J1")
+    db.add(canonical); db.flush()
+    db.add_all([AliasBoundary(alias_name="J1", canonical_id=canonical.id),
+                AliasBoundary(alias_name="Ю1", canonical_id=canonical.id)])
+    db.add_all([Boundary(well_id=well.id, title="J1", depth=100.1),
+                Boundary(well_id=well.id, title="ю1", depth=100.3)])
+    db.commit()
+
+    result = resolve_target(db, well.id, TargetSettings("boundary", canonical.id))
+
+    assert result.status == "ambiguous"
+    assert [candidate.value for candidate in result.candidates] == [100.1, 100.3]
+    result.select(1)
+    assert result.status == "resolved"
+    assert result.value == 100.3
+    assert result.details["manual_override"] is True
+
+
+def test_well_data_resolution_sums_explicit_parts_and_preserves_source(db):
+    well = _well(db)
+    canonical = CanonicalWellOption(canonical_name="Дебит")
+    db.add(canonical); db.flush()
+    db.add(AliasWellOption(alias_name="Q", canonical_id=canonical.id)); db.flush()
+    source = WellOptionally(well_id=well.id, option="q", value="100 + 25 м3/сут")
+    db.add(source); db.commit()
+
+    result = resolve_target(db, well.id, TargetSettings("well_data", canonical.id))
+
+    assert result.status == "resolved"
+    assert result.value == 125
+    assert result.details["selected"]["details"]["well_option_id"] == source.id
+
+
+def test_log_resolution_uses_boundary_interval_and_median(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    db.add(Boundary(well_id=well.id, title="TOP", depth=2.0))
+    curve = WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                    curve_data=json.dumps([1, 2, 10, 20, 30, 40]))
+    db.add(curve); db.commit()
+
+    settings = TargetSettings("well_log", curve_name.id, boundary_canonical_id=boundary_name.id,
+                              interval=2, interval_position="below", aggregation="median")
+    result = resolve_target(db, well.id, settings)
+
+    assert result.status == "resolved"
+    assert result.value == 20
+    details = result.details["selected"]["details"]
+    assert details["well_log_id"] == curve.id
+    assert details["interval"] == [2.0, 4.0]
+    assert details["valid_point_count"] == 3
+
+
+def test_log_ratio_reports_invalid_zero_denominator(db):
+    well = _well(db)
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add(curve_name); db.flush()
+    db.add(AliasWellLog(alias_name="GR", canonical_id=curve_name.id))
+    db.add(WellLog(well_id=well.id, curve_name="gr", begin=0, end=4, step=1,
+                   curve_data=json.dumps([4, 4, 0, 0, 0])))
+    db.commit()
+    settings = TargetSettings("well_log", curve_name.id, depth_mode="fixed", fixed_depth=2,
+                              interval=2, operation="upper_lower_ratio")
+
+    result = resolve_target(db, well.id, settings)
+
+    assert result.status == "invalid"

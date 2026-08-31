@@ -13,6 +13,7 @@ from build_table import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
 from feature_selection import *
+from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
 
 def _get_training_wells_regmod():
     wells = {}
@@ -211,37 +212,75 @@ def add_well_markup_reg():
 
 
 def add_all_well_markup_reg():
-    """Добавить все скважины объекта для обучения регрессионной модели"""
+    """Review target values and add all eligible object wells in one transaction."""
     analysis_id = get_regmod_id()
-
+    if not analysis_id:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите регрессионный анализ.')
+        return
     list_formation = get_list_formation()
     if not list_formation:
         return
     profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    candidates = []
     ui.progressBar.setMaximum(len(profiles))
-    for np, p in enumerate(profiles):
-        ui.progressBar.setValue(np + 1)
-        wells = get_list_nearest_well(p.id)
-        if wells:
-            x_prof = json.loads(session.query(Profile.x_pulc).filter(Profile.id == p.id).first()[0])
-            y_prof = json.loads(session.query(Profile.y_pulc).filter(Profile.id == p.id).first()[0])
-            for w in wells:
-                if session.query(MarkupReg).filter(MarkupReg.analysis_id == analysis_id,
-                                                   MarkupReg.well_id == w[0].id,
-                                                   MarkupReg.profile_id == p.id).count() > 0:
-                    set_info(f'Скважина {w[0].name} на профиле {p.title} уже добавлена', 'red')
-                    continue
-                index, _ = closest_point(w[0].x_coord, w[0].y_coord, x_prof, y_prof)
-                well_dist = ui.spinBox_well_dist_reg.value()
-                start = index - well_dist if index - well_dist > 0 else 0
-                stop = index + well_dist if index + well_dist < len(x_prof) else len(x_prof)
-                list_measure = list(range(start, stop))
-                new_markup_reg = MarkupReg(analysis_id=analysis_id, well_id=w[0].id, profile_id=p.id,
-                                           formation_id=list_formation[np].split(' id')[-1], target_value=0,
-                                           list_measure=json.dumps(list_measure))
-                session.add(new_markup_reg)
-                set_info(f'Добавлена новая обучающая скважина для регрессионной модели - "{w[0].name} - {p.title}"', 'green')
-    session.commit()
+    for profile_index, profile in enumerate(profiles):
+        ui.progressBar.setValue(profile_index + 1)
+        formation_id = int(list_formation[profile_index].split(' id')[-1])
+        x_prof = json.loads(profile.x_pulc or '[]')
+        if not x_prof:
+            continue
+        for well, closest_index, distance in get_list_nearest_well(profile.id) or []:
+            well_dist = ui.spinBox_well_dist_reg.value()
+            start = max(0, closest_index - well_dist)
+            stop = min(len(x_prof), closest_index + well_dist)
+            exists = session.query(MarkupReg.id).filter(
+                MarkupReg.analysis_id == analysis_id, MarkupReg.well_id == well.id,
+                MarkupReg.profile_id == profile.id).first() is not None
+            candidates.append(WizardCandidate(
+                well.id, well.name or f'id{well.id}', profile.id, profile.title or f'id{profile.id}',
+                formation_id, float(distance), list(range(start, stop)), exists))
+    if not candidates:
+        QMessageBox.information(MainWindow, 'Нет скважин', 'В пределах заданного расстояния скважины не найдены.')
+        return
+
+    def open_candidate_log(well_id, details):
+        update_list_well(select_well=True, selected_well_id=well_id)
+        selected = details.get('selected', {}).get('details', {}) if details else {}
+        show_well_log(selected_curve_id=selected.get('well_log_id'),
+                      selected_depth=selected.get('depth'),
+                      selected_interval=(selected.get('interval') or [None, None]))
+
+    dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log)
+    if dialog.exec_() != QtWidgets.QDialog.Accepted:
+        return
+    selected = dialog.selected_candidates()
+    try:
+        # Recheck duplicates because the preview may have been open for a while.
+        for candidate in selected:
+            duplicate = session.query(MarkupReg).filter(
+                MarkupReg.analysis_id == analysis_id, MarkupReg.well_id == candidate.well_id,
+                MarkupReg.profile_id == candidate.profile_id).first()
+            if duplicate and dialog.existing_mode() == 'skip':
+                continue
+            config, details, manual = dialog.provenance_json(candidate)
+            values = dict(target_value=candidate.resolution.value,
+                          target_source_type=dialog.settings().source, target_source_config=config,
+                          target_source_details=details, target_is_manual_override=manual)
+            if duplicate:
+                for field, value in values.items():
+                    setattr(duplicate, field, value)
+                if dialog.existing_mode() == 'all':
+                    duplicate.formation_id = candidate.formation_id
+                    duplicate.list_measure = json.dumps(candidate.list_measure)
+            else:
+                session.add(MarkupReg(
+                    analysis_id=analysis_id, well_id=candidate.well_id, profile_id=candidate.profile_id,
+                    formation_id=candidate.formation_id, list_measure=json.dumps(candidate.list_measure), **values))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    set_info(f'Добавлено обучающих скважин с рассчитанной целевой переменной: {len(selected)}', 'green')
     update_list_well_markup_reg()
 
 
