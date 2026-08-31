@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>Form_well_log</class>
  <widget class="QWidget" name="Form_well_log">
@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>605</width>
+    <width>787</width>
     <height>780</height>
    </rect>
   </property>
@@ -22,355 +22,402 @@
     </widget>
    </item>
    <item row="1" column="0">
-    <widget class="PlotWidget" name="widget_graph_well_log"/>
+    <widget class="PlotWidget" name="widget_graph_well_log" />
    </item>
    <item row="1" column="1">
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="5" column="0">
-        <widget class="QCheckBox" name="checkBox_raar_signal">
-         <property name="text">
-          <string>radar</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="checkBox_cp1251">
-         <property name="text">
-          <string>cp1251</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QPushButton" name="pushButton_rm_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 185, 185);</string>
-         </property>
-         <property name="text">
-          <string>REMOVE</string>
-         </property>
-        </widget>
+    <widget class="QTabWidget" name="tabWidget_well_log">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_logging">
+      <attribute name="title">
+       <string>Каротаж</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="5" column="0">
+          <widget class="QCheckBox" name="checkBox_raar_signal">
+           <property name="text">
+            <string>radar</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QCheckBox" name="checkBox_cp1251">
+           <property name="text">
+            <string>cp1251</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QPushButton" name="pushButton_rm_well_log">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 185, 185);</string>
+           </property>
+           <property name="text">
+            <string>REMOVE</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QPushButton" name="pushButton_add_well_log">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(191, 255, 191);</string>
+           </property>
+           <property name="text">
+            <string>ADD</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButton_rm_all_well_db">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 162, 190);</string>
+           </property>
+           <property name="text">
+            <string>REMOVE ALL</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QPushButton" name="pushButton_clean">
+           <property name="toolTip">
+            <string>Очистить дубли каротажей</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(170, 255, 255);</string>
+           </property>
+           <property name="text">
+            <string>CLEAN</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2">
+          <widget class="QListWidget" name="listWidget_well_log" />
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="pushButton_add_dir_well_log">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(180, 255, 205);</string>
+           </property>
+           <property name="text">
+            <string>ADD DIR</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QPushButton" name="pushButton_add_xls">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(92, 215, 173);</string>
+           </property>
+           <property name="text">
+            <string>ADD XLS</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QPushButton" name="pushButton_map_well_log">
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 170, 127);</string>
+           </property>
+           <property name="text">
+            <string>MAP</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item row="1" column="0">
-        <widget class="QPushButton" name="pushButton_add_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(191, 255, 191);</string>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Regression</string>
          </property>
-         <property name="text">
-          <string>ADD</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QPushButton" name="pushButton_rm_all_well_db">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 162, 190);</string>
-         </property>
-         <property name="text">
-          <string>REMOVE ALL</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QPushButton" name="pushButton_clean">
-         <property name="toolTip">
-          <string>Очистить дубли каротажей</string>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(170, 255, 255);</string>
-         </property>
-         <property name="text">
-          <string>CLEAN</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="QListWidget" name="listWidget_well_log"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="pushButton_add_dir_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(180, 255, 205);</string>
-         </property>
-         <property name="text">
-          <string>ADD DIR</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="pushButton_add_xls">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(92, 215, 173);</string>
-         </property>
-         <property name="text">
-          <string>ADD XLS</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QPushButton" name="pushButton_map_well_log">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 170, 127);</string>
-         </property>
-         <property name="text">
-          <string>MAP</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="1" column="0">
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Regression</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout_5">
+         <layout class="QGridLayout" name="gridLayout_4">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Глубина </string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_depth">
-            <property name="decimals">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <double>10000.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>0.500000000000000</double>
-            </property>
-            <property name="value">
-             <double>100.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Интервал</string>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_add_all">
-            <property name="toolTip">
-             <string>Добавить среднее значение в выделенном интервале по всем кривым </string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(85, 170, 255);</string>
-            </property>
-            <property name="text">
-             <string>ADD ALL</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="label_value">
-            <property name="font">
-             <font>
-              <pointsize>12</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>value</string>
-            </property>
-           </widget>
-          </item>
-          <item row="10" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_update_all">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(170, 170, 255);</string>
-            </property>
-            <property name="text">
-             <string>UPDATE ALL</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_create_an">
-            <property name="toolTip">
-             <string>Создать анализ</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 197, 155);</string>
-            </property>
-            <property name="text">
-             <string>CREATE ANALYSIS</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="pushButton_mosh_pesch_to_data">
-            <property name="toolTip">
-             <string>Добавить мощность песчаной пачки в атрибуты скважины</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 255, 203);</string>
-            </property>
-            <property name="text">
-             <string>TO DATA</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_add_current">
-            <property name="toolTip">
-             <string>Добавить среднее значение в выделенном интервале по текущей кривой</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(134, 197, 255);</string>
-            </property>
-            <property name="text">
-             <string>ADD CURRENT</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_create_all_an">
-            <property name="toolTip">
-             <string>Создать анализ на всех каротажных кривых</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 170, 127);</string>
-            </property>
-            <property name="text">
-             <string>CREATE ANALYSIS FROM ALL</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="font">
-             <font>
-              <pointsize>12</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>MedRatio:</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_interval">
-            <property name="decimals">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <double>1000.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>0.500000000000000</double>
-            </property>
-            <property name="value">
-             <double>10.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="11" column="0" colspan="2">
-           <layout class="QGridLayout" name="gridLayout_6">
+           <layout class="QGridLayout" name="gridLayout_5">
             <item row="0" column="0">
-             <widget class="QPushButton" name="pushButton_to_tar_val">
-              <property name="toolTip">
-               <string>Передать среднее значение в target value</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 239, 175);</string>
-              </property>
+             <widget class="QLabel" name="label_2">
               <property name="text">
-               <string>TO TARGET</string>
+               <string>Глубина </string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_depth">
+              <property name="decimals">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <double>10000.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>0.500000000000000</double>
+              </property>
+              <property name="value">
+               <double>100.000000000000000</double>
               </property>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QPushButton" name="pushButton_to_tar_val_mr">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Интервал</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_add_all">
               <property name="toolTip">
-               <string>Передать среднее значение в target value</string>
+               <string>Добавить среднее значение в выделенном интервале по всем кривым </string>
               </property>
               <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 219, 175);</string>
+               <string notr="true">background-color: rgb(85, 170, 255);</string>
               </property>
               <property name="text">
-               <string>MR TO TARGET</string>
+               <string>ADD ALL</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="label_value">
+              <property name="font">
+               <font>
+                <pointsize>12</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>value</string>
+              </property>
+             </widget>
+            </item>
+            <item row="10" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_update_all">
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(170, 170, 255);</string>
+              </property>
+              <property name="text">
+               <string>UPDATE ALL</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_create_an">
+              <property name="toolTip">
+               <string>Создать анализ</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 197, 155);</string>
+              </property>
+              <property name="text">
+               <string>CREATE ANALYSIS</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QPushButton" name="pushButton_mosh_pesch_to_data">
+              <property name="toolTip">
+               <string>Добавить мощность песчаной пачки в атрибуты скважины</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 255, 203);</string>
+              </property>
+              <property name="text">
+               <string>TO DATA</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_add_current">
+              <property name="toolTip">
+               <string>Добавить среднее значение в выделенном интервале по текущей кривой</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(134, 197, 255);</string>
+              </property>
+              <property name="text">
+               <string>ADD CURRENT</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_create_all_an">
+              <property name="toolTip">
+               <string>Создать анализ на всех каротажных кривых</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 170, 127);</string>
+              </property>
+              <property name="text">
+               <string>CREATE ANALYSIS FROM ALL</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_5">
+              <property name="font">
+               <font>
+                <pointsize>12</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>MedRatio:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_interval">
+              <property name="decimals">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>0.500000000000000</double>
+              </property>
+              <property name="value">
+               <double>10.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="11" column="0" colspan="2">
+             <layout class="QGridLayout" name="gridLayout_6">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="pushButton_to_tar_val">
+                <property name="toolTip">
+                 <string>Передать среднее значение в target value</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 239, 175);</string>
+                </property>
+                <property name="text">
+                 <string>TO TARGET</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="pushButton_to_tar_val_mr">
+                <property name="toolTip">
+                 <string>Передать среднее значение в target value</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 219, 175);</string>
+                </property>
+                <property name="text">
+                 <string>MR TO TARGET</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="pushButton_uf_to_bound">
+              <property name="toolTip">
+               <string>Добавить глубину кровли уфы в границы скважины</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 255, 203);</string>
+              </property>
+              <property name="text">
+               <string>TO BOUND</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="label_mr_value">
+              <property name="text">
+               <string>value</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="font">
+               <font>
+                <pointsize>12</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Медиана:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QPushButton" name="pushButton_add_interval_to_cluster">
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(191, 255, 191);</string>
+              </property>
+              <property name="text">
+               <string>INT TO CLUST</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QPushButton" name="pushButton_add_well_log_to_cluster">
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(92, 215, 173);</string>
+              </property>
+              <property name="text">
+               <string>LOG TO CLUST</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
-          <item row="2" column="0">
-           <widget class="QPushButton" name="pushButton_uf_to_bound">
-            <property name="toolTip">
-             <string>Добавить глубину кровли уфы в границы скважины</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(255, 255, 203);</string>
-            </property>
-            <property name="text">
-             <string>TO BOUND</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QLabel" name="label_mr_value">
-            <property name="text">
-             <string>value</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="font">
-             <font>
-              <pointsize>12</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Медиана:</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QPushButton" name="pushButton_add_interval_to_cluster">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(191, 255, 191);</string>
-            </property>
-            <property name="text">
-             <string>INT TO CLUST</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="pushButton_add_well_log_to_cluster">
-            <property name="styleSheet">
-             <string notr="true">background-color: rgb(92, 215, 173);</string>
-            </property>
-            <property name="text">
-             <string>LOG TO CLUST</string>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_well_info">
+      <attribute name="title">
+       <string>Скважина</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_well_info">
+       <item>
+        <widget class="QGroupBox" name="groupBox_well_info">
+         <property name="title">
+          <string>Информация по скважине</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_well_data">
+          <item>
+           <widget class="QTextEdit" name="textEdit_datawell">
+            <property name="readOnly">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
          </layout>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_boundaries">
+         <property name="text">
+          <string>Границы (выберите для установки отметки)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="listWidget_boundaries">
+         <property name="toolTip">
+          <string>Выбранная граница устанавливает верхнюю отметку интервала на графике каротажа</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -382,6 +429,6 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
- <connections/>
+ <resources />
+ <connections />
 </ui>
