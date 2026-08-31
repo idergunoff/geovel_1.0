@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>605</width>
+    <width>787</width>
     <height>780</height>
    </rect>
   </property>
@@ -390,60 +390,11 @@
          <property name="title">
           <string>Информация по скважине</string>
          </property>
-         <layout class="QFormLayout" name="formLayout_well_info">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_well_name_caption">
-            <property name="text">
-             <string>Название:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="label_well_name">
-            <property name="text">
-             <string>—</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_well_x_caption">
-            <property name="text">
-             <string>X:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="label_well_x">
-            <property name="text">
-             <string>—</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_well_y_caption">
-            <property name="text">
-             <string>Y:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLabel" name="label_well_y">
-            <property name="text">
-             <string>—</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_well_alt_caption">
-            <property name="text">
-             <string>Альтитуда:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="label_well_alt">
-            <property name="text">
-             <string>—</string>
+         <layout class="QVBoxLayout" name="verticalLayout_well_data">
+          <item>
+           <widget class="QTextEdit" name="textEdit_datawell">
+            <property name="readOnly">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
