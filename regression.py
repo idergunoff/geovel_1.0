@@ -244,6 +244,10 @@ def add_all_well_markup_reg():
         return
 
     def open_candidate_log(well_id, details):
+        # Import lazily because well_log imports regression helpers at module load time.
+        # A top-level import here would introduce a circular import.
+        from well_log import show_well_log
+
         update_list_well(select_well=True, selected_well_id=well_id)
         selected = details.get('selected', {}).get('details', {}) if details else {}
         show_well_log(selected_curve_id=selected.get('well_log_id'),
