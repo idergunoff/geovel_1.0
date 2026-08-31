@@ -508,7 +508,7 @@ def show_canonical_aliases_manager():
     dialog.show()
 
 
-def show_well_log():
+def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval=None):
 
     if not get_well_id():
         set_info('Скважина не выбрана', 'red')
@@ -1334,6 +1334,16 @@ def show_well_log():
         ui_wl.pushButton_add_well_log_to_cluster.clicked.connect(add_current_well_log_to_cluster_dataset)
 
         update_list_well_log()
+        if selected_curve_id is not None:
+            for index in range(ui_wl.listWidget_well_log.count()):
+                if ui_wl.listWidget_well_log.item(index).text().endswith(f' ID{selected_curve_id}'):
+                    ui_wl.listWidget_well_log.setCurrentRow(index)
+                    break
+        if selected_depth is not None:
+            set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_depth, selected_depth)
+        if selected_interval and len(selected_interval) == 2 and all(value is not None for value in selected_interval):
+            set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_interval,
+                                              abs(float(selected_interval[1]) - float(selected_interval[0])))
 
         WellLogForm.exec_()
 

@@ -1037,6 +1037,10 @@ class MarkupReg(Base):
     list_measure = Column(Text)
     list_fake = Column(Text)
     type_markup = Column(String)
+    target_source_type = Column(String)
+    target_source_config = Column(Text)
+    target_source_details = Column(Text)
+    target_is_manual_override = Column(Boolean, default=False)
 
     analysis = relationship('AnalysisReg', back_populates='markups')
     well = relationship("Well", back_populates="markups_reg")
@@ -1562,4 +1566,3 @@ class ParameterMask(Base):
 
     model_mask = relationship("TrainedModelClassMask", back_populates="mask")
     model_mask_reg = relationship("TrainedModelRegMask", back_populates="mask")
-
