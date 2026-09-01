@@ -245,7 +245,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         labels = [f"{item.source_name}: {item.raw_value} → {item.value:g}" for item in candidate.resolution.candidates]
         selected, ok = QtWidgets.QInputDialog.getItem(self, "Выбор значения", "Исходная запись:", labels, 0, False)
         if ok:
-            candidate.resolution.select(labels.index(selected))
+            selected_index = labels.index(selected)
+            if (self._settings and self._settings.source == "well_log"
+                    and candidate.resolution.details.get("pending_selection") == "boundary_depth"):
+                # A boundary is only an input to the log calculation.  Re-run the
+                # resolver at the chosen depth instead of storing that depth as target.
+                candidate.resolution = resolve_target(
+                    self.session, candidate.well_id, self._settings,
+                    boundary_candidate=candidate.resolution.candidates[selected_index])
+            else:
+                candidate.resolution.select(selected_index)
             self._render()
 
     def _open_well_log(self):
