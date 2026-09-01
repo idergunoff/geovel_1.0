@@ -204,15 +204,24 @@ def _interval(depth: float, length: float, position: str) -> tuple[float, float]
     return depth, depth + length
 
 
-def resolve_well_log(session, well_id: int, settings: TargetSettings) -> Resolution:
+def resolve_well_log(session, well_id: int, settings: TargetSettings,
+                     boundary_candidate: ResolutionCandidate | None = None) -> Resolution:
     if settings.interval <= 0:
         return Resolution("invalid", message="Интервал должен быть больше нуля")
     if settings.depth_mode == "boundary":
         if settings.boundary_canonical_id is None:
             return Resolution("invalid", message="Не выбрана опорная граница")
         boundary = resolve_boundary(session, well_id, settings.boundary_canonical_id)
+        if boundary_candidate is not None:
+            matching_candidate = next(
+                (candidate for candidate in boundary.candidates
+                 if candidate.source_id == boundary_candidate.source_id), None)
+            if matching_candidate is None:
+                return Resolution("invalid", message="Выбранная опорная глубина больше не существует")
+            boundary.select(boundary.candidates.index(matching_candidate))
         if boundary.status != "resolved":
             boundary.message = "Опорная глубина: " + boundary.message
+            boundary.details["pending_selection"] = "boundary_depth"
             return boundary
         depth = float(boundary.value)
         boundary_details = boundary.details
@@ -268,17 +277,20 @@ def resolve_well_log(session, well_id: int, settings: TargetSettings) -> Resolut
         return Resolution("invalid", message="В выбранном интервале нет достаточных валидных отсчётов")
     if len(candidates) > 1:
         return Resolution("ambiguous", candidates=candidates, message="Найдено несколько подходящих кривых")
-    return Resolution("resolved", candidates[0].value, candidates, "Каротажное значение рассчитано",
-                      {"selected": asdict(candidates[0])})
+    details = {"selected": asdict(candidates[0])}
+    if boundary_details.get("manual_override"):
+        details["manual_override"] = True
+    return Resolution("resolved", candidates[0].value, candidates, "Каротажное значение рассчитано", details)
 
 
-def resolve_target(session, well_id: int, settings: TargetSettings) -> Resolution:
+def resolve_target(session, well_id: int, settings: TargetSettings,
+                   boundary_candidate: ResolutionCandidate | None = None) -> Resolution:
     if settings.source == "boundary":
         return resolve_boundary(session, well_id, settings.canonical_id)
     if settings.source == "well_data":
         return resolve_well_data(session, well_id, settings)
     if settings.source == "well_log":
-        return resolve_well_log(session, well_id, settings)
+        return resolve_well_log(session, well_id, settings, boundary_candidate)
     return Resolution("invalid", message=f"Неизвестный источник: {settings.source}")
 
 
