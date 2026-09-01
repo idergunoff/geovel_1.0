@@ -4264,18 +4264,15 @@ Therm</string>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_99">
-                    <item row="0" column="1">
-                     <spacer name="horizontalSpacer_7">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="pushButton_update_all_well_reg">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(249, 240, 107);</string>
                       </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
+                      <property name="text">
+                       <string>upd all</string>
                       </property>
-                     </spacer>
+                     </widget>
                     </item>
                     <item row="0" column="0">
                      <widget class="QLabel" name="label_count_markup_reg">
@@ -4299,13 +4296,26 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="pushButton_update_all_well_reg">
+                    <item row="0" column="1">
+                     <spacer name="horizontalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>40</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item row="0" column="4">
+                     <widget class="QPushButton" name="pushButton_reg_check_all_well">
                       <property name="styleSheet">
-                       <string notr="true">background-color: rgb(249, 240, 107);</string>
+                       <string notr="true">background-color: rgb(255, 223, 183);</string>
                       </property>
                       <property name="text">
-                       <string>upd all</string>
+                       <string>check all well</string>
                       </property>
                      </widget>
                     </item>
@@ -7048,9 +7058,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup_3"/>
  </buttongroups>
 </ui>
