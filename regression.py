@@ -289,6 +289,69 @@ def add_all_well_markup_reg():
     update_list_well_markup_reg()
 
 
+def check_all_well_markup_reg():
+    """Recalculate and optionally correct target values of the current analysis."""
+    analysis_id = get_regmod_id()
+    if not analysis_id:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите регрессионный анализ.')
+        return
+    markups = session.query(MarkupReg).filter(
+        MarkupReg.analysis_id == analysis_id,
+        (MarkupReg.type_markup.is_(None)) | (MarkupReg.type_markup != 'intersection'),
+    ).all()
+    candidates = []
+    for markup in markups:
+        if not markup.well or not markup.profile or not markup.formation:
+            continue
+        candidates.append(WizardCandidate(
+            markup.well_id, markup.well.name or f'id{markup.well_id}', markup.profile_id,
+            markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
+            json.loads(markup.list_measure or '[]'), True, markup_id=markup.id,
+            stored_value=markup.target_value,
+            stored_manual_override=bool(markup.target_is_manual_override)))
+    if not candidates:
+        QMessageBox.information(MainWindow, 'Нет скважин',
+                                'В текущем анализе нет скважин, доступных для проверки.')
+        return
+
+    def open_candidate_log(well_id, details):
+        from well_log import show_well_log
+        update_list_well(select_well=True, selected_well_id=well_id)
+        selected = details.get('selected', {}).get('details', {}) if details else {}
+        show_well_log(selected_curve_id=selected.get('well_log_id'), selected_depth=selected.get('depth'),
+                      selected_interval=(selected.get('interval') or [None, None]), parent=dialog)
+
+    dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log, mode='check')
+    if dialog.exec_() != QtWidgets.QDialog.Accepted:
+        return
+    selected = dialog.selected_candidates()
+    answer = QMessageBox.question(
+        MainWindow, 'Исправить целевые значения',
+        f'Будут изменены целевые значения у {len(selected)} скважин. Продолжить?',
+        QMessageBox.Yes, QMessageBox.No)
+    if answer != QMessageBox.Yes:
+        return
+    try:
+        for candidate in selected:
+            markup = session.query(MarkupReg).filter(
+                MarkupReg.id == candidate.markup_id,
+                MarkupReg.analysis_id == analysis_id).first()
+            if not markup:
+                continue
+            config, details, manual = dialog.provenance_json(candidate)
+            markup.target_value = candidate.resolution.value
+            markup.target_source_type = dialog.settings().source
+            markup.target_source_config = config
+            markup.target_source_details = details
+            markup.target_is_manual_override = manual
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    set_info(f'Исправлены целевые значения у {len(selected)} скважин', 'green')
+    update_list_well_markup_reg()
+
+
 def update_list_well_markup_reg():
     """Обновить список обучающих скважин"""
     ui.listWidget_well_regmod.clear()
