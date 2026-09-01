@@ -110,6 +110,37 @@ def test_log_resolution_uses_boundary_interval_and_median(db):
     assert details["valid_point_count"] == 3
 
 
+def test_log_boundary_choice_is_recalculated_into_curve_target(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    db.add_all([Boundary(well_id=well.id, title="TOP", depth=1.0),
+                Boundary(well_id=well.id, title="top", depth=3.0)])
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+
+    settings = TargetSettings("well_log", curve_name.id, boundary_canonical_id=boundary_name.id,
+                              interval=1, aggregation="mean")
+    unresolved = resolve_target(db, well.id, settings)
+
+    assert unresolved.status == "ambiguous"
+    assert unresolved.details["pending_selection"] == "boundary_depth"
+
+    result = resolve_target(db, well.id, settings, boundary_candidate=unresolved.candidates[1])
+
+    assert result.status == "resolved"
+    assert result.value == 45
+    assert result.value != unresolved.candidates[1].value
+    assert result.details["manual_override"] is True
+    selected_details = result.details["selected"]["details"]
+    assert selected_details["depth"] == 3.0
+    assert selected_details["selected"]["source_id"] == unresolved.candidates[1].source_id
+
+
 def test_log_ratio_reports_invalid_zero_denominator(db):
     well = _well(db)
     curve_name = CanonicalWellLog(canonical_name="GR")
