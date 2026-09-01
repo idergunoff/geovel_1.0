@@ -28,6 +28,9 @@ class WizardCandidate:
     list_measure: list[int]
     already_exists: bool = False
     resolution: Resolution | None = None
+    markup_id: int | None = None
+    stored_value: float | None = None
+    stored_manual_override: bool = False
 
 
 class RegressionTargetWizard(QtWidgets.QDialog):
@@ -39,13 +42,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                     "missing": "#eeeeee", "invalid": "#ffd6d6"}
 
     def __init__(self, session, candidates: list[WizardCandidate], parent=None,
-                 open_well_log: Callable[[int, dict], None] | None = None):
+                 open_well_log: Callable[[int, dict], None] | None = None,
+                 mode: str = "add"):
         super().__init__(parent)
         self.session = session
         self.candidates = candidates
         self.open_well_log_callback = open_well_log
+        self.mode = mode
         self._settings: TargetSettings | None = None
-        self.setWindowTitle("Массовое добавление скважин — целевая переменная")
+        self.setWindowTitle("Проверка целевых значений скважин" if mode == "check"
+                            else "Массовое добавление скважин — целевая переменная")
         self.setModal(True)
         self.resize(1200, 720)
         self._build_ui()
@@ -113,26 +119,44 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.existing_combo.addItem("Существующие: пропускать", "skip")
         self.existing_combo.addItem("Существующие: обновить целевое значение", "target")
         self.existing_combo.addItem("Существующие: пересчитать всё", "all")
+        self.absolute_tolerance = QtWidgets.QDoubleSpinBox()
+        self.absolute_tolerance.setRange(0, 1000000)
+        self.absolute_tolerance.setDecimals(6)
+        self.absolute_tolerance.setValue(0.01)
+        self.absolute_tolerance.setPrefix("Допуск: ")
         self.export_button = QtWidgets.QPushButton("Экспорт отчёта CSV")
         self.open_log_button = QtWidgets.QPushButton("Открыть каротаж выбранной скважины")
         tools.addWidget(self.calculate_button); tools.addWidget(self.hide_missing_check)
-        tools.addWidget(self.existing_combo); tools.addStretch(); tools.addWidget(self.export_button)
+        tools.addWidget(self.existing_combo)
+        if self.mode == "check":
+            self.existing_combo.hide()
+            tools.addWidget(self.absolute_tolerance)
+            self.absolute_tolerance.valueChanged.connect(self._render)
+        tools.addStretch(); tools.addWidget(self.export_button)
         tools.addWidget(self.open_log_button)
         root.addLayout(tools)
 
-        self.table = QtWidgets.QTableWidget(0, 9)
-        self.table.setHorizontalHeaderLabels(("Добавить", "Скважина", "Профиль", "Расстояние", "Пласт ID",
-                                               "Источник", "Исходные значения", "Целевое значение", "Статус"))
+        columns = (("Исправить", "Скважина", "Профиль", "Пласт ID", "Источник", "Исходные значения",
+                    "Сохранено", "Рассчитано", "Разница", "Статус") if self.mode == "check" else
+                   ("Добавить", "Скважина", "Профиль", "Расстояние", "Пласт ID", "Источник",
+                    "Исходные значения", "Целевое значение", "Статус"))
+        self.table = QtWidgets.QTableWidget(0, len(columns))
+        self.table.setHorizontalHeaderLabels(columns)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(6, QtWidgets.QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(5 if self.mode == "check" else 6,
+                                                           QtWidgets.QHeaderView.Stretch)
         root.addWidget(self.table, 1)
         self.summary = QtWidgets.QLabel()
         root.addWidget(self.summary)
         buttons = QtWidgets.QDialogButtonBox()
-        self.add_resolved_button = buttons.addButton("Добавить однозначные", QtWidgets.QDialogButtonBox.AcceptRole)
-        self.add_selected_button = buttons.addButton("Добавить выбранные", QtWidgets.QDialogButtonBox.AcceptRole)
+        self.add_resolved_button = buttons.addButton(
+            "Выбрать несовпавшие" if self.mode == "check" else "Добавить однозначные",
+            QtWidgets.QDialogButtonBox.AcceptRole)
+        self.add_selected_button = buttons.addButton(
+            "Исправить выбранные" if self.mode == "check" else "Добавить выбранные",
+            QtWidgets.QDialogButtonBox.AcceptRole)
         buttons.addButton(QtWidgets.QDialogButtonBox.Cancel)
         root.addWidget(buttons)
 
@@ -208,23 +232,55 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             row = self.table.rowCount(); self.table.insertRow(row)
             check = QtWidgets.QTableWidgetItem()
             check.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsUserCheckable)
-            can_update = not candidate.already_exists or self.existing_mode() != "skip"
-            check.setCheckState(QtCore.Qt.Checked if resolution and status == "resolved" and can_update else QtCore.Qt.Unchecked)
+            can_update = (self.mode == "check" or not candidate.already_exists
+                          or self.existing_mode() != "skip")
+            mismatch = self._is_mismatch(candidate)
+            check.setCheckState(QtCore.Qt.Checked if resolution and status == "resolved" and can_update
+                                and (self.mode != "check" or
+                                     (mismatch and not candidate.stored_manual_override))
+                                else QtCore.Qt.Unchecked)
             check.setData(QtCore.Qt.UserRole, index)
             self.table.setItem(row, 0, check)
-            values = (candidate.well_name, candidate.profile_name, f"{candidate.distance:.2f}", str(candidate.formation_id),
-                      self.canonical_combo.currentText(), self._candidate_text(resolution),
-                      "" if not resolution or resolution.value is None else f"{resolution.value:g}",
-                      "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status])
+            if self.mode == "check":
+                calculated = resolution.value if resolution and resolution.value is not None else None
+                delta = calculated - candidate.stored_value if calculated is not None and candidate.stored_value is not None else None
+                if status == "resolved":
+                    result_status = "Не совпало" if mismatch else "Совпало"
+                    if candidate.stored_manual_override:
+                        result_status += " (ручное значение)"
+                else:
+                    result_status = self.STATUS_TEXT[status]
+                values = (candidate.well_name, candidate.profile_name, str(candidate.formation_id),
+                          self.canonical_combo.currentText(), self._candidate_text(resolution),
+                          "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
+                          "" if calculated is None else f"{calculated:g}",
+                          "" if delta is None else f"{delta:+g}", result_status)
+            else:
+                values = (candidate.well_name, candidate.profile_name, f"{candidate.distance:.2f}",
+                          str(candidate.formation_id), self.canonical_combo.currentText(),
+                          self._candidate_text(resolution),
+                          "" if not resolution or resolution.value is None else f"{resolution.value:g}",
+                          "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status])
             for column, value in enumerate(values, 1):
                 item = QtWidgets.QTableWidgetItem(value)
-                item.setBackground(QtGui.QColor("#eeeeee" if candidate.already_exists else self.STATUS_COLOR[status]))
+                color = ("#ffd6d6" if self.mode == "check" and mismatch else
+                         "#d9f2df" if self.mode == "check" and status == "resolved" else
+                         "#eeeeee" if candidate.already_exists else self.STATUS_COLOR[status])
+                item.setBackground(QtGui.QColor(color))
                 if resolution:
                     item.setToolTip(resolution.message)
                 self.table.setItem(row, column, item)
-        self.summary.setText(f"Кандидатов: {len(self.candidates)}; готово: {counts['resolved']}; "
+        mismatches = sum(self._is_mismatch(row) for row in self.candidates)
+        prefix = f"Несовпадений: {mismatches}; " if self.mode == "check" else ""
+        self.summary.setText(prefix + f"Кандидатов: {len(self.candidates)}; готово: {counts['resolved']}; "
                              f"требуют выбора: {counts['ambiguous']}; без данных/ошибки: "
                              f"{counts['missing'] + counts['invalid']}; уже добавлено: {existing}")
+
+    def _is_mismatch(self, candidate: WizardCandidate) -> bool:
+        resolution = candidate.resolution
+        return bool(resolution and resolution.status == "resolved" and resolution.value is not None
+                    and (candidate.stored_value is None or
+                         abs(resolution.value - candidate.stored_value) > self.absolute_tolerance.value()))
 
     @staticmethod
     def _candidate_text(resolution: Resolution | None) -> str:
@@ -278,15 +334,19 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             candidate = self._candidate_for_row(row)
             self.table.item(row, 0).setCheckState(
                 QtCore.Qt.Checked if candidate and candidate.resolution and candidate.resolution.status == "resolved"
-                and (not candidate.already_exists or self.existing_mode() != "skip") else QtCore.Qt.Unchecked)
+                and (self.mode != "check" or
+                     (self._is_mismatch(candidate) and not candidate.stored_manual_override))
+                and (self.mode == "check" or not candidate.already_exists
+                     or self.existing_mode() != "skip") else QtCore.Qt.Unchecked)
         self._accept_selected()
 
     def _accept_selected(self):
-        invalid = [row for row in self._checked_candidates() if (row.already_exists and self.existing_mode() == "skip") or not row.resolution or
+        invalid = [row for row in self._checked_candidates() if
+                   (self.mode != "check" and row.already_exists and self.existing_mode() == "skip") or not row.resolution or
                    row.resolution.status != "resolved" or row.resolution.value is None]
         if invalid:
             QtWidgets.QMessageBox.warning(self, "Неразрешённые строки",
-                                          "Добавлять можно только строки со статусом «Готово».")
+                                          "Обрабатывать можно только строки с рассчитанным значением.")
             return
         if not self._checked_candidates():
             QtWidgets.QMessageBox.warning(self, "Нет строк", "Не выбрано ни одной скважины.")
@@ -307,12 +367,14 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         with open(path, "w", encoding="utf-8-sig", newline="") as stream:
             writer = csv.writer(stream, delimiter=";")
             writer.writerow(("well_id", "well", "profile_id", "profile", "distance", "formation_id",
-                             "status", "target_value", "message", "source_details"))
+                             "status", "stored_value", "target_value", "delta", "message", "source_details"))
             for row in self.candidates:
                 resolution = row.resolution
                 writer.writerow((row.well_id, row.well_name, row.profile_id, row.profile_name, row.distance,
-                                 row.formation_id, resolution.status if resolution else "not_calculated",
-                                 resolution.value if resolution else "", resolution.message if resolution else "",
+                                 row.formation_id, resolution.status if resolution else "not_calculated", row.stored_value,
+                                 resolution.value if resolution else "",
+                                 resolution.value - row.stored_value if resolution and resolution.value is not None and row.stored_value is not None else "",
+                                 resolution.message if resolution else "",
                                  json.dumps(resolution.details, ensure_ascii=False) if resolution else "{}"))
 
     def provenance_json(self, candidate: WizardCandidate) -> tuple[str, str, bool]:
