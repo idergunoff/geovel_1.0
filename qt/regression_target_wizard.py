@@ -182,7 +182,11 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.strict_check.setVisible(is_data); self.sum_check.setVisible(is_data)
         for widget in self.log_widgets:
             widget.setVisible(is_log)
-        self.open_log_button.setVisible(is_log)
+        # The log viewer is useful for checking the selected well regardless of
+        # where its regression target comes from.  Source-specific curve and
+        # interval details are optional; callbacks open the well with the full
+        # log list when those details are unavailable.
+        self.open_log_button.setVisible(True)
         self._depth_mode_changed()
 
     def _depth_mode_changed(self):
