@@ -1,4 +1,4 @@
-"""Modal review wizard for automatically populated regression targets."""
+"""Review wizard for automatically populated regression targets."""
 from __future__ import annotations
 
 import json
@@ -52,7 +52,12 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self._settings: TargetSettings | None = None
         self.setWindowTitle("Проверка целевых значений скважин" if mode == "check"
                             else "Массовое добавление скважин — целевая переменная")
-        self.setModal(True)
+        # The check window is intentionally modeless: users often need to
+        # inspect or edit data in other application windows while comparing
+        # stored and calculated targets.  The add workflow remains modal
+        # because its caller applies the selected rows immediately after
+        # ``exec_()`` returns.
+        self.setModal(mode != "check")
         self.resize(1200, 720)
         self._build_ui()
         self._source_changed()

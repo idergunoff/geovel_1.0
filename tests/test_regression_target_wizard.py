@@ -47,3 +47,17 @@ def test_open_well_log_button_is_available_for_every_target_source(application, 
     dialog.open_log_button.click()
     assert opened == [(candidate.well_id, {})]
     dialog.close()
+
+
+def test_check_window_is_modeless_while_add_window_remains_modal(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    candidate = WizardCandidate(1, "Скважина 1", 2, "Профиль 1", 3, 0.0, [])
+
+    check_dialog = RegressionTargetWizard(_Session(), [candidate], mode="check")
+    add_dialog = RegressionTargetWizard(_Session(), [candidate], mode="add")
+
+    assert not check_dialog.isModal()
+    assert add_dialog.isModal()
+
+    check_dialog.close()
+    add_dialog.close()
