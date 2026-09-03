@@ -13,8 +13,6 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from sqlalchemy import func
-
 from models_db.model import (
     AliasBoundary,
     AliasWellOption,
@@ -129,12 +127,22 @@ def _alias_norms(session, alias_model, canonical_id: int) -> list[str]:
     return names
 
 
+def _matches_alias(value: str | None, aliases: set[str]) -> bool:
+    """Compare source names with aliases using the same Unicode normalization.
+
+    SQLite's ``lower()`` only handles ASCII characters by default.  Doing this
+    small, per-well comparison in Python therefore prevents Cyrillic names
+    such as ``КРОВЛЯ`` from being missed when the stored alias is ``кровля``.
+    """
+    return value is not None and value.strip().casefold() in aliases
+
+
 def resolve_boundary(session, well_id: int, canonical_id: int) -> Resolution:
-    aliases = _alias_norms(session, AliasBoundary, canonical_id)
+    aliases = set(_alias_norms(session, AliasBoundary, canonical_id))
     rows = session.query(Boundary).filter(
-        Boundary.well_id == well_id,
-        func.lower(func.trim(Boundary.title)).in_(aliases),
+        Boundary.well_id == well_id
     ).order_by(Boundary.depth, Boundary.id).all() if aliases else []
+    rows = [row for row in rows if _matches_alias(row.title, aliases)]
     candidates = [ResolutionCandidate(float(row.depth), row.id, row.title or "", str(row.depth),
                                       {"boundary_id": row.id}) for row in rows if row.depth is not None]
     if not candidates:
@@ -146,11 +154,11 @@ def resolve_boundary(session, well_id: int, canonical_id: int) -> Resolution:
 
 
 def resolve_well_data(session, well_id: int, settings: TargetSettings) -> Resolution:
-    aliases = _alias_norms(session, AliasWellOption, settings.canonical_id)
+    aliases = set(_alias_norms(session, AliasWellOption, settings.canonical_id))
     rows = session.query(WellOptionally).filter(
-        WellOptionally.well_id == well_id,
-        func.lower(func.trim(WellOptionally.option)).in_(aliases),
+        WellOptionally.well_id == well_id
     ).order_by(WellOptionally.id).all() if aliases else []
+    rows = [row for row in rows if _matches_alias(row.option, aliases)]
     candidates: list[ResolutionCandidate] = []
     errors: list[str] = []
     for row in rows:
@@ -229,11 +237,11 @@ def resolve_well_log(session, well_id: int, settings: TargetSettings,
         depth = float(settings.fixed_depth)
         boundary_details = {"fixed_depth": depth}
 
-    aliases = _alias_norms(session, AliasWellLog, settings.canonical_id)
+    aliases = set(_alias_norms(session, AliasWellLog, settings.canonical_id))
     curves = session.query(WellLog).filter(
-        WellLog.well_id == well_id,
-        func.lower(func.trim(WellLog.curve_name)).in_(aliases),
+        WellLog.well_id == well_id
     ).order_by(WellLog.id).all() if aliases else []
+    curves = [curve for curve in curves if _matches_alias(curve.curve_name, aliases)]
     candidates: list[ResolutionCandidate] = []
     for curve in curves:
         lower_interval = (_interval(depth, settings.interval, settings.interval_position)

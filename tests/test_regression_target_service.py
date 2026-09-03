@@ -71,6 +71,20 @@ def test_boundary_resolution_requires_manual_choice_for_alias_duplicates(db):
     assert result.details["manual_override"] is True
 
 
+def test_boundary_resolution_matches_cyrillic_alias_case_insensitively(db):
+    well = _well(db)
+    canonical = CanonicalBoundary(canonical_name="Кровля пласта")
+    db.add(canonical); db.flush()
+    db.add(AliasBoundary(alias_name="кровля j1", canonical_id=canonical.id))
+    db.add(Boundary(well_id=well.id, title="  КРОВЛЯ J1  ", depth=123.4))
+    db.commit()
+
+    result = resolve_target(db, well.id, TargetSettings("boundary", canonical.id))
+
+    assert result.status == "resolved"
+    assert result.value == 123.4
+
+
 def test_well_data_resolution_sums_explicit_parts_and_preserves_source(db):
     well = _well(db)
     canonical = CanonicalWellOption(canonical_name="Дебит")
