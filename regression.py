@@ -15,6 +15,8 @@ from random_param_reg import push_random_param_reg
 from feature_selection import *
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
 
+_regression_target_check_dialog = None
+
 def _get_training_wells_regmod():
     wells = {}
     markups = session.query(MarkupReg).filter(
@@ -291,6 +293,17 @@ def add_all_well_markup_reg():
 
 def check_all_well_markup_reg():
     """Recalculate and optionally correct target values of the current analysis."""
+    global _regression_target_check_dialog
+
+    # Do not create multiple check windows for the same action.  Keeping this
+    # module-level reference also prevents a modeless dialog from being
+    # garbage-collected as soon as this function returns.
+    if _regression_target_check_dialog is not None:
+        _regression_target_check_dialog.show()
+        _regression_target_check_dialog.raise_()
+        _regression_target_check_dialog.activateWindow()
+        return
+
     analysis_id = get_regmod_id()
     if not analysis_id:
         QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите регрессионный анализ.')
@@ -322,34 +335,44 @@ def check_all_well_markup_reg():
                       selected_interval=(selected.get('interval') or [None, None]), parent=dialog)
 
     dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log, mode='check')
-    if dialog.exec_() != QtWidgets.QDialog.Accepted:
-        return
-    selected = dialog.selected_candidates()
-    answer = QMessageBox.question(
-        MainWindow, 'Исправить целевые значения',
-        f'Будут изменены целевые значения у {len(selected)} скважин. Продолжить?',
-        QMessageBox.Yes, QMessageBox.No)
-    if answer != QMessageBox.Yes:
-        return
-    try:
-        for candidate in selected:
-            markup = session.query(MarkupReg).filter(
-                MarkupReg.id == candidate.markup_id,
-                MarkupReg.analysis_id == analysis_id).first()
-            if not markup:
-                continue
-            config, details, manual = dialog.provenance_json(candidate)
-            markup.target_value = candidate.resolution.value
-            markup.target_source_type = dialog.settings().source
-            markup.target_source_config = config
-            markup.target_source_details = details
-            markup.target_is_manual_override = manual
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    set_info(f'Исправлены целевые значения у {len(selected)} скважин', 'green')
-    update_list_well_markup_reg()
+    _regression_target_check_dialog = dialog
+
+    def apply_selected_corrections():
+        selected = dialog.selected_candidates()
+        answer = QMessageBox.question(
+            MainWindow, 'Исправить целевые значения',
+            f'Будут изменены целевые значения у {len(selected)} скважин. Продолжить?',
+            QMessageBox.Yes, QMessageBox.No)
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            for candidate in selected:
+                markup = session.query(MarkupReg).filter(
+                    MarkupReg.id == candidate.markup_id,
+                    MarkupReg.analysis_id == analysis_id).first()
+                if not markup:
+                    continue
+                config, details, manual = dialog.provenance_json(candidate)
+                markup.target_value = candidate.resolution.value
+                markup.target_source_type = dialog.settings().source
+                markup.target_source_config = config
+                markup.target_source_details = details
+                markup.target_is_manual_override = manual
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        set_info(f'Исправлены целевые значения у {len(selected)} скважин', 'green')
+        update_list_well_markup_reg()
+
+    def release_dialog(_result):
+        global _regression_target_check_dialog
+        _regression_target_check_dialog = None
+        dialog.deleteLater()
+
+    dialog.accepted.connect(apply_selected_corrections)
+    dialog.finished.connect(release_dialog)
+    dialog.show()
 
 
 def update_list_well_markup_reg():
