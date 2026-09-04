@@ -40,6 +40,17 @@ def normalize_text(value):
     return " ".join(tokens)
 
 
+def normalize_well_name(value):
+    """Normalize a well identifier, including Excel's integer-as-float form."""
+    text = "" if value is None else str(value).strip()
+    # An identifier stored as a numeric Excel cell is read by pandas as, for
+    # example, ``124.0``.  It is the same well as the database value ``124``.
+    numeric_identifier = re.fullmatch(r"([+-]?\d+)[.,]0+", text)
+    if numeric_identifier:
+        text = numeric_identifier.group(1)
+    return normalize_text(text)
+
+
 def text_similarity(left, right):
     left, right = normalize_text(left), normalize_text(right)
     if not left or not right:
@@ -71,13 +82,13 @@ class WellLookupIndex:
         return math.floor(x / self.cell_size), math.floor(y / self.cell_size)
 
     def add(self, well):
-        self._by_name[normalize_text(well.name)].append(well)
+        self._by_name[normalize_well_name(well.name)].append(well)
         if well.x_coord is not None and well.y_coord is not None:
             self._by_cell[self._cell(well.x_coord, well.y_coord)].append(well)
 
     def candidates(self, name, x, y):
         """Return exact-name wells plus wells in neighbouring coordinate cells."""
-        result = {well.id: well for well in self._by_name.get(normalize_text(name), ())}
+        result = {well.id: well for well in self._by_name.get(normalize_well_name(name), ())}
         cell_x, cell_y = self._cell(x, y)
         for offset_x in (-1, 0, 1):
             for offset_y in (-1, 0, 1):
@@ -94,7 +105,7 @@ def rank_well_candidates(wells, name, x, y, area="", areas_by_well=None, *, max_
         if well.x_coord is None or well.y_coord is None:
             continue
         distance = math.hypot(well.x_coord - x, well.y_coord - y)
-        name_similarity = text_similarity(well.name, name)
+        name_similarity = text_similarity(normalize_well_name(well.name), normalize_well_name(name))
         area_matches = [
             (text_similarity(candidate_area, area), candidate_area)
             for candidate_area in areas_by_well.get(well.id, ())
@@ -127,5 +138,11 @@ def is_confident_match(candidate, area=""):
 
 
 def requires_confirmation(candidate, area=""):
-    """Ask the user only when other fields match but coordinates differ by over 50 m."""
-    return candidate.distance > 50.0 and other_fields_match(candidate, area)
+    """Ask about every plausible candidate that is unsafe to merge automatically.
+
+    Candidate ranking has already discarded unrelated records.  Previously a
+    nearby record with a spelling or area discrepancy fell between the two
+    decisions: it was neither merged nor shown for confirmation and therefore
+    got inserted as a duplicate.
+    """
+    return not is_confident_match(candidate, area)
