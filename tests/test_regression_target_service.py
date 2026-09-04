@@ -40,6 +40,7 @@ def _well(db):
     ("125,4 м3/сут", "resolved", 125.4),
     ("1 250 м", "resolved", 1250.0),
     ("100 + 25 м", "resolved", 125.0),
+    ("100/100", "resolved", 100.0),
     ("100/125", "ambiguous", None),
     ("100-125", "ambiguous", None),
     ("< 0.5", "ambiguous", None),
@@ -85,6 +86,26 @@ def test_boundary_resolution_matches_cyrillic_alias_case_insensitively(db):
     assert result.value == 123.4
 
 
+def test_equal_boundary_values_are_resolved_automatically(db):
+    well = _well(db)
+    canonical = CanonicalBoundary(canonical_name="J1")
+    db.add(canonical); db.flush()
+    db.add_all([AliasBoundary(alias_name="J1", canonical_id=canonical.id),
+                AliasBoundary(alias_name="Ю1", canonical_id=canonical.id)])
+    boundaries = [Boundary(well_id=well.id, title="J1", depth=100.0),
+                  Boundary(well_id=well.id, title="Ю1", depth=100.0)]
+    db.add_all(boundaries); db.commit()
+
+    result = resolve_target(db, well.id, TargetSettings("boundary", canonical.id))
+
+    assert result.status == "resolved"
+    assert result.value == 100.0
+    assert result.details["auto_selected_equal_values"] is True
+    assert [row["source_id"] for row in result.details["equivalent_sources"]] == [
+        row.id for row in boundaries
+    ]
+
+
 def test_well_data_resolution_sums_explicit_parts_and_preserves_source(db):
     well = _well(db)
     canonical = CanonicalWellOption(canonical_name="Дебит")
@@ -98,6 +119,23 @@ def test_well_data_resolution_sums_explicit_parts_and_preserves_source(db):
     assert result.status == "resolved"
     assert result.value == 125
     assert result.details["selected"]["details"]["well_option_id"] == source.id
+
+
+def test_equal_well_data_values_are_resolved_automatically(db):
+    well = _well(db)
+    canonical = CanonicalWellOption(canonical_name="Дебит")
+    db.add(canonical); db.flush()
+    db.add(AliasWellOption(alias_name="Q", canonical_id=canonical.id)); db.flush()
+    rows = [WellOptionally(well_id=well.id, option="Q", value="125"),
+            WellOptionally(well_id=well.id, option="q", value="125,0 м3/сут")]
+    db.add_all(rows); db.commit()
+
+    result = resolve_target(db, well.id, TargetSettings("well_data", canonical.id))
+
+    assert result.status == "resolved"
+    assert result.value == 125.0
+    assert result.details["auto_selected_equal_values"] is True
+    assert len(result.details["equivalent_sources"]) == 2
 
 
 def test_log_resolution_uses_boundary_interval_and_median(db):
@@ -122,6 +160,32 @@ def test_log_resolution_uses_boundary_interval_and_median(db):
     assert details["well_log_id"] == curve.id
     assert details["interval"] == [2.0, 4.0]
     assert details["valid_point_count"] == 3
+
+
+def test_equal_values_from_multiple_log_curves_are_resolved_automatically(db):
+    well = _well(db)
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add(curve_name); db.flush()
+    db.add_all([AliasWellLog(alias_name="gamma", canonical_id=curve_name.id),
+                AliasWellLog(alias_name="gr", canonical_id=curve_name.id)])
+    curves = [WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=2, step=1,
+                      curve_data=json.dumps([10, 20, 30])),
+              WellLog(well_id=well.id, curve_name="GR", begin=0, end=2, step=1,
+                      curve_data=json.dumps([10, 20, 30]))]
+    db.add_all(curves); db.commit()
+
+    result = resolve_target(
+        db, well.id,
+        TargetSettings("well_log", curve_name.id, depth_mode="fixed", fixed_depth=0,
+                       interval=2, aggregation="mean"),
+    )
+
+    assert result.status == "resolved"
+    assert result.value == 20.0
+    assert result.details["auto_selected_equal_values"] is True
+    assert [row["source_id"] for row in result.details["equivalent_sources"]] == [
+        row.id for row in curves
+    ]
 
 
 def test_log_boundary_choice_is_recalculated_into_curve_target(db):
@@ -153,6 +217,83 @@ def test_log_boundary_choice_is_recalculated_into_curve_target(db):
     selected_details = result.details["selected"]["details"]
     assert selected_details["depth"] == 3.0
     assert selected_details["selected"]["source_id"] == unresolved.candidates[1].source_id
+
+
+def test_log_boundary_choices_without_curve_samples_are_filtered_before_selection(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    unavailable = Boundary(well_id=well.id, title="TOP", depth=100.0)
+    available = Boundary(well_id=well.id, title="top", depth=2.0)
+    db.add_all([unavailable, available])
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+
+    result = resolve_target(
+        db, well.id,
+        TargetSettings("well_log", curve_name.id, boundary_canonical_id=boundary_name.id,
+                       interval=1, aggregation="mean"),
+    )
+
+    assert result.status == "resolved"
+    assert result.value == 35
+    assert result.details["auto_selected_boundary_id"] == available.id
+    assert "выбрана автоматически" in result.message
+
+
+def test_log_boundary_check_reports_missing_samples_without_prompting_for_boundary(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    boundaries = [Boundary(well_id=well.id, title="TOP", depth=100.0),
+                  Boundary(well_id=well.id, title="top", depth=200.0)]
+    db.add_all(boundaries)
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+
+    result = resolve_target(
+        db, well.id,
+        TargetSettings("well_log", curve_name.id, boundary_canonical_id=boundary_name.id, interval=1),
+    )
+
+    assert result.status == "invalid"
+    assert result.candidates == []
+    assert result.details["checked_boundary_ids"] == [row.id for row in boundaries]
+    assert "Ни для одной" in result.message
+
+
+def test_log_boundary_prompt_contains_only_boundaries_with_curve_samples(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    available = [Boundary(well_id=well.id, title="TOP", depth=1.0),
+                 Boundary(well_id=well.id, title="top", depth=3.0)]
+    unavailable = Boundary(well_id=well.id, title="top", depth=100.0)
+    db.add_all([*available, unavailable])
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+
+    result = resolve_target(
+        db, well.id,
+        TargetSettings("well_log", curve_name.id, boundary_canonical_id=boundary_name.id, interval=1),
+    )
+
+    assert result.status == "ambiguous"
+    assert [row.source_id for row in result.candidates] == [row.id for row in available]
+    assert result.details["unavailable_boundary_ids"] == [unavailable.id]
+    assert result.details["pending_selection"] == "boundary_depth"
 
 
 def test_log_ratio_reports_invalid_zero_denominator(db):
