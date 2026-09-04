@@ -82,7 +82,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.resize(1200, 720)
         self._build_ui()
         self._restore_preferences()
-        self.finished.connect(lambda _result: self._save_preferences())
+        self.finished.connect(self._save_preferences)
 
     def _build_ui(self):
         root = QtWidgets.QVBoxLayout(self)
@@ -233,7 +233,8 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         """Exclude transient well/table state from persistent preferences."""
         return object_name in cls.SETTINGS_WIDGETS
 
-    def _save_preferences(self):
+    def _save_preferences(self, _result: int | None = None):
+        """Save reusable options only; candidate wells remain invocation-local."""
         save_form(self, self.SETTINGS_GROUP, self._is_preference_widget)
 
     def _source_changed(self):

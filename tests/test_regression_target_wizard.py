@@ -130,7 +130,15 @@ def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch
     application.processEvents()
 
     store = app_settings.settings()
-    persisted = "\n".join(f"{key}={store.value(key)}" for key in store.allKeys())
-    assert "Уникальная скважина 731" not in persisted
-    assert "731" not in persisted
-    assert not any("table" in key.lower() for key in store.allKeys())
+    keys = store.allKeys()
+    values = [str(store.value(key)) for key in keys]
+    assert "Уникальная скважина 731" not in values
+    assert "731" not in values
+    assert not any("table" in key.lower() for key in keys)
+
+    next_candidate = WizardCandidate(912, "Другая скважина", 4, "Профиль 2", 5, 0.0, [])
+    reopened = RegressionTargetWizard(_Session(), [next_candidate], mode="check")
+    reopened._render()
+    assert reopened._candidate_for_row(0) is next_candidate
+    assert reopened.table.item(0, 0).checkState() == QtCore.Qt.Unchecked
+    reopened.close()
