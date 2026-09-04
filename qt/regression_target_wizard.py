@@ -8,6 +8,7 @@ from typing import Callable
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from app_settings import restore_form, save_form
 from models_db.model import CanonicalBoundary
 from regression_target.service import (
     Resolution,
@@ -34,6 +35,7 @@ class WizardCandidate:
 
 
 class RegressionTargetWizard(QtWidgets.QDialog):
+    SETTINGS_GROUP = "regression_target_wizard"
     SOURCE_DATA = (("Глубина границы", "boundary"), ("Информация о скважине", "well_data"),
                    ("Каротажная кривая", "well_log"))
     STATUS_TEXT = {"resolved": "Готово", "ambiguous": "Требуется выбор",
@@ -60,15 +62,18 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.setModal(mode != "check")
         self.resize(1200, 720)
         self._build_ui()
-        self._source_changed()
+        self._restore_preferences()
+        self.finished.connect(lambda _result: save_form(self, self.SETTINGS_GROUP))
 
     def _build_ui(self):
         root = QtWidgets.QVBoxLayout(self)
         source_row = QtWidgets.QHBoxLayout()
         self.source_combo = QtWidgets.QComboBox()
+        self.source_combo.setObjectName("comboBox_target_source")
         for title, value in self.SOURCE_DATA:
             self.source_combo.addItem(title, value)
         self.canonical_combo = QtWidgets.QComboBox()
+        self.canonical_combo.setObjectName("comboBox_canonical_target")
         source_row.addWidget(QtWidgets.QLabel("Источник:"))
         source_row.addWidget(self.source_combo)
         source_row.addWidget(QtWidgets.QLabel("Каноническое название:"))
@@ -78,24 +83,38 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.options = QtWidgets.QGroupBox("Настройки источника")
         options = QtWidgets.QGridLayout(self.options)
         self.strict_check = QtWidgets.QCheckBox("Строгий разбор строк")
+        self.strict_check.setObjectName("checkBox_strict_numeric")
         self.sum_check = QtWidgets.QCheckBox("Складывать явные выражения через +")
+        self.sum_check.setObjectName("checkBox_explicit_sum")
         self.sum_check.setChecked(True)
         self.aggregation_combo = QtWidgets.QComboBox()
+        self.aggregation_combo.setObjectName("comboBox_aggregation")
         self.aggregation_combo.addItem("Медиана", "median")
         self.aggregation_combo.addItem("Среднее", "mean")
         self.operation_combo = QtWidgets.QComboBox()
+        self.operation_combo.setObjectName("comboBox_operation")
         for title, value in (("Значение интервала", "single"), ("Верх / низ", "upper_lower_ratio"),
                              ("Низ / верх", "lower_upper_ratio"), ("Низ − верх", "difference")):
             self.operation_combo.addItem(title, value)
         self.depth_mode_combo = QtWidgets.QComboBox()
+        self.depth_mode_combo.setObjectName("comboBox_depth_mode")
         self.depth_mode_combo.addItem("От канонической границы", "boundary")
         self.depth_mode_combo.addItem("Фиксированная глубина", "fixed")
         self.boundary_combo = QtWidgets.QComboBox()
+        self.boundary_combo.setObjectName("comboBox_canonical_boundary")
         for row in self.session.query(CanonicalBoundary).order_by(CanonicalBoundary.canonical_name).all():
             self.boundary_combo.addItem(row.canonical_name, row.id)
-        self.fixed_depth = QtWidgets.QDoubleSpinBox(); self.fixed_depth.setRange(-100000, 100000); self.fixed_depth.setDecimals(3)
-        self.interval = QtWidgets.QDoubleSpinBox(); self.interval.setRange(0.001, 100000); self.interval.setValue(5); self.interval.setDecimals(3)
+        self.fixed_depth = QtWidgets.QDoubleSpinBox()
+        self.fixed_depth.setObjectName("doubleSpinBox_fixed_depth")
+        self.fixed_depth.setRange(-100000, 100000)
+        self.fixed_depth.setDecimals(3)
+        self.interval = QtWidgets.QDoubleSpinBox()
+        self.interval.setObjectName("doubleSpinBox_interval")
+        self.interval.setRange(0.001, 100000)
+        self.interval.setValue(5)
+        self.interval.setDecimals(3)
         self.position_combo = QtWidgets.QComboBox()
+        self.position_combo.setObjectName("comboBox_interval_position")
         self.position_combo.addItem("Ниже глубины", "below")
         self.position_combo.addItem("Выше глубины", "above")
         self.position_combo.addItem("Симметрично", "centered")
@@ -120,11 +139,14 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         tools = QtWidgets.QHBoxLayout()
         self.calculate_button = QtWidgets.QPushButton("Рассчитать / обновить")
         self.hide_missing_check = QtWidgets.QCheckBox("Скрыть строки без данных")
+        self.hide_missing_check.setObjectName("checkBox_hide_missing")
         self.existing_combo = QtWidgets.QComboBox()
+        self.existing_combo.setObjectName("comboBox_existing_mode")
         self.existing_combo.addItem("Существующие: пропускать", "skip")
         self.existing_combo.addItem("Существующие: обновить целевое значение", "target")
         self.existing_combo.addItem("Существующие: пересчитать всё", "all")
         self.absolute_tolerance = QtWidgets.QDoubleSpinBox()
+        self.absolute_tolerance.setObjectName("doubleSpinBox_absolute_tolerance")
         self.absolute_tolerance.setRange(0, 1000000)
         self.absolute_tolerance.setDecimals(6)
         self.absolute_tolerance.setValue(0.01)
@@ -176,6 +198,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.add_resolved_button.clicked.connect(self._accept_resolved)
         self.add_selected_button.clicked.connect(self._accept_selected)
         buttons.rejected.connect(self.reject)
+
+    def _restore_preferences(self):
+        """Restore every editable option, including source-dependent targets."""
+        # The canonical-target list depends on the restored source.  The first
+        # pass restores the source, then rebuilding that list allows the second
+        # pass to restore its selected value by text as well.
+        restore_form(self, self.SETTINGS_GROUP)
+        self._source_changed()
+        restore_form(self, self.SETTINGS_GROUP)
+        self._depth_mode_changed()
 
     def _source_changed(self):
         source = self.source_combo.currentData()
