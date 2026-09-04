@@ -135,9 +135,10 @@ def add_wells():
 
     pd_wells = clean_dataframe(pd_wells)
 
-    WellLoader = QtWidgets.QDialog()
+    WellLoader = QtWidgets.QDialog(MainWindow)
     ui_wl = Ui_WellLoader()
     ui_wl.setupUi(WellLoader)
+    WellLoader.setWindowModality(Qt.NonModal)
     WellLoader.show()
     WellLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
@@ -214,6 +215,10 @@ def add_wells():
                 '«Нет» — создать новую, «Отмена» — пропустить строку.'
             )
             dialog = QMessageBox(WellLoader)
+            # Do not use QMessageBox.exec_(): together with the old modal
+            # WellLoader it prevented interaction with every other application
+            # window while a large import was being reviewed.
+            dialog.setWindowModality(Qt.NonModal)
             dialog.setWindowTitle('Проверка возможного дубля')
             dialog.setIcon(QMessageBox.Question)
             dialog.setText(message)
@@ -224,7 +229,11 @@ def add_wells():
             )
             apply_to_area.setEnabled(bool(area))
             dialog.setCheckBox(apply_to_area)
-            decision = dialog.exec_()
+            decision_loop = QtCore.QEventLoop(dialog)
+            dialog.finished.connect(decision_loop.quit)
+            dialog.show()
+            decision_loop.exec_()
+            decision = dialog.result()
             return decision, apply_to_area.isChecked() and bool(area)
 
         n_new = n_update = n_skipped = 0
@@ -350,7 +359,8 @@ def add_wells():
     ui_wl.pushButton_add_opt.clicked.connect(add_well_option)
     ui_wl.buttonBox.accepted.connect(load_wells)
     ui_wl.buttonBox.rejected.connect(cancel_load)
-    WellLoader.exec_()
+    # Keep column mapping and duplicate review modeless so the user can inspect
+    # other application windows before deciding how to handle a well.
 
 
 

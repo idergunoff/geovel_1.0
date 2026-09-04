@@ -50,7 +50,17 @@ def test_exact_nearby_well_is_confident_and_text_is_normalized():
     assert is_confident_match(candidate)
 
 
-def test_confirmation_is_requested_only_beyond_50_metres_when_other_fields_match():
+def test_numeric_excel_well_name_matches_database_integer_name():
+    well = Well(1, "124", 10, 20)
+    index = WellLookupIndex([well])
+
+    candidates = rank_well_candidates(index.candidates("124.0", 10, 20), "124.0", 10, 20)
+
+    assert [candidate.well.id for candidate in candidates] == [1]
+    assert is_confident_match(candidates[0])
+
+
+def test_uncertain_candidates_require_confirmation():
     near = rank_well_candidates([Well(1, "124", 0, 0)], "124", 30, 0)[0]
     far = rank_well_candidates([Well(1, "124", 0, 0)], "124", 70, 0)[0]
     wrong_area = rank_well_candidates(
@@ -59,7 +69,14 @@ def test_confirmation_is_requested_only_beyond_50_metres_when_other_fields_match
     assert is_confident_match(near)
     assert not requires_confirmation(near)
     assert requires_confirmation(far)
-    assert not requires_confirmation(wrong_area, "Южная")
+    assert requires_confirmation(wrong_area, "Южная")
+
+
+def test_nearby_plausible_candidate_with_different_name_requires_confirmation():
+    candidate = rank_well_candidates([Well(1, "124-A", 0, 0)], "124", 1, 1)[0]
+
+    assert not is_confident_match(candidate)
+    assert requires_confirmation(candidate)
 
 
 def test_lookup_index_limits_search_and_keeps_far_exact_number():
