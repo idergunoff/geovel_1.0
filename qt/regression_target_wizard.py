@@ -36,6 +36,25 @@ class WizardCandidate:
 
 class RegressionTargetWizard(QtWidgets.QDialog):
     SETTINGS_GROUP = "regression_target_wizard"
+    # Persist only controls that describe how a target is calculated or shown.
+    # In particular, candidates and their selections belong to one invocation
+    # of the wizard and must never leak into a later regression analysis.
+    SETTINGS_WIDGETS = frozenset({
+        "comboBox_target_source",
+        "comboBox_canonical_target",
+        "checkBox_strict_numeric",
+        "checkBox_explicit_sum",
+        "comboBox_aggregation",
+        "comboBox_operation",
+        "comboBox_depth_mode",
+        "comboBox_canonical_boundary",
+        "doubleSpinBox_fixed_depth",
+        "doubleSpinBox_interval",
+        "comboBox_interval_position",
+        "checkBox_hide_missing",
+        "comboBox_existing_mode",
+        "doubleSpinBox_absolute_tolerance",
+    })
     SOURCE_DATA = (("Глубина границы", "boundary"), ("Информация о скважине", "well_data"),
                    ("Каротажная кривая", "well_log"))
     STATUS_TEXT = {"resolved": "Готово", "ambiguous": "Требуется выбор",
@@ -63,7 +82,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.resize(1200, 720)
         self._build_ui()
         self._restore_preferences()
-        self.finished.connect(lambda _result: save_form(self, self.SETTINGS_GROUP))
+        self.finished.connect(lambda _result: self._save_preferences())
 
     def _build_ui(self):
         root = QtWidgets.QVBoxLayout(self)
@@ -204,10 +223,18 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         # The canonical-target list depends on the restored source.  The first
         # pass restores the source, then rebuilding that list allows the second
         # pass to restore its selected value by text as well.
-        restore_form(self, self.SETTINGS_GROUP)
+        restore_form(self, self.SETTINGS_GROUP, self._is_preference_widget)
         self._source_changed()
-        restore_form(self, self.SETTINGS_GROUP)
+        restore_form(self, self.SETTINGS_GROUP, self._is_preference_widget)
         self._depth_mode_changed()
+
+    @classmethod
+    def _is_preference_widget(cls, object_name: str) -> bool:
+        """Exclude transient well/table state from persistent preferences."""
+        return object_name in cls.SETTINGS_WIDGETS
+
+    def _save_preferences(self):
+        save_form(self, self.SETTINGS_GROUP, self._is_preference_widget)
 
     def _source_changed(self):
         source = self.source_combo.currentData()
