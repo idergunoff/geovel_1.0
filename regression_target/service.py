@@ -52,6 +52,23 @@ class Resolution:
         self.details = {**self.details, "selected": asdict(candidate), "manual_override": True}
 
 
+def _resolve_multiple_candidates(candidates: list[ResolutionCandidate],
+                                 ambiguous_message: str) -> Resolution:
+    """Resolve duplicate source rows automatically when their values agree exactly."""
+    first = candidates[0]
+    if all(candidate.value == first.value for candidate in candidates[1:]):
+        return Resolution(
+            "resolved", first.value, candidates,
+            "Найдено несколько источников с одинаковым значением; выбор выполнен автоматически",
+            {
+                "selected": asdict(first),
+                "equivalent_sources": [asdict(candidate) for candidate in candidates],
+                "auto_selected_equal_values": True,
+            },
+        )
+    return Resolution("ambiguous", candidates=candidates, message=ambiguous_message)
+
+
 @dataclass(frozen=True)
 class TargetSettings:
     source: Literal["boundary", "well_data", "well_log"]
@@ -100,11 +117,13 @@ def parse_numeric_value(raw: Any, *, allow_explicit_sum: bool = True, strict: bo
                 return Resolution("resolved", sum(values), message=f"Сумма {values}", details={"parts": values})
     tokens = _SINGLE_RE.findall(text)
     if len(tokens) != 1:
-        status = "missing" if not tokens else "ambiguous"
-        return Resolution(status, candidates=[
+        if not tokens:
+            return Resolution("missing", message="Не найдено число")
+        candidates = [
             ResolutionCandidate(_to_float(token), index, "числовая часть", token)
             for index, token in enumerate(tokens)
-        ], message="Не найдено число" if not tokens else "Найдено несколько числовых частей")
+        ]
+        return _resolve_multiple_candidates(candidates, "Найдено несколько числовых частей")
     token = tokens[0]
     # A lone number surrounded by range/date/comparison syntax is not unambiguous.
     if any(symbol in text for symbol in ("<", ">")) or re.search(r"\d\s*[/–—]\s*\d", text):
@@ -148,7 +167,7 @@ def resolve_boundary(session, well_id: int, canonical_id: int) -> Resolution:
     if not candidates:
         return Resolution("missing", message="Граница выбранного типа отсутствует")
     if len(candidates) > 1:
-        return Resolution("ambiguous", candidates=candidates, message="Найдено несколько границ")
+        return _resolve_multiple_candidates(candidates, "Найдено несколько границ")
     return Resolution("resolved", candidates[0].value, candidates, "Найдена одна граница",
                       {"selected": asdict(candidates[0])})
 
@@ -174,8 +193,11 @@ def resolve_well_data(session, well_id: int, settings: TargetSettings) -> Resolu
     if not candidates:
         return Resolution("invalid", message="; ".join(errors) or "Нет числовых значений")
     if len(candidates) > 1:
-        return Resolution("ambiguous", candidates=candidates,
-                          message="Найдено несколько значений; " + "; ".join(errors))
+        result = _resolve_multiple_candidates(
+            candidates, "Найдено несколько значений; " + "; ".join(errors))
+        if result.status == "resolved":
+            result.details["warnings"] = errors
+        return result
     return Resolution("resolved", candidates[0].value, candidates, "Значение распознано",
                       {"selected": asdict(candidates[0]), "warnings": errors})
 
@@ -220,6 +242,39 @@ def resolve_well_log(session, well_id: int, settings: TargetSettings,
         if settings.boundary_canonical_id is None:
             return Resolution("invalid", message="Не выбрана опорная граница")
         boundary = resolve_boundary(session, well_id, settings.boundary_canonical_id)
+        if boundary_candidate is None and boundary.status == "ambiguous":
+            # Do not ask the user to choose an offset that cannot actually be
+            # used for the requested log calculation.  Previously every
+            # matching boundary was offered and the absence of curve samples
+            # was discovered only after the choice had been made.
+            checked = list(boundary.candidates)
+            usable = []
+            calculated = []
+            for candidate in checked:
+                result = resolve_well_log(session, well_id, settings, candidate)
+                if result.status in ("resolved", "ambiguous"):
+                    usable.append(candidate)
+                    calculated.append(result)
+            if not usable:
+                return Resolution(
+                    "invalid",
+                    message=("Ни для одной найденной опорной границы нет достаточных "
+                             "валидных отсчётов каротажа в выбранном интервале"),
+                    details={"checked_boundary_ids": [row.source_id for row in checked]},
+                )
+            if len(usable) == 1:
+                result = calculated[0]
+                result.message += "; единственная граница с доступными данными выбрана автоматически"
+                result.details["auto_selected_boundary_id"] = usable[0].source_id
+                return result
+            boundary.candidates = usable
+            boundary.message = "Найдено несколько границ с доступными данными каротажа"
+            boundary.details["checked_boundary_ids"] = [row.source_id for row in checked]
+            boundary.details["unavailable_boundary_ids"] = [
+                row.source_id for row in checked if row not in usable
+            ]
+            boundary.details["pending_selection"] = "boundary_depth"
+            return boundary
         if boundary_candidate is not None:
             matching_candidate = next(
                 (candidate for candidate in boundary.candidates
@@ -284,7 +339,10 @@ def resolve_well_log(session, well_id: int, settings: TargetSettings,
     if not candidates:
         return Resolution("invalid", message="В выбранном интервале нет достаточных валидных отсчётов")
     if len(candidates) > 1:
-        return Resolution("ambiguous", candidates=candidates, message="Найдено несколько подходящих кривых")
+        result = _resolve_multiple_candidates(candidates, "Найдено несколько подходящих кривых")
+        if result.status == "resolved" and boundary_details.get("manual_override"):
+            result.details["manual_override"] = True
+        return result
     details = {"selected": asdict(candidates[0])}
     if boundary_details.get("manual_override"):
         details["manual_override"] = True
