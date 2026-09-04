@@ -117,3 +117,20 @@ def test_all_target_options_are_restored_including_source_dependent_target(appli
     assert restored.interval.value() == 17.25
     assert restored.position_combo.currentData() == "centered"
     restored.close()
+
+
+def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    candidate = WizardCandidate(731, "Уникальная скважина 731", 2, "Профиль 1", 3, 0.0, [])
+    dialog = RegressionTargetWizard(_Session(), [candidate], mode="check")
+    dialog._render()
+    dialog.table.item(0, 0).setCheckState(QtCore.Qt.Checked)
+    dialog.show()
+    dialog.close()
+    application.processEvents()
+
+    store = app_settings.settings()
+    persisted = "\n".join(f"{key}={store.value(key)}" for key in store.allKeys())
+    assert "Уникальная скважина 731" not in persisted
+    assert "731" not in persisted
+    assert not any("table" in key.lower() for key in store.allKeys())
