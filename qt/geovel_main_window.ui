@@ -6851,9 +6851,9 @@ Therm</string>
            <widget class="QComboBox" name="comboBox_year_research"/>
           </item>
           <item>
-           <widget class="QToolButton" name="toolButton_info_objects">
+           <widget class="QToolButton" name="toolButton_info_projects">
             <property name="toolTip">
-             <string>информация по объектам и профилям</string>
+             <string>Отчёт по метражу объектов и профилей за выбранный год</string>
             </property>
             <property name="styleSheet">
              <string notr="true">background-color: rgb(85, 255, 255);</string>

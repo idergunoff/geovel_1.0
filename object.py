@@ -1,3 +1,4 @@
+import datetime
 import sys, os
 import random, math
 from pathlib import Path
@@ -140,6 +141,13 @@ import hdbscan
 from boruta import BorutaPy
 from collections import defaultdict
 
+from project_length_report import (
+    ProfileLength,
+    build_year_report,
+    calculate_measurement_length,
+    calculate_profile_length,
+)
+
 
 from difflib import SequenceMatcher
 
@@ -182,6 +190,53 @@ def require_torch_stack():
         raise ImportError("PyTorch is required for this neural-network action.") from _TORCH_IMPORT_ERROR
     if NeuralNetClassifier is None or NeuralNetRegressor is None or ValidSplit is None or EarlyStopping is None:
         raise ImportError("skorch is required for this neural-network action.") from _SKORCH_IMPORT_ERROR
+
+
+def show_year_profile_length_report():
+    """Показать прокручиваемый отчёт по метражу профилей выбранного года."""
+    # Не вызываем get_year_research(): func.py импортирует этот модуль, поэтому
+    # такой вызов создаёт зависимость от функции из циклического импорта.
+    year_text = ui.comboBox_year_research.currentText()
+    try:
+        year = int(year_text)
+    except (TypeError, ValueError):
+        QMessageBox.warning(MainWindow, "Отчёт по метражу", "Сначала выберите год исследований.")
+        return
+
+    date_from = datetime.date(year, 1, 1)
+    date_to = datetime.date(year + 1, 1, 1)
+    rows = (
+        session.query(GeoradarObject.title, Research.date_research, Profile.title,
+                      Profile.x_pulc, Profile.y_pulc, Profile.signal)
+        .join(Research, Research.object_id == GeoradarObject.id)
+        .join(Profile, Profile.research_id == Research.id)
+        .filter(Research.date_research >= date_from, Research.date_research < date_to)
+        .order_by(GeoradarObject.title, Research.date_research, Profile.title)
+        .all()
+    )
+    profiles = [
+        ProfileLength(
+            object_title,
+            research_date,
+            profile_title,
+            calculate_profile_length(x, y),
+            calculate_measurement_length(signal),
+        )
+        for object_title, research_date, profile_title, x, y, signal in rows
+    ]
+
+    dialog = QtWidgets.QDialog(MainWindow)
+    dialog.setWindowTitle(f"Метраж профилей за {year} год")
+    dialog.resize(720, 600)
+    layout = QtWidgets.QVBoxLayout(dialog)
+    report = QtWidgets.QTextBrowser(dialog)
+    report.setPlainText(build_year_report(year, profiles))
+    report.setFontFamily("monospace")
+    layout.addWidget(report)
+    buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, parent=dialog)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    dialog.exec_()
 
 from yellowbrick.classifier import DiscriminationThreshold
 
