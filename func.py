@@ -13,6 +13,7 @@ from mapinfo_export import (
     prepare_export_profile,
     write_mif_mid,
 )
+from well_selection import find_well_row, well_id_from_text
 
 
 list_param_geovel = [
@@ -1715,11 +1716,10 @@ def update_list_well(select_well=False, selected_well_id=None):
         ui.label_11.setText(f'Wells: {len(wells_with_logs)} / {ui.listWidget_well.count()}')
     # ui.listWidget_well.setCurrentRow(0)
     if select_well and selected_well_id is not None:
-        for i in range(ui.listWidget_well.count()):
-            item = ui.listWidget_well.item(i)
-            if f'id{selected_well_id}' in item.text():
-                ui.listWidget_well.setCurrentRow(i)
-                break
+        items = (ui.listWidget_well.item(i) for i in range(ui.listWidget_well.count()))
+        selected_row = find_well_row(items, selected_well_id)
+        if selected_row is not None:
+            ui.listWidget_well.setCurrentRow(selected_row)
     elif ui.listWidget_well.count() > 0:  # Иначе выбираем первую скважину
         ui.listWidget_well.setCurrentRow(0)
 
@@ -1789,7 +1789,7 @@ def set_title_list_widget_wells():
 
 def get_well_id():
     if ui.listWidget_well.currentItem():
-        return ui.listWidget_well.currentItem().text().split(' id')[-1]
+        return well_id_from_text(ui.listWidget_well.currentItem().text())
 
 
 def get_well_name():
