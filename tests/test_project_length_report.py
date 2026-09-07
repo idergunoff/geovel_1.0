@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 from project_length_report import (
     ProfileLength,
@@ -43,3 +44,11 @@ def test_build_year_report_contains_totals_objects_and_profiles():
     assert "Профиль 1 (10.01.2025): 1 000,00 м" in report
     assert "Профиль 3 (10.03.2025): по измерениям — 100,00 м; координаты отсутствуют" in report
     assert "Без корректных координат: 1" in report
+
+
+def test_dialog_does_not_depend_on_func_module_year_helper():
+    object_source = Path("object.py").read_text(encoding="utf-8")
+    function_source = object_source.split("def show_year_profile_length_report():", 1)[1]
+    function_source = function_source.split("\nfrom yellowbrick", 1)[0]
+    assert "year_text = get_year_research()" not in function_source
+    assert "ui.comboBox_year_research.currentText()" in function_source

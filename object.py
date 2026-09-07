@@ -1,3 +1,4 @@
+import datetime
 import sys, os
 import random, math
 from pathlib import Path
@@ -193,7 +194,9 @@ def require_torch_stack():
 
 def show_year_profile_length_report():
     """Показать прокручиваемый отчёт по метражу профилей выбранного года."""
-    year_text = get_year_research()
+    # Не вызываем get_year_research(): func.py импортирует этот модуль, поэтому
+    # такой вызов создаёт зависимость от функции из циклического импорта.
+    year_text = ui.comboBox_year_research.currentText()
     try:
         year = int(year_text)
     except (TypeError, ValueError):
