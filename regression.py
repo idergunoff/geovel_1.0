@@ -346,7 +346,8 @@ def check_all_well_markup_reg():
             markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
             json.loads(markup.list_measure or '[]'), True, markup_id=markup.id,
             stored_value=markup.target_value,
-            stored_manual_override=bool(markup.target_is_manual_override)))
+            stored_manual_override=bool(markup.target_is_manual_override),
+            stored_source_config=markup.target_source_config))
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин',
                                 'В текущем анализе нет скважин, доступных для проверки.')
