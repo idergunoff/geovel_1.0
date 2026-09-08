@@ -3146,6 +3146,7 @@ def get_list_formation(profiles=None):
         if len(prof.formations) == 1:
             list_formation.append(f'{prof.formations[0].title} id{prof.formations[0].id}')
         elif len(prof.formations) > 1:
+            selection_count = len(list_formation)
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
@@ -3159,17 +3160,19 @@ def get_list_formation(profiles=None):
                 global flag_break
                 if ui_cf.checkBox_to_all.isChecked():
                     title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                    formations_for_all = []
                     for prof in profiles:
                         prof_form = session.query(Formation).filter_by(
                             profile_id=prof.id,
                             title=title_form
                         ).first()
                         if prof_form:
-                            list_formation.append(f'{prof_form.title} id{prof_form.id}')
+                            formations_for_all.append(f'{prof_form.title} id{prof_form.id}')
                         else:
                             flag_break = [prof.title, title_form]
                             Choose_Formation.close()
                             return
+                    list_formation[:] = formations_for_all
                     flag_break = ['stop', 'stop']
                     Choose_Formation.close()
                 else:
@@ -3178,6 +3181,19 @@ def get_list_formation(profiles=None):
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
+            if flag_break and flag_break[0] not in ('stop',):
+                set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
+                QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '
+                                                           f'{flag_break[0]}, выберите пласты для каждого профиля.')
+                return False
+            if len(list_formation) == selection_count:
+                # The chooser was closed without selecting a formation.  Keep
+                # the result aligned with ``profiles`` so callers can skip it.
+                list_formation.append(None)
+        else:
+            # Profiles without formations are valid in a year-wide selection,
+            # but cannot be used to build regression markup.
+            list_formation.append(None)
 
     return list_formation
 

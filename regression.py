@@ -248,7 +248,11 @@ def add_all_well_markup_reg():
     ui.progressBar.setMaximum(len(profiles))
     for profile_index, profile in enumerate(profiles):
         ui.progressBar.setValue(profile_index + 1)
-        formation_id = int(list_formation[profile_index].split(' id')[-1])
+        formation = (list_formation[profile_index]
+                     if profile_index < len(list_formation) else None)
+        if not formation:
+            continue
+        formation_id = int(formation.split(' id')[-1])
         x_prof = json.loads(profile.x_pulc or '[]')
         if not x_prof:
             continue
