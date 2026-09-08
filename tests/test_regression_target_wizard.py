@@ -66,6 +66,8 @@ def test_check_window_is_modeless_while_add_window_remains_modal(application, mo
 
     assert not check_dialog.isModal()
     assert add_dialog.isModal()
+    assert not check_dialog.replace_button.isHidden()
+    assert add_dialog.replace_button.isHidden()
 
     check_dialog.close()
     add_dialog.close()

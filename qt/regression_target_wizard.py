@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -15,6 +15,7 @@ from regression_target.service import (
     TargetSettings,
     list_canonical_targets,
     resolve_target,
+    resolve_replacement_target,
 )
 
 
@@ -32,6 +33,8 @@ class WizardCandidate:
     markup_id: int | None = None
     stored_value: float | None = None
     stored_manual_override: bool = False
+    stored_source_config: str | None = None
+    effective_settings: TargetSettings | None = None
 
 
 class RegressionTargetWizard(QtWidgets.QDialog):
@@ -157,6 +160,9 @@ class RegressionTargetWizard(QtWidgets.QDialog):
 
         tools = QtWidgets.QHBoxLayout()
         self.calculate_button = QtWidgets.QPushButton("Рассчитать / обновить")
+        self.replace_button = QtWidgets.QPushButton("Заменить значения")
+        self.replace_button.setToolTip(
+            "Рассчитать новый параметр на глубине границы, которая воспроизводит сохранённое значение")
         self.hide_missing_check = QtWidgets.QCheckBox("Скрыть строки без данных")
         self.hide_missing_check.setObjectName("checkBox_hide_missing")
         self.existing_combo = QtWidgets.QComboBox()
@@ -173,6 +179,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.export_button = QtWidgets.QPushButton("Экспорт отчёта CSV")
         self.open_log_button = QtWidgets.QPushButton("Открыть каротаж выбранной скважины")
         tools.addWidget(self.calculate_button); tools.addWidget(self.hide_missing_check)
+        if self.mode == "check":
+            tools.addWidget(self.replace_button)
+        else:
+            self.replace_button.hide()
         tools.addWidget(self.existing_combo)
         if self.mode == "check":
             self.existing_combo.hide()
@@ -209,6 +219,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.source_combo.currentIndexChanged.connect(self._source_changed)
         self.depth_mode_combo.currentIndexChanged.connect(self._depth_mode_changed)
         self.calculate_button.clicked.connect(self.calculate)
+        self.replace_button.clicked.connect(self.calculate_replacements)
         self.hide_missing_check.toggled.connect(self._render)
         self.existing_combo.currentIndexChanged.connect(self._render)
         self.export_button.clicked.connect(self._export_csv)
@@ -281,6 +292,32 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         try:
             for candidate in self.candidates:
                 candidate.resolution = resolve_target(self.session, candidate.well_id, settings)
+                candidate.effective_settings = settings
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+        self._render()
+
+    def calculate_replacements(self):
+        """Calculate another parameter without asking for boundary depths again."""
+        settings = self.settings()
+        if settings is None:
+            QtWidgets.QMessageBox.warning(self, "Нет показателя", "Выберите новый параметр.")
+            return
+        self._settings = settings
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        try:
+            for candidate in self.candidates:
+                try:
+                    raw = json.loads(candidate.stored_source_config or "{}")
+                    previous_settings = TargetSettings(**raw)
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    candidate.resolution = Resolution(
+                        "invalid", message="Нет корректных настроек исходного расчёта")
+                    candidate.effective_settings = None
+                    continue
+                candidate.resolution, candidate.effective_settings = resolve_replacement_target(
+                    self.session, candidate.well_id, candidate.stored_value,
+                    previous_settings, settings, self.absolute_tolerance.value())
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
         self._render()
@@ -378,6 +415,18 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                 candidate.resolution = resolve_target(
                     self.session, candidate.well_id, self._settings,
                     boundary_candidate=candidate.resolution.candidates[selected_index])
+            elif (self._settings and self._settings.source == "well_log"
+                  and candidate.resolution.details.get("pending_selection") == "replacement_depth"):
+                # Equal old values at different boundaries cannot identify the
+                # original depth automatically.  If this rare case occurs, a
+                # single manual choice still calculates the *new* parameter.
+                depth = candidate.resolution.candidates[selected_index].value
+                candidate.effective_settings = replace(
+                    self._settings, depth_mode="fixed", fixed_depth=float(depth))
+                candidate.resolution = resolve_target(
+                    self.session, candidate.well_id, candidate.effective_settings)
+                candidate.resolution.details["replacement_depth_inference"] = {
+                    "method": "manual_equal_value_choice", "depth": float(depth)}
             else:
                 candidate.resolution.select(selected_index)
             self._render()
@@ -447,7 +496,8 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                                  json.dumps(resolution.details, ensure_ascii=False) if resolution else "{}"))
 
     def provenance_json(self, candidate: WizardCandidate) -> tuple[str, str, bool]:
-        config = json.dumps(self._settings.as_dict(), ensure_ascii=False) if self._settings else "{}"
+        effective_settings = candidate.effective_settings or self._settings
+        config = json.dumps(effective_settings.as_dict(), ensure_ascii=False) if effective_settings else "{}"
         resolution = candidate.resolution
         details = json.dumps(resolution.details if resolution else {}, ensure_ascii=False)
         return config, details, bool(resolution and resolution.details.get("manual_override"))
