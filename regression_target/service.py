@@ -402,22 +402,24 @@ def resolve_replacement_target(session, well_id: int, stored_value: float | None
                 message="Не найдена глубина границы, воспроизводящая сохранённое значение",
                 details={"checked_boundary_ids": [row.source_id for row in boundary.candidates]},
             ), replacement_settings
-        selected_boundary, old_result, difference = matches[0]
+        best_difference = min(difference for _row, _result, difference in matches)
+        best_matches = [match for match in matches if match[2] == best_difference]
+        selected_boundary, old_result, difference = best_matches[0]
         depth = float(selected_boundary.value)
-        # Equal *calculated targets* are not sufficient to infer the old
-        # choice: two different depths can legitimately produce the same log
-        # value.  Skip the prompt only for duplicate boundary records whose
-        # depth values themselves are exactly equal.
-        if any(float(row.value) != depth for row, _result, _difference in matches[1:]):
+        # Several depths can fall within tolerance.  Prefer the one whose old
+        # calculation is closest to the stored target.  A prompt is necessary
+        # only when different depths tie for the smallest difference.
+        if any(float(row.value) != depth for row, _result, _difference in best_matches[1:]):
             return Resolution(
-                "ambiguous", candidates=[row for row, _result, _difference in matches],
-                message="Сохранённому значению соответствуют несколько глубин границы",
+                "ambiguous", candidates=[row for row, _result, _difference in best_matches],
+                message="Несколько глубин одинаково близки к сохранённому значению",
                 details={"pending_selection": "replacement_depth"},
             ), replacement_settings
         inference = {
             "method": "matched_stored_value", "depth": depth,
             "boundary_id": selected_boundary.source_id,
-            "equivalent_boundary_ids": [row.source_id for row, _result, _difference in matches],
+            "equivalent_boundary_ids": [row.source_id for row, _result, _difference in best_matches],
+            "matching_boundary_ids": [row.source_id for row, _result, _difference in matches],
             "stored_value": stored_value, "recalculated_value": old_result.value,
             "difference": difference, "tolerance": tolerance,
         }

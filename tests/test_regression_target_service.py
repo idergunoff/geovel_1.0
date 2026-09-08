@@ -309,6 +309,44 @@ def test_replacement_does_not_guess_when_two_depths_match_stored_value(db):
     assert len(result.candidates) == 2
 
 
+def test_replacement_selects_closest_depth_when_several_are_within_tolerance(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    old_curve_name = CanonicalWellLog(canonical_name="GR")
+    new_curve_name = CanonicalWellLog(canonical_name="RHOB")
+    db.add_all([boundary_name, old_curve_name, new_curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add_all([AliasWellLog(alias_name="gamma", canonical_id=old_curve_name.id),
+                AliasWellLog(alias_name="density", canonical_id=new_curve_name.id)])
+    boundaries = [Boundary(well_id=well.id, title="TOP", depth=1.0),
+                  Boundary(well_id=well.id, title="top", depth=3.0)]
+    db.add_all(boundaries)
+    db.add_all([
+        WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                curve_data=json.dumps([10, 20, 30, 40, 50, 60])),
+        WellLog(well_id=well.id, curve_name="DENSITY", begin=0, end=5, step=1,
+                curve_data=json.dumps([1, 2, 3, 4, 5, 6])),
+    ])
+    db.commit()
+    previous = TargetSettings("well_log", old_curve_name.id,
+                              boundary_canonical_id=boundary_name.id, interval=1)
+    replacement = TargetSettings("well_log", new_curve_name.id,
+                                 boundary_canonical_id=boundary_name.id, interval=1)
+
+    # Old values are 25 at depth 1 and 45 at depth 3.  Both fit the generous
+    # tolerance, but depth 3 is substantially closer to the stored value 43.
+    result, effective = resolve_replacement_target(
+        db, well.id, 43.0, previous, replacement, tolerance=20.0)
+
+    assert result.status == "resolved"
+    assert result.value == 4.5
+    assert effective.fixed_depth == 3.0
+    inference = result.details["replacement_depth_inference"]
+    assert inference["difference"] == 2.0
+    assert inference["boundary_id"] == boundaries[1].id
+    assert inference["matching_boundary_ids"] == [row.id for row in boundaries]
+
+
 def test_replacement_skips_choice_only_for_equal_boundary_depths(db):
     well = _well(db)
     boundary_name = CanonicalBoundary(canonical_name="Top")
