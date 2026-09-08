@@ -260,7 +260,6 @@ def test_replacement_reuses_boundary_depth_matching_stored_value(db):
 
 @pytest.mark.parametrize(("stored_value", "tolerance", "expected_status"), [
     (45.01, 0.01, "resolved"),
-    (45.010001, 0.01, "invalid"),
 ])
 def test_replacement_uses_inclusive_absolute_tolerance_from_spinbox(
         db, stored_value, tolerance, expected_status):
@@ -285,6 +284,57 @@ def test_replacement_uses_inclusive_absolute_tolerance_from_spinbox(
         inference = result.details["replacement_depth_inference"]
         assert inference["difference"] == pytest.approx(tolerance)
         assert inference["tolerance"] == tolerance
+
+
+def test_replacement_uses_only_available_depth_even_when_outside_tolerance(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    boundary = Boundary(well_id=well.id, title="TOP", depth=3.0)
+    db.add(boundary)
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+    settings = TargetSettings("well_log", curve_name.id,
+                              boundary_canonical_id=boundary_name.id, interval=1)
+
+    result, effective = resolve_replacement_target(
+        db, well.id, 100.0, settings, settings, tolerance=0.01)
+
+    assert result.status == "resolved"
+    assert effective.fixed_depth == 3.0
+    inference = result.details["replacement_depth_inference"]
+    assert inference["method"] == "single_available_depth"
+    assert inference["outside_tolerance"] is True
+
+
+def test_replacement_offers_manual_depths_when_none_match_tolerance(db):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    boundaries = [Boundary(well_id=well.id, title="TOP", depth=1.0),
+                  Boundary(well_id=well.id, title="top", depth=3.0)]
+    db.add_all(boundaries)
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+    settings = TargetSettings("well_log", curve_name.id,
+                              boundary_canonical_id=boundary_name.id, interval=1)
+
+    result, _effective = resolve_replacement_target(
+        db, well.id, 100.0, settings, settings, tolerance=0.01)
+
+    assert result.status == "ambiguous"
+    assert result.details["pending_selection"] == "replacement_depth"
+    assert [candidate.source_id for candidate in result.candidates] == [
+        boundaries[1].id, boundaries[0].id
+    ]
 
 
 def test_replacement_does_not_guess_when_two_depths_match_stored_value(db):

@@ -387,42 +387,73 @@ def resolve_replacement_target(session, well_id: int, stored_value: float | None
         if previous_settings.boundary_canonical_id is None:
             return Resolution("invalid", message="В исходном расчёте не указана опорная граница"), replacement_settings
         boundary = resolve_boundary(session, well_id, previous_settings.boundary_canonical_id)
+        evaluated: list[tuple[ResolutionCandidate, Resolution, float]] = []
         matches: list[tuple[ResolutionCandidate, Resolution, float]] = []
         for boundary_candidate in boundary.candidates:
             old_result = resolve_well_log(session, well_id, previous_settings, boundary_candidate)
             if old_result.status == "resolved" and old_result.value is not None:
                 difference = abs(old_result.value - stored_value)
+                evaluated.append((boundary_candidate, old_result, difference))
                 # The tolerance shown in the check-window spinbox is inclusive:
                 # a boundary is suitable when |calculated - stored| <= tolerance.
                 if difference <= tolerance:
                     matches.append((boundary_candidate, old_result, difference))
         if not matches:
-            return Resolution(
-                "invalid",
-                message="Не найдена глубина границы, воспроизводящая сохранённое значение",
-                details={"checked_boundary_ids": [row.source_id for row in boundary.candidates]},
-            ), replacement_settings
-        best_difference = min(difference for _row, _result, difference in matches)
-        best_matches = [match for match in matches if match[2] == best_difference]
-        selected_boundary, old_result, difference = best_matches[0]
-        depth = float(selected_boundary.value)
-        # Several depths can fall within tolerance.  Prefer the one whose old
-        # calculation is closest to the stored target.  A prompt is necessary
-        # only when different depths tie for the smallest difference.
-        if any(float(row.value) != depth for row, _result, _difference in best_matches[1:]):
-            return Resolution(
-                "ambiguous", candidates=[row for row, _result, _difference in best_matches],
-                message="Несколько глубин одинаково близки к сохранённому значению",
-                details={"pending_selection": "replacement_depth"},
-            ), replacement_settings
-        inference = {
-            "method": "matched_stored_value", "depth": depth,
-            "boundary_id": selected_boundary.source_id,
-            "equivalent_boundary_ids": [row.source_id for row, _result, _difference in best_matches],
-            "matching_boundary_ids": [row.source_id for row, _result, _difference in matches],
-            "stored_value": stored_value, "recalculated_value": old_result.value,
-            "difference": difference, "tolerance": tolerance,
-        }
+            # A mismatch must not make the row unusable: boundaries and the
+            # new curve may still be perfectly valid.  Offer evaluated depths
+            # (closest first), or every boundary when the old curve itself
+            # cannot be reproduced.  A sole depth is unambiguous and can be
+            # used immediately even though the old value is outside tolerance.
+            choices = sorted(evaluated, key=lambda item: item[2])
+            choice_candidates = ([row for row, _result, _difference in choices]
+                                 or list(boundary.candidates))
+            if not choice_candidates:
+                return Resolution(
+                    "invalid", message="Нет доступных отметок границы для расчёта нового параметра"
+                ), replacement_settings
+            unique_depths = {float(row.value) for row in choice_candidates}
+            if len(unique_depths) != 1:
+                return Resolution(
+                    "ambiguous", candidates=choice_candidates,
+                    message=("Ни одна глубина не совпала в пределах допуска; "
+                             "выберите глубину для расчёта нового параметра"),
+                    details={"pending_selection": "replacement_depth",
+                             "checked_boundary_ids": [row.source_id for row in boundary.candidates]},
+                ), replacement_settings
+            selected_boundary = choice_candidates[0]
+            depth = float(selected_boundary.value)
+            old_result = choices[0][1] if choices else None
+            difference = choices[0][2] if choices else None
+            inference = {
+                "method": "single_available_depth", "depth": depth,
+                "boundary_id": selected_boundary.source_id,
+                "stored_value": stored_value,
+                "recalculated_value": old_result.value if old_result else None,
+                "difference": difference, "tolerance": tolerance,
+                "outside_tolerance": True,
+            }
+        else:
+            best_difference = min(difference for _row, _result, difference in matches)
+            best_matches = [match for match in matches if match[2] == best_difference]
+            selected_boundary, old_result, difference = best_matches[0]
+            depth = float(selected_boundary.value)
+            # Several depths can fall within tolerance.  Prefer the one whose old
+            # calculation is closest to the stored target.  A prompt is necessary
+            # only when different depths tie for the smallest difference.
+            if any(float(row.value) != depth for row, _result, _difference in best_matches[1:]):
+                return Resolution(
+                    "ambiguous", candidates=[row for row, _result, _difference in best_matches],
+                    message="Несколько глубин одинаково близки к сохранённому значению",
+                    details={"pending_selection": "replacement_depth"},
+                ), replacement_settings
+            inference = {
+                "method": "matched_stored_value", "depth": depth,
+                "boundary_id": selected_boundary.source_id,
+                "equivalent_boundary_ids": [row.source_id for row, _result, _difference in best_matches],
+                "matching_boundary_ids": [row.source_id for row, _result, _difference in matches],
+                "stored_value": stored_value, "recalculated_value": old_result.value,
+                "difference": difference, "tolerance": tolerance,
+            }
 
     effective_settings = replace(replacement_settings, depth_mode="fixed", fixed_depth=depth)
     result = resolve_target(session, well_id, effective_settings)
