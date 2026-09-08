@@ -253,8 +253,12 @@ def add_all_well_markup_reg():
         if not formation:
             continue
         formation_id = int(formation.split(' id')[-1])
-        x_prof = json.loads(profile.x_pulc or '[]')
-        if not x_prof:
+        try:
+            x_prof = json.loads(profile.x_pulc or '[]')
+            y_prof = json.loads(profile.y_pulc or '[]')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if not x_prof or not y_prof or len(x_prof) != len(y_prof):
             continue
         for well, closest_index, distance in get_list_nearest_well(profile.id) or []:
             well_dist = ui.spinBox_well_dist_reg.value()
