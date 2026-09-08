@@ -182,3 +182,51 @@ def test_replacement_uses_last_check_settings_when_markup_has_no_config(applicat
     assert calls == [(10, 20)]
     assert candidate.resolution.value == 200.0
     dialog.close()
+
+
+def test_quick_selection_supports_all_resolved_missing_and_mismatched(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    candidates = [
+        WizardCandidate(1, "Готовая", 2, "Профиль", 3, 0.0, [],
+                        resolution=Resolution("resolved", 12.0), stored_value=10.0),
+        WizardCandidate(2, "Без данных", 2, "Профиль", 3, 0.0, [],
+                        resolution=Resolution("missing")),
+        WizardCandidate(3, "Не рассчитана", 2, "Профиль", 3, 0.0, []),
+    ]
+    dialog = RegressionTargetWizard(_Session(), candidates, mode="check")
+    dialog._render()
+
+    dialog._select_rows("all")
+    assert dialog._checked_candidates() == candidates
+    dialog._select_rows("resolved")
+    assert dialog._checked_candidates() == [candidates[0]]
+    dialog._select_rows("missing")
+    assert dialog._checked_candidates() == candidates[1:]
+    dialog._select_rows("mismatched")
+    assert dialog._checked_candidates() == [candidates[0]]
+    dialog._select_rows("none")
+    assert dialog._checked_candidates() == []
+    dialog.close()
+
+
+def test_delete_selected_uses_callback_and_refreshes_table(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    monkeypatch.setattr(QtWidgets.QMessageBox, "question",
+                        lambda *_args, **_kwargs: QtWidgets.QMessageBox.Yes)
+    candidates = [
+        WizardCandidate(1, "Удалить", 2, "Профиль", 3, 0.0, [], markup_id=10),
+        WizardCandidate(2, "Оставить", 2, "Профиль", 3, 0.0, [], markup_id=20),
+    ]
+    deleted = []
+    dialog = RegressionTargetWizard(
+        _Session(), candidates, mode="check",
+        delete_candidates=lambda rows: deleted.extend(rows) or True)
+    dialog._render()
+    dialog.table.item(0, 0).setCheckState(QtCore.Qt.Checked)
+
+    dialog._delete_selected()
+
+    assert deleted == [candidates[0]]
+    assert dialog.candidates == [candidates[1]]
+    assert dialog.table.rowCount() == 1
+    dialog.close()
