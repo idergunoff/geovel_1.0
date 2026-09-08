@@ -258,6 +258,35 @@ def test_replacement_reuses_boundary_depth_matching_stored_value(db):
     assert result.details["replacement_depth_inference"]["method"] == "matched_stored_value"
 
 
+@pytest.mark.parametrize(("stored_value", "tolerance", "expected_status"), [
+    (45.01, 0.01, "resolved"),
+    (45.010001, 0.01, "invalid"),
+])
+def test_replacement_uses_inclusive_absolute_tolerance_from_spinbox(
+        db, stored_value, tolerance, expected_status):
+    well = _well(db)
+    boundary_name = CanonicalBoundary(canonical_name="Top")
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add_all([boundary_name, curve_name]); db.flush()
+    db.add(AliasBoundary(alias_name="top", canonical_id=boundary_name.id))
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    db.add(Boundary(well_id=well.id, title="TOP", depth=3.0))
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=5, step=1,
+                   curve_data=json.dumps([10, 20, 30, 40, 50, 60])))
+    db.commit()
+    settings = TargetSettings("well_log", curve_name.id,
+                              boundary_canonical_id=boundary_name.id, interval=1)
+
+    result, _effective = resolve_replacement_target(
+        db, well.id, stored_value, settings, settings, tolerance=tolerance)
+
+    assert result.status == expected_status
+    if expected_status == "resolved":
+        inference = result.details["replacement_depth_inference"]
+        assert inference["difference"] == pytest.approx(tolerance)
+        assert inference["tolerance"] == tolerance
+
+
 def test_replacement_does_not_guess_when_two_depths_match_stored_value(db):
     well = _well(db)
     boundary_name = CanonicalBoundary(canonical_name="Top")

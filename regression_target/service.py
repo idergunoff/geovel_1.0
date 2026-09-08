@@ -387,36 +387,39 @@ def resolve_replacement_target(session, well_id: int, stored_value: float | None
         if previous_settings.boundary_canonical_id is None:
             return Resolution("invalid", message="В исходном расчёте не указана опорная граница"), replacement_settings
         boundary = resolve_boundary(session, well_id, previous_settings.boundary_canonical_id)
-        matches: list[tuple[ResolutionCandidate, Resolution]] = []
+        matches: list[tuple[ResolutionCandidate, Resolution, float]] = []
         for boundary_candidate in boundary.candidates:
             old_result = resolve_well_log(session, well_id, previous_settings, boundary_candidate)
-            if (old_result.status == "resolved" and old_result.value is not None
-                    and abs(old_result.value - stored_value) <= tolerance):
-                matches.append((boundary_candidate, old_result))
+            if old_result.status == "resolved" and old_result.value is not None:
+                difference = abs(old_result.value - stored_value)
+                # The tolerance shown in the check-window spinbox is inclusive:
+                # a boundary is suitable when |calculated - stored| <= tolerance.
+                if difference <= tolerance:
+                    matches.append((boundary_candidate, old_result, difference))
         if not matches:
             return Resolution(
                 "invalid",
                 message="Не найдена глубина границы, воспроизводящая сохранённое значение",
                 details={"checked_boundary_ids": [row.source_id for row in boundary.candidates]},
             ), replacement_settings
-        selected_boundary, old_result = matches[0]
+        selected_boundary, old_result, difference = matches[0]
         depth = float(selected_boundary.value)
         # Equal *calculated targets* are not sufficient to infer the old
         # choice: two different depths can legitimately produce the same log
         # value.  Skip the prompt only for duplicate boundary records whose
         # depth values themselves are exactly equal.
-        if any(float(row.value) != depth for row, _result in matches[1:]):
+        if any(float(row.value) != depth for row, _result, _difference in matches[1:]):
             return Resolution(
-                "ambiguous", candidates=[row for row, _result in matches],
+                "ambiguous", candidates=[row for row, _result, _difference in matches],
                 message="Сохранённому значению соответствуют несколько глубин границы",
                 details={"pending_selection": "replacement_depth"},
             ), replacement_settings
         inference = {
             "method": "matched_stored_value", "depth": depth,
             "boundary_id": selected_boundary.source_id,
-            "equivalent_boundary_ids": [row.source_id for row, _result in matches],
+            "equivalent_boundary_ids": [row.source_id for row, _result, _difference in matches],
             "stored_value": stored_value, "recalculated_value": old_result.value,
-            "tolerance": tolerance,
+            "difference": difference, "tolerance": tolerance,
         }
 
     effective_settings = replace(replacement_settings, depth_mode="fixed", fixed_depth=depth)
