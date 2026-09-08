@@ -3118,10 +3118,20 @@ def interpolate_nones(data):
     return list(interpolated)
 
 
-def get_list_formation():
+def get_list_formation(profiles=None):
+    """Return the selected formation for every profile in *profiles*.
+
+    By default the profiles of the currently selected research are used.  An
+    explicit profile collection lets bulk operations keep the formation
+    selection aligned with a wider scope (for example, all researches in the
+    selected year).
+    """
     global flag_break
     list_formation = []
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    if profiles is None:
+        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    else:
+        profiles = list(profiles)
     flag_break = []
     for n, prof in enumerate(profiles):
         if flag_break:

@@ -214,15 +214,36 @@ def add_well_markup_reg():
 
 
 def add_all_well_markup_reg():
-    """Review target values and add all eligible object wells in one transaction."""
+    """Review target values and add eligible wells in one transaction.
+
+    Normally only profiles from the current research are considered.  With
+    ``checkBox_within_year`` enabled the scope is expanded to every research
+    in the year selected in the main window.
+    """
     analysis_id = get_regmod_id()
     if not analysis_id:
         QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите регрессионный анализ.')
         return
-    list_formation = get_list_formation()
+    profiles_query = session.query(Profile)
+    if ui.checkBox_within_year.isChecked():
+        year = get_year_research()
+        if not year:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите год исследований.')
+            return
+        profiles_query = (profiles_query.join(Research)
+                          .filter(func.strftime('%Y', Research.date_research) == year)
+                          .order_by(Research.date_research, Research.object_id, Profile.id))
+    else:
+        profiles_query = (profiles_query.filter(Profile.research_id == get_research_id())
+                          .order_by(Profile.id))
+    profiles = profiles_query.all()
+    if not profiles:
+        QMessageBox.information(MainWindow, 'Нет профилей',
+                                'За выбранный период профили не найдены.')
+        return
+    list_formation = get_list_formation(profiles)
     if not list_formation:
         return
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
     candidates = []
     ui.progressBar.setMaximum(len(profiles))
     for profile_index, profile in enumerate(profiles):
