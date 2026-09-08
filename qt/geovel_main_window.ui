@@ -4941,44 +4941,11 @@ Therm</string>
                    </layout>
                   </item>
                   <item row="1" column="0">
-                   <layout class="QGridLayout" name="gridLayout_71">
-                    <item row="1" column="3">
-                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>add_all_well</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="1">
-                     <widget class="QPushButton" name="pushButton_copy_reg">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(191, 255, 191);</string>
-                      </property>
-                      <property name="text">
-                       <string>copy RegMod</string>
-                      </property>
-                     </widget>
-                    </item>
+                   <layout class="QGridLayout" name="gridLayout_71" columnstretch="1,1,1,0,1">
                     <item row="0" column="1">
                      <widget class="QLabel" name="label_19">
                       <property name="text">
                        <string>Target variable:</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <widget class="QPushButton" name="pushButton_train_test_reg">
-                      <property name="autoFillBackground">
-                       <bool>false</bool>
-                      </property>
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(254, 254, 197);</string>
-                      </property>
-                      <property name="text">
-                       <string>Train/Test</string>
                       </property>
                      </widget>
                     </item>
@@ -5019,6 +4986,49 @@ Therm</string>
                       </item>
                      </layout>
                     </item>
+                    <item row="0" column="4">
+                     <widget class="QPushButton" name="pushButton_filter_reg">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(200, 171, 252);</string>
+                      </property>
+                      <property name="text">
+                       <string>filter Reg</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QPushButton" name="pushButton_train_test_reg">
+                      <property name="autoFillBackground">
+                       <bool>false</bool>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(254, 254, 197);</string>
+                      </property>
+                      <property name="text">
+                       <string>Train/Test</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="4">
+                     <widget class="QPushButton" name="pushButton_add_all_well_regmod">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add_all_well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QPushButton" name="pushButton_copy_reg">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>copy RegMod</string>
+                      </property>
+                     </widget>
+                    </item>
                     <item row="1" column="2">
                      <widget class="QPushButton" name="pushButton_copy_by_except">
                       <property name="text">
@@ -5036,13 +5046,13 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="pushButton_filter_reg">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(200, 171, 252);</string>
+                    <item row="1" column="3">
+                     <widget class="QCheckBox" name="checkBox_within_year">
+                      <property name="toolTip">
+                       <string>за весь год</string>
                       </property>
                       <property name="text">
-                       <string>filter Reg</string>
+                       <string>y</string>
                       </property>
                      </widget>
                     </item>
@@ -7072,8 +7082,8 @@ Therm</string>
  <connections/>
  <buttongroups>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_3"/>
   <buttongroup name="buttonGroup_2"/>
-  <buttongroup name="buttonGroup_4"/>
  </buttongroups>
 </ui>
