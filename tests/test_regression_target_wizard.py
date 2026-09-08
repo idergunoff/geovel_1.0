@@ -8,6 +8,7 @@ from PyQt5 import QtCore, QtWidgets
 import app_settings
 import qt.regression_target_wizard as wizard_module
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
+from regression_target.service import Resolution
 
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -144,3 +145,40 @@ def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch
     assert reopened._candidate_for_row(0) is next_candidate
     assert reopened.table.item(0, 0).checkState() == QtCore.Qt.Unchecked
     reopened.close()
+
+
+def test_replacement_uses_last_check_settings_when_markup_has_no_config(application, monkeypatch):
+    class Target:
+        def __init__(self, name, target_id):
+            self.canonical_name = name
+            self.id = target_id
+
+    targets = {
+        "boundary": [], "well_data": [],
+        "well_log": [Target("Старый параметр", 10), Target("Новый параметр", 20)],
+    }
+    monkeypatch.setattr(wizard_module, "list_canonical_targets",
+                        lambda _session, source: targets[source])
+    monkeypatch.setattr(wizard_module, "resolve_target",
+                        lambda *_args, **_kwargs: Resolution("resolved", 100.0))
+    calls = []
+
+    def replacement(_session, _well_id, _stored_value, previous, new, _tolerance):
+        calls.append((previous.canonical_id, new.canonical_id))
+        return Resolution("resolved", 200.0), new
+
+    monkeypatch.setattr(wizard_module, "resolve_replacement_target", replacement)
+    candidate = WizardCandidate(
+        1, "Скважина", 2, "Профиль", 3, 0.0, [], stored_value=100.0,
+        stored_source_config=None)
+    dialog = RegressionTargetWizard(_Session(), [candidate], mode="check")
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData("well_log"))
+    dialog.canonical_combo.setCurrentIndex(dialog.canonical_combo.findData(10))
+
+    dialog.calculate()
+    dialog.canonical_combo.setCurrentIndex(dialog.canonical_combo.findData(20))
+    dialog.calculate_replacements()
+
+    assert calls == [(10, 20)]
+    assert candidate.resolution.value == 200.0
+    dialog.close()

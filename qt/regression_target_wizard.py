@@ -74,6 +74,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.open_well_log_callback = open_well_log
         self.mode = mode
         self._settings: TargetSettings | None = None
+        # Legacy markups commonly have no target_source_config.  Keep the
+        # settings from the last ordinary check in memory so the user can
+        # calculate the old parameter, select a new one and then replace it.
+        self._comparison_settings: TargetSettings | None = None
         self.setWindowTitle("Проверка целевых значений скважин" if mode == "check"
                             else "Массовое добавление скважин — целевая переменная")
         # The check window is intentionally modeless: users often need to
@@ -162,7 +166,8 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.calculate_button = QtWidgets.QPushButton("Рассчитать / обновить")
         self.replace_button = QtWidgets.QPushButton("Заменить значения")
         self.replace_button.setToolTip(
-            "Рассчитать новый параметр на глубине границы, которая воспроизводит сохранённое значение")
+            "Сначала рассчитайте текущий параметр, затем выберите новый: он будет рассчитан "
+            "на глубине границы, воспроизводящей сохранённое значение")
         self.hide_missing_check = QtWidgets.QCheckBox("Скрыть строки без данных")
         self.hide_missing_check.setObjectName("checkBox_hide_missing")
         self.existing_combo = QtWidgets.QComboBox()
@@ -288,6 +293,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "Нет показателя", "Выберите каноническое название.")
             return
         self._settings = settings
+        self._comparison_settings = settings
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         try:
             for candidate in self.candidates:
@@ -303,6 +309,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         if settings is None:
             QtWidgets.QMessageBox.warning(self, "Нет показателя", "Выберите новый параметр.")
             return
+        comparison_settings = self._comparison_settings
         self._settings = settings
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         try:
@@ -311,8 +318,12 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                     raw = json.loads(candidate.stored_source_config or "{}")
                     previous_settings = TargetSettings(**raw)
                 except (TypeError, ValueError, json.JSONDecodeError):
+                    previous_settings = comparison_settings
+                if previous_settings is None:
                     candidate.resolution = Resolution(
-                        "invalid", message="Нет корректных настроек исходного расчёта")
+                        "invalid", message=("Настройки исходного расчёта не сохранены. "
+                                            "Сначала выберите исходный параметр и нажмите "
+                                            "«Рассчитать / обновить», затем выберите новый параметр."))
                     candidate.effective_settings = None
                     continue
                 candidate.resolution, candidate.effective_settings = resolve_replacement_target(
