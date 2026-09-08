@@ -67,11 +67,13 @@ class RegressionTargetWizard(QtWidgets.QDialog):
 
     def __init__(self, session, candidates: list[WizardCandidate], parent=None,
                  open_well_log: Callable[[int, dict], None] | None = None,
+                 delete_candidates: Callable[[list[WizardCandidate]], bool] | None = None,
                  mode: str = "add"):
         super().__init__(parent)
         self.session = session
         self.candidates = candidates
         self.open_well_log_callback = open_well_log
+        self.delete_candidates_callback = delete_candidates
         self.mode = mode
         self._settings: TargetSettings | None = None
         # Legacy markups commonly have no target_source_config.  Keep the
@@ -209,6 +211,22 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.table.horizontalHeader().setSectionResizeMode(5 if self.mode == "check" else 6,
                                                            QtWidgets.QHeaderView.Stretch)
         root.addWidget(self.table, 1)
+
+        selection_tools = QtWidgets.QHBoxLayout()
+        selection_tools.addWidget(QtWidgets.QLabel("Быстрый выбор:"))
+        self.select_all_button = QtWidgets.QPushButton("Все")
+        self.select_resolved_button = QtWidgets.QPushButton("С данными")
+        self.select_missing_button = QtWidgets.QPushButton("Без данных")
+        self.select_mismatched_button = QtWidgets.QPushButton("Несовпавшие")
+        self.clear_selection_button = QtWidgets.QPushButton("Снять выбор")
+        for button in (self.select_all_button, self.select_resolved_button,
+                       self.select_missing_button, self.select_mismatched_button,
+                       self.clear_selection_button):
+            selection_tools.addWidget(button)
+        self.select_mismatched_button.setVisible(self.mode == "check")
+        selection_tools.addStretch()
+        root.addLayout(selection_tools)
+
         self.summary = QtWidgets.QLabel()
         root.addWidget(self.summary)
         buttons = QtWidgets.QDialogButtonBox()
@@ -218,6 +236,9 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.add_selected_button = buttons.addButton(
             "Исправить выбранные" if self.mode == "check" else "Добавить выбранные",
             QtWidgets.QDialogButtonBox.AcceptRole)
+        self.delete_selected_button = buttons.addButton(
+            "Удалить выбранные", QtWidgets.QDialogButtonBox.DestructiveRole)
+        self.delete_selected_button.setVisible(self.mode == "check")
         buttons.addButton(QtWidgets.QDialogButtonBox.Cancel)
         root.addWidget(buttons)
 
@@ -230,8 +251,14 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.export_button.clicked.connect(self._export_csv)
         self.table.cellDoubleClicked.connect(self._resolve_ambiguity)
         self.open_log_button.clicked.connect(self._open_well_log)
+        self.select_all_button.clicked.connect(lambda: self._select_rows("all"))
+        self.select_resolved_button.clicked.connect(lambda: self._select_rows("resolved"))
+        self.select_missing_button.clicked.connect(lambda: self._select_rows("missing"))
+        self.select_mismatched_button.clicked.connect(lambda: self._select_rows("mismatched"))
+        self.clear_selection_button.clicked.connect(lambda: self._select_rows("none"))
         self.add_resolved_button.clicked.connect(self._accept_resolved)
         self.add_selected_button.clicked.connect(self._accept_selected)
+        self.delete_selected_button.clicked.connect(self._delete_selected)
         buttons.rejected.connect(self.reject)
 
     def _restore_preferences(self):
@@ -457,6 +484,43 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                 if candidate:
                     selected.append(candidate)
         return selected
+
+    def _select_rows(self, selection: str):
+        """Apply a quick checkbox filter to the currently visible rows."""
+        for row in range(self.table.rowCount()):
+            candidate = self._candidate_for_row(row)
+            resolution = candidate.resolution if candidate else None
+            checked = (
+                selection == "all"
+                or selection == "resolved" and bool(resolution and resolution.status == "resolved")
+                or selection == "missing" and (not resolution or resolution.status in ("missing", "invalid"))
+                or selection == "mismatched" and bool(candidate and self._is_mismatch(candidate))
+            )
+            self.table.item(row, 0).setCheckState(
+                QtCore.Qt.Checked if checked else QtCore.Qt.Unchecked)
+
+    def _delete_selected(self):
+        """Delete checked analysis markups without closing the check window."""
+        selected = self._checked_candidates()
+        if not selected:
+            QtWidgets.QMessageBox.warning(self, "Нет строк", "Не выбрано ни одной скважины.")
+            return
+        if not self.delete_candidates_callback:
+            return
+        names = ", ".join(candidate.well_name for candidate in selected[:5])
+        if len(selected) > 5:
+            names += f" и ещё {len(selected) - 5}"
+        answer = QtWidgets.QMessageBox.question(
+            self, "Удалить выбранные скважины",
+            f"Удалить из текущего анализа {len(selected)} скважин?\n{names}",
+            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if answer != QtWidgets.QMessageBox.Yes:
+            return
+        if self.delete_candidates_callback(selected):
+            deleted = set(id(candidate) for candidate in selected)
+            self.candidates[:] = [candidate for candidate in self.candidates
+                                  if id(candidate) not in deleted]
+            self._render()
 
     def _accept_resolved(self):
         for row in range(self.table.rowCount()):

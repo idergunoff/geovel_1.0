@@ -360,7 +360,26 @@ def check_all_well_markup_reg():
         show_well_log(selected_curve_id=selected.get('well_log_id'), selected_depth=selected.get('depth'),
                       selected_interval=(selected.get('interval') or [None, None]), parent=dialog)
 
-    dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log, mode='check')
+    def delete_candidates(candidates):
+        """Remove the selected markups while keeping the modeless review open."""
+        markup_ids = [candidate.markup_id for candidate in candidates if candidate.markup_id is not None]
+        if not markup_ids:
+            return False
+        try:
+            deleted = session.query(MarkupReg).filter(
+                MarkupReg.analysis_id == analysis_id,
+                MarkupReg.id.in_(markup_ids)).delete(synchronize_session=False)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        set_info(f'Удалено скважин из регрессионного анализа: {deleted}', 'green')
+        update_list_well_markup_reg()
+        return True
+
+    dialog = RegressionTargetWizard(
+        session, candidates, MainWindow, open_candidate_log,
+        delete_candidates=delete_candidates, mode='check')
     _regression_target_check_dialog = dialog
 
     def apply_selected_corrections():
