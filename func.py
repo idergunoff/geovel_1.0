@@ -1726,25 +1726,40 @@ def update_list_well(select_well=False, selected_well_id=None):
 
 def get_list_nearest_well(profile_id):
     profile = session.query(Profile).filter_by(id=profile_id).first()
+    if profile is None:
+        return []
+
     try:
-        if session.query(Profile.x_pulc).filter_by(id=profile_id).first()[0]:
-            x_prof = json.loads(profile.x_pulc)
-            y_prof = json.loads(profile.y_pulc)
-            profile_plus_dist = calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1]) + ui.spinBox_well_distance.value()
-            wells = session.query(Well).order_by(Well.name).all()
-            list_nearest_well = []
-            for w in wells:
-                start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
-                end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
-                if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
-                    index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
-                    if dist <= ui.spinBox_well_distance.value():
-                        list_nearest_well.append([w, index, dist])
-            return list_nearest_well
-        else:
-            ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
-    except TypeError:
-        pass
+        x_prof = json.loads(profile.x_pulc or '[]')
+        y_prof = json.loads(profile.y_pulc or '[]')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+    if not x_prof or not y_prof or len(x_prof) != len(y_prof):
+        ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
+        return []
+
+    try:
+        profile_plus_dist = (calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1])
+                             + ui.spinBox_well_distance.value())
+    except (TypeError, ValueError):
+        return []
+
+    list_nearest_well = []
+    for w in session.query(Well).order_by(Well.name).all():
+        # A single incomplete well must not abort a year-wide scan of all
+        # profiles and wells.
+        if w.x_coord is None or w.y_coord is None:
+            continue
+        try:
+            start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
+            end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
+            if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
+                index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
+                if dist <= ui.spinBox_well_distance.value():
+                    list_nearest_well.append([w, index, dist])
+        except (TypeError, ValueError):
+            continue
+    return list_nearest_well
 
 
 def get_list_nearest_well_for_object(object_id):
@@ -3124,7 +3139,9 @@ def get_list_formation(profiles=None):
     By default the profiles of the currently selected research are used.  An
     explicit profile collection lets bulk operations keep the formation
     selection aligned with a wider scope (for example, all researches in the
-    selected year).
+    selected year).  When ``for all`` is selected, the chosen formation title
+    is mapped independently for every profile; profiles without that title get
+    ``None`` and are skipped by the caller.
     """
     global flag_break
     list_formation = []
@@ -3151,33 +3168,34 @@ def get_list_formation(profiles=None):
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
             Choose_Formation.show()
-            Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
             for f in prof.formations:
-                ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+                item = QtWidgets.QListWidgetItem(f'{f.title} id{f.id}')
+                # Do not recover the title by splitting visible text: a valid
+                # formation title itself may contain the substring " id".
+                item.setData(Qt.UserRole, f.title)
+                ui_cf.listWidget_form_lda.addItem(item)
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
                 global flag_break
                 if ui_cf.checkBox_to_all.isChecked():
-                    title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                    selected_item = ui_cf.listWidget_form_lda.currentItem()
+                    if selected_item is None:
+                        return
+                    title_form = selected_item.data(Qt.UserRole)
                     formations_for_all = []
                     for prof in profiles:
-                        prof_form = session.query(Formation).filter_by(
-                            profile_id=prof.id,
-                            title=title_form
-                        ).first()
-                        if prof_form:
-                            formations_for_all.append(f'{prof_form.title} id{prof_form.id}')
-                        else:
-                            flag_break = [prof.title, title_form]
-                            Choose_Formation.close()
-                            return
+                        prof_form = next(
+                            (formation for formation in prof.formations
+                             if formation.title == title_form), None)
+                        formations_for_all.append(
+                            f'{prof_form.title} id{prof_form.id}' if prof_form else None)
                     list_formation[:] = formations_for_all
                     flag_break = ['stop', 'stop']
-                    Choose_Formation.close()
+                    Choose_Formation.accept()
                 else:
                     list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
-                    Choose_Formation.close()
+                    Choose_Formation.accept()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
