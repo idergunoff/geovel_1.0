@@ -3139,7 +3139,9 @@ def get_list_formation(profiles=None):
     By default the profiles of the currently selected research are used.  An
     explicit profile collection lets bulk operations keep the formation
     selection aligned with a wider scope (for example, all researches in the
-    selected year).
+    selected year).  When ``for all`` is selected, the chosen formation title
+    is mapped independently for every profile; profiles without that title get
+    ``None`` and are skipped by the caller.
     """
     global flag_break
     list_formation = []
@@ -3166,33 +3168,34 @@ def get_list_formation(profiles=None):
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
             Choose_Formation.show()
-            Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
             for f in prof.formations:
-                ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
+                item = QtWidgets.QListWidgetItem(f'{f.title} id{f.id}')
+                # Do not recover the title by splitting visible text: a valid
+                # formation title itself may contain the substring " id".
+                item.setData(Qt.UserRole, f.title)
+                ui_cf.listWidget_form_lda.addItem(item)
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
                 global flag_break
                 if ui_cf.checkBox_to_all.isChecked():
-                    title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
+                    selected_item = ui_cf.listWidget_form_lda.currentItem()
+                    if selected_item is None:
+                        return
+                    title_form = selected_item.data(Qt.UserRole)
                     formations_for_all = []
                     for prof in profiles:
-                        prof_form = session.query(Formation).filter_by(
-                            profile_id=prof.id,
-                            title=title_form
-                        ).first()
-                        if prof_form:
-                            formations_for_all.append(f'{prof_form.title} id{prof_form.id}')
-                        else:
-                            flag_break = [prof.title, title_form]
-                            Choose_Formation.close()
-                            return
+                        prof_form = next(
+                            (formation for formation in prof.formations
+                             if formation.title == title_form), None)
+                        formations_for_all.append(
+                            f'{prof_form.title} id{prof_form.id}' if prof_form else None)
                     list_formation[:] = formations_for_all
                     flag_break = ['stop', 'stop']
-                    Choose_Formation.close()
+                    Choose_Formation.accept()
                 else:
                     list_formation.append(ui_cf.listWidget_form_lda.currentItem().text())
-                    Choose_Formation.close()
+                    Choose_Formation.accept()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
             Choose_Formation.exec_()
