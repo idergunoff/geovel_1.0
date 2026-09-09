@@ -269,7 +269,8 @@ def add_all_well_markup_reg():
                 MarkupReg.profile_id == profile.id).first() is not None
             candidates.append(WizardCandidate(
                 well.id, well.name or f'id{well.id}', profile.id, profile.title or f'id{profile.id}',
-                formation_id, float(distance), list(range(start, stop)), exists))
+                formation_id, float(distance), list(range(start, stop)), exists,
+                well_log_count=len(well.well_logs)))
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин', 'В пределах заданного расстояния скважины не найдены.')
         return
@@ -351,7 +352,8 @@ def check_all_well_markup_reg():
             json.loads(markup.list_measure or '[]'), True, markup_id=markup.id,
             stored_value=markup.target_value,
             stored_manual_override=bool(markup.target_is_manual_override),
-            stored_source_config=markup.target_source_config))
+            stored_source_config=markup.target_source_config,
+            well_log_count=len(markup.well.well_logs)))
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин',
                                 'В текущем анализе нет скважин, доступных для проверки.')
