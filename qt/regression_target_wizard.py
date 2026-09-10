@@ -200,11 +200,11 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         tools.addWidget(self.open_log_button)
         root.addLayout(tools)
 
-        columns = (("Исправить", "Скважина", "Профиль", "Пласт ID", "Источник", "Исходные значения",
-                    "Сохранено", "Рассчитано", "Разница", "Статус", "Кол-во каротажных\nкривых")
+        columns = (("Исправить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Пласт ID",
+                    "Источник", "Исходные значения", "Сохранено", "Рассчитано", "Разница", "Статус")
                    if self.mode == "check" else
-                   ("Добавить", "Скважина", "Профиль", "Расстояние", "Пласт ID", "Источник",
-                    "Исходные значения", "Целевое значение", "Статус", "Кол-во каротажных\nкривых"))
+                   ("Добавить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Расстояние",
+                    "Пласт ID", "Источник", "Исходные значения", "Целевое значение", "Статус"))
         self.table = QtWidgets.QTableWidget(0, len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -212,7 +212,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(6 if self.mode == "check" else 7,
                                                            QtWidgets.QHeaderView.Stretch)
-        log_count_column = len(columns) - 1
+        log_count_column = 2
         self.table.horizontalHeader().setSectionResizeMode(log_count_column, QtWidgets.QHeaderView.Fixed)
         self.table.setColumnWidth(log_count_column, 110)
         root.addWidget(self.table, 1)
@@ -399,21 +399,19 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                         result_status += " (ручное значение)"
                 else:
                     result_status = self.STATUS_TEXT[status]
-                values = (candidate.well_name, candidate.profile_name,
+                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
                           str(candidate.formation_id),
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
                           "" if calculated is None else f"{calculated:g}",
-                          "" if delta is None else f"{delta:+g}", result_status,
-                          str(candidate.well_log_count))
+                          "" if delta is None else f"{delta:+g}", result_status)
             else:
-                values = (candidate.well_name, candidate.profile_name,
+                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
                           f"{candidate.distance:.2f}",
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
                           "" if not resolution or resolution.value is None else f"{resolution.value:g}",
-                          "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status],
-                          str(candidate.well_log_count))
+                          "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status])
             for column, value in enumerate(values, 1):
                 item = QtWidgets.QTableWidgetItem(value)
                 color = ("#ffd6d6" if self.mode == "check" and mismatch else
