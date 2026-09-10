@@ -399,7 +399,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                         result_status += " (ручное значение)"
                 else:
                     result_status = self.STATUS_TEXT[status]
-                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                values = (candidate.well_name, candidate.profile_name,
                           str(candidate.formation_id),
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
@@ -407,7 +407,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                           "" if delta is None else f"{delta:+g}", result_status,
                           str(candidate.well_log_count))
             else:
-                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                values = (candidate.well_name, candidate.profile_name,
                           f"{candidate.distance:.2f}",
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
