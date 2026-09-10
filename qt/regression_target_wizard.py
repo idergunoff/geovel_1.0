@@ -210,7 +210,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(5 if self.mode == "check" else 6,
+        self.table.horizontalHeader().setSectionResizeMode(6 if self.mode == "check" else 7,
                                                            QtWidgets.QHeaderView.Stretch)
         log_count_column = len(columns) - 1
         self.table.horizontalHeader().setSectionResizeMode(log_count_column, QtWidgets.QHeaderView.Fixed)
@@ -399,14 +399,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                         result_status += " (ручное значение)"
                 else:
                     result_status = self.STATUS_TEXT[status]
-                values = (candidate.well_name, candidate.profile_name, str(candidate.formation_id),
+                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                          str(candidate.formation_id),
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
                           "" if calculated is None else f"{calculated:g}",
                           "" if delta is None else f"{delta:+g}", result_status,
                           str(candidate.well_log_count))
             else:
-                values = (candidate.well_name, candidate.profile_name, f"{candidate.distance:.2f}",
+                values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                          f"{candidate.distance:.2f}",
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
                           "" if not resolution or resolution.value is None else f"{resolution.value:g}",
