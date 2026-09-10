@@ -77,17 +77,20 @@ def test_check_window_is_modeless_while_add_window_remains_modal(application, mo
 def test_well_log_count_is_shown_in_add_and_check_result_tables(application, monkeypatch):
     monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
     candidate = WizardCandidate(
-        1, "Скважина 1", 2, "Профиль 1", 3, 0.0, [], well_log_count=7)
+        1, "Скважина 1", 2, "Профиль 1", 3, 0.0, [], already_exists=True,
+        resolution=Resolution("resolved", 42.0), stored_value=42.0, well_log_count=7)
 
     for mode in ("add", "check"):
         dialog = RegressionTargetWizard(_Session(), [candidate], mode=mode)
         dialog._render()
 
-        count_column = dialog.table.columnCount() - 2
+        count_column = dialog.table.columnCount() - 1
         assert dialog.table.horizontalHeaderItem(count_column).text() == "Кол-во каротажных\nкривых"
         assert dialog.table.item(0, count_column).text() == "7"
         assert dialog.table.columnWidth(count_column) == 110
-        assert dialog.table.horizontalHeaderItem(count_column + 1).text() == "Статус"
+        assert dialog.table.horizontalHeaderItem(count_column - 1).text() == "Статус"
+        expected_status = "Совпало" if mode == "check" else "Уже добавлена"
+        assert dialog.table.item(0, count_column - 1).text() == expected_status
         dialog.close()
 
 
