@@ -84,13 +84,16 @@ def test_well_log_count_is_shown_in_add_and_check_result_tables(application, mon
         dialog = RegressionTargetWizard(_Session(), [candidate], mode=mode)
         dialog._render()
 
-        count_column = dialog.table.columnCount() - 1
+        count_column = 2
         assert dialog.table.horizontalHeaderItem(count_column).text() == "Кол-во каротажных\nкривых"
         assert dialog.table.item(0, count_column).text() == "7"
         assert dialog.table.columnWidth(count_column) == 110
-        assert dialog.table.horizontalHeaderItem(count_column - 1).text() == "Статус"
+        assert dialog.table.horizontalHeaderItem(3).text() == "Профиль"
+        assert dialog.table.item(0, 3).text() == "Профиль 1"
+        status_column = dialog.table.columnCount() - 1
+        assert dialog.table.horizontalHeaderItem(status_column).text() == "Статус"
         expected_status = "Совпало" if mode == "check" else "Уже добавлена"
-        assert dialog.table.item(0, count_column - 1).text() == expected_status
+        assert dialog.table.item(0, status_column).text() == expected_status
         dialog.close()
 
 
