@@ -35,6 +35,7 @@ class WizardCandidate:
     stored_manual_override: bool = False
     stored_source_config: str | None = None
     effective_settings: TargetSettings | None = None
+    well_log_count: int = 0
 
 
 class RegressionTargetWizard(QtWidgets.QDialog):
@@ -200,9 +201,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         root.addLayout(tools)
 
         columns = (("Исправить", "Скважина", "Профиль", "Пласт ID", "Источник", "Исходные значения",
-                    "Сохранено", "Рассчитано", "Разница", "Статус") if self.mode == "check" else
+                    "Сохранено", "Рассчитано", "Разница", "Статус", "Кол-во каротажных\nкривых")
+                   if self.mode == "check" else
                    ("Добавить", "Скважина", "Профиль", "Расстояние", "Пласт ID", "Источник",
-                    "Исходные значения", "Целевое значение", "Статус"))
+                    "Исходные значения", "Целевое значение", "Статус", "Кол-во каротажных\nкривых"))
         self.table = QtWidgets.QTableWidget(0, len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -210,6 +212,9 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(5 if self.mode == "check" else 6,
                                                            QtWidgets.QHeaderView.Stretch)
+        log_count_column = len(columns) - 1
+        self.table.horizontalHeader().setSectionResizeMode(log_count_column, QtWidgets.QHeaderView.Fixed)
+        self.table.setColumnWidth(log_count_column, 110)
         root.addWidget(self.table, 1)
 
         selection_tools = QtWidgets.QHBoxLayout()
@@ -398,13 +403,15 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
                           "" if calculated is None else f"{calculated:g}",
-                          "" if delta is None else f"{delta:+g}", result_status)
+                          "" if delta is None else f"{delta:+g}", result_status,
+                          str(candidate.well_log_count))
             else:
                 values = (candidate.well_name, candidate.profile_name, f"{candidate.distance:.2f}",
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
                           "" if not resolution or resolution.value is None else f"{resolution.value:g}",
-                          "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status])
+                          "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status],
+                          str(candidate.well_log_count))
             for column, value in enumerate(values, 1):
                 item = QtWidgets.QTableWidgetItem(value)
                 color = ("#ffd6d6" if self.mode == "check" and mismatch else
@@ -559,11 +566,12 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             return
         with open(path, "w", encoding="utf-8-sig", newline="") as stream:
             writer = csv.writer(stream, delimiter=";")
-            writer.writerow(("well_id", "well", "profile_id", "profile", "distance", "formation_id",
+            writer.writerow(("well_id", "well", "well_log_count", "profile_id", "profile", "distance", "formation_id",
                              "status", "stored_value", "target_value", "delta", "message", "source_details"))
             for row in self.candidates:
                 resolution = row.resolution
-                writer.writerow((row.well_id, row.well_name, row.profile_id, row.profile_name, row.distance,
+                writer.writerow((row.well_id, row.well_name, row.well_log_count,
+                                 row.profile_id, row.profile_name, row.distance,
                                  row.formation_id, resolution.status if resolution else "not_calculated", row.stored_value,
                                  resolution.value if resolution else "",
                                  resolution.value - row.stored_value if resolution and resolution.value is not None and row.stored_value is not None else "",
