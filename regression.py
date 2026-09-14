@@ -4361,14 +4361,27 @@ def update_trained_model_reg_comment():
 
 def reg_model_prediction_upgrade():
     """Переназначить модели, используемые как признаки регрессионной модели."""
-    try:
-        model_id = ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)
-    except AttributeError:
+    model_list = ui.listWidget_trained_model_reg
+    selected_items = model_list.selectedItems()
+    selected_item = model_list.currentItem() or (selected_items[0] if selected_items else None)
+
+    # После обновления QListWidget визуально выбранная строка иногда ещё не
+    # становится currentItem. Для единственной модели выбор однозначен.
+    if selected_item is None and model_list.count() == 1:
+        selected_item = model_list.item(0)
+
+    if selected_item is None:
         QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
         set_info('Не выбрана модель', 'red')
         return
 
-    model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+    model_id = selected_item.data(Qt.UserRole)
+    model = session.query(TrainedModelReg).filter_by(id=model_id).first() if model_id is not None else None
+    if model is None:
+        model = session.query(TrainedModelReg).filter_by(
+            analysis_id=get_regmod_id(),
+            title=selected_item.text()
+        ).first()
     if not model:
         QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
         set_info('Не выбрана модель', 'red')
