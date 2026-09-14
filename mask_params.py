@@ -30,8 +30,9 @@ def mask_param_form():
 
     # Создание модели параметров
     model = QStandardItemModel()
-    # list_param = get_list_param_numerical_for_train(get_list_param_mlp())
-    list_param = universal_expand_parameters(get_unique_parameters_from_mlp())
+    # Маски общие для классификации и регрессии, поэтому показываем объединение
+    # параметров обоих типов анализа (включая добавляемые динамически model_*).
+    list_param = universal_expand_parameters(get_unique_parameters_from_ml_analyses())
     # data, list_param_ex = build_table_train(False, 'mlp')
     # list_param_ex = data.columns.tolist()[2:]
 
@@ -40,6 +41,17 @@ def mask_param_form():
         item = QStandardItem(param)
         item.setCheckable(True)
         item.setCheckState(Qt.Unchecked)  # По умолчанию все выключены
+        if param.startswith('model_'):
+            try:
+                model_id = int(param.rsplit('_id', 1)[1])
+                trained_model = session.query(
+                    TrainedModelReg if param.startswith('model_reg') else TrainedModelClass
+                ).filter_by(id=model_id).first()
+                if trained_model:
+                    item.setToolTip(trained_model.title)
+            except (IndexError, ValueError):
+                # Оставляем нестандартно названный параметр доступным в маске.
+                pass
         model.appendRow(item)
 
     ui_mp.listView_mask_params.setModel(model)

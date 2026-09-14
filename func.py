@@ -3334,6 +3334,29 @@ def get_unique_parameters_from_mlp():
         print(f"Ошибка при получении параметров: {e}")
         return []
 
+
+def get_unique_parameters_from_ml_analyses():
+    """Return every parameter used by classification or regression analyses.
+
+    Mask editing is shared by both kinds of analysis, therefore its parameter
+    catalogue must not depend on whichever classification parameters happen to
+    exist.  Keeping the union here also makes newly added ``model_*`` parameters
+    available without maintaining a separate hard-coded model list.
+    """
+    try:
+        classification_params = session.query(distinct(ParameterMLP.parameter)).all()
+        regression_params = session.query(distinct(ParameterReg.parameter)).all()
+    except Exception as e:
+        print(f"Ошибка при получении параметров классификации и регрессии: {e}")
+        return []
+
+    return list({
+        parameter
+        for rows in (classification_params, regression_params)
+        for parameter, in rows
+        if parameter is not None
+    })
+
 def natural_sort_key(s):
     """
     Ключ для естественной сортировки строк с числами
