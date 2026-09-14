@@ -15,6 +15,23 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
 TRAIN_TABLE_ROW_CHUNK_SIZE = 1000
 
 
+def _model_table_cache_key(analisis, model, formation):
+    """Return a key for data collected before a trained-model mask is applied.
+
+    A mask is deliberately not part of the key: ``calc_profile_model_predict``
+    applies it only after collection, so models trained on the same source
+    parameters can safely share the expensive profile table.
+    """
+    return (
+        analisis,
+        formation.id,
+        formation.profile_id,
+        tuple(json.loads(model.list_params)),
+        model.except_signal or '',
+        model.except_crl or '',
+    )
+
+
 def _stored_feature_source(param):
     """Return model, id column and SQL value column for a stored parameter."""
     profile_sources = (
@@ -206,6 +223,12 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     remaining_profiles = Counter(markup.profile_id for markup in markups)
     profile_data_cache = _prefetch_profile_data(markups, list_param)
     formation_layer_cache = _prefetch_formation_layers(markups)
+    # Nested model parameters often refer to several models trained from the
+    # same columns and differing only by their final feature mask.  Keep their
+    # unmasked profile tables for this build only, so repeated models do not
+    # collect and transform the same signals again.  A per-operation cache also
+    # avoids stale data between explicit table rebuilds.
+    model_table_cache = {}
 
     list_except_signal, list_except_crl = [], []
     if except_param:
@@ -259,7 +282,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                     if predict:
                         runtime_values[str(markup.profile_id) + '_' + param] = json.loads(predict.prediction)
                     else:
-                        calc_profile_model_predict(param, markup.formation)
+                        calc_profile_model_predict(param, markup.formation, model_table_cache)
                         runtime_values[str(markup.profile_id) + '_' + param] = json.loads(
                             session.query(ProfileModelPrediction.prediction).filter_by(profile_id=markup.profile_id,
                                                                               model_id=model_id).first()[0])
@@ -533,7 +556,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
     return data_train, list_param
 
 
-def build_table_test(analisis='mlp', model=False, curr_form=False):
+def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_cache=None):
     list_except_signal, list_except_crl = [], []
     if analisis == 'mlp':
         if not model:
@@ -566,6 +589,12 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
         set_info('Не выбран пласт', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Не выбран пласт')
         return
+    cache_key = None
+    if model_table_cache is not None and model:
+        cache_key = _model_table_cache_key(analisis, model, curr_form)
+        cached_table = model_table_cache.get(cache_key)
+        if cached_table is not None:
+            return cached_table, curr_form
     x_pulc = json.loads(curr_form.profile.x_pulc)
     y_pulc = json.loads(curr_form.profile.y_pulc)
     for param in list_param:
@@ -586,7 +615,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
                 if predict:
                     locals()[str(curr_form.profile.id) + '_' + param] = json.loads(predict.prediction)
                 else:
-                    calc_profile_model_predict(param, curr_form)
+                    calc_profile_model_predict(param, curr_form, model_table_cache)
                     locals()[str(curr_form.profile.id) + '_' + param] = json.loads(
                         session.query(ProfileModelPrediction.prediction).filter_by(profile_id=curr_form.profile_id,
                                                                                    model_id=model_id).first()[0])
@@ -703,6 +732,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
     ui.progressBar.setMaximum(len(list_up))
     set_info(f'Процесс сбора параметров {analysis_title} по профилю {curr_form.profile.title}',
              'blue')
+    test_rows = []
     for i in tqdm(range(len(list_up))):
         dict_value = {}
         for param in list_param:
@@ -755,10 +785,17 @@ def build_table_test(analisis='mlp', model=False, curr_form=False):
             else:
                 dict_value[param] = locals()[f'list_{param}'][i]
         dict_value['prof_index'] = f'{curr_form.profile_id}_{i}'
-        test_data = pd.concat([test_data, pd.DataFrame([dict_value])], ignore_index=True)
+        test_rows.append(dict_value)
         ui.progressBar.setValue(i + 1)
+    if test_rows:
+        test_data = pd.DataFrame.from_records(test_rows)
     test_data['x_pulc'] = x_pulc
     test_data['y_pulc'] = y_pulc
+    metadata_columns = ['prof_index', 'x_pulc', 'y_pulc']
+    feature_columns = [column for column in test_data.columns if column not in metadata_columns]
+    test_data = test_data[metadata_columns + feature_columns]
+    if cache_key is not None:
+        model_table_cache[cache_key] = test_data
     return test_data, curr_form
 
 
@@ -773,7 +810,7 @@ def set_marks():
     return labels
 
 
-def calc_profile_model_predict(param, formation):
+def calc_profile_model_predict(param, formation, model_table_cache=None):
     set_info(f'Вычисление предсказания {param} для профиля {formation.profile.title}', 'blue')
     print(f'Вычисление предсказания {param} для профиля {formation.profile.title}')
 
@@ -787,7 +824,9 @@ def calc_profile_model_predict(param, formation):
 
     type_table = 'mlp' if type_predict == 'cls' else 'regmod'
 
-    working_data, curr_form = build_table_test(type_table, model, formation)
+    working_data, curr_form = build_table_test(
+        type_table, model, formation, model_table_cache=model_table_cache
+    )
 
     # labels = set_marks()
     # labels_dict = {value: key for key, value in labels.items()}
