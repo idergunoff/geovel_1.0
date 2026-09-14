@@ -2,7 +2,12 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import LeaveOneGroupOut
 
-from feature_mask_evaluator import FeatureMaskEvaluator, INVALID_SCORE
+from feature_mask_evaluator import (
+    FeatureMaskEvaluator,
+    INVALID_SCORE,
+    ScoreEarlyStopping,
+    build_seed_masks,
+)
 
 
 def make_evaluator(*, objective_count=1, folds=None, seed=17):
@@ -48,3 +53,44 @@ def test_checkpoint_metrics_can_be_continued():
     evaluator([True, False])
     assert evaluator.metrics()["model_fits"] == 12
     assert evaluator.metrics()["evaluations"] == 4
+
+
+def test_duplicate_mask_uses_exact_cache_without_more_fits():
+    evaluator = make_evaluator()
+    expected = evaluator([True, False])
+    fits = evaluator.metrics()["model_fits"]
+    assert evaluator([[True], [False]]) == expected
+    assert evaluator.metrics()["model_fits"] == fits
+    assert evaluator.metrics()["cache_hits"] == 1
+
+
+def test_cache_checkpoint_requires_matching_fingerprint():
+    source = make_evaluator(seed=42)
+    expected = source([True, False])
+    payload = source.checkpoint_cache()
+
+    matching = make_evaluator(seed=42)
+    assert matching.restore_cache(payload)
+    assert matching([True, False]) == expected
+    assert matching.metrics()["model_fits"] == 0
+
+    different_seed = make_evaluator(seed=43)
+    assert not different_seed.restore_cache(payload)
+
+
+def test_score_early_stopping_resets_only_for_meaningful_improvement():
+    stopping = ScoreEarlyStopping(patience=2, min_delta=0.01)
+    assert not stopping.update([0.5])
+    assert not stopping.update([0.505])
+    assert stopping.update([0.509])
+    assert not stopping.update([0.52])
+
+
+def test_seed_masks_are_deterministic_and_include_all_features():
+    X = np.arange(48, dtype=float).reshape(12, 4)
+    y = np.array([0, 1] * 6)
+    first = build_seed_masks(X, y, task="classification", seed=7)
+    second = build_seed_masks(X, y, task="classification", seed=7)
+    assert first == second
+    assert [True, True, True, True] in first
+    assert all(any(mask) and len(mask) == X.shape[1] for mask in first)
