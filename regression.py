@@ -17,6 +17,15 @@ from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
 
 _regression_target_check_dialog = None
 
+
+def remember_selected_trained_model_reg(item):
+    """Запомнить модель независимо от временного состояния QListWidget."""
+    if item is not None:
+        ui.listWidget_trained_model_reg.setProperty(
+            'selected_model_id', item.data(Qt.UserRole)
+        )
+
+
 def _get_training_wells_regmod():
     wells = {}
     markups = session.query(MarkupReg).filter(
@@ -3771,6 +3780,7 @@ def train_regression_model():
 def update_list_trained_models_regmod():
     """  Обновление списка моделей """
     models = session.query(TrainedModelReg).filter(TrainedModelReg.analysis_id == get_regmod_id()).all()
+    ui.listWidget_trained_model_reg.setProperty('selected_model_id', None)
     ui.listWidget_trained_model_reg.clear()
     for model in models:
         item_text = model.title
@@ -3786,6 +3796,7 @@ def update_list_trained_models_regmod():
         item.setToolTip(tool_tip_text)
         ui.listWidget_trained_model_reg.addItem(item)
     ui.listWidget_trained_model_reg.setCurrentRow(0)
+    remember_selected_trained_model_reg(ui.listWidget_trained_model_reg.currentItem())
 
 
 def remove_trained_model_regmod():
@@ -4365,23 +4376,19 @@ def reg_model_prediction_upgrade():
     selected_items = model_list.selectedItems()
     selected_item = model_list.currentItem() or (selected_items[0] if selected_items else None)
 
-    # После обновления QListWidget визуально выбранная строка иногда ещё не
-    # становится currentItem. Для единственной модели выбор однозначен.
-    if selected_item is None and model_list.count() == 1:
-        selected_item = model_list.item(0)
+    # Во время переключения фокуса с QListWidget на кнопку Qt может очистить
+    # currentItem/selectedItems. currentRow и сохранённый обработчиком сигнала
+    # идентификатор не зависят от этого кратковременного состояния виджета.
+    current_row = model_list.currentRow()
+    if selected_item is None and current_row >= 0:
+        selected_item = model_list.item(current_row)
 
-    if selected_item is None:
-        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
-        set_info('Не выбрана модель', 'red')
-        return
+    model_id = selected_item.data(Qt.UserRole) if selected_item is not None else None
+    if model_id is None:
+        model_id = model_list.property('selected_model_id')
+    model = session.query(TrainedModelReg).filter_by(id=model_id).first() \
+        if model_id is not None else None
 
-    model_id = selected_item.data(Qt.UserRole)
-    model = session.query(TrainedModelReg).filter_by(id=model_id).first() if model_id is not None else None
-    if model is None:
-        model = session.query(TrainedModelReg).filter_by(
-            analysis_id=get_regmod_id(),
-            title=selected_item.text()
-        ).first()
     if not model:
         QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
         set_info('Не выбрана модель', 'red')
