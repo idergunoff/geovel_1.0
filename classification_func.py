@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 
 import numpy as np
@@ -14,7 +15,9 @@ from build_table import *
 from random_search import push_random_search
 from random_param import push_random_param
 from feature_selection import *
-from feature_mask_evaluator import FeatureMaskEvaluator
+from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+
+LOGGER = logging.getLogger(__name__)
 
 
 
@@ -1496,11 +1499,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def start_gen_algorithm():
 
             data_train_cov = data_train.copy()
-            data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+            profile_ids = data_train_cov['prof_well_index'].str.split('_').str[0].astype(int)
+            object_by_profile = dict(session.query(Profile.id, Research.object_id).join(Research).filter(
+                Profile.id.in_(profile_ids.unique().tolist())
+            ).all())
+            data_train_cov['object_id'] = profile_ids.map(object_by_profile)
 
             training_sample = data_train_cov[list_param]
             markup = data_train_cov[[mark]]
-            groups = data_train_cov[['obj_title']]
+            groups = data_train_cov[['object_id']]
 
             (markup_train, model_class, model_name, pipe,
              text_model, training_sample_train) = build_pipeline(markup, training_sample)
@@ -1555,7 +1562,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
             evaluator = FeatureMaskEvaluator(
                 X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
-                progress=update_fold_progress,
+                progress=update_fold_progress, feature_names=list_param,
             )
 
             def objectives(features):
@@ -1565,6 +1572,21 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 return result
 
             problem.function = objectives
+
+            def initial_population():
+                masks = build_seed_masks(X, y, task="classification", seed=seed)
+                rng = np.random.default_rng(seed)
+                while len(masks) < ui_ga.spinBox_pop_size.value():
+                    mask = rng.choice([False, True], size=n_features).tolist()
+                    if not any(mask):
+                        mask[rng.integers(n_features)] = True
+                    masks.append(mask)
+                solutions = []
+                for mask in masks[:ui_ga.spinBox_pop_size.value()]:
+                    solution = Solution(problem)
+                    solution.variables[:] = [[value] for value in mask]
+                    solutions.append(solution)
+                return InjectedPopulation(solutions)
 
             # --- Параметры сохранения и выполнения ---
             population_size = ui_ga.spinBox_pop_size.value() # Размер популяции
@@ -1593,9 +1615,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
                     if ui_ga.radioButton_pareto_no.isChecked():
-                        algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                        algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                     else:
-                        algorithm = NSGAII(problem, population_size=population_size)
+                        algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
 
             else:
@@ -1603,20 +1625,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 print("Файл состояния не найден. Начинаем новый запуск.")
 
                 if ui_ga.radioButton_pareto_no.isChecked():
-                    algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                    algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                 else:
-                    algorithm = NSGAII(problem, population_size=population_size)
+                    algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
 
             # --- Основной цикл выполнения с сохранением ---
             print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
 
             n_gen = 0
+            early_stopping = ScoreEarlyStopping()
             for gen in range(start_gen, total_generations + start_gen):
                 ui_ga.lcdNumber_generation.display(gen)
                 ui_ga.progressBar_pop.setValue(0)
                 print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
                 algorithm.step()  # Выполняем одно поколение
+
+                should_stop = early_stopping.update(
+                    s.objectives[0] for s in algorithm.population
+                )
 
                 # Проверяем, нужно ли сохраняться
                 if (gen + 1) % save_interval == 0:
@@ -1626,6 +1653,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                         print("Состояние успешно сохранено.")
                     except Exception as e:
                         print(f"Ошибка при сохранении состояния: {e}")
+
+                if should_stop:
+                    save_population(algorithm, checkpoint_file)
+                    LOGGER.info("Genetic search stopped after %s plateau generations", early_stopping.patience)
+                    break
 
                 n_gen += 1
                 ui_ga.progressBar_gen.setValue(n_gen)
@@ -1678,6 +1710,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 ngen=alg.nfe // alg.population_size,
                 seed=seed,
                 telemetry=evaluator.metrics(),
+                evaluation_cache=evaluator.checkpoint_cache(),
             )
             with open(fname, "wb") as f:
                 pickle.dump(data, f)
@@ -1688,6 +1721,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 data = pickle.load(f)
 
             evaluator.restore_metrics(data.get("telemetry"), data["X"])
+            evaluator.restore_cache(data.get("evaluation_cache"))
 
             pop = []
             for x, fobj in zip(data["X"], data["F"]):
@@ -2013,9 +2047,6 @@ def get_text_train_param_geochem(list_param):
     text = '\nПараметры модели:\n'
     text += ", ".join(list_param)
     return text
-
-
-
 
 
 
