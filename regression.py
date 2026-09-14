@@ -685,8 +685,10 @@ def split_well_train_test():
         set_info(f'Выборка разделена на {ui.lineEdit_string.text()}_train и {ui.lineEdit_string.text()}_test', 'green')
 
 
-def set_updata_false_reg():
-    analysis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+def set_updata_false_reg(analysis_id=None):
+    analysis = session.query(AnalysisReg).filter_by(
+        id=analysis_id if analysis_id is not None else get_regmod_id()
+    ).first()
     try:
         filepath = Path(analysis.data)
         if filepath.exists():
@@ -4355,6 +4357,65 @@ def update_trained_model_reg_comment():
     ui_cmt.buttonBox.accepted.connect(update_comment)
 
     FormComment.exec_()
+
+
+def reg_model_prediction_upgrade():
+    """Переназначить модели, используемые как признаки регрессионной модели."""
+    try:
+        model_id = ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)
+    except AttributeError:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    model = session.query(TrainedModelReg).filter_by(id=model_id).first()
+    if not model:
+        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
+        set_info('Не выбрана модель', 'red')
+        return
+
+    FormUpgradePredict = QtWidgets.QDialog()
+    ui_up = Ui_FormUpgradeModel()
+    ui_up.setupUi(FormUpgradePredict)
+    FormUpgradePredict.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    model_list_param = json.loads(model.list_params)
+    ui_up.listWidget_predict_model.addItems([
+        param for param in model_list_param if param.startswith('model')
+    ])
+
+    def upgrade_list_param_predict():
+        current_param = ui_up.listWidget_predict_model.currentItem()
+        if current_param is None:
+            set_info('Выберите модель-признак для переназначения', 'red')
+            return
+
+        try:
+            prediction_id = ui.listWidget_model_pred.currentItem().text().split(' id')[-1]
+        except AttributeError:
+            set_info('Выберите модель в Model Prediction', 'red')
+            return
+
+        prediction = session.query(ProfileModelPrediction).filter_by(id=prediction_id).first()
+        if prediction is None:
+            set_info('Выберите модель в Model Prediction', 'red')
+            return
+
+        old_model = current_param.text()
+        new_model = f'model_{prediction.type_model}_id{prediction.model_id}'
+        model_list_param[model_list_param.index(old_model)] = new_model
+
+        session.query(TrainedModelReg).filter_by(id=model.id).update(
+            {'list_params': json.dumps(model_list_param)},
+            synchronize_session='fetch'
+        )
+        set_updata_false_reg(model.analysis_id)
+        set_color_button_updata_regmod()
+        update_list_trained_models_regmod()
+        FormUpgradePredict.close()
+
+    ui_up.pushButton_upgrade_model.clicked.connect(upgrade_list_param_predict)
+    FormUpgradePredict.exec_()
 
 
 def export_model_reg():

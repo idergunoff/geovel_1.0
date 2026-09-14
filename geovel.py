@@ -352,6 +352,7 @@ ui.lineEdit_signal_except_reg.returnPressed.connect(add_signal_except_reg)
 ui.lineEdit_crl_except_reg.returnPressed.connect(add_crl_except_reg)
 ui.listWidget_trained_model_reg.itemDoubleClicked.connect(rename_model_reg)
 ui.toolButton_list_param_to_line_reg.clicked.connect(list_param_reg_to_lineEdit)
+ui.toolButton_reg_upgarde_model.clicked.connect(reg_model_prediction_upgrade)
 
 ui.toolButton_add_obj.clicked.connect(add_object)
 ui.toolButton_del_obj.clicked.connect(remove_object)
