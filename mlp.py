@@ -1075,8 +1075,10 @@ def update_line_edit_exception_mlp():
         ui.lineEdit_crl_except.setText(except_mlp.except_crl)
 
 
-def set_updata_false():
-    analysis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+def set_updata_false(analysis_id=None):
+    analysis = session.query(AnalysisMLP).filter_by(
+        id=analysis_id if analysis_id is not None else get_MLP_id()
+    ).first()
     try:
         filepath = Path(analysis.data)
         if filepath.exists():
@@ -1968,8 +1970,12 @@ def cls_model_prediction_upgrade():
         idx = model_list_param.index(old_model)
         model_list_param[idx] = new_model
 
-        session.query(TrainedModelClass).filter_by(id=an.id).update({'list_params': json.dumps(model_list_param)}, synchronize_session='fetch')
-        session.commit()
+        session.query(TrainedModelClass).filter_by(id=an.id).update(
+            {'list_params': json.dumps(model_list_param)},
+            synchronize_session='fetch'
+        )
+        set_updata_false(an.analysis_id)
+        set_color_button_updata()
         update_list_trained_models_class()
         FormUpgradePredict.close()
 
