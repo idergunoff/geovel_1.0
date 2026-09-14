@@ -1043,6 +1043,17 @@ def update_list_param_reg_no_update():
 def update_list_param_regmod(db=False):
     """ Обновление списка параметров со сбором таблицы """
 
+    analysis = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+    if db and analysis is not None and not analysis.up_data:
+        # ``db=True`` is used while restoring/selecting an analysis.  An absent
+        # cached table must remain absent until the user explicitly presses
+        # UP DATA (which calls this function with ``db=False``).
+        update_list_param_reg_no_update()
+        update_list_trained_models_regmod()
+        set_color_button_updata_regmod()
+        update_line_edit_exception_reg()
+        return
+
     try:
         data_train, list_param = build_table_train(db, 'regmod')
     except TypeError:
