@@ -9,6 +9,7 @@ from scipy.cluster.vq import kmeans
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_groups_with_smoothed_hull, \
     plot_graphs_by_group
 from func import *
+from feature_mask_evaluator import FeatureMaskEvaluator
 from build_table import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
@@ -3171,81 +3172,29 @@ def train_regression_model():
             else:
                 pass
 
-            # Целевая функция
+            seed = ui_ga.spinBox_seed.value()
+            X = training_sample.to_numpy()
+            y = np.asarray(markup).reshape(-1)
+            group_values = np.asarray(groups).reshape(-1)
+            folds = list(LeaveOneGroupOut().split(X, y, group_values))
+            if ui_r.checkBox_cov_percent.isChecked():
+                minimum = ui_r.spinBox_cov_percent.value() / 100
+                folds = [(train, test) for train, test in folds if len(test) / len(y) >= minimum]
+
+            def update_fold_progress(current, total):
+                ui.progressBar.setMaximum(total)
+                ui.progressBar.setValue(current)
+
+            evaluator = FeatureMaskEvaluator(
+                X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
+                progress=update_fold_progress,
+            )
+
             def objectives(features):
-
-                selected_features = np.array(features, dtype=int)
-                if np.sum(selected_features) == 0:
-                    return [0, n_features]
-
-                # Выбор активных признаков
-                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
-
-                markup_subset = np.array(sum(markup.values.tolist(), []))
-                groups_subset = np.array(sum(groups.values.tolist(), []))
-
-                scores = []
-
-                # Нормализация данных
-                text_scaler = ''
-
-                pipe_steps = []
-                if ui_r.checkBox_stdscaler_reg.isChecked():
-                    std_scaler = StandardScaler()
-                    pipe_steps.append(('scaler', std_scaler))
-                    text_scaler += '\nStandardScaler'
-                if ui_r.checkBox_robscaler_reg.isChecked():
-                    robust_scaler = RobustScaler()
-                    pipe_steps.append(('scaler', robust_scaler))
-                    text_scaler += '\nRobustScaler'
-                if ui_r.checkBox_mnmxscaler_reg.isChecked():
-                    minmax_scaler = MinMaxScaler()
-                    pipe_steps.append(('scaler', minmax_scaler))
-                    text_scaler += '\nMinMaxScaler'
-                if ui_r.checkBox_mxabsscaler_reg.isChecked():
-                    maxabs_scaler = MaxAbsScaler()
-                    pipe_steps.append(('scaler', maxabs_scaler))
-                    text_scaler += '\nMaxAbsScaler'
-
-                if ui_r.checkBox_pca.isChecked():
-                    n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
-                    pca = PCA(n_components=n_comp, random_state=0)
-                    pipe_steps.append(('pca', pca))
-                text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
-
-                model_name = ui_r.buttonGroup.checkedButton().text()
-                model_class, text_model = choice_model_regressor(model_name, training_sample)
-
-                text_model += text_scaler
-                text_model += text_pca
-
-                pipe_steps.append(('model', model_class))
-                pipe = Pipeline(pipe_steps)
-
-                ui.progressBar.setMaximum(len(set(list(groups_subset))))
-                n_progress = 1
-
-                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset,
-                                                                    groups_subset):
-                    ui.progressBar.setValue(n_progress)
-
-                    if ui_r.checkBox_cov_percent.isChecked():
-                        if len(test_idx) / len(markup_subset) < ui_r.spinBox_cov_percent.value() / 100:
-                            n_progress += 1
-                            continue
-
-                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
-                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
-                    scores.append(score)
-
-                count = np.sum(selected_features)
-                print(np.mean(scores), count)
+                result = evaluator(features)
                 ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
-
-                if ui_ga.radioButton_pareto_no.isChecked():
-                    return [np.mean(scores)]
-                else:
-                    return [np.mean(scores), count]
+                print(evaluator.metrics())
+                return result
 
             problem.function = objectives
 
@@ -3259,6 +3208,8 @@ def train_regression_model():
             ui_ga.progressBar_gen.setMaximum(total_generations)
 
             # --- Логика загрузки или инициализации ---
+            random.seed(seed)
+            np.random.seed(seed)
             start_gen = 0
             if os.path.exists(checkpoint_file):
                 try:
@@ -3351,7 +3302,9 @@ def train_regression_model():
                 ],
                 nfe=alg.nfe,
                 rng=random.getstate(),
-                ngen=alg.nfe // alg.population_size
+                ngen=alg.nfe // alg.population_size,
+                seed=seed,
+                telemetry=evaluator.metrics(),
             )
             with open(fname, "wb") as f:
                 pickle.dump(data, f)
@@ -3359,6 +3312,8 @@ def train_regression_model():
         def load_checkpoint(problem, fname, is_master_node=False):
             with open(fname, "rb") as f:
                 data = pickle.load(f)
+
+            evaluator.restore_metrics(data.get("telemetry"), data["X"])
 
             pop = []
             for x, fobj in zip(data["X"], data["F"]):
@@ -3392,10 +3347,10 @@ def train_regression_model():
                              population_size=len(pop))
 
             alg.nfe = data["nfe"]
-            if is_master_node:
-                random.setstate(data["rng"])  # воспроизводимость
-            else:
-                random.seed()  # новое зерно из /dev/urandom
+            checkpoint_seed = data.get("seed", seed)
+            if checkpoint_seed != seed:
+                raise ValueError(f"Checkpoint seed {checkpoint_seed} does not match requested seed {seed}")
+            random.setstate(data["rng"])
 
             alg.initialize()
 

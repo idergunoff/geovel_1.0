@@ -14,6 +14,7 @@ from build_table import *
 from random_search import push_random_search
 from random_param import push_random_param
 from feature_selection import *
+from feature_mask_evaluator import FeatureMaskEvaluator
 
 
 
@@ -1539,50 +1540,29 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             else:
                 pass
 
-            # Целевая функция
+            seed = ui_ga.spinBox_seed.value()
+            X = training_sample.to_numpy()
+            y = np.asarray(markup).reshape(-1)
+            group_values = np.asarray(groups).reshape(-1)
+            folds = list(LeaveOneGroupOut().split(X, y, group_values))
+            if ui_cls.checkBox_cov_percent.isChecked():
+                minimum = ui_cls.spinBox_cov_percent.value() / 100
+                folds = [(train, test) for train, test in folds if len(test) / len(y) >= minimum]
+
+            def update_fold_progress(current, total):
+                ui.progressBar.setMaximum(total)
+                ui.progressBar.setValue(current)
+
+            evaluator = FeatureMaskEvaluator(
+                X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
+                progress=update_fold_progress,
+            )
+
             def objectives(features):
-
-                selected_features = np.array(features, dtype=int)
-                if np.sum(selected_features) == 0:
-                    return [0, n_features]
-
-                # Выбор активных признаков
-                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
-
-                markup_subset = np.array(sum(markup.values.tolist(), []))
-                groups_subset = np.array(sum(groups.values.tolist(), []))
-
-                scores = []
-
-                (markup_train, model_class, model_name, pipe,
-                 text_model, training_sample_train) = build_pipeline(markup, training_sample)
-
-                ui.progressBar.setMaximum(len(set(list(groups_subset))))
-                n_progress = 1
-
-                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
-                    ui.progressBar.setValue(n_progress)
-
-                    if ui_cls.checkBox_cov_percent.isChecked():
-                        if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
-                            n_progress += 1
-                            continue
-
-                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
-                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
-                    scores.append(score)
-
-
-                count = np.sum(selected_features)
-                print(np.mean(scores), count)
+                result = evaluator(features)
                 ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
-
-                if ui_ga.radioButton_pareto_no.isChecked():
-                    return [np.mean(scores)]
-                else:
-                    return [np.mean(scores), count]
-
-
+                print(evaluator.metrics())
+                return result
 
             problem.function = objectives
 
@@ -1596,6 +1576,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             ui_ga.progressBar_gen.setMaximum(total_generations)
 
             # --- Логика загрузки или инициализации ---
+            random.seed(seed)
+            np.random.seed(seed)
             start_gen = 0
             if os.path.exists(checkpoint_file):
                 try:
@@ -1693,7 +1675,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 ],
                 nfe=alg.nfe,
                 rng=random.getstate(),
-                ngen=alg.nfe // alg.population_size
+                ngen=alg.nfe // alg.population_size,
+                seed=seed,
+                telemetry=evaluator.metrics(),
             )
             with open(fname, "wb") as f:
                 pickle.dump(data, f)
@@ -1702,6 +1686,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def load_checkpoint(problem, fname, is_master_node=False):
             with open(fname, "rb") as f:
                 data = pickle.load(f)
+
+            evaluator.restore_metrics(data.get("telemetry"), data["X"])
 
             pop = []
             for x, fobj in zip(data["X"], data["F"]):
@@ -1735,10 +1721,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                              population_size=len(pop))
 
             alg.nfe = data["nfe"]
-            if is_master_node:
-                random.setstate(data["rng"])  # воспроизводимость
-            else:
-                random.seed()  # новое зерно из /dev/urandom
+            checkpoint_seed = data.get("seed", seed)
+            if checkpoint_seed != seed:
+                raise ValueError(f"Checkpoint seed {checkpoint_seed} does not match requested seed {seed}")
+            random.setstate(data["rng"])
 
             alg.initialize()
 
@@ -2027,8 +2013,6 @@ def get_text_train_param_geochem(list_param):
     text = '\nПараметры модели:\n'
     text += ", ".join(list_param)
     return text
-
-
 
 
 
