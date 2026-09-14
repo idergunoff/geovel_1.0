@@ -4365,23 +4365,30 @@ def reg_model_prediction_upgrade():
     selected_items = model_list.selectedItems()
     selected_item = model_list.currentItem() or (selected_items[0] if selected_items else None)
 
-    # После обновления QListWidget визуально выбранная строка иногда ещё не
-    # становится currentItem. Для единственной модели выбор однозначен.
-    if selected_item is None and model_list.count() == 1:
-        selected_item = model_list.item(0)
+    # QListWidget может отрисовать текущую строку, но временно вернуть None из
+    # currentItem()/selectedItems() после обновления модели представления.
+    # currentRow() при этом уже содержит фактически выбранную пользователем
+    # строку, поэтому используем её как дополнительный источник выбора.
+    current_row = model_list.currentRow()
+    if selected_item is None and current_row >= 0:
+        selected_item = model_list.item(current_row)
 
-    if selected_item is None:
-        QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
-        set_info('Не выбрана модель', 'red')
-        return
+    analysis_models = session.query(TrainedModelReg).filter_by(
+        analysis_id=get_regmod_id()
+    ).all()
+    model = None
+    if selected_item is not None:
+        model_id = selected_item.data(Qt.UserRole)
+        if model_id is not None:
+            model = next((item for item in analysis_models if item.id == model_id), None)
+        if model is None:
+            model = next((item for item in analysis_models if item.title == selected_item.text()), None)
 
-    model_id = selected_item.data(Qt.UserRole)
-    model = session.query(TrainedModelReg).filter_by(id=model_id).first() if model_id is not None else None
-    if model is None:
-        model = session.query(TrainedModelReg).filter_by(
-            analysis_id=get_regmod_id(),
-            title=selected_item.text()
-        ).first()
+    # Если в анализе обучена только одна модель, выбор однозначен даже в тот
+    # короткий момент, когда QListWidget потерял currentItem при перерисовке.
+    if model is None and len(analysis_models) == 1:
+        model = analysis_models[0]
+
     if not model:
         QMessageBox.critical(MainWindow, 'Не выбрана модель', 'Не выбрана модель.')
         set_info('Не выбрана модель', 'red')
