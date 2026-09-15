@@ -7,6 +7,7 @@ from typing import Callable
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from app_settings import restore_form, save_form
 from models_db.model import CanonicalBoundary
 from regression_target.service import Resolution, TargetSettings, list_canonical_targets, resolve_target
 
@@ -28,6 +29,20 @@ class ClassificationWellCandidate:
 class ClassificationWellWizard(QtWidgets.QDialog):
     """Calculate several well attributes and make one exclusive class choice."""
 
+    SETTINGS_GROUP = "classification_well_wizard"
+    SETTINGS_WIDGETS = frozenset({
+        "comboBox_classification_source",
+        "comboBox_classification_canonical",
+        "checkBox_classification_strict",
+        "checkBox_classification_explicit_sum",
+        "comboBox_classification_aggregation",
+        "comboBox_classification_operation",
+        "comboBox_classification_depth_mode",
+        "comboBox_classification_boundary",
+        "doubleSpinBox_classification_fixed_depth",
+        "doubleSpinBox_classification_interval",
+        "comboBox_classification_interval_position",
+    })
     SOURCES = (("Глубина границы", "boundary"), ("Информация о скважине", "well_data"),
                ("Каротажная кривая", "well_log"))
 
@@ -44,31 +59,43 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                             "Массовое добавление скважин в классификацию")
         self.resize(1250, 720)
         self._build_ui()
-        self._source_changed()
+        self._restore_preferences()
+        self.finished.connect(self._save_preferences)
         self._render()
 
     def _build_ui(self):
         root = QtWidgets.QVBoxLayout(self)
         selector = QtWidgets.QGridLayout()
         self.source = QtWidgets.QComboBox()
+        self.source.setObjectName("comboBox_classification_source")
         for title, value in self.SOURCES:
             self.source.addItem(title, value)
         self.canonical = QtWidgets.QComboBox()
+        self.canonical.setObjectName("comboBox_classification_canonical")
         self.strict = QtWidgets.QCheckBox("Строгий разбор")
+        self.strict.setObjectName("checkBox_classification_strict")
         self.explicit_sum = QtWidgets.QCheckBox("Складывать выражения через +")
+        self.explicit_sum.setObjectName("checkBox_classification_explicit_sum")
         self.explicit_sum.setChecked(True)
         self.aggregation = QtWidgets.QComboBox(); self.aggregation.addItem("Медиана", "median"); self.aggregation.addItem("Среднее", "mean")
+        self.aggregation.setObjectName("comboBox_classification_aggregation")
         self.operation = QtWidgets.QComboBox()
+        self.operation.setObjectName("comboBox_classification_operation")
         for title, value in (("Значение интервала", "single"), ("Верх / низ", "upper_lower_ratio"),
                              ("Низ / верх", "lower_upper_ratio"), ("Низ − верх", "difference")):
             self.operation.addItem(title, value)
         self.depth_mode = QtWidgets.QComboBox(); self.depth_mode.addItem("От границы", "boundary"); self.depth_mode.addItem("Фиксированная", "fixed")
+        self.depth_mode.setObjectName("comboBox_classification_depth_mode")
         self.boundary = QtWidgets.QComboBox()
+        self.boundary.setObjectName("comboBox_classification_boundary")
         for row in self.session.query(CanonicalBoundary).order_by(CanonicalBoundary.canonical_name).all():
             self.boundary.addItem(row.canonical_name, row.id)
         self.fixed_depth = QtWidgets.QDoubleSpinBox(); self.fixed_depth.setRange(-100000, 100000); self.fixed_depth.setDecimals(3)
+        self.fixed_depth.setObjectName("doubleSpinBox_classification_fixed_depth")
         self.interval = QtWidgets.QDoubleSpinBox(); self.interval.setRange(.001, 100000); self.interval.setValue(5); self.interval.setDecimals(3)
+        self.interval.setObjectName("doubleSpinBox_classification_interval")
         self.position = QtWidgets.QComboBox(); self.position.addItem("Ниже", "below"); self.position.addItem("Выше", "above"); self.position.addItem("Симметрично", "centered")
+        self.position.setObjectName("comboBox_classification_interval_position")
         controls = (("Источник", self.source), ("Параметр", self.canonical), ("", self.strict),
                     ("", self.explicit_sum), ("Агрегация", self.aggregation), ("Операция", self.operation),
                     ("Глубина", self.depth_mode), ("Граница", self.boundary), ("Фикс. глубина", self.fixed_depth),
@@ -114,6 +141,25 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.open_log_button.clicked.connect(self._open_well_log)
         self.table.cellDoubleClicked.connect(self._resolve_ambiguity)
         buttons.rejected.connect(self.reject)
+
+    @property
+    def _settings_group(self):
+        """Keep the add and review workflows from overwriting each other."""
+        return f"{self.SETTINGS_GROUP}/{self.mode}"
+
+    @classmethod
+    def _is_preference_widget(cls, object_name):
+        return object_name in cls.SETTINGS_WIDGETS
+
+    def _restore_preferences(self):
+        """Restore source-dependent controls after rebuilding their choices."""
+        restore_form(self, self._settings_group, self._is_preference_widget)
+        self._source_changed()
+        restore_form(self, self._settings_group, self._is_preference_widget)
+        self._depth_changed()
+
+    def _save_preferences(self, _result=None):
+        save_form(self, self._settings_group, self._is_preference_widget)
 
     def _source_changed(self):
         self.canonical.clear()
