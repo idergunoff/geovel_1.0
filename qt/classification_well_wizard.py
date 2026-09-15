@@ -240,13 +240,15 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                                  candidate.current_marker_id is None and choice == 2)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.parameter_label.setText("Выбрано параметров: " + str(len(self.parameters)))
-        self.summary.setText(f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий.")
+        self.summary.setText(
+            f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий. "
+            "Выбор исходной записи применяется ко всем столбцам того же параметра.")
 
     def _candidate_for_row(self, row):
         return self.candidates[row] if 0 <= row < len(self.candidates) else None
 
     def _resolve_ambiguity(self, row, column):
-        """Ask which source row to use when a parameter has several matches."""
+        """Ask once for a source row and reuse it in matching cells of the well."""
         parameter_index = column - 4
         candidate = self._candidate_for_row(row)
         if (candidate is None or parameter_index < 0 or
@@ -262,15 +264,38 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         if not accepted:
             return
         selected_index = labels.index(selected)
+        selected_candidate = resolution.candidates[selected_index]
+        selection_key = self._ambiguity_key(parameter_index, resolution)
+        for peer_index, peer_resolution in enumerate(candidate.values):
+            if (peer_resolution.status != "ambiguous" or
+                    self._ambiguity_key(peer_index, peer_resolution) != selection_key):
+                continue
+            peer_choice = next((item for item in peer_resolution.candidates
+                                if item.source_id == selected_candidate.source_id), None)
+            if peer_choice is None:
+                continue
+            self._select_resolution_candidate(candidate, peer_index, peer_resolution, peer_choice)
+        self._render()
+
+    def _ambiguity_key(self, parameter_index, resolution):
+        """Identify cells whose ambiguity refers to the same source parameter."""
+        if not 0 <= parameter_index < len(self.parameters):
+            return None
+        settings = self.parameters[parameter_index][1]
+        if (settings.source == "well_log" and
+                resolution.details.get("pending_selection") == "boundary_depth"):
+            return "boundary", settings.boundary_canonical_id
+        return settings.source, settings.canonical_id
+
+    def _select_resolution_candidate(self, candidate, parameter_index, resolution, choice):
+        """Apply a source choice, recalculating log values that depend on a boundary."""
         settings = self.parameters[parameter_index][1]
         if (settings.source == "well_log" and
                 resolution.details.get("pending_selection") == "boundary_depth"):
             candidate.values[parameter_index] = resolve_target(
-                self.session, candidate.well_id, settings,
-                boundary_candidate=resolution.candidates[selected_index])
-        else:
-            resolution.select(selected_index)
-        self._render()
+                self.session, candidate.well_id, settings, boundary_candidate=choice)
+            return
+        resolution.select(resolution.candidates.index(choice))
 
     def _open_well_log(self):
         candidate = self._candidate_for_row(self.table.currentRow())

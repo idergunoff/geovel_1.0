@@ -79,6 +79,71 @@ def test_double_click_resolves_multiple_source_values(monkeypatch):
     assert candidate.values[0].value == 22.0
 
 
+def test_source_choice_is_applied_to_same_parameter_columns(monkeypatch):
+    candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
+    choices = [
+        ResolutionCandidate(11.0, 1, "first", "11"),
+        ResolutionCandidate(22.0, 2, "second", "22"),
+    ]
+    candidate.values = [
+        Resolution("ambiguous", candidates=choices.copy()),
+        Resolution("ambiguous", candidates=choices.copy()),
+        Resolution("ambiguous", candidates=choices.copy()),
+    ]
+    markers = [SimpleNamespace(id=10, title="A"), SimpleNamespace(id=20, title="B")]
+    dialog = ClassificationWellWizard(_Session(), [candidate], markers)
+    dialog.parameters = [
+        ("Depth 1", TargetSettings("boundary", 1)),
+        ("Depth 2", TargetSettings("boundary", 1, aggregation="mean")),
+        ("Other", TargetSettings("boundary", 2)),
+    ]
+    dialog._render()
+    monkeypatch.setattr(QtWidgets.QInputDialog, "getItem",
+                        lambda *_args: ("second: 22 → 22", True))
+
+    dialog._resolve_ambiguity(0, 4)
+
+    assert candidate.values[0].value == 22.0
+    assert candidate.values[1].value == 22.0
+    assert candidate.values[1].details["selected"]["source_id"] == 2
+    assert candidate.values[2].status == "ambiguous"
+
+
+def test_boundary_choice_is_reused_for_dependent_log_columns(monkeypatch):
+    candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
+    choices = [
+        ResolutionCandidate(100.0, 5, "top", "100"),
+        ResolutionCandidate(200.0, 6, "bottom", "200"),
+    ]
+    candidate.values = [
+        Resolution("ambiguous", candidates=choices.copy(),
+                   details={"pending_selection": "boundary_depth"}),
+        Resolution("ambiguous", candidates=choices.copy(),
+                   details={"pending_selection": "boundary_depth"}),
+    ]
+    markers = [SimpleNamespace(id=10, title="A"), SimpleNamespace(id=20, title="B")]
+    dialog = ClassificationWellWizard(_Session(), [candidate], markers)
+    dialog.parameters = [
+        ("GR", TargetSettings("well_log", 1, boundary_canonical_id=9)),
+        ("SP", TargetSettings("well_log", 2, boundary_canonical_id=9)),
+    ]
+    dialog._render()
+    monkeypatch.setattr(QtWidgets.QInputDialog, "getItem",
+                        lambda *_args: ("bottom: 200 → 200", True))
+    calls = []
+
+    def resolve(_session, well_id, settings, *, boundary_candidate):
+        calls.append((well_id, settings.canonical_id, boundary_candidate.source_id))
+        return Resolution("resolved", float(settings.canonical_id))
+
+    monkeypatch.setattr(wizard_module, "resolve_target", resolve)
+
+    dialog._resolve_ambiguity(0, 4)
+
+    assert calls == [(1, 1, 6), (1, 2, 6)]
+    assert [value.status for value in candidate.values] == ["resolved", "resolved"]
+
+
 def test_open_log_uses_selected_parameter_details():
     opened = []
     candidate = ClassificationWellCandidate(7, "W-7", 2, "P-1", 3, 0, [])
