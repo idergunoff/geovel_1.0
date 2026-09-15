@@ -9,7 +9,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from app_settings import restore_form, save_form
 from models_db.model import CanonicalBoundary
-from regression_target.service import Resolution, TargetSettings, list_canonical_targets, resolve_target
+from regression_target.service import (
+    Resolution, TargetSettings, list_canonical_targets, resolve_target,
+    save_parameter_choice,
+)
 
 
 @dataclass
@@ -229,8 +232,14 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 self.table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
             for offset, resolution in enumerate(candidate.values, 4):
                 value = f"{resolution.value:g}" if resolution.status == "resolved" and resolution.value is not None else "—"
-                item = QtWidgets.QTableWidgetItem(value); item.setToolTip(resolution.message)
-                item.setBackground(QtGui.QColor("#d9f2df" if resolution.status == "resolved" else "#ffd6d6"))
+                item = QtWidgets.QTableWidgetItem(value)
+                has_alternatives = len(resolution.candidates) > 1
+                suffix = ("\nЕсть альтернативные варианты. Дважды щёлкните, чтобы перевыбрать."
+                          if has_alternatives else "")
+                item.setToolTip(resolution.message + suffix)
+                item.setBackground(QtGui.QColor(
+                    "#ffe4a3" if has_alternatives else
+                    "#d9f2df" if resolution.status == "resolved" else "#ffd6d6"))
                 if resolution.status == "ambiguous":
                     item.setText("выберите…")
                 self.table.setItem(row, offset, item)
@@ -272,7 +281,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 parameter_index >= len(candidate.values)):
             return
         resolution = candidate.values[parameter_index]
-        if resolution.status != "ambiguous" or not resolution.candidates:
+        if len(resolution.candidates) < 2:
             return
         labels = [f"{item.source_name}: {item.raw_value} → {item.value:g}"
                   for item in resolution.candidates]
@@ -311,8 +320,14 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 resolution.details.get("pending_selection") == "boundary_depth"):
             candidate.values[parameter_index] = resolve_target(
                 self.session, candidate.well_id, settings, boundary_candidate=choice)
+            save_parameter_choice(
+                self.session, candidate.well_id, "boundary",
+                settings.boundary_canonical_id, choice.source_id)
             return
         resolution.select(resolution.candidates.index(choice))
+        save_parameter_choice(
+            self.session, candidate.well_id, settings.source,
+            settings.canonical_id, choice.source_id)
 
     def _open_well_log(self):
         candidate = self._candidate_for_row(self.table.currentRow())

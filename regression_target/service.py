@@ -21,6 +21,7 @@ from models_db.model import (
     CanonicalWellOption,
     WellLog,
     WellOptionally,
+    WellParameterChoice,
 )
 from models_db.model_cluster import AliasWellLog, CanonicalWellLog
 
@@ -50,6 +51,46 @@ class Resolution:
         self.status = "resolved"
         self.message = f'Выбрано вручную: {candidate.source_name}'
         self.details = {**self.details, "selected": asdict(candidate), "manual_override": True}
+
+
+def save_parameter_choice(session, well_id: int, source: str, canonical_id: int,
+                          source_id: int) -> None:
+    """Insert or update the reusable source choice for a well and parameter."""
+    query = session.query(WellParameterChoice)
+    # Lightweight dialog test doubles intentionally implement read-only queries.
+    if not hasattr(query, "filter_by") or not hasattr(session, "flush"):
+        return
+    choice = query.filter_by(
+        well_id=well_id, source_type=source, canonical_id=canonical_id).one_or_none()
+    if choice is None:
+        choice = WellParameterChoice(well_id=well_id, source_type=source,
+                                     canonical_id=canonical_id, source_id=source_id)
+        session.add(choice)
+    else:
+        choice.source_id = source_id
+    session.flush()
+
+
+def _apply_parameter_choice(session, well_id: int, source: str, canonical_id: int,
+                            resolution: Resolution) -> Resolution:
+    """Apply a still-valid saved choice while retaining alternatives for reselection."""
+    if len(resolution.candidates) < 2:
+        return resolution
+    resolution.details["has_alternatives"] = True
+    query = session.query(WellParameterChoice)
+    if not hasattr(query, "filter_by"):
+        return resolution
+    choice = query.filter_by(
+        well_id=well_id, source_type=source, canonical_id=canonical_id).one_or_none()
+    selected = next((candidate for candidate in resolution.candidates
+                     if choice and candidate.source_id == choice.source_id), None)
+    if selected is None:
+        return resolution
+    resolution.select(resolution.candidates.index(selected))
+    resolution.message = (f'Применён сохранённый выбор: {selected.source_name}. '
+                          'Дважды щёлкните ячейку, чтобы перевыбрать.')
+    resolution.details.update({"saved_choice": True, "has_alternatives": True})
+    return resolution
 
 
 def _resolve_multiple_candidates(candidates: list[ResolutionCandidate],
@@ -167,7 +208,9 @@ def resolve_boundary(session, well_id: int, canonical_id: int) -> Resolution:
     if not candidates:
         return Resolution("missing", message="Граница выбранного типа отсутствует")
     if len(candidates) > 1:
-        return _resolve_multiple_candidates(candidates, "Найдено несколько границ")
+        return _apply_parameter_choice(
+            session, well_id, "boundary", canonical_id,
+            _resolve_multiple_candidates(candidates, "Найдено несколько границ"))
     return Resolution("resolved", candidates[0].value, candidates, "Найдена одна граница",
                       {"selected": asdict(candidates[0])})
 
@@ -197,7 +240,8 @@ def resolve_well_data(session, well_id: int, settings: TargetSettings) -> Resolu
             candidates, "Найдено несколько значений; " + "; ".join(errors))
         if result.status == "resolved":
             result.details["warnings"] = errors
-        return result
+        return _apply_parameter_choice(
+            session, well_id, "well_data", settings.canonical_id, result)
     return Resolution("resolved", candidates[0].value, candidates, "Значение распознано",
                       {"selected": asdict(candidates[0]), "warnings": errors})
 
@@ -342,7 +386,8 @@ def resolve_well_log(session, well_id: int, settings: TargetSettings,
         result = _resolve_multiple_candidates(candidates, "Найдено несколько подходящих кривых")
         if result.status == "resolved" and boundary_details.get("manual_override"):
             result.details["manual_override"] = True
-        return result
+        return _apply_parameter_choice(
+            session, well_id, "well_log", settings.canonical_id, result)
     details = {"selected": asdict(candidates[0])}
     if boundary_details.get("manual_override"):
         details["manual_override"] = True
