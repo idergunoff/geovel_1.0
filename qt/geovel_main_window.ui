@@ -3331,6 +3331,18 @@ Therm</string>
                       </property>
                      </widget>
                     </item>
+                    <item row="0" column="5">
+                     <widget class="QPushButton" name="pushButton_add_all_well_cls">
+                      <property name="styleSheet"><string notr="true">background-color: rgb(191, 255, 191);</string></property>
+                      <property name="text"><string>add all well</string></property>
+                     </widget>
+                    </item>
+                    <item row="0" column="6">
+                     <widget class="QPushButton" name="pushButton_check_all_well_cls">
+                      <property name="styleSheet"><string notr="true">background-color: rgb(255, 223, 183);</string></property>
+                      <property name="text"><string>check all well</string></property>
+                     </widget>
+                    </item>
                    </layout>
                   </item>
                   <item row="3" column="0">
