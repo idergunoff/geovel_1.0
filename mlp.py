@@ -13,6 +13,7 @@ from qt.choose_formation_lda import *
 from random_search import push_random_search
 from classification_func import train_classifier
 from regression import update_list_reg
+from qt.classification_well_wizard import ClassificationWellCandidate, ClassificationWellWizard
 
 
 def add_mlp():
@@ -256,6 +257,135 @@ def add_well_markup_mlp():
         update_list_well_markup_mlp()
     else:
         set_info('выбраны не все параметры', 'red')
+
+
+def _classification_markers():
+    markers = session.query(MarkerMLP).filter(
+        MarkerMLP.analysis_id == get_MLP_id()).order_by(MarkerMLP.id).all()
+    if len(markers) < 2:
+        QMessageBox.warning(MainWindow, 'Недостаточно классов',
+                            'Для массовой разметки создайте как минимум два маркера класса.')
+        return []
+    return markers[:2]
+
+
+def _classification_candidates_for_profiles(analysis_id):
+    profiles = session.query(Profile).filter(
+        Profile.research_id == get_research_id()).order_by(Profile.id).all()
+    if not profiles:
+        QMessageBox.information(MainWindow, 'Нет профилей', 'В текущем исследовании профили не найдены.')
+        return []
+    formations = get_list_formation(profiles)
+    if not formations:
+        return []
+    candidates = []
+    for profile_index, profile in enumerate(profiles):
+        if profile_index >= len(formations) or not formations[profile_index]:
+            continue
+        formation_id = int(formations[profile_index].split(' id')[-1])
+        try:
+            x_prof = json.loads(profile.x_pulc or '[]')
+            y_prof = json.loads(profile.y_pulc or '[]')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if not x_prof or len(x_prof) != len(y_prof):
+            continue
+        for well, closest_index, distance in get_list_nearest_well(profile.id) or []:
+            well_dist = ui.spinBox_well_dist_mlp.value()
+            start = max(0, closest_index - well_dist)
+            stop = min(len(x_prof), closest_index + well_dist)
+            existing = session.query(MarkupMLP).filter_by(
+                analysis_id=analysis_id, well_id=well.id, profile_id=profile.id).first()
+            candidates.append(ClassificationWellCandidate(
+                well.id, well.name or f'id{well.id}', profile.id, profile.title or f'id{profile.id}',
+                formation_id, float(distance), list(range(start, stop)),
+                markup_id=existing.id if existing else None,
+                current_marker_id=existing.marker_id if existing else None))
+    return candidates
+
+
+def add_all_well_markup_mlp():
+    """Review well attributes and assign nearby wells to one of two classes."""
+    analysis_id = get_MLP_id()
+    if not analysis_id:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите классификационный анализ.')
+        return
+    markers = _classification_markers()
+    if not markers:
+        return
+    candidates = _classification_candidates_for_profiles(analysis_id)
+    if not candidates:
+        QMessageBox.information(MainWindow, 'Нет скважин', 'В пределах заданного расстояния скважины не найдены.')
+        return
+    dialog = ClassificationWellWizard(session, candidates, markers, MainWindow, mode='add')
+    if dialog.exec_() != QtWidgets.QDialog.Accepted:
+        return
+    changed = 0
+    try:
+        for candidate, marker_id in dialog.assignments():
+            if marker_id is None:
+                continue
+            markup = session.query(MarkupMLP).filter_by(
+                analysis_id=analysis_id, well_id=candidate.well_id,
+                profile_id=candidate.profile_id).first()
+            if markup:
+                markup.marker_id = marker_id
+                markup.formation_id = candidate.formation_id
+                markup.list_measure = json.dumps(candidate.list_measure)
+            else:
+                session.add(MarkupMLP(
+                    analysis_id=analysis_id, well_id=candidate.well_id,
+                    profile_id=candidate.profile_id, formation_id=candidate.formation_id,
+                    marker_id=marker_id, list_measure=json.dumps(candidate.list_measure)))
+            changed += 1
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    update_list_well_markup_mlp()
+    set_info(f'Массовая разметка классификации: добавлено/обновлено {changed} скважин', 'green')
+
+
+def check_all_well_markup_mlp():
+    """Review attributes and correct the classes of existing well markups."""
+    analysis_id = get_MLP_id()
+    if not analysis_id:
+        QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите классификационный анализ.')
+        return
+    markers = _classification_markers()
+    if not markers:
+        return
+    markups = session.query(MarkupMLP).filter(
+        MarkupMLP.analysis_id == analysis_id,
+        (MarkupMLP.type_markup.is_(None)) | (MarkupMLP.type_markup == '')).all()
+    candidates = [ClassificationWellCandidate(
+        markup.well_id, markup.well.name or f'id{markup.well_id}', markup.profile_id,
+        markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
+        json.loads(markup.list_measure or '[]'), markup_id=markup.id,
+        current_marker_id=markup.marker_id)
+        for markup in markups if markup.well and markup.profile and markup.formation]
+    if not candidates:
+        QMessageBox.information(MainWindow, 'Нет скважин', 'В анализе нет скважин для проверки.')
+        return
+    dialog = ClassificationWellWizard(session, candidates, markers, MainWindow, mode='check')
+    if dialog.exec_() != QtWidgets.QDialog.Accepted:
+        return
+    changed = deleted = 0
+    try:
+        for candidate, marker_id in dialog.assignments():
+            markup = session.query(MarkupMLP).filter_by(id=candidate.markup_id, analysis_id=analysis_id).first()
+            if not markup:
+                continue
+            if marker_id is None:
+                session.delete(markup); deleted += 1
+            elif markup.marker_id != marker_id:
+                markup.marker_id = marker_id; changed += 1
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    update_list_well_markup_mlp()
+    set_info(f'Проверка классификации: изменено {changed}, удалено {deleted} скважин', 'green')
 
 
 def add_profile_mlp():
