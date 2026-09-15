@@ -1,4 +1,5 @@
 import json
+import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,6 +10,9 @@ from scipy.cluster.vq import kmeans
 from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_groups_with_smoothed_hull, \
     plot_graphs_by_group
 from func import *
+from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+
+LOGGER = logging.getLogger(__name__)
 from build_table import *
 from krige import draw_map
 from random_param_reg import push_random_param_reg
@@ -3093,12 +3097,16 @@ def train_regression_model():
         def start_gen_algorithm():
 
             data_train_cov = data_train.copy()
-            data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+            profile_ids = data_train_cov['prof_well_index'].str.split('_').str[0].astype(int)
+            object_by_profile = dict(session.query(Profile.id, Research.object_id).join(Research).filter(
+                Profile.id.in_(profile_ids.unique().tolist())
+            ).all())
+            data_train_cov['object_id'] = profile_ids.map(object_by_profile)
 
             training_sample = data_train_cov[list_param_reg]
 
             markup = data_train_cov[['target_value']]
-            groups = data_train_cov[['obj_title']]
+            groups = data_train_cov[['object_id']]
 
             # Нормализация данных
             text_scaler = ''
@@ -3171,83 +3179,46 @@ def train_regression_model():
             else:
                 pass
 
-            # Целевая функция
+            seed = ui_ga.spinBox_seed.value()
+            X = training_sample.to_numpy()
+            y = np.asarray(markup).reshape(-1)
+            group_values = np.asarray(groups).reshape(-1)
+            folds = list(LeaveOneGroupOut().split(X, y, group_values))
+            if ui_r.checkBox_cov_percent.isChecked():
+                minimum = ui_r.spinBox_cov_percent.value() / 100
+                folds = [(train, test) for train, test in folds if len(test) / len(y) >= minimum]
+
+            def update_fold_progress(current, total):
+                ui.progressBar.setMaximum(total)
+                ui.progressBar.setValue(current)
+
+            evaluator = FeatureMaskEvaluator(
+                X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
+                progress=update_fold_progress, feature_names=list_param_reg,
+            )
+
             def objectives(features):
-
-                selected_features = np.array(features, dtype=int)
-                if np.sum(selected_features) == 0:
-                    return [0, n_features]
-
-                # Выбор активных признаков
-                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
-
-                markup_subset = np.array(sum(markup.values.tolist(), []))
-                groups_subset = np.array(sum(groups.values.tolist(), []))
-
-                scores = []
-
-                # Нормализация данных
-                text_scaler = ''
-
-                pipe_steps = []
-                if ui_r.checkBox_stdscaler_reg.isChecked():
-                    std_scaler = StandardScaler()
-                    pipe_steps.append(('scaler', std_scaler))
-                    text_scaler += '\nStandardScaler'
-                if ui_r.checkBox_robscaler_reg.isChecked():
-                    robust_scaler = RobustScaler()
-                    pipe_steps.append(('scaler', robust_scaler))
-                    text_scaler += '\nRobustScaler'
-                if ui_r.checkBox_mnmxscaler_reg.isChecked():
-                    minmax_scaler = MinMaxScaler()
-                    pipe_steps.append(('scaler', minmax_scaler))
-                    text_scaler += '\nMinMaxScaler'
-                if ui_r.checkBox_mxabsscaler_reg.isChecked():
-                    maxabs_scaler = MaxAbsScaler()
-                    pipe_steps.append(('scaler', maxabs_scaler))
-                    text_scaler += '\nMaxAbsScaler'
-
-                if ui_r.checkBox_pca.isChecked():
-                    n_comp = 'mle' if ui_r.checkBox_pca_mle.isChecked() else ui_r.spinBox_pca.value()
-                    pca = PCA(n_components=n_comp, random_state=0)
-                    pipe_steps.append(('pca', pca))
-                text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
-
-                model_name = ui_r.buttonGroup.checkedButton().text()
-                model_class, text_model = choice_model_regressor(model_name, training_sample)
-
-                text_model += text_scaler
-                text_model += text_pca
-
-                pipe_steps.append(('model', model_class))
-                pipe = Pipeline(pipe_steps)
-
-                ui.progressBar.setMaximum(len(set(list(groups_subset))))
-                n_progress = 1
-
-                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset,
-                                                                    groups_subset):
-                    ui.progressBar.setValue(n_progress)
-
-                    if ui_r.checkBox_cov_percent.isChecked():
-                        if len(test_idx) / len(markup_subset) < ui_r.spinBox_cov_percent.value() / 100:
-                            n_progress += 1
-                            continue
-
-                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
-                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
-                    scores.append(score)
-
-                count = np.sum(selected_features)
-                print(np.mean(scores), count)
+                result = evaluator(features)
                 ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
-
-                if ui_ga.radioButton_pareto_no.isChecked():
-                    return [np.mean(scores)]
-                else:
-                    return [np.mean(scores), count]
+                print(evaluator.metrics())
+                return result
 
             problem.function = objectives
+
+            def initial_population():
+                masks = build_seed_masks(X, y, task="regression", seed=seed)
+                rng = np.random.default_rng(seed)
+                while len(masks) < ui_ga.spinBox_pop_size.value():
+                    mask = rng.choice([False, True], size=n_features).tolist()
+                    if not any(mask):
+                        mask[rng.integers(n_features)] = True
+                    masks.append(mask)
+                solutions = []
+                for mask in masks[:ui_ga.spinBox_pop_size.value()]:
+                    solution = Solution(problem)
+                    solution.variables[:] = [[value] for value in mask]
+                    solutions.append(solution)
+                return InjectedPopulation(solutions)
 
             # --- Параметры сохранения и выполнения ---
             population_size = ui_ga.spinBox_pop_size.value()  # Размер популяции
@@ -3259,6 +3230,8 @@ def train_regression_model():
             ui_ga.progressBar_gen.setMaximum(total_generations)
 
             # --- Логика загрузки или инициализации ---
+            random.seed(seed)
+            np.random.seed(seed)
             start_gen = 0
             if os.path.exists(checkpoint_file):
                 try:
@@ -3273,9 +3246,9 @@ def train_regression_model():
                     print("Начинаем новый запуск.")
 
                     if ui_ga.radioButton_pareto_no.isChecked():
-                        algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                        algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                     else:
-                        algorithm = NSGAII(problem, population_size=population_size)
+                        algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
 
             else:
@@ -3283,19 +3256,24 @@ def train_regression_model():
                 print("Файл состояния не найден. Начинаем новый запуск.")
 
                 if ui_ga.radioButton_pareto_no.isChecked():
-                    algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                    algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                 else:
-                    algorithm = NSGAII(problem, population_size=population_size)
+                    algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
             # --- Основной цикл выполнения с сохранением ---
             print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
 
             n_gen = 0
+            early_stopping = ScoreEarlyStopping()
             for gen in range(start_gen, total_generations + start_gen):
                 ui_ga.lcdNumber_generation.display(gen)
                 ui_ga.progressBar_pop.setValue(0)
                 print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
                 algorithm.step()  # Выполняем одно поколение
+
+                should_stop = early_stopping.update(
+                    s.objectives[0] for s in algorithm.population
+                )
 
                 # Проверяем, нужно ли сохраняться
                 if (gen + 1) % save_interval == 0:
@@ -3305,6 +3283,11 @@ def train_regression_model():
                         print("Состояние успешно сохранено.")
                     except Exception as e:
                         print(f"Ошибка при сохранении состояния: {e}")
+
+                if should_stop:
+                    save_population(algorithm, checkpoint_file)
+                    LOGGER.info("Genetic search stopped after %s plateau generations", early_stopping.patience)
+                    break
 
                 n_gen += 1
                 ui_ga.progressBar_gen.setValue(n_gen)
@@ -3351,7 +3334,10 @@ def train_regression_model():
                 ],
                 nfe=alg.nfe,
                 rng=random.getstate(),
-                ngen=alg.nfe // alg.population_size
+                ngen=alg.nfe // alg.population_size,
+                seed=seed,
+                telemetry=evaluator.metrics(),
+                evaluation_cache=evaluator.checkpoint_cache(),
             )
             with open(fname, "wb") as f:
                 pickle.dump(data, f)
@@ -3359,6 +3345,9 @@ def train_regression_model():
         def load_checkpoint(problem, fname, is_master_node=False):
             with open(fname, "rb") as f:
                 data = pickle.load(f)
+
+            evaluator.restore_metrics(data.get("telemetry"), data["X"])
+            evaluator.restore_cache(data.get("evaluation_cache"))
 
             pop = []
             for x, fobj in zip(data["X"], data["F"]):
@@ -3392,10 +3381,10 @@ def train_regression_model():
                              population_size=len(pop))
 
             alg.nfe = data["nfe"]
-            if is_master_node:
-                random.setstate(data["rng"])  # воспроизводимость
-            else:
-                random.seed()  # новое зерно из /dev/urandom
+            checkpoint_seed = data.get("seed", seed)
+            if checkpoint_seed != seed:
+                raise ValueError(f"Checkpoint seed {checkpoint_seed} does not match requested seed {seed}")
+            random.setstate(data["rng"])
 
             alg.initialize()
 

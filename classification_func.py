@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 
 import numpy as np
@@ -14,6 +15,9 @@ from build_table import *
 from random_search import push_random_search
 from random_param import push_random_param
 from feature_selection import *
+from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+
+LOGGER = logging.getLogger(__name__)
 
 
 
@@ -1495,11 +1499,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def start_gen_algorithm():
 
             data_train_cov = data_train.copy()
-            data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
+            profile_ids = data_train_cov['prof_well_index'].str.split('_').str[0].astype(int)
+            object_by_profile = dict(session.query(Profile.id, Research.object_id).join(Research).filter(
+                Profile.id.in_(profile_ids.unique().tolist())
+            ).all())
+            data_train_cov['object_id'] = profile_ids.map(object_by_profile)
 
             training_sample = data_train_cov[list_param]
             markup = data_train_cov[[mark]]
-            groups = data_train_cov[['obj_title']]
+            groups = data_train_cov[['object_id']]
 
             (markup_train, model_class, model_name, pipe,
              text_model, training_sample_train) = build_pipeline(markup, training_sample)
@@ -1539,52 +1547,46 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             else:
                 pass
 
-            # Целевая функция
+            seed = ui_ga.spinBox_seed.value()
+            X = training_sample.to_numpy()
+            y = np.asarray(markup).reshape(-1)
+            group_values = np.asarray(groups).reshape(-1)
+            folds = list(LeaveOneGroupOut().split(X, y, group_values))
+            if ui_cls.checkBox_cov_percent.isChecked():
+                minimum = ui_cls.spinBox_cov_percent.value() / 100
+                folds = [(train, test) for train, test in folds if len(test) / len(y) >= minimum]
+
+            def update_fold_progress(current, total):
+                ui.progressBar.setMaximum(total)
+                ui.progressBar.setValue(current)
+
+            evaluator = FeatureMaskEvaluator(
+                X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
+                progress=update_fold_progress, feature_names=list_param,
+            )
+
             def objectives(features):
-
-                selected_features = np.array(features, dtype=int)
-                if np.sum(selected_features) == 0:
-                    return [0, n_features]
-
-                # Выбор активных признаков
-                training_sample_subset = np.array(training_sample.loc[:, selected_features == 1].values.tolist())
-
-                markup_subset = np.array(sum(markup.values.tolist(), []))
-                groups_subset = np.array(sum(groups.values.tolist(), []))
-
-                scores = []
-
-                (markup_train, model_class, model_name, pipe,
-                 text_model, training_sample_train) = build_pipeline(markup, training_sample)
-
-                ui.progressBar.setMaximum(len(set(list(groups_subset))))
-                n_progress = 1
-
-                for train_idx, test_idx in LeaveOneGroupOut().split(training_sample_subset, markup_subset, groups_subset):
-                    ui.progressBar.setValue(n_progress)
-
-                    if ui_cls.checkBox_cov_percent.isChecked():
-                        if len(test_idx) / len(markup_subset) < ui_cls.spinBox_cov_percent.value() / 100:
-                            n_progress += 1
-                            continue
-
-                    pipe.fit(training_sample_subset[train_idx], markup_subset[train_idx])
-                    score = pipe.score(training_sample_subset[test_idx], markup_subset[test_idx])
-                    scores.append(score)
-
-
-                count = np.sum(selected_features)
-                print(np.mean(scores), count)
+                result = evaluator(features)
                 ui_ga.progressBar_pop.setValue(ui_ga.progressBar_pop.value() + 1)
-
-                if ui_ga.radioButton_pareto_no.isChecked():
-                    return [np.mean(scores)]
-                else:
-                    return [np.mean(scores), count]
-
-
+                print(evaluator.metrics())
+                return result
 
             problem.function = objectives
+
+            def initial_population():
+                masks = build_seed_masks(X, y, task="classification", seed=seed)
+                rng = np.random.default_rng(seed)
+                while len(masks) < ui_ga.spinBox_pop_size.value():
+                    mask = rng.choice([False, True], size=n_features).tolist()
+                    if not any(mask):
+                        mask[rng.integers(n_features)] = True
+                    masks.append(mask)
+                solutions = []
+                for mask in masks[:ui_ga.spinBox_pop_size.value()]:
+                    solution = Solution(problem)
+                    solution.variables[:] = [[value] for value in mask]
+                    solutions.append(solution)
+                return InjectedPopulation(solutions)
 
             # --- Параметры сохранения и выполнения ---
             population_size = ui_ga.spinBox_pop_size.value() # Размер популяции
@@ -1596,6 +1598,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             ui_ga.progressBar_gen.setMaximum(total_generations)
 
             # --- Логика загрузки или инициализации ---
+            random.seed(seed)
+            np.random.seed(seed)
             start_gen = 0
             if os.path.exists(checkpoint_file):
                 try:
@@ -1611,9 +1615,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
                     if ui_ga.radioButton_pareto_no.isChecked():
-                        algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                        algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                     else:
-                        algorithm = NSGAII(problem, population_size=population_size)
+                        algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
 
             else:
@@ -1621,20 +1625,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 print("Файл состояния не найден. Начинаем новый запуск.")
 
                 if ui_ga.radioButton_pareto_no.isChecked():
-                    algorithm = GeneticAlgorithm(problem, population_size=population_size)
+                    algorithm = GeneticAlgorithm(problem, generator=initial_population(), population_size=population_size)
                 else:
-                    algorithm = NSGAII(problem, population_size=population_size)
+                    algorithm = NSGAII(problem, generator=initial_population(), population_size=population_size)
 
 
             # --- Основной цикл выполнения с сохранением ---
             print(f"Запуск оптимизации с поколения {start_gen + 1} до {start_gen + total_generations}")
 
             n_gen = 0
+            early_stopping = ScoreEarlyStopping()
             for gen in range(start_gen, total_generations + start_gen):
                 ui_ga.lcdNumber_generation.display(gen)
                 ui_ga.progressBar_pop.setValue(0)
                 print(f"Поколение {gen + 1}/{total_generations + start_gen}...")
                 algorithm.step()  # Выполняем одно поколение
+
+                should_stop = early_stopping.update(
+                    s.objectives[0] for s in algorithm.population
+                )
 
                 # Проверяем, нужно ли сохраняться
                 if (gen + 1) % save_interval == 0:
@@ -1644,6 +1653,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                         print("Состояние успешно сохранено.")
                     except Exception as e:
                         print(f"Ошибка при сохранении состояния: {e}")
+
+                if should_stop:
+                    save_population(algorithm, checkpoint_file)
+                    LOGGER.info("Genetic search stopped after %s plateau generations", early_stopping.patience)
+                    break
 
                 n_gen += 1
                 ui_ga.progressBar_gen.setValue(n_gen)
@@ -1693,7 +1707,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                 ],
                 nfe=alg.nfe,
                 rng=random.getstate(),
-                ngen=alg.nfe // alg.population_size
+                ngen=alg.nfe // alg.population_size,
+                seed=seed,
+                telemetry=evaluator.metrics(),
+                evaluation_cache=evaluator.checkpoint_cache(),
             )
             with open(fname, "wb") as f:
                 pickle.dump(data, f)
@@ -1702,6 +1719,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         def load_checkpoint(problem, fname, is_master_node=False):
             with open(fname, "rb") as f:
                 data = pickle.load(f)
+
+            evaluator.restore_metrics(data.get("telemetry"), data["X"])
+            evaluator.restore_cache(data.get("evaluation_cache"))
 
             pop = []
             for x, fobj in zip(data["X"], data["F"]):
@@ -1735,10 +1755,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                              population_size=len(pop))
 
             alg.nfe = data["nfe"]
-            if is_master_node:
-                random.setstate(data["rng"])  # воспроизводимость
-            else:
-                random.seed()  # новое зерно из /dev/urandom
+            checkpoint_seed = data.get("seed", seed)
+            if checkpoint_seed != seed:
+                raise ValueError(f"Checkpoint seed {checkpoint_seed} does not match requested seed {seed}")
+            random.setstate(data["rng"])
 
             alg.initialize()
 
@@ -2027,11 +2047,6 @@ def get_text_train_param_geochem(list_param):
     text = '\nПараметры модели:\n'
     text += ", ".join(list_param)
     return text
-
-
-
-
-
 
 
 
