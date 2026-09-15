@@ -16,6 +16,7 @@ from regression_target.service import (
     list_canonical_targets,
     resolve_target,
     resolve_replacement_target,
+    save_parameter_choice,
 )
 
 
@@ -420,12 +421,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                           "Уже добавлена" if candidate.already_exists else self.STATUS_TEXT[status])
             for column, value in enumerate(values, 1):
                 item = QtWidgets.QTableWidgetItem(value)
-                color = ("#ffd6d6" if self.mode == "check" and mismatch else
+                has_alternatives = bool(resolution and len(resolution.candidates) > 1)
+                color = ("#ffe4a3" if has_alternatives else
+                         "#ffd6d6" if self.mode == "check" and mismatch else
                          "#d9f2df" if self.mode == "check" and status == "resolved" else
                          "#eeeeee" if candidate.already_exists else self.STATUS_COLOR[status])
                 item.setBackground(QtGui.QColor(color))
                 if resolution:
-                    item.setToolTip(resolution.message)
+                    suffix = ("\nЕсть альтернативные варианты. Дважды щёлкните, чтобы перевыбрать."
+                              if has_alternatives else "")
+                    item.setToolTip(resolution.message + suffix)
                 self.table.setItem(row, column, item)
         mismatches = sum(self._is_mismatch(row) for row in self.candidates)
         prefix = f"Несовпадений: {mismatches}; " if self.mode == "check" else ""
@@ -469,13 +474,17 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         selected, ok = QtWidgets.QInputDialog.getItem(self, "Выбор значения", "Исходная запись:", labels, 0, False)
         if ok:
             selected_index = labels.index(selected)
+            selected_candidate = candidate.resolution.candidates[selected_index]
             if (self._settings and self._settings.source == "well_log"
                     and candidate.resolution.details.get("pending_selection") == "boundary_depth"):
                 # A boundary is only an input to the log calculation.  Re-run the
                 # resolver at the chosen depth instead of storing that depth as target.
                 candidate.resolution = resolve_target(
                     self.session, candidate.well_id, self._settings,
-                    boundary_candidate=candidate.resolution.candidates[selected_index])
+                    boundary_candidate=selected_candidate)
+                save_parameter_choice(
+                    self.session, candidate.well_id, "boundary",
+                    self._settings.boundary_canonical_id, selected_candidate.source_id)
             elif (self._settings and self._settings.source == "well_log"
                   and candidate.resolution.details.get("pending_selection") == "replacement_depth"):
                 # Equal old values at different boundaries cannot identify the
@@ -490,6 +499,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                     "method": "manual_equal_value_choice", "depth": float(depth)}
             else:
                 candidate.resolution.select(selected_index)
+                if self._settings:
+                    save_parameter_choice(
+                        self.session, candidate.well_id, self._settings.source,
+                        self._settings.canonical_id, selected_candidate.source_id)
             self._render()
 
     def _open_well_log(self):

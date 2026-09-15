@@ -763,6 +763,25 @@ class Well(Base):
     markups_mlp = relationship('MarkupMLP', back_populates='well')
     markups_reg = relationship('MarkupReg', back_populates='well')
     well_for_cluster = relationship('WellForCluster', back_populates='well')
+    parameter_choices = relationship('WellParameterChoice', back_populates='well',
+                                     cascade='all, delete-orphan')
+
+
+class WellParameterChoice(Base):
+    """A reusable user choice when one well has several parameter sources."""
+    __tablename__ = 'well_parameter_choice'
+    __table_args__ = (UniqueConstraint('well_id', 'source_type', 'canonical_id',
+                                       name='uq_well_parameter_choice'),)
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well.id'), nullable=False, index=True)
+    source_type = Column(String, nullable=False)
+    canonical_id = Column(Integer, nullable=False)
+    source_id = Column(Integer, nullable=False)
+    updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow,
+                        onupdate=datetime.datetime.utcnow)
+
+    well = relationship('Well', back_populates='parameter_choices')
 
 
 class Boundary(Base):
