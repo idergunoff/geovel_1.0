@@ -60,6 +60,17 @@ def test_parameter_columns_precede_three_decision_columns():
     assert headers[:4] == ["Скважина", "Профиль", "Расстояние", "Пласт ID"]
 
 
+def test_class_choice_survives_table_rerender():
+    candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
+    markers = [SimpleNamespace(id=10, title="A"), SimpleNamespace(id=20, title="B")]
+    dialog = ClassificationWellWizard(_Session(), [candidate], markers)
+    candidate._button_group.button(1).setChecked(True)
+
+    dialog._render()
+
+    assert dialog.assignments() == [(candidate, 20)]
+
+
 def test_double_click_resolves_multiple_source_values(monkeypatch):
     candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
     candidate.values = [Resolution("ambiguous", candidates=[

@@ -55,6 +55,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.mode = mode
         self.open_well_log_callback = open_well_log
         self.parameters: list[tuple[str, TargetSettings]] = []
+        # The table is rebuilt whenever a parameter is added, removed or an
+        # ambiguous value is resolved.  Keep the user's row decisions outside
+        # the disposable cell widgets so those rebuilds do not reset them.
+        self._row_choices: dict[int, int] = {}
         self.setWindowTitle("Проверка классов скважин" if mode == "check" else
                             "Массовое добавление скважин в классификацию")
         self.resize(1250, 720)
@@ -214,6 +218,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self._render()
 
     def _render(self):
+        self._remember_row_choices()
         marker_titles = [marker.title for marker in self.markers]
         headers = ["Скважина", "Профиль", "Расстояние", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
         self.table.clear(); self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
@@ -236,13 +241,25 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 radio = QtWidgets.QRadioButton(); group.addButton(radio, choice)
                 self.table.setCellWidget(row, start + choice, radio)
                 marker_id = self.markers[choice].id if choice < 2 else None
-                radio.setChecked(candidate.current_marker_id == marker_id if marker_id is not None else
-                                 candidate.current_marker_id is None and choice == 2)
+                saved_choice = self._row_choices.get(id(candidate))
+                if saved_choice is None:
+                    checked = (candidate.current_marker_id == marker_id if marker_id is not None else
+                               candidate.current_marker_id is None and choice == 2)
+                else:
+                    checked = saved_choice == choice
+                radio.setChecked(checked)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.parameter_label.setText("Выбрано параметров: " + str(len(self.parameters)))
         self.summary.setText(
             f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий. "
             "Выбор исходной записи применяется ко всем столбцам того же параметра.")
+
+    def _remember_row_choices(self):
+        """Snapshot radio choices before table cell widgets are destroyed."""
+        for candidate in self.candidates:
+            group = getattr(candidate, "_button_group", None)
+            if group is not None and group.checkedId() >= 0:
+                self._row_choices[id(candidate)] = group.checkedId()
 
     def _candidate_for_row(self, row):
         return self.candidates[row] if 0 <= row < len(self.candidates) else None

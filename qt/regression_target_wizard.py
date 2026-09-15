@@ -77,6 +77,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.delete_candidates_callback = delete_candidates
         self.mode = mode
         self._settings: TargetSettings | None = None
+        # Rendering replaces every QTableWidgetItem.  Store checkbox decisions
+        # independently so recalculation, filtering and ambiguity resolution
+        # cannot silently replace the user's selection with automatic defaults.
+        self._row_checks: dict[int, QtCore.Qt.CheckState] = {}
         # Legacy markups commonly have no target_source_config.  Keep the
         # settings from the last ordinary check in memory so the user can
         # calculate the old parameter, select a new one and then replace it.
@@ -366,6 +370,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self._render()
 
     def _render(self):
+        self._remember_row_checks()
         self.table.setRowCount(0)
         counts = {key: 0 for key in self.STATUS_TEXT}
         existing = 0
@@ -384,10 +389,11 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             can_update = (self.mode == "check" or not candidate.already_exists
                           or self.existing_mode() != "skip")
             mismatch = self._is_mismatch(candidate)
-            check.setCheckState(QtCore.Qt.Checked if resolution and status == "resolved" and can_update
-                                and (self.mode != "check" or
-                                     (mismatch and not candidate.stored_manual_override))
-                                else QtCore.Qt.Unchecked)
+            default_state = (QtCore.Qt.Checked if resolution and status == "resolved" and can_update
+                             and (self.mode != "check" or
+                                  (mismatch and not candidate.stored_manual_override))
+                             else QtCore.Qt.Unchecked)
+            check.setCheckState(self._row_checks.get(id(candidate), default_state))
             check.setData(QtCore.Qt.UserRole, index)
             self.table.setItem(row, 0, check)
             if self.mode == "check":
@@ -426,6 +432,16 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.summary.setText(prefix + f"Кандидатов: {len(self.candidates)}; готово: {counts['resolved']}; "
                              f"требуют выбора: {counts['ambiguous']}; без данных/ошибки: "
                              f"{counts['missing'] + counts['invalid']}; уже добавлено: {existing}")
+
+    def _remember_row_checks(self):
+        """Snapshot visible row selections before rebuilding or filtering."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is None:
+                continue
+            candidate_index = item.data(QtCore.Qt.UserRole)
+            if candidate_index is not None and 0 <= candidate_index < len(self.candidates):
+                self._row_checks[id(self.candidates[candidate_index])] = item.checkState()
 
     def _is_mismatch(self, candidate: WizardCandidate) -> bool:
         resolution = candidate.resolution
