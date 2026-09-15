@@ -170,6 +170,21 @@ def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch
     reopened.close()
 
 
+def test_checkbox_choice_survives_table_rerender(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    candidate = WizardCandidate(
+        1, "Скважина", 2, "Профиль", 3, 0.0, [],
+        resolution=Resolution("resolved", 42.0))
+    dialog = RegressionTargetWizard(_Session(), [candidate], mode="add")
+    dialog._render()
+    dialog.table.item(0, 0).setCheckState(QtCore.Qt.Unchecked)
+
+    dialog._render()
+
+    assert dialog.table.item(0, 0).checkState() == QtCore.Qt.Unchecked
+    dialog.close()
+
+
 def test_replacement_uses_last_check_settings_when_markup_has_no_config(application, monkeypatch):
     class Target:
         def __init__(self, name, target_id):
