@@ -3286,6 +3286,26 @@ Therm</string>
                   </item>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_95">
+                    <item row="0" column="5">
+                     <widget class="QPushButton" name="pushButton_add_all_well_cls">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(191, 255, 191);</string>
+                      </property>
+                      <property name="text">
+                       <string>add all well</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="4">
+                     <widget class="QPushButton" name="pushButton_clear_fake">
+                      <property name="styleSheet">
+                       <string notr="true">background-color: rgb(255, 185, 185);</string>
+                      </property>
+                      <property name="text">
+                       <string>clear fake</string>
+                      </property>
+                     </widget>
+                    </item>
                     <item row="0" column="1">
                      <spacer name="horizontalSpacer_6">
                       <property name="orientation">
@@ -3298,16 +3318,6 @@ Therm</string>
                        </size>
                       </property>
                      </spacer>
-                    </item>
-                    <item row="0" column="4">
-                     <widget class="QPushButton" name="pushButton_clear_fake">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: rgb(255, 185, 185);</string>
-                      </property>
-                      <property name="text">
-                       <string>clear fake</string>
-                      </property>
-                     </widget>
                     </item>
                     <item row="0" column="0">
                      <widget class="QLabel" name="label_count_markup_mlp">
@@ -7093,9 +7103,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
