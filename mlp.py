@@ -317,7 +317,18 @@ def add_all_well_markup_mlp():
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин', 'В пределах заданного расстояния скважины не найдены.')
         return
-    dialog = ClassificationWellWizard(session, candidates, markers, MainWindow, mode='add')
+    def open_candidate_log(well_id, details):
+        from well_log import show_well_log
+
+        update_list_well(select_well=True, selected_well_id=well_id)
+        selected = details.get('selected', {}).get('details', {}) if details else {}
+        show_well_log(selected_curve_id=selected.get('well_log_id'),
+                      selected_depth=selected.get('depth'),
+                      selected_interval=(selected.get('interval') or [None, None]),
+                      parent=dialog)
+
+    dialog = ClassificationWellWizard(
+        session, candidates, markers, MainWindow, mode='add', open_well_log=open_candidate_log)
     if dialog.exec_() != QtWidgets.QDialog.Accepted:
         return
     changed = 0
@@ -367,7 +378,18 @@ def check_all_well_markup_mlp():
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин', 'В анализе нет скважин для проверки.')
         return
-    dialog = ClassificationWellWizard(session, candidates, markers, MainWindow, mode='check')
+    def open_candidate_log(well_id, details):
+        from well_log import show_well_log
+
+        update_list_well(select_well=True, selected_well_id=well_id)
+        selected = details.get('selected', {}).get('details', {}) if details else {}
+        show_well_log(selected_curve_id=selected.get('well_log_id'),
+                      selected_depth=selected.get('depth'),
+                      selected_interval=(selected.get('interval') or [None, None]),
+                      parent=dialog)
+
+    dialog = ClassificationWellWizard(
+        session, candidates, markers, MainWindow, mode='check', open_well_log=open_candidate_log)
     if dialog.exec_() != QtWidgets.QDialog.Accepted:
         return
     changed = deleted = 0

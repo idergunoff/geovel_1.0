@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass, field
+from typing import Callable
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -30,12 +31,14 @@ class ClassificationWellWizard(QtWidgets.QDialog):
     SOURCES = (("Глубина границы", "boundary"), ("Информация о скважине", "well_data"),
                ("Каротажная кривая", "well_log"))
 
-    def __init__(self, session, candidates, markers, parent=None, mode="add"):
+    def __init__(self, session, candidates, markers, parent=None, mode="add",
+                 open_well_log: Callable[[int, dict], None] | None = None):
         super().__init__(parent)
         self.session = session
         self.candidates = candidates
         self.markers = markers[:2]
         self.mode = mode
+        self.open_well_log_callback = open_well_log
         self.parameters: list[tuple[str, TargetSettings]] = []
         self.setWindowTitle("Проверка классов скважин" if mode == "check" else
                             "Массовое добавление скважин в классификацию")
@@ -97,6 +100,8 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         buttons = QtWidgets.QDialogButtonBox()
         self.apply_button = buttons.addButton("Применить выбранные классы", QtWidgets.QDialogButtonBox.AcceptRole)
         self.export_button = buttons.addButton("Экспорт CSV", QtWidgets.QDialogButtonBox.ActionRole)
+        self.open_log_button = buttons.addButton(
+            "Открыть каротаж выбранной скважины", QtWidgets.QDialogButtonBox.ActionRole)
         buttons.addButton(QtWidgets.QDialogButtonBox.Cancel)
         root.addWidget(buttons)
 
@@ -106,6 +111,8 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.remove_parameter.clicked.connect(self._remove_parameter)
         self.apply_button.clicked.connect(self._accept)
         self.export_button.clicked.connect(self._export)
+        self.open_log_button.clicked.connect(self._open_well_log)
+        self.table.cellDoubleClicked.connect(self._resolve_ambiguity)
         buttons.rejected.connect(self.reject)
 
     def _source_changed(self):
@@ -173,6 +180,8 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 value = f"{resolution.value:g}" if resolution.status == "resolved" and resolution.value is not None else "—"
                 item = QtWidgets.QTableWidgetItem(value); item.setToolTip(resolution.message)
                 item.setBackground(QtGui.QColor("#d9f2df" if resolution.status == "resolved" else "#ffd6d6"))
+                if resolution.status == "ambiguous":
+                    item.setText("выберите…")
                 self.table.setItem(row, offset, item)
             group = QtWidgets.QButtonGroup(self.table); group.setExclusive(True)
             candidate._button_group = group
@@ -186,6 +195,48 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.parameter_label.setText("Выбрано параметров: " + str(len(self.parameters)))
         self.summary.setText(f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий.")
+
+    def _candidate_for_row(self, row):
+        return self.candidates[row] if 0 <= row < len(self.candidates) else None
+
+    def _resolve_ambiguity(self, row, column):
+        """Ask which source row to use when a parameter has several matches."""
+        parameter_index = column - 4
+        candidate = self._candidate_for_row(row)
+        if (candidate is None or parameter_index < 0 or
+                parameter_index >= len(candidate.values)):
+            return
+        resolution = candidate.values[parameter_index]
+        if resolution.status != "ambiguous" or not resolution.candidates:
+            return
+        labels = [f"{item.source_name}: {item.raw_value} → {item.value:g}"
+                  for item in resolution.candidates]
+        selected, accepted = QtWidgets.QInputDialog.getItem(
+            self, "Выбор значения", "Исходная запись:", labels, 0, False)
+        if not accepted:
+            return
+        selected_index = labels.index(selected)
+        settings = self.parameters[parameter_index][1]
+        if (settings.source == "well_log" and
+                resolution.details.get("pending_selection") == "boundary_depth"):
+            candidate.values[parameter_index] = resolve_target(
+                self.session, candidate.well_id, settings,
+                boundary_candidate=resolution.candidates[selected_index])
+        else:
+            resolution.select(selected_index)
+        self._render()
+
+    def _open_well_log(self):
+        candidate = self._candidate_for_row(self.table.currentRow())
+        if candidate is None or self.open_well_log_callback is None:
+            QtWidgets.QMessageBox.information(
+                self, "Скважина не выбрана", "Выберите строку скважины в таблице.")
+            return
+        details = {}
+        column = self.table.currentColumn() - 4
+        if 0 <= column < len(candidate.values):
+            details = candidate.values[column].details
+        self.open_well_log_callback(candidate.well_id, details)
 
     def assignments(self):
         result = []
