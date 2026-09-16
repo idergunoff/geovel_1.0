@@ -300,7 +300,8 @@ def _classification_candidates_for_profiles(analysis_id):
                 well.id, well.name or f'id{well.id}', profile.id, profile.title or f'id{profile.id}',
                 formation_id, float(distance), list(range(start, stop)),
                 markup_id=existing.id if existing else None,
-                current_marker_id=existing.marker_id if existing else None))
+                current_marker_id=existing.marker_id if existing else None,
+                object_name=profile.research.object.title or ''))
     return candidates
 
 
@@ -373,7 +374,8 @@ def check_all_well_markup_mlp():
         markup.well_id, markup.well.name or f'id{markup.well_id}', markup.profile_id,
         markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
         json.loads(markup.list_measure or '[]'), markup_id=markup.id,
-        current_marker_id=markup.marker_id)
+        current_marker_id=markup.marker_id,
+        object_name=markup.profile.research.object.title or '')
         for markup in markups if markup.well and markup.profile and markup.formation]
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин', 'В анализе нет скважин для проверки.')

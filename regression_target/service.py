@@ -116,7 +116,7 @@ class TargetSettings:
     canonical_id: int
     strict_numeric: bool = False
     allow_explicit_sum: bool = True
-    aggregation: Literal["median", "mean"] = "median"
+    aggregation: Literal["median", "mean", "max", "min"] = "median"
     operation: Literal["single", "upper_lower_ratio", "lower_upper_ratio", "difference"] = "single"
     depth_mode: Literal["fixed", "boundary"] = "boundary"
     fixed_depth: float = 0.0
@@ -267,7 +267,17 @@ def _curve_values(row: WellLog, top: float, bottom: float) -> list[float]:
 
 
 def _aggregate(values: list[float], method: str) -> float:
-    return float(statistics.median(values) if method == "median" else statistics.fmean(values))
+    aggregators = {
+        "median": statistics.median,
+        "mean": statistics.fmean,
+        "max": max,
+        "min": min,
+    }
+    try:
+        aggregate = aggregators[method]
+    except KeyError as error:
+        raise ValueError(f"Unknown well-log aggregation: {method}") from error
+    return float(aggregate(values))
 
 
 def _interval(depth: float, length: float, position: str) -> tuple[float, float]:

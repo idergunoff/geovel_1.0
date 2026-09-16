@@ -78,7 +78,8 @@ def test_well_log_count_is_shown_in_add_and_check_result_tables(application, mon
     monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
     candidate = WizardCandidate(
         1, "Скважина 1", 2, "Профиль 1", 3, 0.0, [], already_exists=True,
-        resolution=Resolution("resolved", 42.0), stored_value=42.0, well_log_count=7)
+        resolution=Resolution("resolved", 42.0), stored_value=42.0, well_log_count=7,
+        object_name="Объект 1")
 
     for mode in ("add", "check"):
         dialog = RegressionTargetWizard(_Session(), [candidate], mode=mode)
@@ -90,6 +91,8 @@ def test_well_log_count_is_shown_in_add_and_check_result_tables(application, mon
         assert dialog.table.columnWidth(count_column) == 110
         assert dialog.table.horizontalHeaderItem(3).text() == "Профиль"
         assert dialog.table.item(0, 3).text() == "Профиль 1"
+        assert dialog.table.horizontalHeaderItem(4).text() == "Объект"
+        assert dialog.table.item(0, 4).text() == "Объект 1"
         status_column = dialog.table.columnCount() - 1
         assert dialog.table.horizontalHeaderItem(status_column).text() == "Статус"
         expected_status = "Совпало" if mode == "check" else "Уже добавлена"
@@ -143,6 +146,17 @@ def test_all_target_options_are_restored_including_source_dependent_target(appli
     assert restored.interval.value() == 17.25
     assert restored.position_combo.currentData() == "centered"
     restored.close()
+
+
+def test_well_log_aggregation_offers_extrema(application, monkeypatch):
+    monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
+    dialog = RegressionTargetWizard(_Session(), [], mode="add")
+
+    options = [dialog.aggregation_combo.itemData(index)
+               for index in range(dialog.aggregation_combo.count())]
+
+    assert options == ["median", "mean", "max", "min"]
+    dialog.close()
 
 
 def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch):

@@ -37,6 +37,7 @@ class WizardCandidate:
     stored_source_config: str | None = None
     effective_settings: TargetSettings | None = None
     well_log_count: int = 0
+    object_name: str = ""
 
 
 class RegressionTargetWizard(QtWidgets.QDialog):
@@ -125,6 +126,8 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.aggregation_combo.setObjectName("comboBox_aggregation")
         self.aggregation_combo.addItem("Медиана", "median")
         self.aggregation_combo.addItem("Среднее", "mean")
+        self.aggregation_combo.addItem("Максимум", "max")
+        self.aggregation_combo.addItem("Минимум", "min")
         self.operation_combo = QtWidgets.QComboBox()
         self.operation_combo.setObjectName("comboBox_operation")
         for title, value in (("Значение интервала", "single"), ("Верх / низ", "upper_lower_ratio"),
@@ -205,17 +208,17 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         tools.addWidget(self.open_log_button)
         root.addLayout(tools)
 
-        columns = (("Исправить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Пласт ID",
+        columns = (("Исправить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект", "Пласт ID",
                     "Источник", "Исходные значения", "Сохранено", "Рассчитано", "Разница", "Статус")
                    if self.mode == "check" else
-                   ("Добавить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Расстояние",
+                   ("Добавить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект", "Расстояние",
                     "Пласт ID", "Источник", "Исходные значения", "Целевое значение", "Статус"))
         self.table = QtWidgets.QTableWidget(0, len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(6 if self.mode == "check" else 7,
+        self.table.horizontalHeader().setSectionResizeMode(7 if self.mode == "check" else 8,
                                                            QtWidgets.QHeaderView.Stretch)
         log_count_column = 2
         self.table.horizontalHeader().setSectionResizeMode(log_count_column, QtWidgets.QHeaderView.Fixed)
@@ -407,6 +410,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                 else:
                     result_status = self.STATUS_TEXT[status]
                 values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                          candidate.object_name,
                           str(candidate.formation_id),
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
@@ -414,6 +418,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                           "" if delta is None else f"{delta:+g}", result_status)
             else:
                 values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
+                          candidate.object_name,
                           f"{candidate.distance:.2f}",
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
@@ -595,12 +600,12 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             return
         with open(path, "w", encoding="utf-8-sig", newline="") as stream:
             writer = csv.writer(stream, delimiter=";")
-            writer.writerow(("well_id", "well", "well_log_count", "profile_id", "profile", "distance", "formation_id",
+            writer.writerow(("well_id", "well", "well_log_count", "profile_id", "profile", "object", "distance", "formation_id",
                              "status", "stored_value", "target_value", "delta", "message", "source_details"))
             for row in self.candidates:
                 resolution = row.resolution
                 writer.writerow((row.well_id, row.well_name, row.well_log_count,
-                                 row.profile_id, row.profile_name, row.distance,
+                                 row.profile_id, row.profile_name, row.object_name, row.distance,
                                  row.formation_id, resolution.status if resolution else "not_calculated", row.stored_value,
                                  resolution.value if resolution else "",
                                  resolution.value - row.stored_value if resolution and resolution.value is not None and row.stored_value is not None else "",
