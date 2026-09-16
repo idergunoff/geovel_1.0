@@ -161,6 +161,29 @@ def test_well_log_aggregation_offers_extrema(application, monkeypatch):
     dialog.close()
 
 
+def test_parameter_column_has_short_canonical_header_and_provenance_tooltip(application, monkeypatch):
+    class Target:
+        canonical_name = "GR"
+        id = 4
+
+    monkeypatch.setattr(wizard_module, "list_canonical_targets",
+                        lambda _session, source: [Target()] if source == "well_log" else [])
+    candidate = WizardCandidate(1, "Скважина", 2, "Профиль", 3, 0.0, [])
+    dialog = RegressionTargetWizard(_Session(), [candidate], mode="add")
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData("well_log"))
+    dialog.aggregation_combo.setCurrentIndex(dialog.aggregation_combo.findData("median"))
+
+    dialog._render()
+
+    header = dialog.table.horizontalHeaderItem(7)
+    assert header.text() == "GR"
+    assert "Параметр: GR (каноническое название)" in header.toolTip()
+    assert "Источник: каротажная кривая" in header.toolTip()
+    assert "Агрегация отсчётов кривой: медиана" in header.toolTip()
+    assert "Операция: значение на всём интервале" in header.toolTip()
+    dialog.close()
+
+
 def test_candidates_and_row_selection_are_not_persisted(application, monkeypatch):
     monkeypatch.setattr(wizard_module, "list_canonical_targets", lambda *_args: [])
     candidate = WizardCandidate(731, "Уникальная скважина 731", 2, "Профиль 1", 3, 0.0, [])

@@ -91,6 +91,32 @@ def test_double_click_resolves_multiple_source_values(monkeypatch):
     assert candidate.values[0].value == 22.0
 
 
+def test_parameter_header_uses_canonical_name_and_detailed_tooltip(monkeypatch):
+    class Target:
+        canonical_name = "GR"
+        id = 4
+
+    monkeypatch.setattr(wizard_module, "list_canonical_targets",
+                        lambda _session, source: [Target()] if source == "well_log" else [])
+    monkeypatch.setattr(wizard_module, "resolve_target",
+                        lambda *_args, **_kwargs: Resolution("resolved", 42.0))
+    candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
+    markers = [SimpleNamespace(id=10, title="A"), SimpleNamespace(id=20, title="B")]
+    dialog = ClassificationWellWizard(_Session(), [candidate], markers)
+    dialog.source.setCurrentIndex(dialog.source.findData("well_log"))
+    dialog.aggregation.setCurrentIndex(dialog.aggregation.findData("max"))
+
+    dialog._add_parameter()
+
+    header = dialog.table.horizontalHeaderItem(5)
+    assert header.text() == "GR"
+    assert "Параметр: GR (каноническое название)" in header.toolTip()
+    assert "Источник: каротажная кривая" in header.toolTip()
+    assert "Агрегация отсчётов кривой: максимум" in header.toolTip()
+    assert "Интервал:" in header.toolTip()
+    dialog.close()
+
+
 def test_source_choice_is_applied_to_same_parameter_columns(monkeypatch):
     candidate = ClassificationWellCandidate(1, "W-1", 2, "P-1", 3, 0, [])
     choices = [
