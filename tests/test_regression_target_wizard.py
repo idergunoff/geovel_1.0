@@ -91,6 +91,8 @@ def test_well_log_count_is_shown_in_add_and_check_result_tables(application, mon
         assert dialog.table.columnWidth(count_column) == 110
         assert dialog.table.horizontalHeaderItem(3).text() == "Профиль"
         assert dialog.table.item(0, 3).text() == "Профиль 1"
+        assert dialog.table.horizontalHeaderItem(5).text() == "Расстояние до скважины от профиля"
+        assert dialog.table.item(0, 5).text() == "0.00"
         assert dialog.table.horizontalHeaderItem(4).text() == "Объект"
         assert dialog.table.item(0, 4).text() == "Объект 1"
         status_column = dialog.table.columnCount() - 1

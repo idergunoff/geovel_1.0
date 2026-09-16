@@ -57,7 +57,7 @@ def test_parameter_columns_precede_three_decision_columns():
 
     headers = [dialog.table.horizontalHeaderItem(i).text() for i in range(dialog.table.columnCount())]
     assert headers[-3:] == ["Class A", "Class B", "Не добавлять"]
-    assert headers[:5] == ["Скважина", "Профиль", "Объект", "Расстояние", "Пласт ID"]
+    assert headers[:5] == ["Скважина", "Профиль", "Объект", "Расстояние до скважины от профиля", "Пласт ID"]
     assert dialog.table.item(0, 2).text() == "Object 1"
 
 

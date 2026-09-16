@@ -372,7 +372,8 @@ def check_all_well_markup_mlp():
         (MarkupMLP.type_markup.is_(None)) | (MarkupMLP.type_markup == '')).all()
     candidates = [ClassificationWellCandidate(
         markup.well_id, markup.well.name or f'id{markup.well_id}', markup.profile_id,
-        markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
+        markup.profile.title or f'id{markup.profile_id}', markup.formation_id,
+        well_profile_distance(markup.well, markup.profile),
         json.loads(markup.list_measure or '[]'), markup_id=markup.id,
         current_marker_id=markup.marker_id,
         object_name=markup.profile.research.object.title or '')

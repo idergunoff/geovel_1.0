@@ -22,7 +22,7 @@ class ClassificationWellCandidate:
     profile_id: int
     profile_name: str
     formation_id: int
-    distance: float
+    distance: float | None
     list_measure: list[int]
     markup_id: int | None = None
     current_marker_id: int | None = None
@@ -227,12 +227,12 @@ class ClassificationWellWizard(QtWidgets.QDialog):
     def _render(self):
         self._remember_row_choices()
         marker_titles = [marker.title for marker in self.markers]
-        headers = ["Скважина", "Профиль", "Объект", "Расстояние", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
+        headers = ["Скважина", "Профиль", "Объект", "Расстояние до скважины от профиля", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
         self.table.clear(); self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
         self.table.setRowCount(len(self.candidates))
         for row, candidate in enumerate(self.candidates):
             base = (candidate.well_name, candidate.profile_name, candidate.object_name,
-                    f"{candidate.distance:.2f}", str(candidate.formation_id))
+                    self._distance_text(candidate.distance), str(candidate.formation_id))
             for column, value in enumerate(base):
                 self.table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
             for offset, resolution in enumerate(candidate.values, 5):
@@ -267,6 +267,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.summary.setText(
             f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий. "
             "Выбор исходной записи применяется ко всем столбцам того же параметра.")
+
+    @staticmethod
+    def _distance_text(distance):
+        return "—" if distance is None else f"{distance:.2f}"
 
     def _remember_row_choices(self):
         """Snapshot radio choices before table cell widgets are destroyed."""

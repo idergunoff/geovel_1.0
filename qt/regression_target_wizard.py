@@ -27,7 +27,7 @@ class WizardCandidate:
     profile_id: int
     profile_name: str
     formation_id: int
-    distance: float
+    distance: float | None
     list_measure: list[int]
     already_exists: bool = False
     resolution: Resolution | None = None
@@ -208,17 +208,19 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         tools.addWidget(self.open_log_button)
         root.addLayout(tools)
 
-        columns = (("Исправить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект", "Пласт ID",
+        columns = (("Исправить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект",
+                    "Расстояние до скважины от профиля", "Пласт ID",
                     "Источник", "Исходные значения", "Сохранено", "Рассчитано", "Разница", "Статус")
                    if self.mode == "check" else
-                   ("Добавить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект", "Расстояние",
+                   ("Добавить", "Скважина", "Кол-во каротажных\nкривых", "Профиль", "Объект",
+                    "Расстояние до скважины от профиля",
                     "Пласт ID", "Источник", "Исходные значения", "Целевое значение", "Статус"))
         self.table = QtWidgets.QTableWidget(0, len(columns))
         self.table.setHorizontalHeaderLabels(columns)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(7 if self.mode == "check" else 8,
+        self.table.horizontalHeader().setSectionResizeMode(8,
                                                            QtWidgets.QHeaderView.Stretch)
         log_count_column = 2
         self.table.horizontalHeader().setSectionResizeMode(log_count_column, QtWidgets.QHeaderView.Fixed)
@@ -411,6 +413,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                     result_status = self.STATUS_TEXT[status]
                 values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
                           candidate.object_name,
+                          self._distance_text(candidate.distance),
                           str(candidate.formation_id),
                           self.canonical_combo.currentText(), self._candidate_text(resolution),
                           "" if candidate.stored_value is None else f"{candidate.stored_value:g}",
@@ -419,7 +422,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
             else:
                 values = (candidate.well_name, str(candidate.well_log_count), candidate.profile_name,
                           candidate.object_name,
-                          f"{candidate.distance:.2f}",
+                          self._distance_text(candidate.distance),
                           str(candidate.formation_id), self.canonical_combo.currentText(),
                           self._candidate_text(resolution),
                           "" if not resolution or resolution.value is None else f"{resolution.value:g}",
@@ -466,6 +469,10 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         if resolution.candidates:
             return "; ".join(f"{row.source_name}={row.raw_value}" for row in resolution.candidates)
         return resolution.message
+
+    @staticmethod
+    def _distance_text(distance: float | None) -> str:
+        return "—" if distance is None else f"{distance:.2f}"
 
     def _candidate_for_row(self, row: int) -> WizardCandidate | None:
         item = self.table.item(row, 0)
