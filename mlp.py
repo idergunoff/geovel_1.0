@@ -270,11 +270,23 @@ def _classification_markers():
 
 
 def _classification_candidates_for_profiles(analysis_id):
-    profiles = session.query(Profile).filter(
-        Profile.research_id == get_research_id()).order_by(Profile.id).all()
+    profiles_query = session.query(Profile)
+    if ui.checkBox_within_year_cls.isChecked():
+        year = get_year_research()
+        if not year:
+            QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите год исследований.')
+            return None
+        profiles_query = (profiles_query.join(Research)
+                          .filter(func.strftime('%Y', Research.date_research) == year)
+                          .order_by(Research.date_research, Research.object_id, Profile.id))
+    else:
+        profiles_query = (profiles_query.filter(Profile.research_id == get_research_id())
+                          .order_by(Profile.id))
+    profiles = profiles_query.all()
     if not profiles:
-        QMessageBox.information(MainWindow, 'Нет профилей', 'В текущем исследовании профили не найдены.')
-        return []
+        QMessageBox.information(MainWindow, 'Нет профилей',
+                                'За выбранный период профили не найдены.')
+        return None
     formations = get_list_formation(profiles)
     if not formations:
         return []
@@ -306,7 +318,12 @@ def _classification_candidates_for_profiles(analysis_id):
 
 
 def add_all_well_markup_mlp():
-    """Review well attributes and assign nearby wells to one of two classes."""
+    """Review nearby wells and assign them to one of two classes.
+
+    Profiles normally come from the current research.  When
+    ``checkBox_within_year_cls`` is enabled, profiles from every research in
+    the year selected in the main window are included.
+    """
     analysis_id = get_MLP_id()
     if not analysis_id:
         QMessageBox.critical(MainWindow, 'Ошибка', 'Выберите классификационный анализ.')
@@ -315,6 +332,8 @@ def add_all_well_markup_mlp():
     if not markers:
         return
     candidates = _classification_candidates_for_profiles(analysis_id)
+    if candidates is None:
+        return
     if not candidates:
         QMessageBox.information(MainWindow, 'Нет скважин', 'В пределах заданного расстояния скважины не найдены.')
         return
