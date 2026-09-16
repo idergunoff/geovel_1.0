@@ -10,6 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from app_settings import restore_form, save_form
 from models_db.model import CanonicalBoundary
+from regression_target.presentation import parameter_header_tooltip
 from regression_target.service import (
     Resolution,
     TargetSettings,
@@ -377,6 +378,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
 
     def _render(self):
         self._remember_row_checks()
+        self._update_parameter_header()
         self.table.setRowCount(0)
         counts = {key: 0 for key in self.STATUS_TEXT}
         existing = 0
@@ -445,6 +447,21 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.summary.setText(prefix + f"Кандидатов: {len(self.candidates)}; готово: {counts['resolved']}; "
                              f"требуют выбора: {counts['ambiguous']}; без данных/ошибки: "
                              f"{counts['missing'] + counts['invalid']}; уже добавлено: {existing}")
+
+    def _update_parameter_header(self):
+        """Keep the parameter heading compact and put provenance in its tooltip."""
+        settings = self.settings()
+        canonical_name = self.canonical_combo.currentText().strip()
+        header = self.table.horizontalHeaderItem(7)
+        if header is None:
+            return
+        header.setText(canonical_name or "Параметр")
+        if settings is None or not canonical_name:
+            header.setToolTip("Канонический параметр, выбранный для автоматического расчёта.")
+            return
+        boundary_index = self.boundary_combo.findData(settings.boundary_canonical_id)
+        boundary_name = self.boundary_combo.itemText(boundary_index) if boundary_index >= 0 else ""
+        header.setToolTip(parameter_header_tooltip(canonical_name, settings, boundary_name))
 
     def _remember_row_checks(self):
         """Snapshot visible row selections before rebuilding or filtering."""

@@ -9,6 +9,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from app_settings import restore_form, save_form
 from models_db.model import CanonicalBoundary
+from regression_target.presentation import parameter_header_tooltip
 from regression_target.service import (
     Resolution, TargetSettings, list_canonical_targets, resolve_target,
     save_parameter_choice,
@@ -202,7 +203,9 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         if settings is None:
             QtWidgets.QMessageBox.warning(self, "Нет параметра", "Выберите канонический параметр.")
             return
-        title = f"{self.source.currentText()}: {self.canonical.currentText()}"
+        # The canonical name is deliberately used as the compact table header.
+        # Full provenance remains available without widening the table.
+        title = self.canonical.currentText()
         if any(old == settings for _, old in self.parameters):
             QtWidgets.QMessageBox.information(self, "Параметр уже добавлен", title)
             return
@@ -229,6 +232,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         marker_titles = [marker.title for marker in self.markers]
         headers = ["Скважина", "Профиль", "Объект", "Расстояние до скважины от профиля", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
         self.table.clear(); self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
+        for offset, (title, settings) in enumerate(self.parameters, 5):
+            header = self.table.horizontalHeaderItem(offset)
+            header.setToolTip(parameter_header_tooltip(
+                title, settings, self._boundary_name(settings.boundary_canonical_id)))
         self.table.setRowCount(len(self.candidates))
         for row, candidate in enumerate(self.candidates):
             base = (candidate.well_name, candidate.profile_name, candidate.object_name,
@@ -267,6 +274,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.summary.setText(
             f"Скважин: {len(self.candidates)}. Выбор класса в каждой строке взаимоисключающий. "
             "Выбор исходной записи применяется ко всем столбцам того же параметра.")
+
+    def _boundary_name(self, boundary_id):
+        index = self.boundary.findData(boundary_id)
+        return self.boundary.itemText(index) if index >= 0 else ""
 
     @staticmethod
     def _distance_text(distance):
