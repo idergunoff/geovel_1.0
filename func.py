@@ -13,6 +13,7 @@ from mapinfo_export import (
     prepare_export_profile,
     write_mif_mid,
 )
+from profile_object_selection import choose_profile_object_ids
 from well_selection import find_well_row, well_id_from_text
 
 
@@ -161,20 +162,68 @@ def get_object_name():
     return ui.comboBox_object.currentText().split(' id')[0]
 
 
-def export_current_object_profiles_to_mapinfo():
-    """Export every profile of the selected object to MapInfo MIF/MID files."""
-    object_id = get_object_id()
-    if object_id is None:
-        QMessageBox.warning(MainWindow, "Экспорт MapInfo", "Сначала выберите объект.")
-        return
+def get_profiles_for_profile_mode(current_scope, dialog_title):
+    """Return profiles for the current/all/year mode, with bulk object choice.
 
-    profiles = (
-        session.query(Profile)
-        .join(Research, Profile.research_id == Research.id)
-        .filter(Research.object_id == object_id)
-        .order_by(Profile.research_id, Profile.id)
+    ``current_scope`` is ``"object"`` for MapInfo export and ``"research"``
+    for the PROFILES drawing command.  Bulk modes deliberately share the same
+    object-selection dialog so incompatible coordinate systems or measurement
+    modes can be excluded before processing.
+    """
+    query = session.query(Profile).join(Research, Profile.research_id == Research.id)
+    bulk_mode = ui.checkBox_prof_all.isChecked() or ui.checkBox_profile_year.isChecked()
+
+    if ui.checkBox_profile_year.isChecked():
+        query = query.filter(func.strftime('%Y', Research.date_research) == get_year_research())
+    elif not bulk_mode:
+        if current_scope == "research":
+            research_id = get_research_id()
+            if research_id is None:
+                QMessageBox.warning(MainWindow, dialog_title, "Сначала выберите исследование.")
+                return None
+            return query.filter(Profile.research_id == research_id).order_by(Profile.id).all()
+        object_id = get_object_id()
+        if object_id is None:
+            QMessageBox.warning(MainWindow, dialog_title, "Сначала выберите объект.")
+            return None
+        return query.filter(Research.object_id == object_id).order_by(Profile.research_id, Profile.id).all()
+
+    object_query = (
+        session.query(GeoradarObject)
+        .join(Research, Research.object_id == GeoradarObject.id)
+        .join(Profile, Profile.research_id == Research.id)
+    )
+    if ui.checkBox_profile_year.isChecked():
+        object_query = object_query.filter(
+            func.strftime('%Y', Research.date_research) == get_year_research()
+        )
+    objects = object_query.distinct().order_by(GeoradarObject.title, GeoradarObject.id).all()
+    selected_ids = choose_profile_object_ids(
+        MainWindow,
+        objects,
+        title=dialog_title,
+        description=(
+            "Выберите объекты, профили которых нужно обработать. "
+            "Исключите объекты с другой системой координат или режимом измерений."
+        ),
+    )
+    if selected_ids is None:
+        return None
+    if not selected_ids:
+        QMessageBox.warning(MainWindow, dialog_title, "Не выбран ни один объект.")
+        return None
+    return (
+        query.filter(Research.object_id.in_(selected_ids))
+        .order_by(Research.object_id, Profile.research_id, Profile.id)
         .all()
     )
+
+
+def export_current_object_profiles_to_mapinfo():
+    """Export profiles selected by the current/all/year mode to MIF/MID."""
+    profiles = get_profiles_for_profile_mode("object", "Экспорт MapInfo")
+    if profiles is None:
+        return
     try:
         export_profiles = [prepare_export_profile(profile) for profile in profiles]
         zone = determine_export_zone(export_profiles)
@@ -182,11 +231,17 @@ def export_current_object_profiles_to_mapinfo():
         QMessageBox.critical(MainWindow, "Экспорт MapInfo", str(exc))
         return
 
-    object_name = re.sub(r"[^\w.-]+", "_", get_object_name(), flags=re.UNICODE).strip("._")
+    if ui.checkBox_prof_all.isChecked():
+        export_name = "all"
+    elif ui.checkBox_profile_year.isChecked():
+        export_name = get_year_research()
+    else:
+        export_name = get_object_name()
+    object_name = re.sub(r"[^\w.-]+", "_", export_name, flags=re.UNICODE).strip("._")
     default_name = f"{object_name or 'profiles'}_profiles.mif"
     output_path, _ = QFileDialog.getSaveFileName(
         MainWindow,
-        "Экспорт профилей объекта в MapInfo MIF/MID",
+        "Экспорт профилей в MapInfo MIF/MID",
         default_name,
         "MapInfo Interchange Format (*.mif)",
     )
@@ -214,7 +269,7 @@ def export_current_object_profiles_to_mapinfo():
         QMessageBox.critical(MainWindow, "Экспорт MapInfo", f"Не удалось создать MIF/MID:\n{exc}")
         return
     set_info(
-        f'Профили текущего объекта экспортированы в MapInfo MIF/MID: "{saved_mif}"',
+        f'Выбранные профили экспортированы в MapInfo MIF/MID: "{saved_mif}"',
         "green",
     )
     QMessageBox.information(
