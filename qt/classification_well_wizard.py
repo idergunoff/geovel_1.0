@@ -27,6 +27,7 @@ class ClassificationWellCandidate:
     markup_id: int | None = None
     current_marker_id: int | None = None
     values: list[Resolution] = field(default_factory=list)
+    object_name: str = ""
 
 
 class ClassificationWellWizard(QtWidgets.QDialog):
@@ -84,7 +85,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
         self.explicit_sum = QtWidgets.QCheckBox("Складывать выражения через +")
         self.explicit_sum.setObjectName("checkBox_classification_explicit_sum")
         self.explicit_sum.setChecked(True)
-        self.aggregation = QtWidgets.QComboBox(); self.aggregation.addItem("Медиана", "median"); self.aggregation.addItem("Среднее", "mean")
+        self.aggregation = QtWidgets.QComboBox()
+        for title, value in (("Медиана", "median"), ("Среднее", "mean"),
+                             ("Максимум", "max"), ("Минимум", "min")):
+            self.aggregation.addItem(title, value)
         self.aggregation.setObjectName("comboBox_classification_aggregation")
         self.operation = QtWidgets.QComboBox()
         self.operation.setObjectName("comboBox_classification_operation")
@@ -223,14 +227,15 @@ class ClassificationWellWizard(QtWidgets.QDialog):
     def _render(self):
         self._remember_row_choices()
         marker_titles = [marker.title for marker in self.markers]
-        headers = ["Скважина", "Профиль", "Расстояние", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
+        headers = ["Скважина", "Профиль", "Объект", "Расстояние", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
         self.table.clear(); self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
         self.table.setRowCount(len(self.candidates))
         for row, candidate in enumerate(self.candidates):
-            base = (candidate.well_name, candidate.profile_name, f"{candidate.distance:.2f}", str(candidate.formation_id))
+            base = (candidate.well_name, candidate.profile_name, candidate.object_name,
+                    f"{candidate.distance:.2f}", str(candidate.formation_id))
             for column, value in enumerate(base):
                 self.table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
-            for offset, resolution in enumerate(candidate.values, 4):
+            for offset, resolution in enumerate(candidate.values, 5):
                 value = f"{resolution.value:g}" if resolution.status == "resolved" and resolution.value is not None else "—"
                 item = QtWidgets.QTableWidgetItem(value)
                 has_alternatives = len(resolution.candidates) > 1
@@ -245,7 +250,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 self.table.setItem(row, offset, item)
             group = QtWidgets.QButtonGroup(self.table); group.setExclusive(True)
             candidate._button_group = group
-            start = 4 + len(self.parameters)
+            start = 5 + len(self.parameters)
             for choice in range(3):
                 radio = QtWidgets.QRadioButton(); group.addButton(radio, choice)
                 self.table.setCellWidget(row, start + choice, radio)
@@ -275,7 +280,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
 
     def _resolve_ambiguity(self, row, column):
         """Ask once for a source row and reuse it in matching cells of the well."""
-        parameter_index = column - 4
+        parameter_index = column - 5
         candidate = self._candidate_for_row(row)
         if (candidate is None or parameter_index < 0 or
                 parameter_index >= len(candidate.values)):
@@ -336,7 +341,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 self, "Скважина не выбрана", "Выберите строку скважины в таблице.")
             return
         details = {}
-        column = self.table.currentColumn() - 4
+        column = self.table.currentColumn() - 5
         if 0 <= column < len(candidate.values):
             details = candidate.values[column].details
         self.open_well_log_callback(candidate.well_id, details)
@@ -365,10 +370,10 @@ class ClassificationWellWizard(QtWidgets.QDialog):
             return
         with open(path, "w", encoding="utf-8-sig", newline="") as stream:
             writer = csv.writer(stream, delimiter=";")
-            writer.writerow(["well_id", "well", "profile_id", "profile", "distance", "formation_id"] +
+            writer.writerow(["well_id", "well", "profile_id", "profile", "object", "distance", "formation_id"] +
                             [title for title, _ in self.parameters] + ["class"])
             for candidate, marker_id in self.assignments():
                 marker = next((m.title for m in self.markers if m.id == marker_id), "не добавлять")
                 writer.writerow([candidate.well_id, candidate.well_name, candidate.profile_id, candidate.profile_name,
-                                 candidate.distance, candidate.formation_id] +
+                                 candidate.object_name, candidate.distance, candidate.formation_id] +
                                 [r.value if r.status == "resolved" else "" for r in candidate.values] + [marker])

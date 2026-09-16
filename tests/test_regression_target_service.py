@@ -167,6 +167,26 @@ def test_log_resolution_uses_boundary_interval_and_median(db):
     assert details["valid_point_count"] == 3
 
 
+@pytest.mark.parametrize(("aggregation", "expected"), (("max", 30.0), ("min", 10.0)))
+def test_log_resolution_supports_extrema(db, aggregation, expected):
+    well = _well(db)
+    curve_name = CanonicalWellLog(canonical_name="GR")
+    db.add(curve_name); db.flush()
+    db.add(AliasWellLog(alias_name="gamma", canonical_id=curve_name.id))
+    db.add(WellLog(well_id=well.id, curve_name="GAMMA", begin=0, end=2, step=1,
+                   curve_data=json.dumps([10, 20, 30])))
+    db.commit()
+
+    result = resolve_target(
+        db, well.id,
+        TargetSettings("well_log", curve_name.id, depth_mode="fixed", fixed_depth=0,
+                       interval=2, aggregation=aggregation),
+    )
+
+    assert result.status == "resolved"
+    assert result.value == expected
+
+
 def test_equal_values_from_multiple_log_curves_are_resolved_automatically(db):
     well = _well(db)
     curve_name = CanonicalWellLog(canonical_name="GR")
