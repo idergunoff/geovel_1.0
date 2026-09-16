@@ -798,23 +798,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
 def _get_profiles_for_display():
     """Return profiles according to all/year/current profile drawing mode."""
-    r_id = get_research_id()
-
-    if ui.checkBox_prof_all.isChecked():
-        researches = session.query(Research).all()
-    elif ui.checkBox_profile_year.isChecked():
-        year = get_year_research()
-        researches = (session.query(Research)
-                      .filter(func.strftime('%Y', Research.date_research) == year)
-                      .all())
-    else:
-        research = session.query(Research).filter_by(id=r_id).first()
-        researches = [research] if research else []
-
-    profiles = []
-    for research in researches:
-        profiles.extend(research.profiles)
-    return profiles
+    return get_profiles_for_profile_mode("research", "Построение профилей")
 
 
 def _draw_profile_label(profile):
@@ -859,6 +843,8 @@ def _draw_object_labels(profiles):
 
 def show_profiles():
     profiles = _get_profiles_for_display()
+    if profiles is None:
+        return
     list_x, list_y = [], []
 
     for profile in profiles:
