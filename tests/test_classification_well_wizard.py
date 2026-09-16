@@ -57,8 +57,24 @@ def test_parameter_columns_precede_three_decision_columns():
 
     headers = [dialog.table.horizontalHeaderItem(i).text() for i in range(dialog.table.columnCount())]
     assert headers[-3:] == ["Class A", "Class B", "Не добавлять"]
-    assert headers[:5] == ["Скважина", "Профиль", "Объект", "Расстояние до скважины от профиля", "Пласт ID"]
+    assert headers[:5] == ["Скважина", "Профиль", "Объект", "Расстояние", "Пласт ID"]
+    assert headers[5] == "Уже в классификации"
+    assert dialog.table.horizontalHeaderItem(3).toolTip() == "Расстояние до скважины от профиля"
     assert dialog.table.item(0, 2).text() == "Object 1"
+
+
+def test_existing_markup_is_visibly_marked_with_its_class():
+    candidate = ClassificationWellCandidate(
+        1, "W-1", 2, "P-1", 3, 0, [], markup_id=42, current_marker_id=20)
+    markers = [SimpleNamespace(id=10, title="Class A"), SimpleNamespace(id=20, title="Class B")]
+
+    dialog = ClassificationWellWizard(_Session(), [candidate], markers)
+
+    status = dialog.table.item(0, 5)
+    assert status.text() == "Да — Class B"
+    assert "уже добавлена" in status.toolTip()
+    assert status.background().color().name() == "#d9f2df"
+    assert dialog.assignments() == [(candidate, 20)]
 
 
 def test_class_choice_survives_table_rerender():
@@ -85,7 +101,7 @@ def test_double_click_resolves_multiple_source_values(monkeypatch):
     monkeypatch.setattr(QtWidgets.QInputDialog, "getItem",
                         lambda *_args: ("second: 22 → 22", True))
 
-    dialog._resolve_ambiguity(0, 5)
+    dialog._resolve_ambiguity(0, 6)
 
     assert candidate.values[0].status == "resolved"
     assert candidate.values[0].value == 22.0
@@ -108,7 +124,7 @@ def test_parameter_header_uses_canonical_name_and_detailed_tooltip(monkeypatch):
 
     dialog._add_parameter()
 
-    header = dialog.table.horizontalHeaderItem(5)
+    header = dialog.table.horizontalHeaderItem(6)
     assert header.text() == "GR"
     assert "Параметр: GR (каноническое название)" in header.toolTip()
     assert "Источник: каротажная кривая" in header.toolTip()
@@ -139,7 +155,7 @@ def test_source_choice_is_applied_to_same_parameter_columns(monkeypatch):
     monkeypatch.setattr(QtWidgets.QInputDialog, "getItem",
                         lambda *_args: ("second: 22 → 22", True))
 
-    dialog._resolve_ambiguity(0, 5)
+    dialog._resolve_ambiguity(0, 6)
 
     assert candidate.values[0].value == 22.0
     assert candidate.values[1].value == 22.0
@@ -176,7 +192,7 @@ def test_boundary_choice_is_reused_for_dependent_log_columns(monkeypatch):
 
     monkeypatch.setattr(wizard_module, "resolve_target", resolve)
 
-    dialog._resolve_ambiguity(0, 5)
+    dialog._resolve_ambiguity(0, 6)
 
     assert calls == [(1, 1, 6), (1, 2, 6)]
     assert [value.status for value in candidate.values] == ["resolved", "resolved"]
@@ -191,7 +207,7 @@ def test_open_log_uses_selected_parameter_details():
         _Session(), [candidate], markers, open_well_log=lambda well_id, details: opened.append((well_id, details)))
     dialog.parameters = [("Log", TargetSettings("well_log", 1))]
     dialog._render()
-    dialog.table.setCurrentCell(0, 5)
+    dialog.table.setCurrentCell(0, 6)
 
     dialog._open_well_log()
 
