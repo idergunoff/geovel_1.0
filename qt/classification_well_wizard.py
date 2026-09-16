@@ -34,6 +34,13 @@ class ClassificationWellCandidate:
 class ClassificationWellWizard(QtWidgets.QDialog):
     """Calculate several well attributes and make one exclusive class choice."""
 
+    BASE_HEADERS = (
+        "Скважина", "Профиль", "Объект",
+        "Расстояние", "Пласт ID",
+        "Уже в классификации",
+    )
+    DISTANCE_COLUMN = 3
+    PARAMETER_COLUMN = len(BASE_HEADERS)
     SETTINGS_GROUP = "classification_well_wizard"
     SETTINGS_WIDGETS = frozenset({
         "comboBox_classification_source",
@@ -230,9 +237,11 @@ class ClassificationWellWizard(QtWidgets.QDialog):
     def _render(self):
         self._remember_row_choices()
         marker_titles = [marker.title for marker in self.markers]
-        headers = ["Скважина", "Профиль", "Объект", "Расстояние до скважины от профиля", "Пласт ID"] + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
+        headers = list(self.BASE_HEADERS) + [p[0] for p in self.parameters] + marker_titles + ["Не добавлять"]
         self.table.clear(); self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
-        for offset, (title, settings) in enumerate(self.parameters, 5):
+        self.table.horizontalHeaderItem(self.DISTANCE_COLUMN).setToolTip(
+            "Расстояние до скважины от профиля")
+        for offset, (title, settings) in enumerate(self.parameters, self.PARAMETER_COLUMN):
             header = self.table.horizontalHeaderItem(offset)
             header.setToolTip(parameter_header_tooltip(
                 title, settings, self._boundary_name(settings.boundary_canonical_id)))
@@ -242,7 +251,20 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                     self._distance_text(candidate.distance), str(candidate.formation_id))
             for column, value in enumerate(base):
                 self.table.setItem(row, column, QtWidgets.QTableWidgetItem(value))
-            for offset, resolution in enumerate(candidate.values, 5):
+            status = QtWidgets.QTableWidgetItem("Да" if candidate.markup_id is not None else "Нет")
+            if candidate.markup_id is not None:
+                marker_title = next(
+                    (marker.title for marker in self.markers
+                     if marker.id == candidate.current_marker_id), "класс не определён")
+                status.setText("Да — " + marker_title)
+                status.setToolTip(
+                    "Скважина уже добавлена в текущий классификационный анализ. "
+                    "Выбранный класс можно изменить перед применением.")
+                status.setBackground(QtGui.QColor("#d9f2df"))
+            else:
+                status.setToolTip("Скважина ещё не добавлена в текущий классификационный анализ.")
+            self.table.setItem(row, self.PARAMETER_COLUMN - 1, status)
+            for offset, resolution in enumerate(candidate.values, self.PARAMETER_COLUMN):
                 value = f"{resolution.value:g}" if resolution.status == "resolved" and resolution.value is not None else "—"
                 item = QtWidgets.QTableWidgetItem(value)
                 has_alternatives = len(resolution.candidates) > 1
@@ -257,7 +279,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 self.table.setItem(row, offset, item)
             group = QtWidgets.QButtonGroup(self.table); group.setExclusive(True)
             candidate._button_group = group
-            start = 5 + len(self.parameters)
+            start = self.PARAMETER_COLUMN + len(self.parameters)
             for choice in range(3):
                 radio = QtWidgets.QRadioButton(); group.addButton(radio, choice)
                 self.table.setCellWidget(row, start + choice, radio)
@@ -295,7 +317,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
 
     def _resolve_ambiguity(self, row, column):
         """Ask once for a source row and reuse it in matching cells of the well."""
-        parameter_index = column - 5
+        parameter_index = column - self.PARAMETER_COLUMN
         candidate = self._candidate_for_row(row)
         if (candidate is None or parameter_index < 0 or
                 parameter_index >= len(candidate.values)):
@@ -356,7 +378,7 @@ class ClassificationWellWizard(QtWidgets.QDialog):
                 self, "Скважина не выбрана", "Выберите строку скважины в таблице.")
             return
         details = {}
-        column = self.table.currentColumn() - 5
+        column = self.table.currentColumn() - self.PARAMETER_COLUMN
         if 0 <= column < len(candidate.values):
             details = candidate.values[column].details
         self.open_well_log_callback(candidate.well_id, details)
