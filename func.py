@@ -1639,6 +1639,27 @@ def closest_point(well_x, well_y, profile_x, profile_y):
     return (closest, calc_distance(well_x, well_y, profile_x[closest], profile_y[closest]))
 
 
+def well_profile_distance(well, profile):
+    """Calculate the shortest distance from a well to a profile polyline.
+
+    ``None`` is returned only when either object has no usable coordinates.
+    Keeping this calculation independent from the current distance filter lets
+    review tables show the real distance for previously added wells as well as
+    for newly discovered candidates.
+    """
+    if well is None or profile is None or well.x_coord is None or well.y_coord is None:
+        return None
+    try:
+        profile_x = json.loads(profile.x_pulc or '[]')
+        profile_y = json.loads(profile.y_pulc or '[]')
+        if not profile_x or len(profile_x) != len(profile_y):
+            return None
+        _, distance = closest_point(well.x_coord, well.y_coord, profile_x, profile_y)
+        return float(distance)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
 def update_list_well(select_well=False, selected_well_id=None):
     """Обновить виджет списка скважин"""
     for key, value in globals().items():

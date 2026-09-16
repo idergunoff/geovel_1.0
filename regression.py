@@ -362,7 +362,8 @@ def check_all_well_markup_reg():
             continue
         candidates.append(WizardCandidate(
             markup.well_id, markup.well.name or f'id{markup.well_id}', markup.profile_id,
-            markup.profile.title or f'id{markup.profile_id}', markup.formation_id, 0.0,
+            markup.profile.title or f'id{markup.profile_id}', markup.formation_id,
+            well_profile_distance(markup.well, markup.profile),
             json.loads(markup.list_measure or '[]'), True, markup_id=markup.id,
             stored_value=markup.target_value,
             stored_manual_override=bool(markup.target_is_manual_override),
