@@ -9,7 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from core_description import CoreDescriptionParseError, parse_core_document
+from core_description import (
+    CoreDescriptionParseError,
+    DictionaryValidationError,
+    analyze_description,
+    load_dictionary,
+    parse_core_document,
+)
 from core_description.converter import DocConversionError, docx_source
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "core_description"
@@ -40,14 +46,16 @@ def test_supported_fixtures_have_expected_structural_result(generated):
         for actual, wanted in zip(result.intervals, contract["intervals"]):
             assert actual.top_depth == wanted["top_depth"]
             assert actual.bottom_depth == wanted["bottom_depth"]
-            assert actual.warnings == [
-                item for item in wanted.get("warnings", [])
-                if item == "description_is_placeholder"
-            ]
+            assert actual.warnings == wanted.get("warnings", [])
             assert actual.errors == wanted.get("errors", [])
             assert actual.selected_by_default == wanted.get("selected_by_default", True)
             assert actual.raw_description
+            assert [rock.canonical_value for rock in actual.rocks] == wanted["rocks"]
+            assert actual.oil_saturation == wanted["oil_saturation"]
+            assert 0.0 <= actual.confidence <= 1.0
+            assert all(match.rule_id for match in actual.semantic_matches)
         assert set(result.warnings) == set(contract.get("document_warnings", []))
+        assert result.dictionary_version == "1.0.0"
 
 
 def test_source_coordinates_and_optional_columns(generated):
@@ -92,3 +100,40 @@ def test_doc_conversion_requires_libreoffice(tmp_path, monkeypatch):
     with pytest.raises(DocConversionError, match="LibreOffice is required"):
         with docx_source(source):
             pass
+
+
+def test_rock_relations_and_explanations_are_preserved():
+    rocks, oil, confidence, matches, warnings = analyze_description(
+        "Глина с прослоями известняка, без признаков нефти."
+    )
+    assert [(rock.canonical_value, rock.relation) for rock in rocks] == [
+        ("clay", "primary"), ("limestone", "interlayer")
+    ]
+    assert oil == "none"
+    assert confidence == 1.0
+    assert warnings == []
+    assert {match.category for match in matches} >= {"rock", "rock_relation", "negation"}
+
+
+def test_negation_has_priority_and_uncertainty_marks_disputed_result():
+    assert analyze_description("Песчаник не нефтенасыщен.")[1] == "none"
+    rocks, oil, confidence, _, warnings = analyze_description(
+        "Известняк, предположительно нефтенасыщенный."
+    )
+    assert [rock.canonical_value for rock in rocks] == ["limestone"]
+    assert oil == "uncertain"
+    assert confidence < 1.0
+    assert warnings == ["uncertain_wording"]
+
+
+def test_dictionary_validation_rejects_duplicate_ids(tmp_path):
+    path = tmp_path / "dictionary.json"
+    rule = {
+        "id": "duplicate", "category": "rock", "canonical_value": "x",
+        "patterns": ["x"], "pattern_type": "word", "priority": 1, "enabled": True,
+    }
+    path.write_text(json.dumps({
+        "schema_version": 1, "version": "test", "rules": [rule, rule]
+    }), encoding="utf-8")
+    with pytest.raises(DictionaryValidationError, match="Duplicate rule id"):
+        load_dictionary(path)
