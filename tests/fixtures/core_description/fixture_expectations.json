@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "fixtures": {
+    "standard_separate_columns.docx": {
+      "well_name": "TEST-101", "area_name": "Тестовая Северная",
+      "described_by_raw": "Описал геолог: Иванов И. И.", "described_by": "Иванов И. И.",
+      "intervals": [
+        {"top_depth": 100.0, "bottom_depth": 102.5, "rocks": ["sandstone"], "oil_saturation": "weak", "warnings": []},
+        {"top_depth": 102.5, "bottom_depth": 104.0, "rocks": ["clay", "limestone"], "oil_saturation": "none", "warnings": []}
+      ]
+    },
+    "single_range_column.docx": {
+      "well_name": "TEST-202", "area_name": "Учебная",
+      "described_by_raw": "Описал: Петров П.П.", "described_by": "Петров П.П.",
+      "intervals": [
+        {"top_depth": 205.0, "bottom_depth": 207.25, "rocks": ["sandstone", "clay"], "oil_saturation": "present", "warnings": ["locality_marker"]},
+        {"top_depth": 207.25, "bottom_depth": 208.0, "rocks": ["limestone"], "oil_saturation": "uncertain", "warnings": ["uncertain_wording"]}
+      ]
+    },
+    "merged_header.docx": {
+      "well_name": "TEST-303", "area_name": "Учебная Восточная",
+      "described_by_raw": "Описал геолог Сидорова А. Б.", "described_by": "Сидорова А. Б.",
+      "intervals": [
+        {"top_depth": 310.0, "bottom_depth": 311.2, "rocks": ["dolomite"], "oil_saturation": "unknown", "warnings": []},
+        {"top_depth": 311.2, "bottom_depth": 313.0, "rocks": ["sandstone"], "oil_saturation": "intense", "warnings": []}
+      ]
+    },
+    "continuation_and_boundary.docx": {
+      "well_name": "TEST-404", "area_name": "Демонстрационная",
+      "described_by_raw": null, "described_by": null,
+      "document_warnings": ["description_author_missing"],
+      "intervals": [
+        {"top_depth": 400.0, "bottom_depth": 401.0, "rocks": ["sandstone"], "oil_saturation": "medium", "warnings": []},
+        {"top_depth": null, "bottom_depth": null, "rocks": ["clay"], "oil_saturation": "unknown", "errors": ["missing_depths"], "selected_by_default": false},
+        {"top_depth": 401.0, "bottom_depth": 401.0, "rocks": [], "oil_saturation": "unknown", "errors": ["zero_length_interval", "named_boundary_not_imported"], "selected_by_default": false},
+        {"top_depth": 401.0, "bottom_depth": 403.0, "rocks": [], "oil_saturation": "unknown", "warnings": ["description_is_placeholder"]}
+      ]
+    }
+  }
+}

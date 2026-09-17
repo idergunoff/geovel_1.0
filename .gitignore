@@ -5,3 +5,6 @@ pycache/
 
 # Pytest cache
 .pytest_cache/
+
+# Generated core-description DOCX contract fixtures
+/tests/fixtures/core_description/generated/
