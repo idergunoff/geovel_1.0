@@ -1,0 +1,1035 @@
+{
+  "schema_version": 1,
+  "scope": "Expected structural results for the eight original samples; descriptions are intentionally not copied into Git.",
+  "documents": [
+    {
+      "source_file": "Описание керна скв  37001К.doc",
+      "sha256": "21c888536ce1f20a7cd7c95adac64dd4b6e91bc6d8d35ad2dd284ef76fa67638",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "37001К",
+      "area_candidate": {
+        "raw": "Нефтеперспективный объект 8094",
+        "kind": "object",
+        "confidence": "ambiguous"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 8
+      },
+      "intervals": [
+        {
+          "top_depth": 128.0,
+          "bottom_depth": 131.3,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 131.3,
+          "bottom_depth": 133.4,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 133.4,
+          "bottom_depth": 143.6,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 143.6,
+          "bottom_depth": 144.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 144.0,
+          "bottom_depth": 169.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium"
+          ],
+          "manifestation_raw": null,
+          "warnings": [
+            "uncertain_wording"
+          ]
+        },
+        {
+          "top_depth": 169.0,
+          "bottom_depth": 173.9,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone",
+            "dolomite"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 173.9,
+          "bottom_depth": 174.8,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "dolomite"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 174.8,
+          "bottom_depth": 175.5,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв  37002.doc",
+      "sha256": "138cf171f93db24402058bfdd90e826590535ae13e18ed04c43d59f60aa876ca",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "37002",
+      "area_candidate": {
+        "raw": "Нефтеперспективный объект 8094",
+        "kind": "object",
+        "confidence": "ambiguous"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 8
+      },
+      "intervals": [
+        {
+          "top_depth": 143.0,
+          "bottom_depth": 147.4,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 147.4,
+          "bottom_depth": 150.3,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 150.3,
+          "bottom_depth": 156.0,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 156.0,
+          "bottom_depth": 179.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": [
+            "description_is_placeholder"
+          ]
+        },
+        {
+          "top_depth": 179.0,
+          "bottom_depth": 182.9,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 182.9,
+          "bottom_depth": 184.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone",
+            "dolomite"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 184.0,
+          "bottom_depth": 186.9,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 186.9,
+          "bottom_depth": 189.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone",
+            "dolomite"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв  38004.doc",
+      "sha256": "607be7c2851e5970d44afacb146d6026cd6c938e32ea2469251f96784a014155",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "38004",
+      "area_candidate": {
+        "raw": "Алтайское поднятие",
+        "kind": "uplift",
+        "confidence": "candidate"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 15
+      },
+      "intervals": [
+        {
+          "top_depth": 156.0,
+          "bottom_depth": 157.2,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 157.2,
+          "bottom_depth": 162.0,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 162.0,
+          "bottom_depth": 180.7,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 180.7,
+          "bottom_depth": 183.3,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 183.3,
+          "bottom_depth": 184.5,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 184.5,
+          "bottom_depth": 186.6,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 186.6,
+          "bottom_depth": 192.4,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 192.4,
+          "bottom_depth": 194.3,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 194.3,
+          "bottom_depth": 195.1,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 195.1,
+          "bottom_depth": 196.6,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 196.6,
+          "bottom_depth": 199.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone",
+            "dolomite"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 199.0,
+          "bottom_depth": 200.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 200.0,
+          "bottom_depth": 203.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 203.0,
+          "bottom_depth": 204.4,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 204.4,
+          "bottom_depth": 209.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв  54006.doc",
+      "sha256": "f1ddd527f5a8806ee1c8037f560a31a0865ea9d89957c7b62142260139155ef3",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "54006",
+      "area_candidate": {
+        "raw": "Нефтеперспективный объект №54",
+        "kind": "object",
+        "confidence": "ambiguous"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 9
+      },
+      "intervals": [
+        {
+          "top_depth": 164.0,
+          "bottom_depth": 166.7,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 166.7,
+          "bottom_depth": 167.8,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 167.8,
+          "bottom_depth": 180.8,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 180.8,
+          "bottom_depth": 185.1,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium",
+            "intense"
+          ],
+          "manifestation_raw": "Битум",
+          "warnings": [
+            "embedded_depth_range"
+          ]
+        },
+        {
+          "top_depth": 185.1,
+          "bottom_depth": 186.5,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "intense"
+          ],
+          "manifestation_raw": "Битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 186.5,
+          "bottom_depth": 189.8,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 189.8,
+          "bottom_depth": 195.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 195.0,
+          "bottom_depth": 196.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 196.0,
+          "bottom_depth": 202.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв  56007.doc",
+      "sha256": "75dbbb549856ec9e800878195ddd2b7d124986064ca7bc5ba8073a7f3c36a6af",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "56007",
+      "area_candidate": {
+        "raw": "Нефтеперспективный объект №56",
+        "kind": "object",
+        "confidence": "ambiguous"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 5
+      },
+      "intervals": [
+        {
+          "top_depth": 25.0,
+          "bottom_depth": 42.8,
+          "geological_index_raw": "Р2kz1",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 42.8,
+          "bottom_depth": 43.6,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 43.6,
+          "bottom_depth": 55.7,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 55.7,
+          "bottom_depth": 61.4,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone",
+            "dolomite"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 61.4,
+          "bottom_depth": 71.0,
+          "geological_index_raw": "P1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв 77007р Ягодное поднятие.doc",
+      "sha256": "eceda42a9fb82f44229b2575eb4e76e05103555290aaa0fc43aa1b4e79606bf2",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "77007р",
+      "area_candidate": {
+        "raw": "Ягодное поднятие",
+        "kind": "uplift",
+        "confidence": "candidate"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 9
+      },
+      "intervals": [
+        {
+          "top_depth": 55.0,
+          "bottom_depth": 58.9,
+          "geological_index_raw": "P2bt1",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 58.9,
+          "bottom_depth": 70.4,
+          "geological_index_raw": "P2šš2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 70.4,
+          "bottom_depth": 73.6,
+          "geological_index_raw": "P2šš2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual",
+            "indicator_only"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 73.6,
+          "bottom_depth": 84.4,
+          "geological_index_raw": "P2šš2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 84.4,
+          "bottom_depth": 87.1,
+          "geological_index_raw": "P2šš2",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 87.1,
+          "bottom_depth": 93.6,
+          "geological_index_raw": "P2šš2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 93.6,
+          "bottom_depth": 99.8,
+          "geological_index_raw": "P2šš1",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [
+            "residual"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 99.8,
+          "bottom_depth": 104.7,
+          "geological_index_raw": "P2šš1",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 104.7,
+          "bottom_depth": 111.0,
+          "geological_index_raw": "P2šš1",
+          "rocks_expected": [
+            "clay",
+            "limestone"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "Описание керна скв. № 372 Мл.doc",
+      "sha256": "84fcc572abde9de22dcd0fd8e985d6eb8749beba7715ed50b8e59103e8d409b2",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "372",
+      "area_candidate": {
+        "raw": "Мельничное поднятие",
+        "kind": "uplift",
+        "confidence": "candidate"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 8
+      },
+      "intervals": [
+        {
+          "top_depth": 166.0,
+          "bottom_depth": 172.5,
+          "geological_index_raw": "Р2kz11",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 172.5,
+          "bottom_depth": 175.0,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 175.0,
+          "bottom_depth": 176.0,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 176.0,
+          "bottom_depth": 185.0,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 185.0,
+          "bottom_depth": 191.5,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "medium"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 191.5,
+          "bottom_depth": 193.9,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "intense"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": []
+        },
+        {
+          "top_depth": 193.9,
+          "bottom_depth": 199.4,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 199.4,
+          "bottom_depth": 203.8,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "source_file": "геологический журнал скв 13 Ав .doc",
+      "sha256": "b478d35f1b96269c5ac5621c30ecd85194bfe819326a4a112ffeceabc9be77aa",
+      "source_format": "doc",
+      "openable": true,
+      "well_name_raw": "13 Ав",
+      "area_candidate": {
+        "raw": "Аверьяновское поднятие",
+        "kind": "uplift",
+        "confidence": "candidate"
+      },
+      "target_table": {
+        "logical_columns": 6,
+        "depth_layout": "separate_top_bottom",
+        "unit": "m",
+        "interval_count": 7
+      },
+      "intervals": [
+        {
+          "top_depth": 158.0,
+          "bottom_depth": 162.4,
+          "geological_index_raw": "Р2bt1",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 162.4,
+          "bottom_depth": 171.4,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "weak",
+            "medium"
+          ],
+          "manifestation_raw": "битум",
+          "warnings": [
+            "embedded_depth_range"
+          ]
+        },
+        {
+          "top_depth": 171.4,
+          "bottom_depth": 173.2,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "indicator_only"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 173.2,
+          "bottom_depth": 175.5,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "residual",
+            "indicator_only"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 175.5,
+          "bottom_depth": 176.7,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "clay",
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "indicator_only"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 176.7,
+          "bottom_depth": 178.3,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "sandstone"
+          ],
+          "saturation_terms_expected": [
+            "indicator_only"
+          ],
+          "manifestation_raw": null,
+          "warnings": []
+        },
+        {
+          "top_depth": 178.3,
+          "bottom_depth": 179.0,
+          "geological_index_raw": "Р1uf2",
+          "rocks_expected": [
+            "clay"
+          ],
+          "saturation_terms_expected": [],
+          "manifestation_raw": null,
+          "warnings": []
+        }
+      ]
+    }
+  ]
+}
