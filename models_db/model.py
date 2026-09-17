@@ -3,7 +3,7 @@ import json
 
 from sqlalchemy import (create_engine, Column, Integer, String, Float, Boolean, DateTime, LargeBinary, ForeignKey,
                         Date, Text, text, literal_column, or_, func, Index, desc, select, update, bindparam, literal,
-                        distinct, UniqueConstraint, event)
+                        distinct, UniqueConstraint, CheckConstraint, event)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload, joinedload
 
 
@@ -765,6 +765,87 @@ class Well(Base):
     well_for_cluster = relationship('WellForCluster', back_populates='well')
     parameter_choices = relationship('WellParameterChoice', back_populates='well',
                                      cascade='all, delete-orphan')
+    core_description_documents = relationship(
+        'CoreDescriptionDocument', back_populates='well', cascade='all, delete-orphan')
+    core_description_intervals = relationship(
+        'CoreDescriptionInterval', back_populates='well', cascade='all, delete-orphan')
+
+
+class CoreDescriptionDocument(Base):
+    """One source document accepted by the core-description importer."""
+    __tablename__ = 'core_description_document'
+
+    id = Column(Integer, primary_key=True)
+    well_id = Column(Integer, ForeignKey('well.id'), nullable=False, index=True)
+    source_file_name = Column(String, nullable=False)
+    source_file_hash = Column(String(64), nullable=False, unique=True, index=True)
+    source_format = Column(String, nullable=False)
+    well_name_raw = Column(String)
+    area_name_raw = Column(String)
+    described_by_raw = Column(String)
+    described_by = Column(String)
+    parser_version = Column(String, nullable=False)
+    dictionary_version = Column(String)
+    match_method = Column(String, nullable=False)
+    match_confidence = Column(Float, nullable=False)
+    imported_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    status = Column(String, nullable=False, default='imported')
+    diagnostics = Column(Text, nullable=False, default='{}')
+
+    well = relationship('Well', back_populates='core_description_documents')
+    intervals = relationship(
+        'CoreDescriptionInterval', back_populates='document',
+        cascade='all, delete-orphan', passive_deletes=True)
+
+
+class CoreDescriptionInterval(Base):
+    """A selected and validated depth interval from a source document."""
+    __tablename__ = 'core_description_interval'
+    __table_args__ = (
+        Index('ix_core_description_interval_well_depths',
+              'well_id', 'top_depth', 'bottom_depth'),
+        CheckConstraint('top_depth < bottom_depth', name='ck_core_description_interval_depths'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey('core_description_document.id', ondelete='CASCADE'),
+                         nullable=False, index=True)
+    well_id = Column(Integer, ForeignKey('well.id'), nullable=False, index=True)
+    top_depth = Column(Float, nullable=False)
+    bottom_depth = Column(Float, nullable=False)
+    raw_description = Column(Text, nullable=False)
+    normalized_description = Column(Text, nullable=False)
+    oil_saturation = Column(String, nullable=False, default='unknown')
+    confidence = Column(Float, nullable=False)
+    needs_review = Column(Boolean, nullable=False, default=False)
+    source_table_index = Column(Integer, nullable=False)
+    source_row_index = Column(Integer, nullable=False)
+    manually_edited = Column(Boolean, nullable=False, default=False)
+    recognition_details = Column(Text, nullable=False, default='{}')
+
+    document = relationship('CoreDescriptionDocument', back_populates='intervals')
+    well = relationship('Well', back_populates='core_description_intervals')
+    rocks = relationship(
+        'CoreDescriptionRock', back_populates='interval',
+        cascade='all, delete-orphan', passive_deletes=True)
+
+
+class CoreDescriptionRock(Base):
+    """A rock mention recognized in one imported interval."""
+    __tablename__ = 'core_description_rock'
+
+    id = Column(Integer, primary_key=True)
+    interval_id = Column(Integer, ForeignKey('core_description_interval.id', ondelete='CASCADE'),
+                         nullable=False, index=True)
+    rock_name = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    oil_saturation = Column(String)
+    source_text = Column(Text, nullable=False)
+    confidence = Column(Float, nullable=False)
+    match_start = Column(Integer)
+    match_end = Column(Integer)
+
+    interval = relationship('CoreDescriptionInterval', back_populates='rocks')
 
 
 class WellParameterChoice(Base):
