@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "version": "1.0.0",
+  "rules": [
+    {"id":"rock.sandstone.01","category":"rock","canonical_value":"sandstone","patterns":["песчаник", "песчаника"],"pattern_type":"word","priority":100,"enabled":true},
+    {"id":"rock.clay.01","category":"rock","canonical_value":"clay","patterns":["глина", "глины"],"pattern_type":"word","priority":100,"enabled":true},
+    {"id":"rock.limestone.01","category":"rock","canonical_value":"limestone","patterns":["известняк", "известняка"],"pattern_type":"word","priority":100,"enabled":true},
+    {"id":"rock.dolomite.01","category":"rock","canonical_value":"dolomite","patterns":["доломит", "доломита"],"pattern_type":"word","priority":100,"enabled":true},
+    {"id":"relation.interlayer.01","category":"rock_relation","canonical_value":"interlayer","patterns":["с прослоями"],"pattern_type":"phrase","priority":100,"enabled":true},
+    {"id":"relation.interbedding.01","category":"rock_relation","canonical_value":"interbedding","patterns":["переслаивание"],"pattern_type":"word","priority":100,"enabled":true},
+    {"id":"relation.inclusion.01","category":"rock_relation","canonical_value":"inclusion","patterns":["с включениями"],"pattern_type":"phrase","priority":100,"enabled":true},
+    {"id":"oil.none.01","category":"negation","canonical_value":"none","patterns":["без признаков нефти", "не нефтенасыщенный", "не нефтенасыщен"],"pattern_type":"phrase","priority":300,"enabled":true},
+    {"id":"oil.intense.01","category":"oil_saturation","canonical_value":"intense","patterns":["интенсивно нефтенасыщенный"],"pattern_type":"phrase","priority":200,"enabled":true},
+    {"id":"oil.medium.01","category":"oil_saturation","canonical_value":"medium","patterns":["средне нефтенасыщенный"],"pattern_type":"phrase","priority":200,"enabled":true},
+    {"id":"oil.weak.01","category":"oil_saturation","canonical_value":"weak","patterns":["слабо битумонасыщенный", "слабо нефтенасыщенный"],"pattern_type":"phrase","priority":200,"enabled":true},
+    {"id":"oil.present.01","category":"oil_indicator","canonical_value":"present","patterns":["запах нефти", "признаки нефти", "битум", "нефтенасыщенный"],"pattern_type":"phrase","priority":100,"enabled":true},
+    {"id":"uncertainty.01","category":"uncertainty","canonical_value":"uncertain","patterns":["предположительно", "возможно"],"pattern_type":"word","priority":250,"enabled":true},
+    {"id":"locality.01","category":"uncertainty","canonical_value":"locality","patterns":["местами"],"pattern_type":"word","priority":50,"enabled":true}
+  ]
+}

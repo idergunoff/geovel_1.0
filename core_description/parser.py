@@ -10,6 +10,7 @@ from typing import Optional
 from .converter import DocConversionError, docx_source
 from .docx import DocxExtractionError, ExtractedTable, extract_docx
 from .models import ParsedCoreDocument, ParsedCoreInterval
+from .semantics import enrich_intervals
 
 NUMBER = r"[+-]?\d+(?:[\s\u00a0]*[.,]\d+)?"
 RANGE_RE = re.compile(rf"^\s*({NUMBER})\s*(?:-|–|—)\s*({NUMBER})\s*(?:м\b)?", re.I)
@@ -209,9 +210,10 @@ def parse_core_document(path: str | Path) -> ParsedCoreDocument:
     intervals = _parse_rows(table, index, mapping, start)
     if not intervals:
         raise CoreDescriptionParseError("Core-description table contains no data rows")
+    dictionary_version = enrich_intervals(intervals)
     return ParsedCoreDocument(
         source_path=str(source), source_format=source_format, file_hash=file_hash,
         well_name_raw=well, well_name=well, area_name_raw=area, area_name=area,
         described_by_raw=author_raw, described_by=described_by,
-        intervals=intervals, warnings=warnings,
+        intervals=intervals, warnings=warnings, dictionary_version=dictionary_version,
     )
