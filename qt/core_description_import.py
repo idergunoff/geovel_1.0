@@ -1,7 +1,9 @@
-"""Editable preview dialog for importing one core-description document."""
+"""Editable preview and fault-isolated batch import of core descriptions."""
 
 from __future__ import annotations
 
+import csv
+import json
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -9,12 +11,37 @@ from typing import Any
 from PyQt5 import QtCore, QtWidgets
 
 from core_description.database import match_well, save_core_import
+from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
 from models_db.model import Well
 
 
 SATURATIONS = ("unknown", "none", "weak", "medium", "intense", "present", "uncertain")
+
+
+class BatchParseWorker(QtCore.QObject):
+    """Parse a batch outside the GUI thread and cooperatively support cancel."""
+
+    progress = QtCore.pyqtSignal(int, int, object)
+    finished = QtCore.pyqtSignal(object)
+
+    def __init__(self, paths: list[str], recursive: bool = False) -> None:
+        super().__init__()
+        self.paths = paths
+        self.recursive = recursive
+        self._cancelled = False
+
+    @QtCore.pyqtSlot()
+    def run(self) -> None:
+        result = parse_batch(self.paths, recursive=self.recursive,
+                             cancelled=lambda: self._cancelled,
+                             progress=lambda done, total, item: self.progress.emit(done, total, item))
+        self.finished.emit(result)
+
+    @QtCore.pyqtSlot()
+    def cancel(self) -> None:
+        self._cancelled = True
 
 
 class CoreDescriptionImportDialog(QtWidgets.QDialog):
@@ -32,6 +59,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.match_method = "manual"
         self.match_confidence = 1.0
         self._automatic: dict[str, dict[str, Any]] = {}
+        self.batch_items: list[BatchParseItem] = []
+        self._thread: QtCore.QThread | None = None
+        self._worker: BatchParseWorker | None = None
         self.setWindowTitle("Импорт описания керна")
         self.resize(1250, 720)
         self._build_ui()
@@ -39,13 +69,34 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _build_ui(self) -> None:
         layout = QtWidgets.QVBoxLayout(self)
         source = QtWidgets.QHBoxLayout()
-        self.open_button = QtWidgets.QPushButton("Выбрать DOC/DOCX…")
+        self.open_button = QtWidgets.QPushButton("Добавить файлы…")
         self.open_button.setObjectName("open_core_description")
+        self.directory_button = QtWidgets.QPushButton("Добавить каталог…")
+        self.directory_button.setObjectName("open_core_description_directory")
+        self.recursive_check = QtWidgets.QCheckBox("включая подкаталоги")
         self.path_label = QtWidgets.QLabel("Файл не выбран")
         self.path_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         source.addWidget(self.open_button)
+        source.addWidget(self.directory_button)
+        source.addWidget(self.recursive_check)
         source.addWidget(self.path_label, 1)
         layout.addLayout(source)
+
+        self.documents_table = QtWidgets.QTableWidget(0, 8)
+        self.documents_table.setObjectName("core_description_documents")
+        self.documents_table.setHorizontalHeaderLabels((
+            "Импорт", "Файл", "Скважина", "Площадь", "Автор", "Скважина БД", "Интервалы", "Статус"))
+        self.documents_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.documents_table.setMaximumHeight(180)
+        self.documents_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        layout.addWidget(self.documents_table)
+
+        progress_row = QtWidgets.QHBoxLayout()
+        self.progress_bar = QtWidgets.QProgressBar(); self.progress_bar.setVisible(False)
+        self.cancel_button = QtWidgets.QPushButton("Отменить обработку"); self.cancel_button.setEnabled(False)
+        self.export_button = QtWidgets.QPushButton("Экспорт отчёта…"); self.export_button.setEnabled(False)
+        progress_row.addWidget(self.progress_bar, 1); progress_row.addWidget(self.cancel_button); progress_row.addWidget(self.export_button)
+        layout.addLayout(progress_row)
 
         self.metadata = QtWidgets.QLabel()
         self.metadata.setWordWrap(True)
@@ -97,6 +148,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         layout.addWidget(buttons)
 
         self.open_button.clicked.connect(self.choose_file)
+        self.directory_button.clicked.connect(self.choose_directory)
+        self.cancel_button.clicked.connect(self.cancel_batch)
+        self.export_button.clicked.connect(self.export_report)
+        self.documents_table.currentCellChanged.connect(self._document_row_changed)
         self.well_combo.currentIndexChanged.connect(self._well_changed)
         self.table.itemChanged.connect(self._table_changed)
         for widget in (self.depth_from, self.depth_to, self.saturation_filter, self.state_filter):
@@ -104,9 +159,14 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.rock_filter.textChanged.connect(self.apply_filters)
 
     def choose_file(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Описание керна", "", "Word (*.doc *.docx)")
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Описания керна", "", "Word (*.doc *.docx)")
+        if paths:
+            self.start_batch(paths)
+
+    def choose_directory(self) -> None:
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Каталог описаний керна")
         if path:
-            self.load_file(path)
+            self.start_batch([path], recursive=self.recursive_check.isChecked())
 
     def load_file(self, path: str | Path) -> None:
         try:
@@ -114,6 +174,78 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         except CoreDescriptionParseError as error:
             QtWidgets.QMessageBox.critical(self, "Ошибка разбора", str(error)); return
         self.set_document(document)
+
+    def start_batch(self, paths: list[str], recursive: bool = False) -> None:
+        """Start parsing without blocking Qt's event loop."""
+        if self._thread is not None:
+            return
+        self.batch_items = []
+        self.documents_table.setRowCount(0)
+        self.progress_bar.setRange(0, 0); self.progress_bar.setValue(0); self.progress_bar.setVisible(True)
+        self.cancel_button.setEnabled(True); self.open_button.setEnabled(False); self.directory_button.setEnabled(False)
+        thread = QtCore.QThread(self)
+        worker = BatchParseWorker(paths, recursive)
+        worker.moveToThread(thread); thread.started.connect(worker.run)
+        worker.progress.connect(self._batch_progress); worker.finished.connect(self._batch_finished)
+        worker.finished.connect(thread.quit); thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._thread, self._worker = thread, worker
+        thread.start()
+
+    def cancel_batch(self) -> None:
+        if self._worker is not None:
+            self._worker.cancel()
+            self.cancel_button.setEnabled(False)
+
+    def _batch_progress(self, done: int, total: int, _item: BatchParseItem) -> None:
+        self.progress_bar.setRange(0, total); self.progress_bar.setValue(done)
+
+    def _batch_finished(self, result: BatchParseResult) -> None:
+        self.batch_items = result.items
+        self.documents_table.blockSignals(True); self.documents_table.setRowCount(0)
+        for item in result.items:
+            self._append_document(item)
+        self.documents_table.blockSignals(False)
+        self.progress_bar.setRange(0, max(1, result.processed)); self.progress_bar.setValue(result.processed)
+        self.cancel_button.setEnabled(False); self.open_button.setEnabled(True); self.directory_button.setEnabled(True)
+        self.export_button.setEnabled(bool(result.items)); self._worker = None; self._thread = None
+        if result.items:
+            self.documents_table.setCurrentCell(0, 1)
+        suffix = "; отменено" if result.cancelled else ""
+        self.summary.setText(f"Обработано: {result.processed}; успешно: {result.succeeded}; ошибок: {result.failed}{suffix}")
+
+    def _append_document(self, item: BatchParseItem) -> None:
+        row = self.documents_table.rowCount(); self.documents_table.insertRow(row)
+        document = item.document
+        values = ("", Path(item.source_path).name, document.well_name_raw if document else "—",
+                  document.area_name_raw if document else "—", document.described_by if document else "—",
+                  "ожидает выбора" if document else "—", str(len(document.intervals)) if document else "0",
+                  "готов" if document else f"ошибка: {item.error}")
+        check = QtWidgets.QTableWidgetItem(); check.setFlags(check.flags() | QtCore.Qt.ItemIsUserCheckable)
+        check.setCheckState(QtCore.Qt.Checked if document else QtCore.Qt.Unchecked)
+        check.setData(QtCore.Qt.UserRole, row); self.documents_table.setItem(row, 0, check)
+        for column, value in enumerate(values[1:], 1):
+            cell = QtWidgets.QTableWidgetItem(str(value)); cell.setFlags(cell.flags() & ~QtCore.Qt.ItemIsEditable)
+            cell.setToolTip(item.error or item.source_path); self.documents_table.setItem(row, column, cell)
+
+    def _document_row_changed(self, row: int, _column: int, *_args: Any) -> None:
+        if 0 <= row < len(self.batch_items) and self.batch_items[row].document is not None:
+            self.set_document(self.batch_items[row].document)  # type: ignore[arg-type]
+
+    def export_report(self) -> None:
+        path, selected = QtWidgets.QFileDialog.getSaveFileName(self, "Сохранить отчёт", "core-import-report.json",
+                                                               "JSON (*.json);;CSV (*.csv)")
+        if not path:
+            return
+        rows = [{"source_path": item.source_path, "status": item.status, "error": item.error,
+                 "duration_seconds": round(item.duration_seconds, 6),
+                 "intervals": len(item.document.intervals) if item.document else 0}
+                for item in self.batch_items]
+        if path.casefold().endswith(".csv") or selected.startswith("CSV"):
+            with open(path, "w", encoding="utf-8-sig", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=rows[0].keys()); writer.writeheader(); writer.writerows(rows)
+        else:
+            Path(path).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def set_document(self, document: ParsedCoreDocument) -> None:
         """Populate the preview; public to allow deterministic UI tests."""
@@ -260,6 +392,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
 
     def save(self) -> None:
         if self.document is None: return
+        if self.batch_items:
+            self._save_batch()
+            return
         selected = {self.table.item(row, 0).data(QtCore.Qt.UserRole) for row in range(self.table.rowCount())
                     if self.table.item(row, 0).checkState() == QtCore.Qt.Checked}
         try:
@@ -273,6 +408,54 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, "Ошибка сохранения", str(error)); return
         QtWidgets.QMessageBox.information(self, "Импорт завершён", f"Сохранено интервалов: {result.intervals_saved}")
         self.accept()
+
+    def _save_batch(self) -> None:
+        """Save each checked document in its own service transaction."""
+        saved_documents = saved_intervals = skipped = failed = 0
+        current_path = self.document.source_path if self.document else None
+        for row, item in enumerate(self.batch_items):
+            if self.documents_table.item(row, 0).checkState() != QtCore.Qt.Checked:
+                skipped += 1
+                continue
+            document = item.document
+            if document is None:
+                failed += 1
+                continue
+            match = match_well(self.session, document.well_name, document.area_name)
+            well_id = match.selected.well_id if match.selected else None
+            method = match.selected.method if match.selected else "manual"
+            confidence = match.selected.confidence if match.selected else 1.0
+            edits: dict[str, dict[str, Any]] = {}
+            if document.source_path == current_path and self.well_combo.currentData() is not None:
+                well_id = self.well_combo.currentData(); method = self.match_method; confidence = self.match_confidence
+                selected = {self.table.item(index, 0).data(QtCore.Qt.UserRole)
+                            for index in range(self.table.rowCount())
+                            if self.table.item(index, 0).checkState() == QtCore.Qt.Checked}
+                edits = {self.table.item(index, 0).data(QtCore.Qt.UserRole): self._edits(index)
+                         for index in range(self.table.rowCount())
+                         if self.table.item(index, 0).data(QtCore.Qt.UserRole) in selected}
+            else:
+                selected = {self._key(interval) for interval in document.intervals
+                            if interval.selected_by_default and not interval.errors and interval.confidence >= .8}
+            if well_id is None or not selected:
+                item.status = "needs_review"; self.documents_table.item(row, 7).setText("требует проверки")
+                skipped += 1
+                continue
+            try:
+                result = save_core_import(self.session, document, well_id=well_id,
+                                          selected_interval_ids=selected, edits=edits,
+                                          match_method=method, match_confidence=confidence)
+            except Exception as error:
+                item.status = "save_error"; item.error = str(error)
+                self.documents_table.item(row, 7).setText(f"ошибка сохранения: {error}")
+                failed += 1
+                continue
+            item.status = "saved"; self.documents_table.item(row, 7).setText("сохранён")
+            saved_documents += 1; saved_intervals += result.intervals_saved
+        QtWidgets.QMessageBox.information(
+            self, "Пакетный импорт",
+            f"Сохранено документов: {saved_documents}; интервалов: {saved_intervals}; "
+            f"пропущено: {skipped}; ошибок: {failed}")
 
 
 def open_core_description_import(session: Any, parent: QtWidgets.QWidget | None = None) -> int:
