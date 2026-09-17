@@ -102,6 +102,35 @@ def test_doc_conversion_requires_libreoffice(tmp_path, monkeypatch):
             pass
 
 
+def test_doc_conversion_stages_user_path_before_calling_libreoffice(tmp_path, monkeypatch):
+    source = tmp_path / "архив керна" / "Скважина № 1.doc"
+    source.parent.mkdir()
+    source.write_bytes(b"legacy")
+    captured = {}
+
+    class Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def convert(command, **_kwargs):
+        captured["command"] = command
+        input_path = Path(command[-1])
+        output_dir = Path(command[command.index("--outdir") + 1])
+        assert input_path.name == "source.doc"
+        assert input_path.read_bytes() == b"legacy"
+        (output_dir / "source.docx").write_bytes(b"converted")
+        return Result()
+
+    monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: "soffice")
+    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+
+    with docx_source(source) as converted:
+        assert converted.read_bytes() == b"converted"
+
+    assert str(source) not in captured["command"]
+
+
 def test_rock_relations_and_explanations_are_preserved():
     rocks, oil, confidence, matches, warnings = analyze_description(
         "Глина с прослоями известняка, без признаков нефти."
