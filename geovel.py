@@ -32,11 +32,17 @@ from calc_object_models import *
 from cluster import *
 from ml_clutter_experiment import MLClutterExperimentWindow
 from unite_objects import open_unite_objects_dialog
+from qt.core_description_import import open_core_description_import
 
 MainWindow.show()
 
 m_width, m_height = get_width_height_monitor()
 MainWindow.resize(m_width - 100, m_height - 200)
+
+# The same entry point will be extended to batch import at stage 6.
+ui.pushButton_core_description.clicked.connect(
+    lambda: open_core_description_import(session, MainWindow)
+)
 
 
 
