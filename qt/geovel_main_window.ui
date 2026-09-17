@@ -59,7 +59,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>добавление скважин за весь год</string>
+             <string/>
             </property>
             <property name="styleSheet">
              <string notr="true"/>
@@ -1910,6 +1910,16 @@
                   </property>
                   <property name="text">
                    <string>remove dupl</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QPushButton" name="pushButton_core_description">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(108, 255, 255);</string>
+                  </property>
+                  <property name="text">
+                   <string>Керн</string>
                   </property>
                  </widget>
                 </item>
@@ -7108,9 +7118,9 @@ Therm</string>
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_4"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_3"/>
+  <buttongroup name="buttonGroup_4"/>
  </buttongroups>
 </ui>
