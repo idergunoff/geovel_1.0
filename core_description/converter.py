@@ -18,6 +18,7 @@ class DocConversionError(RuntimeError):
 def docx_source(path: Path) -> Iterator[Path]:
     """Yield *path* as DOCX, converting a DOC in an isolated temporary directory."""
 
+    path = path.expanduser().resolve()
     suffix = path.suffix.lower()
     if suffix == ".docx":
         yield path
@@ -30,7 +31,19 @@ def docx_source(path: Path) -> Iterator[Path]:
         raise DocConversionError("LibreOffice is required to convert .doc files")
 
     with tempfile.TemporaryDirectory(prefix="geovel-core-") as temporary:
-        output_dir = Path(temporary)
+        # Do not pass the user-selected path directly to LibreOffice.  On Windows
+        # its command-line converter is unreliable with long and non-ASCII paths
+        # (both are common for Russian core-description archives).  Staging the
+        # input also gives the output a deterministic name instead of relying on
+        # LibreOffice to reproduce the original basename exactly.
+        work_dir = Path(temporary)
+        source = work_dir / "source.doc"
+        output_dir = work_dir / "converted"
+        output_dir.mkdir()
+        try:
+            shutil.copyfile(path, source)
+        except OSError as error:
+            raise DocConversionError(f"Cannot prepare DOC for conversion: {path}: {error}") from error
         command = [
             executable,
             "--headless",
@@ -38,7 +51,7 @@ def docx_source(path: Path) -> Iterator[Path]:
             "docx",
             "--outdir",
             str(output_dir),
-            str(path),
+            str(source),
         ]
         try:
             result = subprocess.run(
@@ -50,7 +63,7 @@ def docx_source(path: Path) -> Iterator[Path]:
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             raise DocConversionError(f"DOC conversion failed: {error}") from error
-        converted = output_dir / f"{path.stem}.docx"
+        converted = output_dir / "source.docx"
         if result.returncode != 0 or not converted.is_file():
             details = (result.stderr or result.stdout).strip()
             raise DocConversionError(
