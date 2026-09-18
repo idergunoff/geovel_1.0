@@ -56,6 +56,20 @@ def test_dialog_directory_preserves_save_filename(app, tmp_path):
     assert app_settings._dialog_directory("ignored", save=False) == str(tmp_path)
 
 
+def test_remember_selection_accepts_multiple_files(app, tmp_path):
+    selection = ([str(tmp_path / "first.doc"), str(tmp_path / "second.docx")],
+                 "Word (*.doc *.docx)")
+
+    assert app_settings._remember_selection(selection) is selection
+    assert app_settings.settings().value(app_settings._DIALOG_KEY) == str(tmp_path)
+
+
+def test_remember_selection_accepts_empty_multiple_file_result(app):
+    selection = ([], "Word (*.doc *.docx)")
+
+    assert app_settings._remember_selection(selection) is selection
+
+
 def test_name_filter_limits_persisted_widgets(app):
     root = QtWidgets.QWidget()
     kept = QtWidgets.QSpinBox(root, objectName="spinBox_cluster_count")

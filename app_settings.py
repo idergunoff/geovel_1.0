@@ -136,6 +136,10 @@ def _dialog_directory(suggested, save=False):
 
 def _remember_selection(selection):
     path = selection[0] if isinstance(selection, tuple) else selection
+    # getOpenFileNames returns ([path, ...], selected_filter), unlike the
+    # single-path results returned by the other QFileDialog helpers.
+    if isinstance(path, (list, tuple)):
+        path = path[0] if path else ""
     if not path:
         return selection
     directory = path if os.path.isdir(path) else os.path.dirname(path)
