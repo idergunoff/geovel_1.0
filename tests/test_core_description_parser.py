@@ -98,6 +98,7 @@ def test_doc_conversion_requires_libreoffice(tmp_path, monkeypatch):
     source.write_bytes(b"legacy")
     monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
     monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: None)
+    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: None)
     monkeypatch.setattr("core_description.converter._powershell_executable", lambda: None)
     with pytest.raises(DocConversionError, match="requires LibreOffice, or Microsoft Word"):
         with docx_source(source):
@@ -148,6 +149,40 @@ def test_doc_conversion_honours_configured_libreoffice_path(tmp_path, monkeypatc
     assert _libreoffice_executable() == str(executable)
 
 
+def test_doc_conversion_uses_user_flatpak_install(tmp_path, monkeypatch):
+    source = tmp_path / "legacy.doc"
+    source.write_bytes(b"legacy")
+    flatpak_app = tmp_path / ".local/share/flatpak/app/org.libreoffice.LibreOffice"
+    flatpak_app.mkdir(parents=True)
+    captured = {}
+
+    class Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def which(command):
+        return "/usr/bin/flatpak" if command == "flatpak" else None
+
+    def convert(command, **_kwargs):
+        captured["command"] = command
+        output_dir = Path(command[command.index("--outdir") + 1])
+        (output_dir / "source.docx").write_bytes(b"converted")
+        return Result()
+
+    monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
+    monkeypatch.setattr("core_description.converter.Path.home", lambda: tmp_path)
+    monkeypatch.setattr("core_description.converter.shutil.which", which)
+    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+
+    with docx_source(source) as converted:
+        assert converted.read_bytes() == b"converted"
+
+    assert captured["command"][:2] == ["/usr/bin/flatpak", "run"]
+    assert captured["command"][2].startswith("--filesystem=")
+    assert captured["command"][3] == "org.libreoffice.LibreOffice"
+
+
 def test_doc_conversion_falls_back_to_microsoft_word(tmp_path, monkeypatch):
     source = tmp_path / "legacy.doc"
     source.write_bytes(b"legacy")
@@ -164,7 +199,7 @@ def test_doc_conversion_falls_back_to_microsoft_word(tmp_path, monkeypatch):
         Path(kwargs["env"]["GEOVEL_DOCX_TARGET"]).write_bytes(b"converted-by-word")
         return Result()
 
-    monkeypatch.setattr("core_description.converter._libreoffice_executable", lambda: None)
+    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: None)
     monkeypatch.setattr("core_description.converter._powershell_executable", lambda: "powershell.exe")
     monkeypatch.setattr("core_description.converter.subprocess.run", convert)
 
