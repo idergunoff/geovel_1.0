@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -12,6 +13,37 @@ from typing import Iterator
 
 class DocConversionError(RuntimeError):
     """Raised when a legacy DOC cannot be converted."""
+
+
+def _libreoffice_executable() -> str | None:
+    """Find LibreOffice both in PATH and in its usual desktop locations.
+
+    GUI applications started from a shortcut do not necessarily inherit the
+    user's shell PATH.  This is especially common on Windows, where a normal
+    LibreOffice installation therefore used to look unavailable to GeoVel.
+    ``LIBREOFFICE_PATH`` also provides an explicit escape hatch for portable or
+    centrally managed installations.
+    """
+
+    configured = os.environ.get("LIBREOFFICE_PATH")
+    if configured:
+        configured_path = Path(configured).expanduser()
+        if configured_path.is_file():
+            return str(configured_path)
+
+    for command in ("libreoffice", "soffice"):
+        if executable := shutil.which(command):
+            return executable
+
+    candidates: list[Path] = []
+    for variable in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        if root := os.environ.get(variable):
+            candidates.append(Path(root) / "LibreOffice" / "program" / "soffice.exe")
+    candidates.extend((
+        Path("/Applications/LibreOffice.app/Contents/MacOS/soffice"),
+        Path.home() / "Applications/LibreOffice.app/Contents/MacOS/soffice",
+    ))
+    return next((str(candidate) for candidate in candidates if candidate.is_file()), None)
 
 
 @contextmanager
@@ -26,9 +58,12 @@ def docx_source(path: Path) -> Iterator[Path]:
     if suffix != ".doc":
         raise DocConversionError(f"Unsupported Word file extension: {path.suffix}")
 
-    executable = shutil.which("libreoffice") or shutil.which("soffice")
+    executable = _libreoffice_executable()
     if not executable:
-        raise DocConversionError("LibreOffice is required to convert .doc files")
+        raise DocConversionError(
+            "LibreOffice is required to convert .doc files. Install LibreOffice "
+            "or set LIBREOFFICE_PATH to the soffice executable"
+        )
 
     with tempfile.TemporaryDirectory(prefix="geovel-core-") as temporary:
         # Do not pass the user-selected path directly to LibreOffice.  On Windows

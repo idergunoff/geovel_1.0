@@ -96,10 +96,55 @@ def test_broken_docx_is_reported_as_parser_error(tmp_path):
 def test_doc_conversion_requires_libreoffice(tmp_path, monkeypatch):
     source = tmp_path / "legacy.doc"
     source.write_bytes(b"legacy")
+    monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
     monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: None)
     with pytest.raises(DocConversionError, match="LibreOffice is required"):
         with docx_source(source):
             pass
+
+
+def test_doc_conversion_finds_libreoffice_outside_path(tmp_path, monkeypatch):
+    source = tmp_path / "legacy.doc"
+    source.write_bytes(b"legacy")
+    program_files = tmp_path / "Program Files"
+    executable = program_files / "LibreOffice" / "program" / "soffice.exe"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"")
+    captured = {}
+
+    class Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def convert(command, **_kwargs):
+        captured["executable"] = command[0]
+        output_dir = Path(command[command.index("--outdir") + 1])
+        (output_dir / "source.docx").write_bytes(b"converted")
+        return Result()
+
+    monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
+    monkeypatch.setenv("PROGRAMFILES", str(program_files))
+    monkeypatch.delenv("PROGRAMFILES(X86)", raising=False)
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: None)
+    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+
+    with docx_source(source) as converted:
+        assert converted.read_bytes() == b"converted"
+
+    assert captured["executable"] == str(executable)
+
+
+def test_doc_conversion_honours_configured_libreoffice_path(tmp_path, monkeypatch):
+    executable = tmp_path / "portable" / "soffice"
+    executable.parent.mkdir()
+    executable.write_bytes(b"")
+    monkeypatch.setenv("LIBREOFFICE_PATH", str(executable))
+
+    from core_description.converter import _libreoffice_executable
+
+    assert _libreoffice_executable() == str(executable)
 
 
 def test_doc_conversion_stages_user_path_before_calling_libreoffice(tmp_path, monkeypatch):
