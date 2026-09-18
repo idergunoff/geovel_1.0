@@ -46,6 +46,79 @@ def _libreoffice_executable() -> str | None:
     return next((str(candidate) for candidate in candidates if candidate.is_file()), None)
 
 
+def _powershell_executable() -> str | None:
+    """Return Windows PowerShell for Microsoft Word automation, when available."""
+
+    if os.name != "nt":
+        return None
+    if executable := shutil.which("powershell.exe") or shutil.which("powershell"):
+        return executable
+    if windows := os.environ.get("SystemRoot"):
+        candidate = Path(windows) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def _run_conversion(command: list[str], converted: Path, converter_name: str) -> None:
+    """Run a converter and require it to create the requested DOCX file."""
+
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise DocConversionError(f"{converter_name} conversion failed: {error}") from error
+    if result.returncode != 0 or not converted.is_file():
+        details = (result.stderr or result.stdout).strip()
+        raise DocConversionError(
+            f"{converter_name} did not produce a DOCX (exit {result.returncode}): {details}"
+        )
+
+
+def _convert_with_word(powershell: str, source: Path, converted: Path) -> None:
+    """Convert a staged document using an installed Microsoft Word on Windows."""
+
+    # Paths are supplied via the process environment rather than interpolated
+    # into PowerShell code, so quotes and other path characters remain harmless.
+    script = """
+$ErrorActionPreference = 'Stop'
+$word = $null
+$document = $null
+try {
+    $word = New-Object -ComObject Word.Application
+    $word.Visible = $false
+    $word.DisplayAlerts = 0
+    $word.AutomationSecurity = 3
+    $document = $word.Documents.Open($env:GEOVEL_DOC_SOURCE, $false, $true)
+    $document.SaveAs2($env:GEOVEL_DOCX_TARGET, 16)
+} finally {
+    if ($null -ne $document) { $document.Close($false) }
+    if ($null -ne $word) { $word.Quit() }
+}
+""".strip()
+    environment = os.environ.copy()
+    environment["GEOVEL_DOC_SOURCE"] = str(source)
+    environment["GEOVEL_DOCX_TARGET"] = str(converted)
+    command = [powershell, "-NoProfile", "-NonInteractive", "-Command", script]
+    try:
+        result = subprocess.run(
+            command, check=False, capture_output=True, text=True, timeout=120,
+            env=environment,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise DocConversionError(f"Microsoft Word conversion failed: {error}") from error
+    if result.returncode != 0 or not converted.is_file():
+        details = (result.stderr or result.stdout).strip()
+        raise DocConversionError(
+            f"Microsoft Word did not produce a DOCX (exit {result.returncode}): {details}"
+        )
+
+
 @contextmanager
 def docx_source(path: Path) -> Iterator[Path]:
     """Yield *path* as DOCX, converting a DOC in an isolated temporary directory."""
@@ -59,10 +132,11 @@ def docx_source(path: Path) -> Iterator[Path]:
         raise DocConversionError(f"Unsupported Word file extension: {path.suffix}")
 
     executable = _libreoffice_executable()
-    if not executable:
+    powershell = _powershell_executable() if not executable else None
+    if not executable and not powershell:
         raise DocConversionError(
-            "LibreOffice is required to convert .doc files. Install LibreOffice "
-            "or set LIBREOFFICE_PATH to the soffice executable"
+            "Converting .doc files requires LibreOffice, or Microsoft Word on Windows. "
+            "Install one of them or convert the file to .docx"
         )
 
     with tempfile.TemporaryDirectory(prefix="geovel-core-") as temporary:
@@ -79,29 +153,19 @@ def docx_source(path: Path) -> Iterator[Path]:
             shutil.copyfile(path, source)
         except OSError as error:
             raise DocConversionError(f"Cannot prepare DOC for conversion: {path}: {error}") from error
-        command = [
-            executable,
-            "--headless",
-            "--convert-to",
-            "docx",
-            "--outdir",
-            str(output_dir),
-            str(source),
-        ]
-        try:
-            result = subprocess.run(
-                command,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=120,
-            )
-        except (OSError, subprocess.TimeoutExpired) as error:
-            raise DocConversionError(f"DOC conversion failed: {error}") from error
         converted = output_dir / "source.docx"
-        if result.returncode != 0 or not converted.is_file():
-            details = (result.stderr or result.stdout).strip()
-            raise DocConversionError(
-                f"LibreOffice did not produce a DOCX (exit {result.returncode}): {details}"
-            )
+        if executable:
+            command = [
+                executable,
+                "--headless",
+                "--convert-to",
+                "docx",
+                "--outdir",
+                str(output_dir),
+                str(source),
+            ]
+            _run_conversion(command, converted, "LibreOffice")
+        else:
+            assert powershell is not None
+            _convert_with_word(powershell, source, converted)
         yield converted
