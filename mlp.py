@@ -1695,7 +1695,7 @@ def calc_object_class():
         ui.comboBox_profile.setCurrentText(f'{prof.title} ({count_measure} измерений) id{prof.id}')
         update_formation_combobox()
         ui.comboBox_plast.setCurrentText(list_formation[n])
-        working_data, curr_form = build_table_test('mlp')
+        working_data, curr_form = build_table_test('mlp', use_model_mask=True)
 
         if ui.checkBox_save_prof_mlp.isChecked():
             if session.query(ProfileModelPrediction).filter_by(
