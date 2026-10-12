@@ -3,6 +3,7 @@
 import ast
 import json
 import pickle
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -200,7 +201,7 @@ def test_shared_table_grows_for_different_masks_of_same_sources(runtime, formati
 
     assert x_table['X'].tolist() == [10, 20, 30]
     assert y_table['Y'].tolist() == [1, 2, 3]
-    assert same_table is x_table is y_table
+    assert same_table is y_table
     assert len(cache) == 1
 
 
@@ -262,9 +263,52 @@ def test_source_order_and_model_type_do_not_split_shared_table(runtime, formatio
     first_table, _ = build('regmod', first, formation, model_table_cache=cache, use_model_mask=True)
     second_table, _ = build(second_analysis, second, formation, model_table_cache=cache, use_model_mask=True)
 
-    assert second_table is first_table
-    assert first_table['X'].tolist() == [10, 20, 30]
+    assert second_table['X'].tolist() == [10, 20, 30]
     assert second_table['Y'].tolist() == [1, 2, 3]
+    assert len(cache) == 1
+
+
+@pytest.mark.parametrize('measure_indices', [None, [2, 0]])
+def test_wide_shared_table_extends_without_fragmentation_or_recalculating_features(runtime, formation, tmp_path, measure_indices):
+    formation.profile.signal = json.dumps([
+        (np.arange(512) + offset).tolist() for offset in (0, 1000, 2000)
+    ])
+    runtime.db.commit()
+    sources = ['X', 'Signal_Abase', 'sep_Abase_128']
+    first = add_model(runtime, tmp_path, 'reg', 1, sources, mask=['X'])
+    second = add_model(runtime, tmp_path, 'reg', 2, sources, mask=['Signal_Abase_1'])
+    third = add_model(runtime, tmp_path, 'reg', 3, sources, mask=['sep_Abase_128'])
+    equivalent = add_model(runtime, tmp_path, 'reg', 4, sources, mask=['Signal_Abase_512', 'X'])
+    cache = {}
+    build = runtime.functions['build_table_test']
+    transformations = []
+    transform = runtime.functions['calc_atrib_measure']
+
+    def counted_transform(signal, attribute):
+        transformations.append((signal, attribute))
+        return transform(signal, attribute)
+
+    runtime.functions['calc_atrib_measure'] = counted_transform
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', pd.errors.PerformanceWarning)
+        initial, _ = build('regmod', first, formation, model_table_cache=cache,
+                           measure_indices=measure_indices, use_model_mask=True)
+        snapshot = initial.copy()
+        wide, _ = build('regmod', second, formation, model_table_cache=cache,
+                        measure_indices=measure_indices, use_model_mask=True)
+        extended, _ = build('regmod', third, formation, model_table_cache=cache,
+                            measure_indices=measure_indices, use_model_mask=True)
+        reused, _ = build('regmod', equivalent, formation, model_table_cache=cache,
+                          measure_indices=measure_indices, use_model_mask=True)
+
+    indices = [0, 1, 2] if measure_indices is None else [0, 2]
+    assert wide['Signal_Abase_512'].tolist() == [index * 1000 + 511 for index in indices]
+    assert extended['sep_Abase_128'].tolist() == [index * 1000 + 1 for index in indices]
+    pd.testing.assert_frame_equal(extended[snapshot.columns], snapshot)
+    assert extended.columns.is_unique
+    assert len(extended.columns) == 3 + 1 + 512 + 128
+    assert len(transformations) == 2 * len(indices)
+    assert reused is extended
     assert len(cache) == 1
 
 

@@ -875,10 +875,11 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
             model_table_cache[cache_key] = {'table': test_data, 'sources': set(list_param)}
         else:
             # Matching profile, formation and trace indices guarantee the same
-            # row order. Add only newly requested columns to the shared table;
-            # previously collected signals and features are never rebuilt.
-            for column in feature_columns:
-                cache_entry['table'][column] = test_data[column].to_numpy()
+            # row order. Join new columns together and consolidate the blocks
+            # to avoid fragmentation when a source expands to hundreds of
+            # features. Previously collected features are never rebuilt.
+            retained = cache_entry['table'].drop(columns=feature_columns, errors='ignore')
+            cache_entry['table'] = pd.concat([retained, test_data[feature_columns]], axis=1).copy()
             cache_entry['sources'].update(list_param)
             test_data = cache_entry['table']
     return test_data, curr_form
