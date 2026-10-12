@@ -15,17 +15,16 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
 TRAIN_TABLE_ROW_CHUNK_SIZE = 1000
 
 
-def _model_table_cache_key(analisis, model, formation, measure_indices=None, source_params=None):
-    """Return a key for data collected before a trained-model mask is applied.
+def _model_table_cache_key(model, formation, measure_indices=None):
+    """Identify shared source data independently of model type and final mask.
 
-    Models using different columns of the same expanded source parameter can
-    share the table. Sources excluded by a mask must be reflected in the key.
+    The cached table grows when another mask needs additional sources. Each
+    source is collected once, while sources unused by every mask stay skipped.
     """
     return (
-        analisis,
         formation.id,
         formation.profile_id,
-        tuple(json.loads(model.list_params) if source_params is None else source_params),
+        tuple(sorted(set(json.loads(model.list_params)))),
         model.except_signal or '',
         model.except_crl or '',
         None if measure_indices is None else tuple(sorted(set(measure_indices))),
@@ -658,11 +657,14 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
         QMessageBox.critical(MainWindow, 'Ошибка', 'Не выбран пласт')
         return
     cache_key = None
+    cache_entry = None
     if model_table_cache is not None and model:
-        cache_key = _model_table_cache_key(analisis, model, curr_form, measure_indices, list_param)
-        cached_table = model_table_cache.get(cache_key)
-        if cached_table is not None:
-            return cached_table, curr_form
+        cache_key = _model_table_cache_key(model, curr_form, measure_indices)
+        cache_entry = model_table_cache.get(cache_key)
+        if cache_entry is not None:
+            list_param = [param for param in list_param if param not in cache_entry['sources']]
+            if not list_param:
+                return cache_entry['table'], curr_form
     x_pulc = json.loads(curr_form.profile.x_pulc)
     y_pulc = json.loads(curr_form.profile.y_pulc)
     selected_indices = (
@@ -869,7 +871,16 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
     feature_columns = [column for column in test_data.columns if column not in metadata_columns]
     test_data = test_data[metadata_columns + feature_columns]
     if cache_key is not None:
-        model_table_cache[cache_key] = test_data
+        if cache_entry is None:
+            model_table_cache[cache_key] = {'table': test_data, 'sources': set(list_param)}
+        else:
+            # Matching profile, formation and trace indices guarantee the same
+            # row order. Add only newly requested columns to the shared table;
+            # previously collected signals and features are never rebuilt.
+            for column in feature_columns:
+                cache_entry['table'][column] = test_data[column].to_numpy()
+            cache_entry['sources'].update(list_param)
+            test_data = cache_entry['table']
     return test_data, curr_form
 
 
