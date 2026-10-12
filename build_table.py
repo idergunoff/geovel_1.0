@@ -15,22 +15,51 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
 TRAIN_TABLE_ROW_CHUNK_SIZE = 1000
 
 
-def _model_table_cache_key(analisis, model, formation, measure_indices=None):
+def _model_table_cache_key(analisis, model, formation, measure_indices=None, source_params=None):
     """Return a key for data collected before a trained-model mask is applied.
 
-    A mask is deliberately not part of the key: ``calc_profile_model_predict``
-    applies it only after collection, so models trained on the same source
-    parameters can safely share the expensive profile table.
+    Models using different columns of the same expanded source parameter can
+    share the table. Sources excluded by a mask must be reflected in the key.
     """
     return (
         analisis,
         formation.id,
         formation.profile_id,
-        tuple(json.loads(model.list_params)),
+        tuple(json.loads(model.list_params) if source_params is None else source_params),
         model.except_signal or '',
         model.except_crl or '',
         None if measure_indices is None else tuple(sorted(set(measure_indices))),
     )
+
+
+def _model_prediction_identity(param):
+    return param.split('_')[1], int(param.rsplit('_id', 1)[1])
+
+
+def _model_input_columns(type_model, model):
+    mask_class = TrainedModelClassMask if type_model == 'cls' else TrainedModelRegMask
+    model_mask = session.query(mask_class).filter_by(model_id=model.id).first()
+    if model_mask:
+        mask = session.query(ParameterMask).filter_by(id=model_mask.mask_id).first()
+        return sorted(json.loads(mask.mask))
+    return get_list_param_numerical(json.loads(model.list_params), model)
+
+
+def _stored_model_prediction(param, formation):
+    """Load a complete prediction for this exact profile and model type."""
+    type_model, model_id = _model_prediction_identity(param)
+    prediction = session.query(ProfileModelPrediction).filter_by(
+        profile_id=formation.profile_id, type_model=type_model, model_id=model_id,
+    ).order_by(ProfileModelPrediction.id.desc()).first()
+    if prediction is None:
+        return None
+    try:
+        values = json.loads(prediction.prediction)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(values, list) or len(values) != len(json.loads(formation.layer_up.layer_line)):
+        return None
+    return values
 
 
 def _selected_crl(signal, measure_indices, filtered=True):
@@ -164,14 +193,15 @@ def _prefetch_profile_data(markups, list_param):
                     cache[(row[0], param)] = json.loads(value)
 
     for param in (item for item in list_param if item.startswith('model_')):
-        model_id = int(param.split('_id')[-1])
+        type_model, model_id = _model_prediction_identity(param)
         rows = session.query(
             ProfileModelPrediction.profile_id,
             ProfileModelPrediction.prediction,
         ).filter(
             ProfileModelPrediction.profile_id.in_(profile_ids),
             ProfileModelPrediction.model_id == model_id,
-        ).all()
+            ProfileModelPrediction.type_model == type_model,
+        ).order_by(ProfileModelPrediction.id).all()
         for profile_id, prediction in rows:
             if prediction is not None:
                 cache[(profile_id, param)] = json.loads(prediction)
@@ -312,15 +342,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
                         )
             elif param.startswith('model_'):
                 if not str(markup.profile_id) + '_' + param in runtime_values:
-                    model_id = int(param.split('_id')[-1])
-                    predict = session.query(ProfileModelPrediction).filter_by(profile_id=markup.profile_id,
-                                                                              model_id=model_id).first()
-                    if predict:
-                        runtime_values[str(markup.profile_id) + '_' + param] = json.loads(predict.prediction)
-                    else:
-                        runtime_values[str(markup.profile_id) + '_' + param] = calc_profile_model_predict(
-                            param, markup.formation, model_table_cache, measure_indices=measure_indices
-                        )
+                    runtime_values[str(markup.profile_id) + '_' + param] = calc_profile_model_predict(
+                        param, markup.formation, model_table_cache, measure_indices=measure_indices
+                    )
             elif param == 'CRL':
                 if not str(markup.profile_id) + '_CRL' in runtime_values:
                     runtime_values[str(markup.profile_id) + '_CRL'] = _selected_crl(
@@ -592,7 +616,7 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
 
 
 def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_cache=None,
-                     measure_indices=None):
+                     measure_indices=None, use_model_mask=False):
     list_except_signal, list_except_crl = [], []
     if analisis == 'mlp':
         if not model:
@@ -615,6 +639,14 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
         cluster_analysis = session.query(AnalysisCluster).filter_by(id=ui.comboBox_clust_set.currentText().split(' id')[-1]).first()
         list_param = json.loads(cluster_analysis.parameter)
         analysis_title = f'Cluster {cluster_analysis.title}'
+    if use_model_mask and model:
+        required_columns = set(_model_input_columns('cls' if analisis == 'mlp' else 'reg', model))
+        list_param = [
+            param for param in list_param
+            if required_columns.intersection(get_list_param_numerical([param], model))
+        ]
+    if model_table_cache is None:
+        model_table_cache = {}
     test_data = pd.DataFrame(columns=['prof_index', 'x_pulc', 'y_pulc'])
     if not curr_form:
         curr_form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
@@ -627,7 +659,7 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
         return
     cache_key = None
     if model_table_cache is not None and model:
-        cache_key = _model_table_cache_key(analisis, model, curr_form, measure_indices)
+        cache_key = _model_table_cache_key(analisis, model, curr_form, measure_indices, list_param)
         cached_table = model_table_cache.get(cache_key)
         if cached_table is not None:
             return cached_table, curr_form
@@ -652,15 +684,9 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
 
         elif param.startswith('model_'):
             if not str(curr_form.profile.id) + '_' + param in locals():
-                model_id = int(param.split('_id')[-1])
-                predict = session.query(ProfileModelPrediction).filter_by(profile_id=curr_form.profile_id,
-                                                                          model_id=model_id).first()
-                if predict:
-                    locals()[str(curr_form.profile.id) + '_' + param] = json.loads(predict.prediction)
-                else:
-                    locals()[str(curr_form.profile.id) + '_' + param] = calc_profile_model_predict(
-                        param, curr_form, model_table_cache, measure_indices=selected_indices
-                    )
+                locals()[str(curr_form.profile.id) + '_' + param] = calc_profile_model_predict(
+                    param, curr_form, model_table_cache, measure_indices=measure_indices
+                )
 
         elif param.startswith('CRL') and not param.startswith('CRL_NF') and param not in list_param_geovel:
             if not str(curr_form.profile.id) + '_CRL' in locals():
@@ -859,11 +885,17 @@ def set_marks():
 
 
 def calc_profile_model_predict(param, formation, model_table_cache=None, measure_indices=None):
+    stored_prediction = _stored_model_prediction(param, formation)
+    if stored_prediction is not None:
+        set_info(f'Используется сохранённый прогноз {param} для профиля {formation.profile.title}', 'blue')
+        if measure_indices is None:
+            return stored_prediction
+        return {index: stored_prediction[index] for index in measure_indices if 0 <= index < len(stored_prediction)}
+
     set_info(f'Вычисление предсказания {param} для профиля {formation.profile.title}', 'blue')
     print(f'Вычисление предсказания {param} для профиля {formation.profile.title}')
 
-    type_predict = param.split('_')[1]
-    model_id = param.split('_id')[-1]
+    type_predict, model_id = _model_prediction_identity(param)
 
     if type_predict == 'cls':
         model = session.query(TrainedModelClass).filter_by(id=model_id).first()
@@ -874,7 +906,7 @@ def calc_profile_model_predict(param, formation, model_table_cache=None, measure
 
     working_data, curr_form = build_table_test(
         type_table, model, formation, model_table_cache=model_table_cache,
-        measure_indices=measure_indices,
+        measure_indices=measure_indices, use_model_mask=True,
     )
 
     # labels = set_marks()
@@ -885,13 +917,7 @@ def calc_profile_model_predict(param, formation, model_table_cache=None, measure
 
     # list_cat = list(profile_model.classes_)
 
-    list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
-    if type_predict == 'cls':
-        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
-    else:
-        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
-    if model_mask:
-        list_param_num = sorted(json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
+    list_param_num = _model_input_columns(type_predict, model)
 
     working_sample = working_data[list_param_num].values.tolist()
 

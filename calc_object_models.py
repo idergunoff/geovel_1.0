@@ -244,7 +244,9 @@ def calc_object():
 
                 list_formation_loaded = json.loads(co_cls.list_formation)
                 curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-                working_data, curr_form = build_table_test('mlp', model=model, curr_form=curr_form)
+                working_data, curr_form = build_table_test(
+                    'mlp', model=model, curr_form=curr_form, use_model_mask=True,
+                )
 
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()
@@ -300,7 +302,9 @@ def calc_object():
 
                 list_formation_loaded = json.loads(co_reg.list_formation)
                 curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-                working_data, curr_form = build_table_test('regmod', model=model, curr_form=curr_form)
+                working_data, curr_form = build_table_test(
+                    'regmod', model=model, curr_form=curr_form, use_model_mask=True,
+                )
 
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()
