@@ -187,7 +187,7 @@ def test_partial_nested_prediction_keeps_trace_indices_and_does_not_save_partial
     assert len(CountingModel.calls) == 2
 
 
-def test_shared_table_cache_separates_sources_selected_by_different_masks(runtime, formation, tmp_path):
+def test_shared_table_grows_for_different_masks_of_same_sources(runtime, formation, tmp_path):
     x_model = add_model(runtime, tmp_path, 'reg', 1, ['X', 'Y'], mask=['X'])
     y_model = add_model(runtime, tmp_path, 'reg', 2, ['X', 'Y'], mask=['Y'])
     equivalent = add_model(runtime, tmp_path, 'reg', 3, ['X', 'Y'], mask=['X'])
@@ -200,8 +200,8 @@ def test_shared_table_cache_separates_sources_selected_by_different_masks(runtim
 
     assert x_table['X'].tolist() == [10, 20, 30]
     assert y_table['Y'].tolist() == [1, 2, 3]
-    assert same_table is x_table
-    assert len(cache) == 2
+    assert same_table is x_table is y_table
+    assert len(cache) == 1
 
 
 def test_masks_of_expanded_features_share_collection_and_keep_required_column(runtime, formation, tmp_path):
@@ -219,6 +219,68 @@ def test_masks_of_expanded_features_share_collection_and_keep_required_column(ru
     assert second['sep_Abase_2'].tolist() == [3, 6, 9]
     assert first is second
     assert len(cache) == 1
+
+
+def test_nested_models_collect_common_features_once_and_apply_their_own_masks(runtime, formation, tmp_path):
+    formation.profile.signal = json.dumps([[1, 3], [2, 6], [3, 9]])
+    runtime.db.commit()
+    sources = ['sep_Abase_2', 'X', 'Y', 'model_reg_unused_id99']
+    add_model(runtime, tmp_path, 'reg', 2, sources, mask=['X', 'sep_Abase_1'])
+    add_model(runtime, tmp_path, 'reg', 3, sources, mask=['Y', 'sep_Abase_2'])
+    parent = add_model(runtime, tmp_path, 'cls', 1, ['model_reg_first_id2', 'model_reg_second_id3'])
+    transformations = []
+    transform = runtime.functions['calc_atrib_measure']
+
+    def counted_transform(signal, attribute):
+        transformations.append((signal, attribute))
+        return transform(signal, attribute)
+
+    runtime.functions['calc_atrib_measure'] = counted_transform
+    cache = {}
+    table, _ = runtime.functions['build_table_test'](
+        'mlp', parent, formation, model_table_cache=cache, use_model_mask=True,
+    )
+
+    assert len(transformations) == 3  # One transformation per trace for both models.
+    assert CountingModel.calls == [
+        [[10, 1], [20, 2], [30, 3]],
+        [[1, 3], [2, 6], [3, 9]],
+    ]
+    assert table['model_reg_first_id2'].tolist() == [20, 40, 60]
+    assert table['model_reg_second_id3'].tolist() == [2, 4, 6]
+    assert runtime.db.query(db_models.ProfileModelPrediction).count() == 2
+    assert len(cache) == 2  # Parent table and one shared regression source table.
+
+
+@pytest.mark.parametrize('second_type,second_analysis', [('reg', 'regmod'), ('cls', 'mlp')])
+def test_source_order_and_model_type_do_not_split_shared_table(runtime, formation, tmp_path, second_type, second_analysis):
+    first = add_model(runtime, tmp_path, 'reg', 1, ['X', 'Y'], mask=['X'])
+    second = add_model(runtime, tmp_path, second_type, 2, ['Y', 'X'], mask=['Y'])
+    cache = {}
+    build = runtime.functions['build_table_test']
+
+    first_table, _ = build('regmod', first, formation, model_table_cache=cache, use_model_mask=True)
+    second_table, _ = build(second_analysis, second, formation, model_table_cache=cache, use_model_mask=True)
+
+    assert second_table is first_table
+    assert first_table['X'].tolist() == [10, 20, 30]
+    assert second_table['Y'].tolist() == [1, 2, 3]
+    assert len(cache) == 1
+
+
+def test_trace_selection_and_exceptions_keep_separate_source_tables(runtime, formation, tmp_path):
+    model = add_model(runtime, tmp_path, 'reg', 1, ['X'])
+    cache = {}
+    build = runtime.functions['build_table_test']
+    full, _ = build('regmod', model, formation, model_table_cache=cache, use_model_mask=True)
+    partial, _ = build('regmod', model, formation, model_table_cache=cache, measure_indices=[2, 0], use_model_mask=True)
+    model.except_signal = '1'
+    changed, _ = build('regmod', model, formation, model_table_cache=cache, use_model_mask=True)
+
+    assert full['X'].tolist() == [10, 20, 30]
+    assert partial['X'].tolist() == [10, 30]
+    assert full is not partial and full is not changed
+    assert len(cache) == 3
 
 
 def test_multilevel_models_are_saved_once_at_every_level(runtime, formation, tmp_path):
