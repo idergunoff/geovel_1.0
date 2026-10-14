@@ -606,6 +606,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
+        nonlocal training_sample, list_param
         if ui_cls.checkBox_mask_param.isChecked():
             list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
             training_sample = np.array(data_train[list_param].values.tolist())
