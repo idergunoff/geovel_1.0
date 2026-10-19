@@ -1883,49 +1883,20 @@ def calc_corr_mlp():
 
 
 def anova_mlp():
-    """ Отрисовка графиков ANOVA """
-
-    Anova = QtWidgets.QDialog()
-    ui_anova = Ui_Anova()
-    ui_anova.setupUi(Anova)
-    Anova.show()
-    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
-
-    # ui_anova.graphicsView.setBackground('w')
+    """Сравнение преобразований признаков перед ANOVA по классам."""
+    from qt.classification_anova import ClassificationAnovaDialog
 
     data_plot, list_param = build_table_train(True, 'mlp')
-    markers = list(set(data_plot['mark']))
-    pallet = {i: session.query(MarkerMLP).filter(MarkerMLP.title == i, MarkerMLP.analysis_id == get_MLP_id()).first().color for i in markers}
-
-    figure = plt.figure()
-    canvas = FigureCanvas(figure)
-    ui_anova.horizontalLayout.addWidget(canvas)
-
-
-    for i in sorted(data_plot.columns.tolist()[2:]):
-        ui_anova.listWidget.addItem(i)
-
-    def draw_graph_anova():
-        figure.clear()
-        param = ui_anova.listWidget.currentItem().text()
-        if ui_anova.radioButton_box.isChecked():
-            sns.boxplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
-        if ui_anova.radioButton_violin.isChecked():
-            sns.violinplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
-        if ui_anova.radioButton_strip.isChecked():
-            sns.stripplot(data=data_plot, y=param, x='mark', hue='mark', orient='v', palette=pallet)
-        if ui_anova.radioButton_boxen.isChecked():
-            sns.boxenplot(data=data_plot, y=param, x='mark', orient='v', palette=pallet)
-        figure.tight_layout()
-        canvas.draw()
-
-    ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
-    ui_anova.radioButton_boxen.clicked.connect(draw_graph_anova)
-    ui_anova.radioButton_strip.clicked.connect(draw_graph_anova)
-    ui_anova.radioButton_violin.clicked.connect(draw_graph_anova)
-    ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
-
-    Anova.exec_()
+    if data_plot is None or data_plot.empty or len(data_plot.columns) <= 2:
+        set_info('Нет данных или признаков для ANOVA.', 'red')
+        return
+    features = data_plot.columns.tolist()[2:]
+    markers = data_plot['mark'].unique()
+    palette = {marker: session.query(MarkerMLP).filter(
+        MarkerMLP.title == marker, MarkerMLP.analysis_id == get_MLP_id()
+    ).first().color for marker in markers}
+    dialog = ClassificationAnovaDialog(data_plot, features, palette)
+    dialog.exec_()
 
 
 def clear_fake_mlp():
