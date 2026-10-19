@@ -1610,14 +1610,14 @@
            <layout class="QGridLayout" name="gridLayout_36">
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_30">
-              <item row="4" column="0">
+              <item row="5" column="0">
                <widget class="QCheckBox" name="checkBox_robscaler">
                 <property name="text">
                  <string>RobustScaler</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="7" column="0">
                <widget class="QCheckBox" name="checkBox_mxabsscaler">
                 <property name="text">
                  <string>MaxAbsScaler</string>
@@ -1627,14 +1627,27 @@
               <item row="1" column="0">
                <widget class="QCheckBox" name="checkBox_power_trans">
                 <property name="text">
-                 <string>PowerTransform</string>
+                 <string>PowerTransform (Yeo–Johnson) до StandardScaler</string>
+                </property>
+                <property name="toolTip">
+                 <string>Применяется на этом месте в порядке PreProcess, даже если StandardScaler выключен. Допускает нули и отрицательные значения. Включает стандартизацию результата. Обучается внутри Pipeline и сохраняется с моделью. Если выбраны оба PowerTransform, выполняются оба.</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
+              <item row="6" column="0">
                <widget class="QCheckBox" name="checkBox_mnmxscaler">
                 <property name="text">
                  <string>MinMaxScaler</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QCheckBox" name="checkBox_power_trans_after">
+                <property name="text">
+                 <string>PowerTransform (Yeo–Johnson) после StandardScaler</string>
+                </property>
+                <property name="toolTip">
+                 <string>Применяется на этом месте в порядке PreProcess, даже если StandardScaler выключен. Допускает нули и отрицательные значения. Включает стандартизацию результата. Обучается внутри Pipeline и сохраняется с моделью. Если выбраны оба PowerTransform, выполняются оба.</string>
                 </property>
                </widget>
               </item>
