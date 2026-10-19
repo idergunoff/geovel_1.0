@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
-from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import FunctionTransformer, PowerTransformer
 
 from draw import plot_groups_with_smoothed_hull
 from func import *
@@ -906,9 +906,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             pipe_steps.append(('log10', log_transformer))
             text_scaler += '\nLog10'
         if ui_cls.checkBox_power_trans.isChecked():
-            power_t = PowerTransformer(method='yeo-johnson')
+            power_t = PowerTransformer(method='yeo-johnson', standardize=True)
             pipe_steps.append(('power_t', power_t))
-            text_scaler += '\nPowerTransformer'
+            text_scaler += '\nYeo–Johnson до StandardScaler (standardize=True)'
         if ui_cls.checkBox_norm_l1.isChecked():
             norm_l1 = Normalizer(norm='l1')
             pipe_steps.append(('norm_l1', norm_l1))
@@ -917,6 +917,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             std_scaler = StandardScaler()
             pipe_steps.append(('std_scaler', std_scaler))
             text_scaler += '\nStandardScaler'
+        if ui_cls.checkBox_power_trans_after.isChecked():
+            power_after = PowerTransformer(method='yeo-johnson', standardize=True)
+            pipe_steps.append(('power_t_after', power_after))
+            text_scaler += '\nYeo–Johnson после StandardScaler (standardize=True)'
         if ui_cls.checkBox_robscaler.isChecked():
             robust_scaler = RobustScaler()
             pipe_steps.append(('robust_scaler', robust_scaler))
