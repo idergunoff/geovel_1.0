@@ -17,7 +17,10 @@ from core_description.parser import CoreDescriptionParseError, parse_core_docume
 from models_db.model import Well
 
 
-SATURATIONS = ("unknown", "none", "weak", "medium", "intense", "present", "uncertain")
+SATURATIONS = (
+    "unknown", "none", "weak", "medium", "intense",
+    "weak_to_medium", "medium_to_intense", "weak_to_intense", "present", "uncertain",
+)
 
 
 class BatchParseWorker(QtCore.QObject):
@@ -342,7 +345,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 self.table.item(row, 0).setCheckState(QtCore.Qt.Checked if ok else QtCore.Qt.Unchecked)
 
     def _select_oil(self) -> None:
-        oil = {"weak", "medium", "intense", "present", "uncertain"}
+        oil = set(SATURATIONS) - {"unknown", "none"}
         for row in range(self.table.rowCount()):
             if not self.table.isRowHidden(row):
                 self.table.item(row, 0).setCheckState(QtCore.Qt.Checked if self.table.item(row, 5).text() in oil else QtCore.Qt.Unchecked)

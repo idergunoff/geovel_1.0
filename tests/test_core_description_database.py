@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 
 import pytest
@@ -14,6 +15,7 @@ from core_description.database import (
     DuplicateCoreDocumentError, check_duplicates, match_well, save_core_import,
 )
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
+from core_description.semantics import enrich_intervals
 from models_db.model import (
     Base, CoreDescriptionDocument, CoreDescriptionInterval, CoreDescriptionRock,
     Well, WellOptionally,
@@ -140,6 +142,34 @@ def test_match_well_loads_areas_only_for_returned_candidates(db_session, well_na
         assert [item.area_name for item in result.candidates] == [
             f'Площадь {index}' for index in expected_area_ids
         ]
+
+
+def test_extended_dictionary_results_and_evidence_survive_save(db_session):
+    well = Well(name='12')
+    db_session.add(well)
+    db_session.commit()
+    parsed = _document()
+    interval = parsed.intervals[0]
+    interval.raw_description = (
+        'Алевролиты с прослойками мергелей, слабо, средне и интенсивно битумонасыщенные.'
+    )
+    parsed.dictionary_version = enrich_intervals(parsed.intervals)
+
+    save_core_import(db_session, parsed, well_id=well.id, selected_interval_ids={'0:3'})
+
+    saved = db_session.query(CoreDescriptionInterval).one()
+    assert saved.raw_description == interval.raw_description
+    assert saved.oil_saturation == 'weak_to_intense'
+    assert db_session.query(CoreDescriptionDocument).one().dictionary_version == '1.2.0'
+    assert {(rock.rock_name, rock.role) for rock in db_session.query(CoreDescriptionRock)} == {
+        ('siltstone', 'primary'), ('marl', 'interlayer'),
+    }
+    details = json.loads(saved.recognition_details)
+    assert any(
+        match['canonical_value'] == 'weak_to_intense'
+        and match['matched_text'] == 'слабо, средне и интенсивно битумонасыщенные'
+        for match in details['matches']
+    )
 
 
 def test_selective_save_duplicate_rejection_and_replace(db_session):

@@ -92,3 +92,22 @@ def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     assert captured["selected_interval_ids"] == {"0:2"}
     assert captured["edits"]["0:2"]["oil_saturation"] == "medium"
     assert captured["edits"]["0:2"]["rocks"][0]["canonical_value"] == "edited sandstone"
+
+
+@pytest.mark.parametrize("saturation", ["weak_to_medium", "medium_to_intense", "weak_to_intense"])
+def test_saturation_ranges_can_be_filtered_and_selected(app, session, saturation):
+    document = _document()
+    document.intervals[0].oil_saturation = saturation
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+
+    assert dialog.table.item(0, 5).text() == saturation
+    assert dialog.saturation_filter.findText(saturation) >= 0
+    dialog.saturation_filter.setCurrentText(saturation)
+    assert not dialog.table.isRowHidden(0)
+    assert dialog.table.isRowHidden(1)
+
+    dialog._select_visible(False)
+    dialog._select_oil()
+    assert dialog.table.item(0, 0).checkState() == QtCore.Qt.Checked
+    assert dialog._edits(0)["oil_saturation"] == saturation
