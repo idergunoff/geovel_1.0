@@ -172,6 +172,42 @@ def test_extended_dictionary_results_and_evidence_survive_save(db_session):
     )
 
 
+@pytest.mark.parametrize('edited', [False, True])
+def test_thickness_and_geological_index_survive_save(db_session, edited):
+    well = Well(name='12')
+    db_session.add(well)
+    db_session.commit()
+    parsed = _document()
+    parsed.intervals[0].thickness = 1.5
+    parsed.intervals[0].geological_index_raw = 'J₂'
+    edits = {'0:3': {'thickness': 1.25, 'geological_index_raw': 'K₁'}} if edited else {}
+    save_core_import(db_session, parsed, well_id=well.id, selected_interval_ids={'0:3'}, edits=edits)
+    saved = db_session.query(CoreDescriptionInterval).one()
+    assert saved.thickness == (1.25 if edited else 1.5)
+    assert saved.geological_index_raw == ('K₁' if edited else 'J₂')
+
+
+def test_thickness_index_migration_preserves_existing_rows():
+    import importlib.util
+    from pathlib import Path
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    path = Path(__file__).resolve().parents[1] / 'alembic/versions/2f3a4b5c6d7e_add_core_interval_thickness_index.py'
+    spec = importlib.util.spec_from_file_location('core_interval_fields_migration', path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    engine = create_engine('sqlite:///:memory:')
+    with engine.begin() as connection:
+        connection.exec_driver_sql('CREATE TABLE core_description_interval (id INTEGER PRIMARY KEY, raw_description TEXT)')
+        connection.exec_driver_sql("INSERT INTO core_description_interval VALUES (1, 'Песчаник')")
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+            assert connection.exec_driver_sql('SELECT * FROM core_description_interval').one() == (1, 'Песчаник', None, None)
+            migration.downgrade()
+            assert connection.exec_driver_sql('SELECT * FROM core_description_interval').one() == (1, 'Песчаник')
+
+
 def test_selective_save_duplicate_rejection_and_replace(db_session):
     well = Well(name='12')
     db_session.add(well)

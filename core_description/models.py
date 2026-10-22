@@ -24,6 +24,7 @@ class ParsedCoreInterval:
     oil_saturation: str = "unknown"
     confidence: float = 0.0
     semantic_matches: list[SemanticMatch] = field(default_factory=list)
+    thickness: Optional[float] = None
 
 
 @dataclass
@@ -64,7 +65,7 @@ class ParsedCoreDocument:
     described_by: Optional[str]
     intervals: list[ParsedCoreInterval] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    parser_version: str = "3.0"
+    parser_version: str = "3.1"
     dictionary_version: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:

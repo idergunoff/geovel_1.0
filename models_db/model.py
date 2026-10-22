@@ -814,6 +814,8 @@ class CoreDescriptionInterval(Base):
     top_depth = Column(Float, nullable=False)
     bottom_depth = Column(Float, nullable=False)
     raw_description = Column(Text, nullable=False)
+    thickness = Column(Float)
+    geological_index_raw = Column(Text)
     normalized_description = Column(Text, nullable=False)
     oil_saturation = Column(String, nullable=False, default='unknown')
     confidence = Column(Float, nullable=False)

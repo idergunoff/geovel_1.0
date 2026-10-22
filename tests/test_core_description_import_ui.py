@@ -79,6 +79,8 @@ def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     dialog.set_document(_document())
     dialog.table.item(0, 3).setText("edited sandstone")
     dialog.table.item(0, 5).setText("medium")
+    dialog.table.item(0, 9).setText("1,5")
+    dialog.table.item(0, 10).setText("J₂")
     captured = {}
 
     class Result:
@@ -92,6 +94,58 @@ def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     assert captured["selected_interval_ids"] == {"0:2"}
     assert captured["edits"]["0:2"]["oil_saturation"] == "medium"
     assert captured["edits"]["0:2"]["rocks"][0]["canonical_value"] == "edited sandstone"
+    assert captured["edits"]["0:2"]["thickness"] == 1.5
+    assert captured["edits"]["0:2"]["geological_index_raw"] == "J₂"
+
+
+def test_highlighting_preserves_text_and_marks_exact_classifier_spans(app, session):
+    from PyQt5 import QtGui
+    from core_description.semantics import enrich_intervals
+    from qt.core_description_import import DescriptionDelegate
+
+    document = _document()
+    interval = document.intervals[0]
+    interval.raw_description = "🪨 <Песчаник> & глина, без признаков нефти.\n" + "Длинное описание. " * 40
+    enrich_intervals(document.intervals)
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+    rich = QtGui.QTextDocument()
+    rich.setHtml(dialog.table.item(0, 7).data(DescriptionDelegate.HTML_ROLE))
+    assert rich.toPlainText() == interval.raw_description
+
+    for match in interval.semantic_matches:
+        if match.category not in {"rock", "negation"}:
+            continue
+        cursor = QtGui.QTextCursor(rich)
+        # Qt uses UTF-16 positions, classifier offsets use Python code points.
+        position = len(interval.raw_description[:match.start].encode("utf-16-le")) // 2
+        cursor.setPosition(position)
+        cursor.movePosition(QtGui.QTextCursor.NextCharacter, QtGui.QTextCursor.KeepAnchor)
+        expected = DescriptionDelegate.ROCK_COLOR if match.category == "rock" else DescriptionDelegate.OIL_COLOR
+        assert cursor.charFormat().background().color().name() == expected
+
+    dialog.table.setColumnWidth(7, 500)
+    dialog.table.resizeRowsToContents()
+    wide_height = dialog.table.rowHeight(0)
+    dialog.table.setColumnWidth(7, 250)
+    dialog.table.resizeRowsToContents()
+    assert dialog.table.rowHeight(0) > wide_height > dialog.table.rowHeight(1)
+    dialog.table.selectRow(0)
+    assert not dialog.table.grab().isNull()
+
+
+def test_restore_includes_thickness_and_geological_index(app, session):
+    document = _document()
+    document.intervals[0].thickness = 1.5
+    document.intervals[0].geological_index_raw = "J₂"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+    dialog.table.item(0, 9).setText("9")
+    dialog.table.item(0, 10).setText("изменён")
+    dialog.table.selectRow(0)
+    dialog._restore_selected()
+    assert dialog._edits(0)["thickness"] == 1.5
+    assert dialog._edits(0)["geological_index_raw"] == "J₂"
 
 
 @pytest.mark.parametrize("saturation", ["weak_to_medium", "medium_to_intense", "weak_to_intense"])
