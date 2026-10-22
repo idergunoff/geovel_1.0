@@ -201,6 +201,9 @@ def docx_source(path: Path) -> Iterator[Path]:
                 ]
             command = [
                 *command_prefix,
+                # A private profile prevents forwarding this request to an
+                # already running desktop instance (or another import).
+                f"-env:UserInstallation={(work_dir / 'profile').as_uri()}",
                 "--headless",
                 "--convert-to",
                 "docx",

@@ -239,6 +239,57 @@ def test_doc_conversion_stages_user_path_before_calling_libreoffice(tmp_path, mo
     assert str(source) not in captured["command"]
 
 
+def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeypatch, generated):
+    source = tmp_path / "Описание керна.DOC"
+    source.write_bytes(b"legacy")
+    expected = parse_core_document(generated / "standard_separate_columns.docx")
+    profiles = []
+    staging_directories = []
+
+    def convert(command, **kwargs):
+        staged = Path(command[-1])
+        staging_directories.append(staged.parent)
+        profile = next(arg for arg in command if arg.startswith("-env:UserInstallation="))
+        assert profile == f"-env:UserInstallation={(staged.parent / 'profile').as_uri()}"
+        profiles.append(profile)
+        assert kwargs["timeout"] == 120
+        output = Path(command[command.index("--outdir") + 1]) / "source.docx"
+        output.write_bytes((generated / "standard_separate_columns.docx").read_bytes())
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: ["soffice"])
+    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    for _ in range(2):
+        result = parse_core_document(source)
+        assert result.source_format == "doc"
+        assert result.well_name == expected.well_name
+        assert result.intervals == expected.intervals
+    assert profiles[0] != profiles[1]
+    assert all(not directory.exists() for directory in staging_directories)
+    assert source.read_bytes() == b"legacy"
+
+
+@pytest.mark.parametrize("failure", ["timeout", "missing_output", "exit_error"])
+def test_failed_doc_conversion_cleans_temporary_files(tmp_path, monkeypatch, failure):
+    source = tmp_path / "legacy.doc"
+    source.write_bytes(b"legacy")
+    staging_directories = []
+
+    def convert(command, **kwargs):
+        staging_directories.append(Path(command[-1]).parent)
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+        return subprocess.CompletedProcess(command, 1 if failure == "exit_error" else 0, "", "")
+
+    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: ["soffice"])
+    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    with pytest.raises(CoreDescriptionParseError, match="LibreOffice"):
+        parse_core_document(source)
+    assert staging_directories
+    assert all(not directory.exists() for directory in staging_directories)
+    assert source.read_bytes() == b"legacy"
+
+
 def test_rock_relations_and_explanations_are_preserved():
     rocks, oil, confidence, matches, warnings = analyze_description(
         "Глина с прослоями известняка, без признаков нефти."
