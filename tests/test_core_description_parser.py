@@ -65,6 +65,34 @@ def test_source_coordinates_and_optional_columns(generated):
     assert result.intervals[1].manifestation_raw is None
 
 
+@pytest.mark.parametrize("number_position", ["before", "after", "both"])
+def test_column_number_rows_are_skipped_without_losing_source_coordinates(number_position):
+    from core_description.docx import ExtractedTable
+    from core_description.parser import _column_map, _parse_rows
+
+    header = ["От, м", "До, м", "Мощность, м", "Геологический индекс", "Описание керна"]
+    numbers = ["1", "2", "3", "4", "5"]
+    rows = ([numbers] if number_position in {"before", "both"} else []) + [header]
+    if number_position in {"after", "both"}:
+        rows.append(numbers)
+    data_row = len(rows)
+    rows.extend([["100", "102", "1,5", "J₂", "Песчаник"], numbers,
+                 ["102", "103", "", "K₁", "Глина"]])
+    mapping, start, score = _column_map(rows)
+    result = _parse_rows(ExtractedTable(rows), 0, mapping, start)
+
+    assert score == 4
+    assert [item.source_row for item in result] == [data_row, data_row + 2]
+    assert [item.thickness for item in result] == [1.5, 1.0]
+    assert [item.geological_index_raw for item in result] == ["J₂", "K₁"]
+    assert not any(item.errors for item in result)
+
+
+def test_thickness_is_extracted_from_merged_headers(generated):
+    document = parse_core_document(generated / "merged_header.docx")
+    assert [item.thickness for item in document.intervals] == [1.2, 1.8]
+
+
 def test_cli_emits_json_and_is_independent_of_gui_or_database(generated):
     path = generated / "single_range_column.docx"
     process = subprocess.run(

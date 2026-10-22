@@ -218,6 +218,10 @@ def save_core_import(
             raw = edit.get('raw_description', parsed.raw_description)
             oil = edit.get('oil_saturation', parsed.oil_saturation)
             confidence = edit.get('confidence', parsed.confidence)
+            thickness = edit.get('thickness', parsed.thickness)
+            geological_index = edit.get('geological_index_raw', parsed.geological_index_raw)
+            if thickness is not None and (not math.isfinite(float(thickness)) or float(thickness) < 0):
+                raise CoreDescriptionSaveError(f'Invalid thickness for interval {_key(parsed)}')
             if (top is None or bottom is None or not math.isfinite(float(top))
                     or not math.isfinite(float(bottom)) or float(top) >= float(bottom)):
                 raise CoreDescriptionSaveError(f'Invalid depths for interval {_key(parsed)}')
@@ -226,6 +230,8 @@ def save_core_import(
             row = CoreDescriptionInterval(
                 document_id=document.id, well_id=well_id, top_depth=float(top), bottom_depth=float(bottom),
                 raw_description=str(raw), normalized_description=' '.join(str(raw).casefold().split()),
+                thickness=float(thickness) if thickness is not None else None,
+                geological_index_raw=geological_index,
                 oil_saturation=str(oil), confidence=float(confidence),
                 needs_review=bool(edit.get('needs_review', parsed.errors or parsed.confidence < 0.8)),
                 source_table_index=parsed.source_table, source_row_index=parsed.source_row,

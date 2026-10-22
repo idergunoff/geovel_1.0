@@ -100,11 +100,14 @@ def _column_map(rows: list[list[str]]) -> tuple[dict[str, int], int, int]:
         "range": {"интервал", "глубина", "интервал, м"},
         "description": {"описание", "описание керна", "описание породы", "литологическое описание"},
         "geological_index": {"геологический индекс", "индекс"},
+        "thickness": {"мощность", "мощность слоя", "мощность пласта"},
         "manifestation": {"проявление", "нефтепроявление"},
     }
     best: tuple[dict[str, int], int, int] = ({}, 0, 0)
     combined = [""] * max((len(row) for row in rows[:4]), default=0)
     for row_index, row in enumerate(rows[:4]):
+        if _is_column_numbers(row):
+            continue
         for index in range(len(combined)):
             value = _normalized_header(row[index]) if index < len(row) else ""
             if value:
@@ -125,10 +128,16 @@ def _value(row: list[str], index: Optional[int]) -> str:
     return row[index].strip() if index is not None and index < len(row) else ""
 
 
+def _is_column_numbers(row: list[str]) -> bool:
+    """Recognize a service row, including numbers around merged columns."""
+    cells = [cell.strip() for cell in row if cell.strip()]
+    return len(cells) >= 2 and cells == [str(index) for index in range(1, len(cells) + 1)]
+
+
 def _parse_rows(table: ExtractedTable, table_index: int, mapping: dict[str, int], start: int) -> list[ParsedCoreInterval]:
     intervals: list[ParsedCoreInterval] = []
     for row_index, row in enumerate(table.rows[start:], start=start):
-        if not any(cell.strip() for cell in row):
+        if not any(cell.strip() for cell in row) or _is_column_numbers(row):
             continue
         top: Optional[float]
         bottom: Optional[float]
@@ -141,6 +150,12 @@ def _parse_rows(table: ExtractedTable, table_index: int, mapping: dict[str, int]
         description = _value(row, mapping.get("description"))
         errors: list[str] = []
         warnings: list[str] = []
+        thickness_raw = _value(row, mapping.get("thickness"))
+        thickness = _number(thickness_raw) if thickness_raw else (
+            round(bottom - top, 10) if top is not None and bottom is not None and bottom > top else None)
+        if thickness_raw and (thickness is None or thickness < 0):
+            warnings.append("invalid_thickness")
+            thickness = None
         if top is None and bottom is None:
             errors.append("missing_depths")
         elif top is None or bottom is None:
@@ -162,6 +177,7 @@ def _parse_rows(table: ExtractedTable, table_index: int, mapping: dict[str, int]
             source_table=table_index,
             source_row=row_index,
             geological_index_raw=_value(row, mapping.get("geological_index")) or None,
+            thickness=thickness,
             manifestation_raw=_value(row, mapping.get("manifestation")) or None,
             warnings=warnings,
             errors=errors,

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import csv
 import json
+from html import escape
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from core_description.database import match_well, save_core_import
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
@@ -21,6 +22,68 @@ from models_db.model import Well
 
 
 SATURATIONS = tuple(SATURATION_LABELS)
+
+
+class DescriptionDelegate(QtWidgets.QStyledItemDelegate):
+    """Render exact classifier spans while keeping ordinary table selection."""
+
+    HTML_ROLE = QtCore.Qt.UserRole + 1
+    ROCK_COLOR = "#d5edff"
+    OIL_COLOR = "#ffe0a3"
+
+    @classmethod
+    def highlighted_text(cls, interval: ParsedCoreInterval) -> str:
+        text = interval.raw_description
+        spans = []
+        for match in interval.semantic_matches:
+            color = (cls.ROCK_COLOR if match.category == "rock" else cls.OIL_COLOR
+                     if match.category in {"oil_indicator", "oil_saturation", "negation", "uncertainty"}
+                     else None)
+            if color and 0 <= match.start < match.end <= len(text):
+                spans.append((match.start, match.end, color))
+        boundaries = sorted({0, len(text)} | {point for start, end, _ in spans for point in (start, end)})
+        pieces = []
+        for start, end in zip(boundaries, boundaries[1:]):
+            part = escape(text[start:end])
+            color = next((color for left, right, color in spans if left <= start and end <= right), None)
+            pieces.append(f'<span style="background-color:{color};color:#17212b">{part}</span>' if color else part)
+        return '<div style="white-space:pre-wrap">' + "".join(pieces) + '</div>'
+
+    def _document(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> QtGui.QTextDocument:
+        document = QtGui.QTextDocument()
+        document.setDefaultFont(option.font)
+        document.setDocumentMargin(4)
+        text_option = document.defaultTextOption()
+        text_option.setWrapMode(QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
+        document.setDefaultTextOption(text_option)
+        document.setHtml(index.data(self.HTML_ROLE) or escape(index.data() or ""))
+        document.setTextWidth(max(20, option.rect.width()))
+        return document
+
+    def paint(self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> None:
+        option = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        document = self._document(option, index)
+        option.text = ""
+        style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget)
+        context = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        context.palette = option.palette
+        if option.state & QtWidgets.QStyle.State_Selected:
+            context.palette.setColor(QtGui.QPalette.Text, option.palette.color(QtGui.QPalette.HighlightedText))
+        painter.save()
+        painter.translate(option.rect.topLeft())
+        painter.setClipRect(QtCore.QRectF(0, 0, option.rect.width(), option.rect.height()))
+        document.documentLayout().draw(painter, context)
+        painter.restore()
+
+    def sizeHint(self, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex) -> QtCore.QSize:
+        option = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        if option.widget is not None:
+            option.rect.setWidth(option.widget.columnWidth(index.column()))
+        document = self._document(option, index)
+        return QtCore.QSize(int(document.idealWidth()), int(document.size().height()) + 2)
 
 
 class BatchParseWorker(QtCore.QObject):
@@ -53,6 +116,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     COLUMNS = (
         "Сохранить", "Верх", "Низ", "Основная порода", "Дополнительные породы",
         "Нефтенасыщенность", "Уверенность", "Исходное описание", "Состояние",
+        "Мощность, м", "Геологический индекс",
     )
 
     def __init__(self, session: Any, parent: QtWidgets.QWidget | None = None) -> None:
@@ -66,7 +130,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._thread: QtCore.QThread | None = None
         self._worker: BatchParseWorker | None = None
         self.setWindowTitle("Импорт описания керна")
-        self.resize(1250, 720)
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowMaximizeButtonHint)
+        self.setSizeGripEnabled(True)
+        screen = self.screen().availableGeometry()
+        self.resize(min(1800, int(screen.width() * .95)), min(1000, int(screen.height() * .9)))
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -141,8 +208,26 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.table.setHorizontalHeaderLabels(self.COLUMNS)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setAlternatingRowColors(True)
-        self.table.horizontalHeader().setSectionResizeMode(7, QtWidgets.QHeaderView.Stretch)
+        self.table.setWordWrap(True)
+        self.table.setTextElideMode(QtCore.Qt.ElideNone)
+        self.table.setItemDelegateForColumn(7, DescriptionDelegate(self.table))
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        header.setStretchLastSection(False)
+        header.moveSection(header.visualIndex(9), 3)
+        header.moveSection(header.visualIndex(10), 4)
+        self.table.setColumnWidth(7, 560)
+        self.table.setColumnWidth(4, 230)
+        self.table.setColumnWidth(10, 180)
+        self._resize_timer = QtCore.QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self.table.resizeRowsToContents)
+        header.sectionResized.connect(lambda *_: self._resize_timer.start(50))
         layout.addWidget(self.table, 1)
+        legend = QtWidgets.QLabel(
+            f'<span style="background-color:{DescriptionDelegate.ROCK_COLOR};color:#17212b"> Породы </span>'
+            f' &nbsp; <span style="background-color:{DescriptionDelegate.OIL_COLOR};color:#17212b"> Нефтенасыщенность </span>')
+        layout.addWidget(legend)
         self.summary = QtWidgets.QLabel("Выбрано интервалов: 0")
         layout.addWidget(self.summary)
         buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Close)
@@ -265,6 +350,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         for interval in document.intervals:
             self._append_interval(interval)
         self.table.blockSignals(False)
+        for column in (0, 1, 2, 3, 5, 6, 8, 9):
+            self.table.resizeColumnToContents(column)
+            self.table.setColumnWidth(column, min(280, self.table.columnWidth(column)))
+        self.table.resizeRowsToContents()
         self.apply_filters(); self._update_summary()
 
     def _load_wells(self) -> None:
@@ -305,7 +394,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         secondary = ", ".join(f"{display_term(r.canonical_value, ROCK_LABELS)} ({display_term(r.relation, RELATION_LABELS)})" for r in interval.rocks if r.relation != "primary")
         state = "ошибка" if interval.errors else "требует проверки" if interval.warnings or interval.confidence < .8 else "готово"
         values = ("", interval.top_depth, interval.bottom_depth, primary, secondary,
-                  display_term(interval.oil_saturation, SATURATION_LABELS), interval.confidence, interval.raw_description, state)
+                  display_term(interval.oil_saturation, SATURATION_LABELS), interval.confidence, interval.raw_description, state,
+                  interval.thickness, interval.geological_index_raw)
         check = QtWidgets.QTableWidgetItem(); check.setData(QtCore.Qt.UserRole, key)
         check.setFlags(check.flags() | QtCore.Qt.ItemIsUserCheckable)
         check.setCheckState(QtCore.Qt.Checked if interval.selected_by_default and not interval.errors and interval.confidence >= .8 else QtCore.Qt.Unchecked)
@@ -313,14 +403,17 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         for column, value in enumerate(values[1:], 1):
             item = QtWidgets.QTableWidgetItem("" if value is None else str(value)); self.table.setItem(row, column, item)
             if column in (7, 8): item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.table.item(row, 7).setData(DescriptionDelegate.HTML_ROLE, DescriptionDelegate.highlighted_text(interval))
         details = "\n".join(f"{m.rule_id}: «{m.matched_text}» [{m.start}:{m.end}]" for m in interval.semantic_matches)
         for column in range(len(self.COLUMNS)): self.table.item(row, column).setToolTip(details)
         self._automatic[key] = {"top_depth": interval.top_depth, "bottom_depth": interval.bottom_depth,
                                 "primary": primary, "secondary": secondary,
-                                "oil_saturation": display_term(interval.oil_saturation, SATURATION_LABELS), "confidence": interval.confidence}
+                                "oil_saturation": display_term(interval.oil_saturation, SATURATION_LABELS), "confidence": interval.confidence,
+                                "thickness": interval.thickness, "geological_index_raw": interval.geological_index_raw}
 
     def _table_changed(self, _item: QtWidgets.QTableWidgetItem) -> None:
         self._update_summary(); self.apply_filters()
+        self._resize_timer.start(50)
 
     def _state(self, row: int) -> str:
         return self.table.item(row, 8).text()
@@ -356,7 +449,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _restore_selected(self) -> None:
         for row in {index.row() for index in self.table.selectedIndexes()}:
             auto = self._automatic[self.table.item(row, 0).data(QtCore.Qt.UserRole)]
-            for column, name in ((1, "top_depth"), (2, "bottom_depth"), (3, "primary"), (4, "secondary"), (5, "oil_saturation"), (6, "confidence")):
+            for column, name in ((1, "top_depth"), (2, "bottom_depth"), (3, "primary"), (4, "secondary"), (5, "oil_saturation"), (6, "confidence"), (9, "thickness"), (10, "geological_index_raw")):
                 self.table.item(row, column).setText(str(auto[name] if auto[name] is not None else ""))
 
     def _next_problem(self) -> None:
@@ -378,6 +471,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             "bottom_depth": float(self.table.item(row, 2).text().replace(",", ".")),
             "oil_saturation": canonical_term(self.table.item(row, 5).text(), SATURATION_LABELS),
             "confidence": float(self.table.item(row, 6).text().replace(",", ".")),
+            "thickness": float(self.table.item(row, 9).text().replace(",", ".")) if self.table.item(row, 9).text().strip() else None,
+            "geological_index_raw": self.table.item(row, 10).text().strip() or None,
         }
         primary = self.table.item(row, 3).text().strip()
         secondary = self.table.item(row, 4).text().strip()
