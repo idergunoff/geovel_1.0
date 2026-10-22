@@ -15,7 +15,7 @@ from .models import ParsedCoreDocument
 DATE_TOKEN = re.compile(r"(?<!\d)(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-](?:\d{4}|\d{2})|\d{1,2}[./]\d{4}|\d{4}-\d{1,2})(?!\d)")
 NUMBER_TOKEN = re.compile(r"[+-]?\d+(?:[.,]\d+)?")
 ELEVATION_TOLERANCE = 2.0
-MIN_IDENTITY_MATCHES = 3
+MIN_IDENTITY_MATCHES = 2
 
 
 def label_key(value: str) -> str:

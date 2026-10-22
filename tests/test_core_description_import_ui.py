@@ -52,7 +52,7 @@ def _document():
         ], dictionary_version="1.0")
 
 
-def test_preview_needs_three_matches_and_selects_only_confident_intervals(app, session):
+def test_preview_needs_two_matches_and_selects_only_confident_intervals(app, session):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
 
@@ -223,7 +223,7 @@ def test_missing_database_details_never_display_a_match(app, session):
     assert dialog.comparison_table.item(1, 3).text() == "Нет данных для сравнения"
 
 
-def test_three_relaxed_matches_are_selected_and_saved_in_batch(app, session, monkeypatch):
+def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monkeypatch):
     wanted = session.query(Well).filter_by(name="12").one()
     wanted.alt = 134.432
     session.add_all([
@@ -233,12 +233,11 @@ def test_three_relaxed_matches_are_selected_and_saved_in_batch(app, session, mon
     session.commit()
     source = _document()
     source.area_name_raw = source.area_name = "Мелничное поднятие"
-    source.drilling_start = "2019-08-28"
     source.wellhead_elevation = 132.432
     dialog = CoreDescriptionImportDialog(session)
     dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, "ready", source)]))
     assert dialog.well_combo.currentData() == wanted.id
-    assert "3 из 4" in dialog.match_label.text()
+    assert "2 из 4" in dialog.match_label.text()
     assert "сходство" in dialog.comparison_table.item(0, 3).text()
     assert dialog.comparison_table.item(3, 3).text() == "Совпадает"
     captured = []

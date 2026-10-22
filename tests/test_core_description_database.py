@@ -177,7 +177,7 @@ def test_altitude_alone_does_not_select_a_well(db_session):
 
 
 @pytest.mark.parametrize('count', [0, 1, 2, 3, 4])
-def test_automatic_selection_requires_three_distinct_categories(db_session, count):
+def test_automatic_selection_requires_two_distinct_categories(db_session, count):
     well = Well(name='12', alt=134 if count >= 4 else None)
     db_session.add(well)
     db_session.flush()
@@ -192,7 +192,7 @@ def test_automatic_selection_requires_three_distinct_categories(db_session, coun
     source.drilling_end = '2019-09-02'
     source.wellhead_elevation = 132.432
     result = match_well(db_session, '12', source.area_name, document=source)
-    if count >= 3:
+    if count >= 2:
         assert result.selected.well_id == well.id
         assert result.selected.method == 'exact_name_identity'
         assert sum(item.status == 'match' for item in result.selected.comparisons) == count
@@ -200,18 +200,16 @@ def test_automatic_selection_requires_three_distinct_categories(db_session, coun
         assert result.selected is None
 
 
-def test_two_metre_tolerance_can_supply_third_category(db_session):
+def test_two_metre_tolerance_can_supply_second_category(db_session):
     well = Well(name='12', alt=134.432)
     db_session.add(well)
     db_session.flush()
     db_session.add_all([
         WellOptionally(well_id=well.id, option='Участок', value='мельничный уч'),
-        WellOptionally(well_id=well.id, option='Начало бурения', value='28.08.2019'),
     ])
     db_session.commit()
     source = _document()
     source.area_name = 'Мельничное поднятие'
-    source.drilling_start = '2019-08-28'
     source.wellhead_elevation = 132.432
     result = match_well(db_session, '12', source.area_name, document=source)
     assert result.selected.well_id == well.id
@@ -230,7 +228,7 @@ def test_multiple_qualifying_wells_still_require_manual_selection(db_session):
     db_session.commit()
     source = _document()
     source.area_name = 'Мельничное поднятие'
-    source.drilling_start, source.drilling_end = '2019-08-28', '2019-09-02'
+    source.drilling_start = '2019-08-28'
     result = match_well(db_session, '12', source.area_name, document=source)
     assert result.selected is None
     assert 'multiple_identity_matches' in result.warnings
@@ -313,7 +311,7 @@ def test_identity_evidence_is_retained_when_saving(db_session):
     assert diagnostics['well_identity']['wellhead_elevation_raw'] == '132,432 м'
     assert diagnostics['well_comparison'][3]['status'] == 'match'
     assert diagnostics['well_match_policy'] == {
-        'elevation_tolerance_m': 2.0, 'area_similarity_above': 0.5, 'minimum_categories': 3}
+        'elevation_tolerance_m': 2.0, 'area_similarity_above': 0.5, 'minimum_categories': 2}
 
 
 @pytest.mark.parametrize('area_name', ['Северная', None])
