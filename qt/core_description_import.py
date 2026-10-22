@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from core_description.database import load_well_metadata, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
-from core_description.identity import WellMetadata, compare_identity, identity_kind, normalize_elevation
+from core_description.identity import WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
@@ -207,6 +207,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_combo.setToolTip("★ — подходящий вариант; проверьте номер и площадь перед выбором.")
         well_row.addWidget(self.well_combo, 2)
         self.match_label = QtWidgets.QLabel("Не сопоставлена")
+        self.match_label.setWordWrap(True)
         well_row.addWidget(self.match_label, 1)
         self.well_count_label = QtWidgets.QLabel()
         well_row.addWidget(self.well_count_label)
@@ -452,8 +453,11 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._recommended_ids = {candidate.well_id for candidate in result.candidates}
         if result.selected is not None:
             self._recommended_ids.add(result.selected.well_id)
+        candidate_ranks = {candidate.well_id: rank for rank, candidate in enumerate(result.candidates)}
+        if result.selected is not None:
+            candidate_ranks[result.selected.well_id] = 0
         self._wells.sort(key=lambda item: (
-            item[0] not in self._recommended_ids,
+            candidate_ranks.get(item[0], len(candidate_ranks)),
             not any(area_names_match(self.document.area_name, area) for area in item[2]),
             item[1].casefold(), item[0]))
         stored = self._well_selections.get(self.document.source_path)
@@ -465,7 +469,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         elif result.selected and self.well_combo.currentData() == result.selected.well_id:
             self.match_method = result.selected.method
             self.match_confidence = result.selected.confidence
-            self.match_label.setText("Совпадают номер и данные бурения" if self.match_method == "exact_name_identity"
+            count = identity_match_count(result.selected.comparisons)
+            self.match_label.setText(f"Совпадают номер и {count} из 4 признаков" if self.match_method == "exact_name_identity"
                                      else "Точное совпадение" if self.match_confidence == 1.0
                                      else "Совпадает номер; проверьте площадь")
         else:
@@ -493,7 +498,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                               if identity_kind(label) is None and (
                                   normalize_area_name(value) == area_filter
                                   if area_filter.startswith("объект") and area_filter[6:].isdigit()
-                                  else area_filter in normalize_area_name(value)))
+                                  else area_filter in normalize_area_name(value) or area_names_match(area_text, value)))
                 if not found:
                     continue
                 displayed_areas = tuple(dict.fromkeys((*areas, *found)))
@@ -534,8 +539,11 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                     "invalid_source": "Проверьте значение в документе", "invalid_database": "Проверьте значение в базе"}
         for row, comparison in enumerate(comparisons):
             status = comparison.status
+            status_text = statuses[status]
+            if comparison.field == "area" and status == "match" and comparison.similarity < 1:
+                status_text += f" (сходство {comparison.similarity:.1%})"
             for column, value in enumerate((labels[comparison.field], comparison.source or "—",
-                                            comparison.database or "—", statuses[status])):
+                                            comparison.database or "—", status_text)):
                 cell = QtWidgets.QTableWidgetItem(value)
                 cell.setToolTip(value)
                 if status == "match":
