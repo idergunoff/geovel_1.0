@@ -137,6 +137,92 @@ def test_single_well_area_variant_still_requires_manual_choice(db_session):
     assert [candidate.well_id for candidate in result.candidates] == [well.id]
 
 
+@pytest.mark.parametrize('category', ['Залежь', 'Месторождение', 'Участок', 'Произвольная категория'])
+def test_area_can_match_any_data_of_well_category(db_session, category):
+    first, second = Well(name='12'), Well(name='12')
+    db_session.add_all([first, second])
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=second.id, option=category, value='Северная'))
+    db_session.commit()
+    result = match_well(db_session, '12', 'Северная')
+    assert result.selected.well_id == second.id
+
+
+@pytest.mark.parametrize('field, value, category, stored', [
+    ('drilling_start', '2019-08-28', 'Дата начала бурения', '28.08.19'),
+    ('drilling_end', '2019-09-02', 'Скважина окончена', '2019-09-02'),
+    ('wellhead_elevation', 132.432, 'Альтитуда устья', '132,43 м'),
+])
+def test_one_identity_match_resolves_same_number(db_session, field, value, category, stored):
+    first, second = Well(name='12'), Well(name='12')
+    db_session.add_all([first, second])
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=second.id, option=category, value=stored))
+    db_session.commit()
+    source = _document()
+    setattr(source, field, value)
+    result = match_well(db_session, '12', source.area_name, document=source)
+    assert result.selected.well_id == second.id
+    assert result.selected.method == 'exact_name_identity'
+    assert any(item.field == field and item.status == 'match' for item in result.selected.comparisons)
+
+
+def test_main_well_altitude_can_resolve_number(db_session):
+    first, second = Well(name='12', alt=133), Well(name='12', alt=132.43)
+    db_session.add_all([first, second])
+    db_session.commit()
+    source = _document()
+    source.wellhead_elevation = 132.432
+    result = match_well(db_session, '12', document=source)
+    assert result.selected.well_id == second.id
+
+
+@pytest.mark.parametrize('problem', ['multiple_matches', 'partial_date', 'conflicting_date', 'similar_number'])
+def test_ambiguous_or_conflicting_evidence_needs_manual_selection(db_session, problem):
+    name = '120' if problem == 'similar_number' else '12'
+    first, second = Well(name=name), Well(name=name)
+    db_session.add_all([first, second])
+    db_session.flush()
+    stored = '08.2019' if problem == 'partial_date' else '28.08.2019'
+    db_session.add(WellOptionally(well_id=first.id, option='Начало бурения', value=stored))
+    if problem == 'multiple_matches':
+        db_session.add(WellOptionally(well_id=second.id, option='Начало бурения', value=stored))
+    if problem == 'conflicting_date':
+        db_session.add(WellOptionally(well_id=first.id, option='Окончание бурения', value='05.09.2019'))
+    db_session.commit()
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    if problem == 'conflicting_date':
+        source.drilling_end = '2019-09-02'
+    result = match_well(db_session, '12', document=source)
+    assert result.selected is None
+    assert result.candidates
+
+
+def test_conflicting_metadata_blocks_an_otherwise_exact_label_match(db_session):
+    well = Well(name='12', alt=130)
+    db_session.add(well)
+    db_session.commit()
+    source = _document()
+    source.wellhead_elevation = 132.432
+    result = match_well(db_session, '12', document=source)
+    assert result.selected is None
+    assert 'identity_conflict' in result.warnings
+
+
+def test_identity_evidence_is_retained_when_saving(db_session):
+    well = Well(name='12', alt=132.43)
+    db_session.add(well)
+    db_session.commit()
+    source = _document()
+    source.wellhead_elevation = 132.432
+    source.wellhead_elevation_raw = '132,432 м'
+    save_core_import(db_session, source, well_id=well.id, selected_interval_ids={'0:3'})
+    diagnostics = json.loads(db_session.query(CoreDescriptionDocument).one().diagnostics)
+    assert diagnostics['well_identity']['wellhead_elevation_raw'] == '132,432 м'
+    assert diagnostics['well_comparison'][3]['status'] == 'match'
+
+
 @pytest.mark.parametrize('area_name', ['Северная', None])
 def test_match_well_with_many_duplicate_names_respects_sqlite_limit(db_session, area_name):
     wells = [Well(name='12') for _ in range(1205)]

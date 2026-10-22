@@ -67,6 +67,33 @@ def test_source_coordinates_and_optional_columns(generated):
     assert result.intervals[1].manifestation_raw is None
 
 
+@pytest.mark.parametrize("metadata_table", [False, True])
+def test_well_identity_is_extracted_before_core_table(generated, tmp_path, metadata_table):
+    entries = [('Скважина начата', '28.08.19'), ('Скважина окончена', '02.09.2019'),
+               ('Альтитуда устья', '132,432 м'), ('Альтитуда ротора', '133,432 м')]
+    def paragraph(text):
+        return f'<w:p><w:r><w:t>{escape(text)}</w:t></w:r></w:p>'
+    if metadata_table:
+        content = '<w:tbl>' + ''.join('<w:tr><w:tc>' + paragraph(label) + '</w:tc><w:tc>'
+                                    + paragraph(value) + '</w:tc></w:tr>' for label, value in entries) + '</w:tbl>'
+    else:
+        content = ''.join(paragraph(f'{label}: {value}') for label, value in entries)
+    source = tmp_path / 'identity.docx'
+    with ZipFile(generated / 'standard_separate_columns.docx') as original, ZipFile(source, 'w') as output:
+        for item in original.infolist():
+            data = original.read(item)
+            if item.filename == 'word/document.xml':
+                data = data.decode().replace('<w:tbl>', content + '<w:tbl>', 1).encode()
+            output.writestr(item, data)
+    document = parse_core_document(source)
+    assert document.well_name == 'TEST-101'
+    assert document.drilling_start_raw == '28.08.19'
+    assert document.drilling_start == '2019-08-28'
+    assert document.drilling_end == '2019-09-02'
+    assert document.wellhead_elevation == 132.432
+    assert 'well_name_ambiguous' not in document.warnings
+
+
 @pytest.mark.parametrize("number_position", ["before", "after", "both"])
 def test_column_number_rows_are_skipped_without_losing_source_coordinates(number_position):
     from core_description.docx import ExtractedTable

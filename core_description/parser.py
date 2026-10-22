@@ -12,6 +12,7 @@ from .docx import DocxExtractionError, ExtractedTable, extract_docx
 from .models import ParsedCoreDocument, ParsedCoreInterval
 from .semantics import enrich_intervals
 from .areas import OBJECT_RE
+from .identity import extract_identity, identity_kind
 
 NUMBER = r"[+-]?\d+(?:[\s\u00a0]*[.,]\d+)?"
 RANGE_RE = re.compile(rf"^\s*({NUMBER})\s*(?:-|–|—)\s*({NUMBER})\s*(?:м\b)?", re.I)
@@ -59,7 +60,7 @@ def _find_metadata(
     areas: list[str] = []
     authors: list[tuple[str, str]] = []
     for text in texts:
-        if match := WELL_RE.search(text):
+        if identity_kind(text) is None and (match := WELL_RE.search(text)):
             wells.append(_space(match.group(1)))
         if match := AREA_RE.search(text):
             areas.append(_space(match.group(1)))
@@ -252,6 +253,16 @@ def parse_core_document(path: str | Path) -> ParsedCoreDocument:
     if len(best) != 1:
         raise CoreDescriptionParseError("Several equally suitable core-description tables found")
     index, table, mapping, start, _ = best[0]
+    identity_texts, identity_rows = [], []
+    for block in extracted.blocks:
+        if block is table:
+            break
+        if isinstance(block, str):
+            identity_texts.append(block)
+        else:
+            identity_rows.extend(block.rows)
+    identity, identity_warnings = extract_identity(identity_texts, identity_rows)
+    warnings.extend(identity_warnings)
     intervals = _parse_rows(table, index, mapping, start)
     if not intervals:
         raise CoreDescriptionParseError("Core-description table contains no data rows")
@@ -260,5 +271,5 @@ def parse_core_document(path: str | Path) -> ParsedCoreDocument:
         source_path=str(source), source_format=source_format, file_hash=file_hash,
         well_name_raw=well, well_name=well, area_name_raw=area, area_name=area,
         described_by_raw=author_raw, described_by=described_by,
-        intervals=intervals, warnings=warnings, dictionary_version=dictionary_version,
+        intervals=intervals, warnings=warnings, dictionary_version=dictionary_version, **identity,
     )

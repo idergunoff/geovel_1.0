@@ -65,8 +65,14 @@ class ParsedCoreDocument:
     described_by: Optional[str]
     intervals: list[ParsedCoreInterval] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    parser_version: str = "3.2"
+    parser_version: str = "3.3"
     dictionary_version: Optional[str] = None
+    drilling_start_raw: Optional[str] = None
+    drilling_start: Optional[str] = None
+    drilling_end_raw: Optional[str] = None
+    drilling_end: Optional[str] = None
+    wellhead_elevation_raw: Optional[str] = None
+    wellhead_elevation: Optional[float] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation of this result."""
