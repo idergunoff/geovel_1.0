@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 sqlalchemy = pytest.importorskip('sqlalchemy')
@@ -72,6 +74,72 @@ def test_match_well_uses_area_to_resolve_duplicate_names(db_session):
     assert result.status == 'matched'
     assert result.selected.well_id == second.id
     assert result.selected.method == 'exact_name_area'
+
+
+@pytest.mark.parametrize('area_name', ['Северная', None])
+def test_match_well_with_many_duplicate_names_respects_sqlite_limit(db_session, area_name):
+    wells = [Well(name='12') for _ in range(1205)]
+    db_session.add_all(wells)
+    db_session.flush()
+    well_ids = [well.id for well in wells]
+    db_session.add_all([
+        WellOptionally(well_id=well_id, option='Площадь',
+                       value='Северная' if index == len(well_ids) - 1 else 'Южная')
+        for index, well_id in enumerate(well_ids)
+    ])
+    db_session.commit()
+    connection = db_session.connection().connection.driver_connection
+    connection.setlimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER, 999)
+
+    result = match_well(db_session, '12', area_name)
+
+    if area_name:
+        assert result.status == 'matched'
+        assert result.selected.well_id == well_ids[-1]
+        assert result.selected.area_name == 'Северная'
+        assert result.selected.method == 'exact_name_area'
+    else:
+        assert result.status == 'ambiguous'
+        assert [item.well_id for item in result.candidates] == well_ids
+        assert result.candidates[-1].area_name == 'Северная'
+
+
+@pytest.mark.parametrize('well_name, expected_area_ids', [('1234', [1206]), ('120', list(range(1, 11)))])
+def test_match_well_loads_areas_only_for_returned_candidates(db_session, well_name, expected_area_ids):
+    db_session.add_all([Well(id=index, name='12') for index in range(1, 1206)])
+    db_session.add(Well(id=1206, name='1234'))
+    db_session.flush()
+    db_session.add_all([
+        WellOptionally(well_id=index, option='пл.', value=f'Площадь {index}')
+        for index in range(1, 1207)
+    ])
+    db_session.commit()
+    connection = db_session.connection().connection.driver_connection
+    connection.setlimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER, 999)
+    queried_area_ids = []
+
+    def record_area_query(_connection, _cursor, statement, parameters, _context, _executemany):
+        if 'FROM well_optionally' in statement:
+            queried_area_ids.extend(parameters)
+
+    engine = db_session.get_bind()
+    event.listen(engine, 'before_cursor_execute', record_area_query)
+    try:
+        result = match_well(db_session, well_name)
+    finally:
+        event.remove(engine, 'before_cursor_execute', record_area_query)
+
+    assert queried_area_ids == expected_area_ids
+    if result.selected:
+        assert result.status == 'matched'
+        assert result.selected.well_id == 1206
+        assert result.selected.area_name == 'Площадь 1206'
+    else:
+        assert result.status == 'manual_required'
+        assert [item.well_id for item in result.candidates] == expected_area_ids
+        assert [item.area_name for item in result.candidates] == [
+            f'Площадь {index}' for index in expected_area_ids
+        ]
 
 
 def test_selective_save_duplicate_rejection_and_replace(db_session):

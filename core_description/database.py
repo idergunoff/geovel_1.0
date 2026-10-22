@@ -67,15 +67,17 @@ def normalize_lookup_value(value: str | None) -> str:
 
 
 def _area_rows(session: Any, well_ids: Iterable[int]) -> dict[int, list[str]]:
-    ids = tuple(well_ids)
-    if not ids:
-        return {}
-    rows = session.query(WellOptionally).filter(WellOptionally.well_id.in_(ids)).all()
+    ids = tuple(dict.fromkeys(well_ids))
     result: dict[int, list[str]] = {}
-    for row in rows:
-        option = normalize_lookup_value(row.option)
-        if option in {'площадь', 'пл', 'area'} and row.value:
-            result.setdefault(row.well_id, []).append(row.value)
+    # Keep each query below SQLite's legacy limit of 999 SQL variables.
+    batch_size = 500
+    for start in range(0, len(ids), batch_size):
+        rows = session.query(WellOptionally).filter(
+            WellOptionally.well_id.in_(ids[start:start + batch_size])).all()
+        for row in rows:
+            option = normalize_lookup_value(row.option)
+            if option in {'площадь', 'пл', 'area'} and row.value:
+                result.setdefault(row.well_id, []).append(row.value)
     return result
 
 
@@ -86,8 +88,8 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
     if not wanted:
         return WellMatchResult('manual_required', warnings=('well_name_missing',))
     wells = session.query(Well).order_by(Well.id).all()
-    areas = _area_rows(session, (well.id for well in wells))
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted]
+    areas = _area_rows(session, (well.id for well in exact))
     wanted_area = normalize_lookup_value(area_name)
     if len(exact) > 1 and wanted_area:
         area_exact = [well for well in exact if any(
@@ -109,15 +111,18 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
             areas.get(well.id, [None])[0]) for well in exact)
         return WellMatchResult('ambiguous', candidates=candidates, warnings=('multiple_exact_wells',))
 
-    candidates = []
+    suggestions = []
     for well in wells:
         score = SequenceMatcher(None, wanted, normalize_lookup_value(well.name)).ratio()
         if score >= 0.6:
-            candidates.append(WellMatchCandidate(
-                well.id, well.name, round(score, 4), 'fuzzy_suggestion',
-                areas.get(well.id, [None])[0]))
-    candidates.sort(key=lambda item: (-item.confidence, item.well_name, item.well_id))
-    return WellMatchResult('manual_required', candidates=tuple(candidates[:10]),
+            suggestions.append((well, round(score, 4)))
+    suggestions.sort(key=lambda item: (-item[1], item[0].name, item[0].id))
+    suggestions = suggestions[:10]
+    areas = _area_rows(session, (well.id for well, _score in suggestions))
+    candidates = tuple(WellMatchCandidate(
+        well.id, well.name, score, 'fuzzy_suggestion', areas.get(well.id, [None])[0])
+        for well, score in suggestions)
+    return WellMatchResult('manual_required', candidates=candidates,
                            warnings=('no_exact_well',))
 
 
