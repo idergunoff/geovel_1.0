@@ -16,6 +16,7 @@ from core_description.database import (
 )
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.semantics import enrich_intervals
+from core_description.areas import area_names_match
 from models_db.model import (
     Base, CoreDescriptionDocument, CoreDescriptionInterval, CoreDescriptionRock,
     Well, WellOptionally,
@@ -76,6 +77,64 @@ def test_match_well_uses_area_to_resolve_duplicate_names(db_session):
     assert result.status == 'matched'
     assert result.selected.well_id == second.id
     assert result.selected.method == 'exact_name_area'
+
+
+@pytest.mark.parametrize('file_area, database_area', [
+    ('Сарабикуловское поднятие', 'Сарабикуловский'),
+    ('Ягодное поднятие', 'Ягодный'),
+    ('Мельничное поднятие', 'Мельничный'),
+    ('Площадь: Сарабикуловское', 'Сарабикуловская'),
+    ('Нефтеперспективный объект №58', 'Объект 58'),
+    ('Газоперспективный объект 58', '58'),
+    ('Нефтеперспективный объект №8094', 'Перспективный объект № 8094'),
+])
+def test_area_variants_offer_correct_well_for_confirmation(db_session, file_area, database_area):
+    other = Well(name='12')
+    wanted = Well(name='12')
+    db_session.add_all([other, wanted])
+    db_session.flush()
+    db_session.add_all([
+        WellOptionally(well_id=other.id, option='Площадь', value='Южная'),
+        WellOptionally(well_id=wanted.id, option='Площадь', value=database_area),
+    ])
+    db_session.commit()
+
+    result = match_well(db_session, '12', file_area)
+    assert result.status == 'manual_required'
+    assert result.selected is None
+    assert [candidate.well_id for candidate in result.candidates] == [wanted.id]
+    assert result.candidates[0].method == 'area_variant_suggestion'
+
+
+@pytest.mark.parametrize('first, second', [
+    ('Объект 58', 'Объект 580'), ('Объект 58', 'Объект 59'),
+    ('Сарабикуловское поднятие', 'Сарабикуловский Западный'),
+    ('Платовский', 'Атовский'), ('', ''),
+])
+def test_area_lookup_preserves_distinct_names_and_numbers(first, second):
+    assert not area_names_match(first, second)
+
+
+def test_area_ranking_is_applied_before_suggestion_limit(db_session):
+    wells = [Well(name='120') for _ in range(12)]
+    db_session.add_all(wells)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=wells[-1].id, option='Площадь', value='Сарабикуловский'))
+    db_session.commit()
+    result = match_well(db_session, '12', 'Сарабикуловское поднятие')
+    assert len(result.candidates) == 10
+    assert result.candidates[0].well_id == wells[-1].id
+
+
+def test_single_well_area_variant_still_requires_manual_choice(db_session):
+    well = Well(name='12')
+    db_session.add(well)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=well.id, option='Площадь', value='Сарабикуловский'))
+    db_session.commit()
+    result = match_well(db_session, '12', 'Сарабикуловское поднятие')
+    assert result.selected is None
+    assert [candidate.well_id for candidate in result.candidates] == [well.id]
 
 
 @pytest.mark.parametrize('area_name', ['Северная', None])

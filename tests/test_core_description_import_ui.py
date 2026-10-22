@@ -10,16 +10,17 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PyQt5")
 pytest.importorskip("sqlalchemy")
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtTest, QtWidgets
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.terminology import SATURATION_LABELS
-from models_db.model import Base, Well
+from models_db.model import Base, Well, WellOptionally
+from core_description.batch import BatchParseItem, BatchParseResult
 import models_db.model_cluster  # noqa: E402,F401
 import models_db.model_profile_features  # noqa: E402,F401
-from qt.core_description_import import CoreDescriptionImportDialog
+from qt.core_description_import import CoreDescriptionImportDialog, open_core_description_import
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +62,167 @@ def test_preview_matches_well_and_selects_only_confident_rows(app, session):
     assert dialog.table.item(1, 0).checkState() == QtCore.Qt.Unchecked
     assert "интервалов: 1" in dialog.summary.text()
     assert dialog.save_button.isEnabled()
+
+
+def test_import_window_is_modeless_and_reused(app, session):
+    main = QtWidgets.QMainWindow()
+    editor = QtWidgets.QLineEdit()
+    main.setCentralWidget(editor)
+    main.show()
+    dialog = open_core_description_import(session, main)
+    try:
+        assert dialog.isVisible()
+        assert dialog.windowModality() == QtCore.Qt.NonModal
+        assert app.activeModalWidget() is None
+        assert open_core_description_import(session, main) is dialog
+        QtTest.QTest.mouseClick(editor, QtCore.Qt.LeftButton)
+        QtTest.QTest.keyClicks(editor, "working")
+        assert editor.text() == "working"
+    finally:
+        dialog.close()
+        QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.DeferredDelete)
+        main.close()
+    reopened = open_core_description_import(session)
+    assert reopened is not dialog
+    reopened.close()
+    QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.DeferredDelete)
+
+
+def test_search_filters_by_well_number_not_database_id(app, session):
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+    dialog.well_search.setText("13")
+    assert dialog.well_combo.count() == 2
+    assert dialog.well_combo.itemData(1) == session.query(Well).filter_by(name="13").one().id
+    assert dialog.well_combo.currentData() is None
+    assert not dialog.save_button.isEnabled()
+    dialog.well_search.setText(" 1 ")
+    assert dialog.well_combo.count() == 3
+    dialog.well_search.setText("999")
+    assert dialog.well_combo.count() == 1
+    assert "Нет скважин" in dialog.well_count_label.text()
+    dialog.well_search.clear()
+    assert dialog.well_combo.count() == 3
+
+
+@pytest.mark.parametrize("file_area, db_area, search", [
+    ("Сарабикуловское поднятие", "Сарабикуловский", "сарабикуловское поднятие"),
+    ("Нефтеперспективный объект №58", "Объект 58", "58"),
+])
+def test_area_choices_and_recommended_wells_are_visible(app, session, file_area, db_area, search):
+    other = Well(name="12")
+    session.add(other)
+    session.flush()
+    session.add(WellOptionally(well_id=other.id, option="Площадь", value=db_area))
+    session.commit()
+    document = _document()
+    document.area_name = document.area_name_raw = file_area
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+    assert dialog.area_combo.itemText(1) == db_area
+    assert dialog.well_combo.itemData(1) == other.id
+    assert db_area in dialog.well_combo.itemText(1)
+    assert dialog.well_combo.currentData() is None
+    dialog.area_combo.setEditText(search)
+    assert dialog.well_combo.count() == 2
+    assert dialog.well_combo.itemData(1) == other.id
+    dialog.well_combo.setCurrentIndex(1)
+    assert dialog.save_button.isEnabled()
+    dialog.area_combo.setCurrentIndex(0)
+    assert dialog.well_combo.count() == 4
+    assert dialog.well_combo.currentData() == other.id
+
+
+def test_manual_choice_is_available_without_automatic_matches(app, session):
+    document = _document()
+    document.well_name = "UNRECOGNIZED"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+    assert dialog.well_combo.currentData() is None
+    assert dialog.well_combo.count() == 3
+    dialog.well_combo.setCurrentIndex(2)
+    assert dialog.match_method == "manual"
+    assert dialog.save_button.isEnabled()
+
+
+def test_refresh_loads_wells_added_in_main_window(app, session):
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+    selected_id = dialog.well_combo.currentData()
+    well = Well(name="new well")
+    session.add(well)
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.findData(well.id) >= 0
+    assert dialog.well_combo.currentData() == selected_id
+
+
+def test_refresh_disables_save_when_selected_well_was_deleted(app, session):
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+    selected_id = dialog.well_combo.currentData()
+    session.delete(session.get(Well, selected_id))
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() is None
+    assert not dialog.save_button.isEnabled()
+
+
+def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monkeypatch):
+    first, second = _document(), _document()
+    first.source_path, second.source_path = "first.docx", "second.docx"
+    first.well_name = second.well_name = "UNKNOWN"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(BatchParseResult(items=[
+        BatchParseItem(first.source_path, "ready", first),
+        BatchParseItem(second.source_path, "ready", second),
+    ]))
+    ids = [well.id for well in session.query(Well).order_by(Well.id)]
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(ids[0]))
+    dialog.documents_table.setCurrentCell(1, 1)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(ids[1]))
+    dialog.documents_table.setCurrentCell(0, 1)
+    assert dialog.well_combo.currentData() == ids[0]
+    assert "12" in dialog.documents_table.item(0, 5).text()
+    captured = []
+
+    class Result:
+        intervals_saved = 1
+
+    def save(_session, document, **kwargs):
+        captured.append((document.source_path, kwargs["well_id"], kwargs["match_method"]))
+        return Result()
+
+    monkeypatch.setattr("qt.core_description_import.save_core_import", save)
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *args: None)
+    dialog.save()
+    assert captured == [(first.source_path, ids[0], "manual"), (second.source_path, ids[1], "manual")]
+
+
+def test_closing_waits_for_worker_without_blocking_gui(app, session, monkeypatch):
+    import threading
+
+    release = threading.Event()
+
+    def parse(*_args, **_kwargs):
+        release.wait(timeout=2)
+        return BatchParseResult()
+
+    monkeypatch.setattr("qt.core_description_import.parse_batch", parse)
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.show()
+    dialog.start_batch(["core.docx"])
+    dialog.close()
+    assert dialog._close_pending
+    assert dialog.isVisible()
+    assert dialog._thread is not None
+    loop = QtCore.QEventLoop()
+    dialog.finished.connect(loop.quit)
+    QtCore.QTimer.singleShot(0, release.set)
+    QtCore.QTimer.singleShot(3000, loop.quit)
+    loop.exec_()
+    assert dialog._thread is None
+    assert not dialog.isVisible()
 
 
 def test_filter_does_not_change_hidden_row_selection(app, session):
