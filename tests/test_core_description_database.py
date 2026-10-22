@@ -160,7 +160,7 @@ def test_extended_dictionary_results_and_evidence_survive_save(db_session):
     saved = db_session.query(CoreDescriptionInterval).one()
     assert saved.raw_description == interval.raw_description
     assert saved.oil_saturation == 'weak_to_intense'
-    assert db_session.query(CoreDescriptionDocument).one().dictionary_version == '1.2.0'
+    assert db_session.query(CoreDescriptionDocument).one().dictionary_version == '1.3.0'
     assert {(rock.rock_name, rock.role) for rock in db_session.query(CoreDescriptionRock)} == {
         ('siltstone', 'primary'), ('marl', 'interlayer'),
     }
@@ -216,3 +216,23 @@ def test_failed_save_rolls_back_the_whole_document(db_session):
 
     assert db_session.query(CoreDescriptionDocument).count() == 0
     assert db_session.query(CoreDescriptionInterval).count() == 0
+
+
+@pytest.mark.parametrize('text, expected', [
+    ('Песчаник остаточно нефтенасыщенный', 'residual'),
+    ('Песчаник с запахом нефти', 'odor'),
+    ('Песчаник, пятна нефти', 'patchy'),
+])
+def test_new_saturation_categories_survive_save(db_session, text, expected):
+    well = Well(name='12')
+    db_session.add(well)
+    db_session.commit()
+    parsed = _document()
+    parsed.intervals[0].raw_description = text
+    parsed.dictionary_version = enrich_intervals(parsed.intervals)
+    save_core_import(db_session, parsed, well_id=well.id, selected_interval_ids={'0:3'})
+    saved = db_session.query(CoreDescriptionInterval).one()
+    assert saved.oil_saturation == expected
+    assert saved.raw_description == text
+    assert any(match['canonical_value'] == expected
+               for match in json.loads(saved.recognition_details)['matches'])
