@@ -17,6 +17,7 @@ from models_db.model import (
 )
 
 from .models import ParsedCoreDocument, ParsedCoreInterval
+from .areas import area_names_match
 
 
 class CoreDescriptionSaveError(ValueError):
@@ -66,7 +67,7 @@ def normalize_lookup_value(value: str | None) -> str:
     return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
-def _area_rows(session: Any, well_ids: Iterable[int]) -> dict[int, list[str]]:
+def load_well_areas(session: Any, well_ids: Iterable[int]) -> dict[int, list[str]]:
     ids = tuple(dict.fromkeys(well_ids))
     result: dict[int, list[str]] = {}
     # Keep each query below SQLite's legacy limit of 999 SQL variables.
@@ -89,13 +90,24 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         return WellMatchResult('manual_required', warnings=('well_name_missing',))
     wells = session.query(Well).order_by(Well.id).all()
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted]
-    areas = _area_rows(session, (well.id for well in exact))
+    areas = load_well_areas(session, (well.id for well in exact))
     wanted_area = normalize_lookup_value(area_name)
-    if len(exact) > 1 and wanted_area:
+    if exact and wanted_area:
         area_exact = [well for well in exact if any(
             normalize_lookup_value(value) == wanted_area for value in areas.get(well.id, ())) ]
         if area_exact:
             exact = area_exact
+        else:
+            area_variants = [well for well in exact if any(
+                area_names_match(area_name, value) for value in areas.get(well.id, ()))]
+            if area_variants:
+                # A grammatical/object alias is offered for review, never silently confirmed.
+                candidates = tuple(WellMatchCandidate(
+                    well.id, well.name, 0.95, 'area_variant_suggestion',
+                    next(value for value in areas[well.id] if area_names_match(area_name, value)))
+                    for well in area_variants)
+                return WellMatchResult('manual_required', candidates=candidates,
+                                       warnings=('area_variant_requires_confirmation',))
     if len(exact) == 1:
         well = exact[0]
         values = areas.get(well.id, ())
@@ -116,9 +128,16 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         score = SequenceMatcher(None, wanted, normalize_lookup_value(well.name)).ratio()
         if score >= 0.6:
             suggestions.append((well, round(score, 4)))
-    suggestions.sort(key=lambda item: (-item[1], item[0].name, item[0].id))
-    suggestions = suggestions[:10]
-    areas = _area_rows(session, (well.id for well, _score in suggestions))
+    if wanted_area:
+        areas = load_well_areas(session, (well.id for well, _score in suggestions))
+        suggestions.sort(key=lambda item: (
+            not any(area_names_match(area_name, value) for value in areas.get(item[0].id, ())),
+            -item[1], item[0].name, item[0].id))
+        suggestions = suggestions[:10]
+    else:
+        suggestions.sort(key=lambda item: (-item[1], item[0].name, item[0].id))
+        suggestions = suggestions[:10]
+        areas = load_well_areas(session, (well.id for well, _score in suggestions))
     candidates = tuple(WellMatchCandidate(
         well.id, well.name, score, 'fuzzy_suggestion', areas.get(well.id, [None])[0])
         for well, score in suggestions)

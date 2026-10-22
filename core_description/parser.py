@@ -11,13 +11,16 @@ from .converter import DocConversionError, docx_source
 from .docx import DocxExtractionError, ExtractedTable, extract_docx
 from .models import ParsedCoreDocument, ParsedCoreInterval
 from .semantics import enrich_intervals
+from .areas import OBJECT_RE
 
 NUMBER = r"[+-]?\d+(?:[\s\u00a0]*[.,]\d+)?"
 RANGE_RE = re.compile(rf"^\s*({NUMBER})\s*(?:-|–|—)\s*({NUMBER})\s*(?:м\b)?", re.I)
 WELL_RE = re.compile(
     r"(?:№\s*скв(?:ажины)?\.?|скв(?:ажина|ажины|\.)?)\s*(?:№|:)?\s*([^,;\n]+)", re.I
 )
-AREA_RE = re.compile(r"(?:площадь|пл\.)\s*(?:№|:)?\s*(.+)", re.I)
+AREA_RE = re.compile(r"\b(?:площадь|пл\.)\s*(?:№|:)?\s*(.+)", re.I)
+AREA_HEADER_RE = re.compile(
+    r"^[\w\s\-–—«»\"().№/]+\b(?:поднятие|месторождение|структура)\s*$", re.I)
 AUTHOR_RE = re.compile(r"^\s*описал(?:а)?(?:\s+геолог)?\s*:?[\s\-–—]*(.+?)\s*$", re.I)
 
 
@@ -50,7 +53,7 @@ def _normalized_header(value: str) -> str:
 
 
 def _find_metadata(
-    texts: list[str], table_rows: list[list[str]]
+    texts: list[str], table_rows: list[list[str]], header_texts: list[str] | None = None
 ) -> tuple[tuple[Optional[str], Optional[str], Optional[str], list[str]], Optional[str]]:
     wells: list[str] = []
     areas: list[str] = []
@@ -72,6 +75,19 @@ def _find_metadata(
             elif adjacent and re.fullmatch(r"(?:площадь|пл\.?)", label, re.I):
                 areas.append(adjacent)
     warnings: list[str] = []
+    if not areas:
+        header = [_space(line) for text in (header_texts if header_texts is not None else texts)
+                  for line in text.splitlines() if line.strip()]
+        for line in header:
+            if not WELL_RE.search(line) and (AREA_HEADER_RE.fullmatch(line) or OBJECT_RE.search(line)):
+                areas.append(line)
+        # A bare area name is commonly the third nonempty line, before the table.
+        if not areas and len(header) >= 3:
+            third = header[2]
+            if (re.fullmatch(r"[А-ЯЁA-Z][\w]*(?:[ \-–—][А-ЯЁа-яёA-Za-z]+){0,3}", third)
+                    and not re.search(r"опис|керн|журнал|геолог|скваж|скв\b|глубин|интервал", third, re.I)):
+                areas.append(third)
+                warnings.append("area_name_from_third_line")
     unique_wells = list(dict.fromkeys(filter(None, wells)))
     unique_areas = list(dict.fromkeys(filter(None, areas)))
     unique_authors = list(dict.fromkeys(authors))
@@ -209,9 +225,15 @@ def parse_core_document(path: str | Path) -> ParsedCoreDocument:
     except (DocConversionError, DocxExtractionError) as error:
         raise CoreDescriptionParseError(str(error)) from error
 
-    all_text = [block for block in extracted.blocks if isinstance(block, str) and block.strip()]
+    all_text = [line for block in extracted.blocks if isinstance(block, str)
+                for line in block.splitlines() if line.strip()]
     all_rows = [row for block in extracted.blocks if isinstance(block, ExtractedTable) for row in block.rows]
-    metadata, described_by = _find_metadata(all_text, all_rows)
+    header_texts = []
+    for block in extracted.blocks:
+        if isinstance(block, ExtractedTable):
+            break
+        header_texts.append(block)
+    metadata, described_by = _find_metadata(all_text, all_rows, header_texts)
     well, area, author_raw, warnings = metadata
     candidates: list[tuple[int, ExtractedTable, dict[str, int], int, int]] = []
     table_index = 0

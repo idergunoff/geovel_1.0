@@ -6,6 +6,8 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from xml.sax.saxutils import escape
+from zipfile import ZipFile
 
 import pytest
 
@@ -136,6 +138,44 @@ def test_optional_header_on_lower_line_is_not_lost():
     assert len(intervals) == 1
     assert intervals[0].source_row == 3
     assert intervals[0].geological_index_raw == "P1uf2"
+
+
+@pytest.mark.parametrize("header_area", [
+    "Сарабикуловское поднятие", "Ягодное поднятие", "Сарабикуловская",
+    "Нефтеперспективный объект 58", "Нефтеперспективный объект №58",
+    "Перспективный объект № 8094", "Площадь: Сарабикуловское поднятие",
+])
+@pytest.mark.parametrize("single_paragraph", [False, True])
+def test_area_is_read_from_unlabelled_header(tmp_path, header_area, single_paragraph):
+    lines = ["Геологический журнал", "ТГРУ", header_area, "СКВАЖИНА № 12"]
+    paragraphs = ["\n".join(lines)] if single_paragraph else lines
+    body = "".join(f"<w:p><w:r><w:t>{escape(text)}</w:t></w:r></w:p>" for text in paragraphs)
+    body += ('<w:tbl><w:tr><w:tc><w:p><w:r><w:t>Интервал</w:t></w:r></w:p></w:tc>'
+             '<w:tc><w:p><w:r><w:t>Описание</w:t></w:r></w:p></w:tc></w:tr>'
+             '<w:tr><w:tc><w:p><w:r><w:t>100-101</w:t></w:r></w:p></w:tc>'
+             '<w:tc><w:p><w:r><w:t>Песчаник</w:t></w:r></w:p></w:tc></w:tr></w:tbl>')
+    source = tmp_path / "header.docx"
+    with ZipFile(source, "w") as archive:
+        archive.writestr("word/document.xml", '<w:document xmlns:w="http://schemas.openxmlformats.org/'
+                         f'wordprocessingml/2006/main"><w:body>{body}</w:body></w:document>')
+
+    result = parse_core_document(source)
+    assert result.area_name_raw == header_area.removeprefix("Площадь: ")
+    assert result.well_name == "12"
+
+
+def test_area_inference_ignores_text_after_table_and_conflicting_headers():
+    from core_description.parser import _find_metadata
+
+    header = ["Геологический журнал", "ТГРУ", "Описание керна", "Скважина № 12"]
+    (well, area, _author, _warnings), _ = _find_metadata(
+        header + ["Сарабикуловское поднятие"], [], header)
+    assert well == "12"
+    assert area is None
+    (_well, area, _author, warnings), _ = _find_metadata(
+        ["Ягодное поднятие", "Сарабикуловское поднятие"], [])
+    assert area is None
+    assert "area_name_ambiguous" in warnings
 
 
 def test_cli_emits_json_and_is_independent_of_gui_or_database(generated):

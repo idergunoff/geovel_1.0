@@ -11,7 +11,8 @@ from typing import Any
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from core_description.database import match_well, save_core_import
+from core_description.database import load_well_areas, match_well, save_core_import
+from core_description.areas import area_names_match, normalize_area_name
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
@@ -125,11 +126,16 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.document: ParsedCoreDocument | None = None
         self.match_method = "manual"
         self.match_confidence = 1.0
+        self._well_selections: dict[str, tuple[int | None, str, float]] = {}
+        self._wells: list[tuple[int, str, tuple[str, ...]]] = []
+        self._recommended_ids: set[int] = set()
         self._automatic: dict[str, dict[str, Any]] = {}
         self.batch_items: list[BatchParseItem] = []
         self._thread: QtCore.QThread | None = None
         self._worker: BatchParseWorker | None = None
+        self._close_pending = False
         self.setWindowTitle("Импорт описания керна")
+        self.setWindowModality(QtCore.Qt.NonModal)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowMaximizeButtonHint)
         self.setSizeGripEnabled(True)
         screen = self.screen().availableGeometry()
@@ -171,13 +177,33 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.metadata = QtWidgets.QLabel()
         self.metadata.setWordWrap(True)
         layout.addWidget(self.metadata)
+        lookup_row = QtWidgets.QHBoxLayout()
+        lookup_row.addWidget(QtWidgets.QLabel("Площадь БД:"))
+        self.area_combo = QtWidgets.QComboBox()
+        self.area_combo.setEditable(True)
+        self.area_combo.setInsertPolicy(QtWidgets.QComboBox.NoInsert)
+        self.area_combo.setMinimumWidth(260)
+        self.area_combo.addItem("Все площади")
+        self.area_combo.lineEdit().setClearButtonEnabled(True)
+        self.area_combo.setToolTip("Выберите площадь или введите часть названия. «Все площади» снимает фильтр.")
+        lookup_row.addWidget(self.area_combo, 1)
+        self.well_search = QtWidgets.QLineEdit()
+        self.well_search.setPlaceholderText("Поиск по номеру скважины")
+        self.well_search.setClearButtonEnabled(True)
+        lookup_row.addWidget(self.well_search, 1)
+        self.refresh_wells_button = QtWidgets.QPushButton("Обновить список")
+        lookup_row.addWidget(self.refresh_wells_button)
+        layout.addLayout(lookup_row)
         well_row = QtWidgets.QHBoxLayout()
         well_row.addWidget(QtWidgets.QLabel("Скважина БД:"))
         self.well_combo = QtWidgets.QComboBox()
         self.well_combo.setMinimumWidth(260)
-        well_row.addWidget(self.well_combo)
+        self.well_combo.setToolTip("★ — подходящий вариант; проверьте номер и площадь перед выбором.")
+        well_row.addWidget(self.well_combo, 2)
         self.match_label = QtWidgets.QLabel("Не сопоставлена")
         well_row.addWidget(self.match_label, 1)
+        self.well_count_label = QtWidgets.QLabel()
+        well_row.addWidget(self.well_count_label)
         layout.addLayout(well_row)
 
         filters = QtWidgets.QHBoxLayout()
@@ -243,6 +269,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.export_button.clicked.connect(self.export_report)
         self.documents_table.currentCellChanged.connect(self._document_row_changed)
         self.well_combo.currentIndexChanged.connect(self._well_changed)
+        self.well_search.textChanged.connect(self._filter_wells)
+        self.area_combo.currentTextChanged.connect(self._filter_wells)
+        self.refresh_wells_button.clicked.connect(lambda: self._load_wells(reset_filters=False))
         self.table.itemChanged.connect(self._table_changed)
         for widget in (self.depth_from, self.depth_to, self.saturation_filter, self.state_filter):
             widget.valueChanged.connect(self.apply_filters) if hasattr(widget, "valueChanged") else widget.currentIndexChanged.connect(self.apply_filters)
@@ -270,14 +299,17 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         if self._thread is not None:
             return
         self.batch_items = []
+        self._well_selections.clear()
         self.documents_table.setRowCount(0)
         self.progress_bar.setRange(0, 0); self.progress_bar.setValue(0); self.progress_bar.setVisible(True)
+        self.save_button.setEnabled(False)
         self.cancel_button.setEnabled(True); self.open_button.setEnabled(False); self.directory_button.setEnabled(False)
         thread = QtCore.QThread(self)
         worker = BatchParseWorker(paths, recursive)
         worker.moveToThread(thread); thread.started.connect(worker.run)
         worker.progress.connect(self._batch_progress); worker.finished.connect(self._batch_finished)
-        worker.finished.connect(thread.quit); thread.finished.connect(worker.deleteLater)
+        worker.finished.connect(thread.quit); worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(self._batch_thread_finished)
         thread.finished.connect(thread.deleteLater)
         self._thread, self._worker = thread, worker
         thread.start()
@@ -286,6 +318,29 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         if self._worker is not None:
             self._worker.cancel()
             self.cancel_button.setEnabled(False)
+
+    def reject(self) -> None:
+        if self._thread is not None:
+            self._close_pending = True
+            self.cancel_batch()
+            self.summary.setText("Ожидание завершения текущего файла перед закрытием…")
+            return
+        super().reject()
+
+    def closeEvent(self, event: Any) -> None:
+        if self._thread is not None:
+            self.reject()
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    def _batch_thread_finished(self) -> None:
+        self._worker = None
+        self._thread = None
+        if self._close_pending:
+            self.reject()
+        else:
+            self._update_summary()
 
     def _batch_progress(self, done: int, total: int, _item: BatchParseItem) -> None:
         self.progress_bar.setRange(0, total); self.progress_bar.setValue(done)
@@ -298,7 +353,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.documents_table.blockSignals(False)
         self.progress_bar.setRange(0, max(1, result.processed)); self.progress_bar.setValue(result.processed)
         self.cancel_button.setEnabled(False); self.open_button.setEnabled(True); self.directory_button.setEnabled(True)
-        self.export_button.setEnabled(bool(result.items)); self._worker = None; self._thread = None
+        self.export_button.setEnabled(bool(result.items))
         if result.items:
             self.documents_table.setCurrentCell(0, 1)
         suffix = "; отменено" if result.cancelled else ""
@@ -356,30 +411,88 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.table.resizeRowsToContents()
         self.apply_filters(); self._update_summary()
 
-    def _load_wells(self) -> None:
-        self.well_combo.blockSignals(True)
-        self.well_combo.clear(); self.well_combo.addItem("— выберите скважину —", None)
+    def _load_wells(self, reset_filters: bool = True) -> None:
+        if self.document is None:
+            return
+        area_filter = "Все площади" if reset_filters else self.area_combo.currentText()
+        if reset_filters:
+            self.well_search.blockSignals(True)
+            self.well_search.clear()
+            self.well_search.blockSignals(False)
         wells = self.session.query(Well).order_by(Well.name, Well.id).all()
-        for well in wells:
-            self.well_combo.addItem(f"{well.name} (id {well.id})", well.id)
-        assert self.document is not None
+        areas = load_well_areas(self.session, (well.id for well in wells))
+        self._wells = [(well.id, well.name, tuple(areas.get(well.id, ()))) for well in wells]
+        area_names = sorted({value for values in areas.values() for value in values}, key=lambda value: (
+            not area_names_match(self.document.area_name, value), value.casefold()))
+        self.area_combo.blockSignals(True)
+        self.area_combo.clear()
+        self.area_combo.addItem("Все площади")
+        self.area_combo.addItems(area_names)
+        self.area_combo.setCurrentText(area_filter)
+        self.area_combo.blockSignals(False)
         result = match_well(self.session, self.document.well_name, self.document.area_name)
-        if result.selected:
-            index = self.well_combo.findData(result.selected.well_id); self.well_combo.setCurrentIndex(index)
+        self._recommended_ids = {candidate.well_id for candidate in result.candidates}
+        if result.selected is not None:
+            self._recommended_ids.add(result.selected.well_id)
+        self._wells.sort(key=lambda item: (
+            item[0] not in self._recommended_ids,
+            not any(area_names_match(self.document.area_name, area) for area in item[2]),
+            item[1].casefold(), item[0]))
+        stored = self._well_selections.get(self.document.source_path)
+        selected_id = stored[0] if stored else result.selected.well_id if result.selected else None
+        self._fill_well_combo(selected_id)
+        if stored and self.well_combo.currentData() is not None:
+            self.match_method, self.match_confidence = stored[1:]
+            self.match_label.setText("Выбрана вручную")
+        elif result.selected and self.well_combo.currentData() == result.selected.well_id:
             self.match_method = result.selected.method
             self.match_confidence = result.selected.confidence
-            self.match_label.setText(f"{result.selected.method}, {result.selected.confidence:.0%}")
+            self.match_label.setText("Точное совпадение" if self.match_confidence == 1.0
+                                     else "Совпадает номер; проверьте площадь")
         else:
             self.match_method = "manual"
             self.match_confidence = 1.0
-            self.match_label.setText("Требуется ручной выбор" + (f": {', '.join(result.warnings)}" if result.warnings else ""))
+            self.match_label.setText("Варианты отмечены ★; выберите скважину" if result.candidates
+                                     else "Выберите подходящую скважину из списка")
+        self._update_summary()
+
+    def _fill_well_combo(self, selected_id: int | None) -> None:
+        name_filter = self.well_search.text().strip().casefold()
+        area_text = self.area_combo.currentText().strip()
+        area_filter = normalize_area_name(area_text) if area_text != "Все площади" else ""
+        self.well_combo.blockSignals(True)
+        self.well_combo.clear()
+        self.well_combo.addItem("— выберите скважину —", None)
+        for well_id, name, areas in self._wells:
+            if name_filter and name_filter not in name.casefold():
+                continue
+            if area_filter and not any(area_filter in normalize_area_name(value) for value in areas):
+                continue
+            prefix = "★ " if well_id in self._recommended_ids else ""
+            self.well_combo.addItem(f"{prefix}{name} — {', '.join(areas) or 'площадь не указана'} (id {well_id})", well_id)
+        index = self.well_combo.findData(selected_id)
+        self.well_combo.setCurrentIndex(max(0, index))
         self.well_combo.blockSignals(False)
+        count = self.well_combo.count() - 1
+        self.well_count_label.setText(f"Найдено: {count}" if count else "Нет скважин — измените условия поиска")
+
+    def _filter_wells(self, *_args: Any) -> None:
+        selected_id = self.well_combo.currentData()
+        self._fill_well_combo(selected_id)
+        if selected_id != self.well_combo.currentData():
+            self._well_changed()
 
     def _well_changed(self, *_args: Any) -> None:
         self.match_method = "manual"
         self.match_confidence = 1.0
         self.match_label.setText("Выбрана вручную" if self.well_combo.currentData() is not None
                                  else "Требуется ручной выбор")
+        if self.document is not None:
+            self._well_selections[self.document.source_path] = (
+                self.well_combo.currentData(), self.match_method, self.match_confidence)
+            for row, item in enumerate(self.batch_items):
+                if item.source_path == self.document.source_path:
+                    self.documents_table.item(row, 5).setText(self.well_combo.currentText())
         self._update_summary()
 
     @staticmethod
@@ -462,7 +575,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _update_summary(self, *_args: Any) -> None:
         count = sum(self.table.item(row, 0).checkState() == QtCore.Qt.Checked for row in range(self.table.rowCount()))
         self.summary.setText(f"Выбрано документов: {1 if count else 0}; интервалов: {count}")
-        self.save_button.setEnabled(bool(count and self.well_combo.currentData() is not None))
+        self.save_button.setEnabled(bool(count and self.well_combo.currentData() is not None
+                                         and self._thread is None))
 
     def _edits(self, row: int) -> dict[str, Any]:
         key = self.table.item(row, 0).data(QtCore.Qt.UserRole); auto = self._automatic[key]
@@ -493,7 +607,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         return values
 
     def save(self) -> None:
-        if self.document is None: return
+        if self.document is None or self._thread is not None: return
         if self.batch_items:
             self._save_batch()
             return
@@ -527,6 +641,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             well_id = match.selected.well_id if match.selected else None
             method = match.selected.method if match.selected else "manual"
             confidence = match.selected.confidence if match.selected else 1.0
+            if document.source_path in self._well_selections:
+                well_id, method, confidence = self._well_selections[document.source_path]
             edits: dict[str, dict[str, Any]] = {}
             if document.source_path == current_path and self.well_combo.currentData() is not None:
                 well_id = self.well_combo.currentData(); method = self.match_method; confidence = self.match_confidence
@@ -560,6 +676,24 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             f"пропущено: {skipped}; ошибок: {failed}")
 
 
-def open_core_description_import(session: Any, parent: QtWidgets.QWidget | None = None) -> int:
-    """Open the single-document import entry point."""
-    return CoreDescriptionImportDialog(session, parent).exec_()
+_import_dialog: CoreDescriptionImportDialog | None = None
+
+
+def open_core_description_import(
+    session: Any, parent: QtWidgets.QWidget | None = None,
+) -> CoreDescriptionImportDialog:
+    """Keep a modeless importer alive and reuse it while it remains open."""
+    global _import_dialog
+    if _import_dialog is None:
+        _import_dialog = CoreDescriptionImportDialog(session, parent)
+        _import_dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        _import_dialog.destroyed.connect(_forget_import_dialog)
+    _import_dialog.show()
+    _import_dialog.raise_()
+    _import_dialog.activateWindow()
+    return _import_dialog
+
+
+def _forget_import_dialog() -> None:
+    global _import_dialog
+    _import_dialog = None
