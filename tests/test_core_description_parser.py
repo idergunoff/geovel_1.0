@@ -239,16 +239,23 @@ def test_doc_conversion_stages_user_path_before_calling_libreoffice(tmp_path, mo
     assert str(source) not in captured["command"]
 
 
-def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeypatch, generated):
+@pytest.mark.parametrize("host_bridge", [False, True])
+def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeypatch, generated, host_bridge):
     source = tmp_path / "Описание керна.DOC"
     source.write_bytes(b"legacy")
     expected = parse_core_document(generated / "standard_separate_columns.docx")
     profiles = []
     staging_directories = []
+    application = "com.jetbrains.PyCharm-Community"
+    monkeypatch.setenv("FLATPAK_ID", application)
+    monkeypatch.setattr("core_description.converter.Path.home", lambda: tmp_path)
 
     def convert(command, **kwargs):
         staged = Path(command[-1])
         staging_directories.append(staged.parent)
+        if host_bridge:
+            assert command[:3] == ["flatpak-spawn", "--host", "/usr/bin/libreoffice"]
+            assert staged.parent.parent == tmp_path / ".var/app" / application / "cache"
         profile = next(arg for arg in command if arg.startswith("-env:UserInstallation="))
         assert profile == f"-env:UserInstallation={(staged.parent / 'profile').as_uri()}"
         profiles.append(profile)
@@ -257,7 +264,8 @@ def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeyp
         output.write_bytes((generated / "standard_separate_columns.docx").read_bytes())
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: ["soffice"])
+    prefix = ["flatpak-spawn", "--host", "/usr/bin/libreoffice"] if host_bridge else ["soffice"]
+    monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: prefix)
     monkeypatch.setattr("core_description.converter.subprocess.run", convert)
     for _ in range(2):
         result = parse_core_document(source)
@@ -267,6 +275,35 @@ def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeyp
     assert profiles[0] != profiles[1]
     assert all(not directory.exists() for directory in staging_directories)
     assert source.read_bytes() == b"legacy"
+
+
+@pytest.mark.parametrize("outcome", ["success", "denied", "timeout", "configured"])
+def test_flatpak_ide_discovers_host_libreoffice(tmp_path, monkeypatch, outcome):
+    from core_description.converter import _libreoffice_command
+
+    monkeypatch.setenv("FLATPAK_ID", "com.jetbrains.PyCharm-Community")
+    monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
+    if outcome == "configured":
+        monkeypatch.setenv("LIBREOFFICE_PATH", "/opt/Libre Office/soffice")
+    monkeypatch.setattr("core_description.converter._libreoffice_executable", lambda: None)
+    monkeypatch.setattr("core_description.converter.shutil.which",
+                        lambda name: "/usr/bin/flatpak-spawn" if name == "flatpak-spawn" else None)
+
+    def probe(command, **kwargs):
+        assert command[:2] == ["/usr/bin/flatpak-spawn", "--host"]
+        assert command[-1] == "--version"
+        assert kwargs["timeout"] == 10
+        if outcome == "timeout":
+            raise subprocess.TimeoutExpired(command, 10)
+        return subprocess.CompletedProcess(command, 1 if outcome == "denied" else 0, "", "")
+
+    monkeypatch.setattr("core_description.converter.subprocess.run", probe)
+    command = _libreoffice_command()
+    if outcome in {"denied", "timeout"}:
+        assert command is None
+    else:
+        executable = "/opt/Libre Office/soffice" if outcome == "configured" else "/usr/bin/libreoffice"
+        assert command == ["/usr/bin/flatpak-spawn", "--host", executable]
 
 
 @pytest.mark.parametrize("failure", ["timeout", "missing_output", "exit_error"])
