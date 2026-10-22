@@ -55,7 +55,7 @@ def test_supported_fixtures_have_expected_structural_result(generated):
             assert 0.0 <= actual.confidence <= 1.0
             assert all(match.rule_id for match in actual.semantic_matches)
         assert set(result.warnings) == set(contract.get("document_warnings", []))
-        assert result.dictionary_version == "1.2.0"
+        assert result.dictionary_version == "1.3.0"
 
 
 def test_source_coordinates_and_optional_columns(generated):

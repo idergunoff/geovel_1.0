@@ -22,7 +22,7 @@
       "well_name": "TEST-202", "area_name": "Учебная",
       "described_by_raw": "Описал: Петров П.П.", "described_by": "Петров П.П.",
       "intervals": [
-        {"top_depth": 205.0, "bottom_depth": 207.25, "rocks": ["sandstone", "clay"], "oil_saturation": "present", "warnings": ["locality_marker"]},
+        {"top_depth": 205.0, "bottom_depth": 207.25, "rocks": ["sandstone", "clay"], "oil_saturation": "odor", "warnings": ["locality_marker"]},
         {"top_depth": 207.25, "bottom_depth": 208.0, "rocks": ["limestone"], "oil_saturation": "uncertain", "warnings": ["uncertain_wording"]}
       ]
     },

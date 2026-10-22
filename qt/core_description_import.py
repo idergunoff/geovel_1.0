@@ -15,13 +15,13 @@ from core_description.database import match_well, save_core_import
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
+from core_description.terminology import (
+    ROCK_LABELS, SATURATION_LABELS, RELATION_LABELS, canonical_term, display_term,
+)
 from models_db.model import Well
 
 
-SATURATIONS = (
-    "unknown", "none", "weak", "medium", "intense",
-    "weak_to_medium", "medium_to_intense", "weak_to_intense", "present", "uncertain",
-)
+SATURATIONS = tuple(SATURATION_LABELS)
 
 
 class DescriptionDelegate(QtWidgets.QStyledItemDelegate):
@@ -184,7 +184,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.depth_from = QtWidgets.QDoubleSpinBox(); self.depth_from.setRange(-1e6, 1e6)
         self.depth_to = QtWidgets.QDoubleSpinBox(); self.depth_to.setRange(-1e6, 1e6); self.depth_to.setValue(1e6)
         self.rock_filter = QtWidgets.QLineEdit(); self.rock_filter.setPlaceholderText("любая")
-        self.saturation_filter = QtWidgets.QComboBox(); self.saturation_filter.addItems(("любая",) + SATURATIONS)
+        self.saturation_filter = QtWidgets.QComboBox(); self.saturation_filter.addItem("любая", None)
+        for code, label in SATURATION_LABELS.items():
+            self.saturation_filter.addItem(label, code)
         self.state_filter = QtWidgets.QComboBox(); self.state_filter.addItems(("любое", "готово", "требует проверки", "ошибка"))
         for label, widget in (("Глубина от", self.depth_from), ("до", self.depth_to),
                               ("Порода", self.rock_filter), ("Насыщенность", self.saturation_filter),
@@ -387,11 +389,12 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _append_interval(self, interval: ParsedCoreInterval) -> None:
         row = self.table.rowCount(); self.table.insertRow(row)
         key = self._key(interval)
-        primary = next((r.canonical_value for r in interval.rocks if r.relation == "primary"), "")
-        secondary = ", ".join(f"{r.canonical_value} ({r.relation})" for r in interval.rocks if r.relation != "primary")
+        primary = next((display_term(r.canonical_value, ROCK_LABELS)
+                        for r in interval.rocks if r.relation == "primary"), "")
+        secondary = ", ".join(f"{display_term(r.canonical_value, ROCK_LABELS)} ({display_term(r.relation, RELATION_LABELS)})" for r in interval.rocks if r.relation != "primary")
         state = "ошибка" if interval.errors else "требует проверки" if interval.warnings or interval.confidence < .8 else "готово"
         values = ("", interval.top_depth, interval.bottom_depth, primary, secondary,
-                  interval.oil_saturation, interval.confidence, interval.raw_description, state,
+                  display_term(interval.oil_saturation, SATURATION_LABELS), interval.confidence, interval.raw_description, state,
                   interval.thickness, interval.geological_index_raw)
         check = QtWidgets.QTableWidgetItem(); check.setData(QtCore.Qt.UserRole, key)
         check.setFlags(check.flags() | QtCore.Qt.ItemIsUserCheckable)
@@ -405,7 +408,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         for column in range(len(self.COLUMNS)): self.table.item(row, column).setToolTip(details)
         self._automatic[key] = {"top_depth": interval.top_depth, "bottom_depth": interval.bottom_depth,
                                 "primary": primary, "secondary": secondary,
-                                "oil_saturation": interval.oil_saturation, "confidence": interval.confidence,
+                                "oil_saturation": display_term(interval.oil_saturation, SATURATION_LABELS), "confidence": interval.confidence,
                                 "thickness": interval.thickness, "geological_index_raw": interval.geological_index_raw}
 
     def _table_changed(self, _item: QtWidgets.QTableWidgetItem) -> None:
@@ -416,14 +419,14 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         return self.table.item(row, 8).text()
 
     def apply_filters(self) -> None:
-        rock = self.rock_filter.text().casefold().strip(); saturation = self.saturation_filter.currentText()
+        rock = self.rock_filter.text().casefold().strip(); saturation = self.saturation_filter.currentData()
         state = self.state_filter.currentText()
         for row in range(self.table.rowCount()):
             try: top = float(self.table.item(row, 1).text().replace(",", "."))
             except ValueError: top = float("-inf")
             row_rocks = (self.table.item(row, 3).text() + " " + self.table.item(row, 4).text()).casefold()
             visible = self.depth_from.value() <= top <= self.depth_to.value() and (not rock or rock in row_rocks)
-            visible &= saturation == "любая" or self.table.item(row, 5).text() == saturation
+            visible &= saturation is None or canonical_term(self.table.item(row, 5).text(), SATURATION_LABELS) == saturation
             visible &= state == "любое" or self._state(row) == state
             self.table.setRowHidden(row, not visible)
 
@@ -441,7 +444,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         oil = set(SATURATIONS) - {"unknown", "none"}
         for row in range(self.table.rowCount()):
             if not self.table.isRowHidden(row):
-                self.table.item(row, 0).setCheckState(QtCore.Qt.Checked if self.table.item(row, 5).text() in oil else QtCore.Qt.Unchecked)
+                self.table.item(row, 0).setCheckState(QtCore.Qt.Checked if canonical_term(self.table.item(row, 5).text(), SATURATION_LABELS) in oil else QtCore.Qt.Unchecked)
 
     def _restore_selected(self) -> None:
         for row in {index.row() for index in self.table.selectedIndexes()}:
@@ -466,7 +469,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         values: dict[str, Any] = {
             "top_depth": float(self.table.item(row, 1).text().replace(",", ".")),
             "bottom_depth": float(self.table.item(row, 2).text().replace(",", ".")),
-            "oil_saturation": self.table.item(row, 5).text().strip(),
+            "oil_saturation": canonical_term(self.table.item(row, 5).text(), SATURATION_LABELS),
             "confidence": float(self.table.item(row, 6).text().replace(",", ".")),
             "thickness": float(self.table.item(row, 9).text().replace(",", ".")) if self.table.item(row, 9).text().strip() else None,
             "geological_index_raw": self.table.item(row, 10).text().strip() or None,
@@ -476,14 +479,15 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         interval = next(i for i in self.document.intervals if self._key(i) == key)  # type: ignore[union-attr]
         if primary != auto["primary"] or secondary != auto["secondary"]:
             rocks = []
-            if primary: rocks.insert(0, {"canonical_value": primary, "matched_text": primary, "relation": "primary", "confidence": 1.0, "rule_ids": []})
+            if primary: rocks.insert(0, {"canonical_value": canonical_term(primary, ROCK_LABELS), "matched_text": primary, "relation": "primary", "confidence": 1.0, "rule_ids": []})
             for value in filter(None, (part.strip() for part in secondary.split(","))):
                 name, separator, relation = value.rpartition(" (")
                 if separator and relation.endswith(")"):
                     value, relation = name, relation[:-1]
                 else:
                     relation = "secondary"
-                rocks.append({"canonical_value": value, "matched_text": value, "relation": relation,
+                rocks.append({"canonical_value": canonical_term(value, ROCK_LABELS), "matched_text": value,
+                              "relation": canonical_term(relation, RELATION_LABELS),
                               "confidence": 1.0, "rule_ids": []})
             values["rocks"] = rocks
         return values
