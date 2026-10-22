@@ -108,3 +108,39 @@ def test_locality_with_multiple_degrees_is_preserved(degrees):
 ])
 def test_multiple_degrees_do_not_capture_unrelated_properties(text, expected):
     assert analyze_description(text)[1] == expected
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Песчаник остаточно нефтенасыщенный", "residual"),
+    ("Остаточная нефтенасыщенность", "residual"),
+    ("Остаточное битумонасыщение", "residual"),
+    ("Остаточная нефть в порах", "residual"),
+    ("Песчаник с запахом нефти", "odor"),
+    ("Слабый запах битума", "odor"),
+    ("Запах углеводородов", "odor"),
+    ("Нефтяной запах", "odor"),
+    ("Песчаник, пятна нефти", "patchy"),
+    ("Песчаник пятнами нефтенасыщенный", "patchy"),
+    ("Пятнистая нефтенасыщенность", "patchy"),
+    ("Битумонасыщение пятнами", "patchy"),
+    ("Нефть отдельными пятнами", "patchy"),
+    ("Битумные пятна", "patchy"),
+    ("Остаточная влажность", "unknown"),
+    ("Запах сероводорода", "unknown"),
+    ("Песчаник с пятнами окислов железа", "unknown"),
+    ("Пятнистая окраска", "unknown"),
+    ("Без запаха нефти", "none"),
+    ("Запах битума отсутствует", "none"),
+    ("Запах нефти не ощущается", "none"),
+    ("Без нефтяных пятен", "none"),
+    ("Без признаков нефти, остаточная нефтенасыщенность", "none"),
+    ("Возможно остаточная нефтенасыщенность", "uncertain"),
+    ("Возможно запах нефти", "uncertain"),
+    ("Возможно пятна нефти", "uncertain"),
+])
+def test_residual_odor_and_patchy_saturation(text, expected):
+    _, oil, _, matches, _ = analyze_description(text)
+    assert oil == expected
+    assert all(text[m.start:m.end] == m.matched_text for m in matches)
+    if expected in {"residual", "odor", "patchy"}:
+        assert any(m.canonical_value == expected and m.category == "oil_saturation" for m in matches)
