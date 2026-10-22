@@ -1,0 +1,86 @@
+"""Well identity evidence: date precision, elevations and arbitrary categories."""
+
+import pytest
+
+from core_description.identity import (
+    WellMetadata, compare_identity, extract_identity, normalize_date, normalize_elevation,
+)
+from core_description.models import ParsedCoreDocument
+
+
+def document(**fields):
+    return ParsedCoreDocument("core.docx", "docx", "a" * 64, "12", "12", "Северная", "Северная",
+                              None, None, **fields)
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("28.08.2019", "2019-08-28"), ("28.8.19", "2019-08-28"),
+    ("31/12/99", "1999-12-31"), ("2019-08-28 00:00:00", "2019-08-28"),
+    ("11.2019", "2019-11"), ("2019-11", "2019-11"),
+    ("31.02.2019", None), ("13.2019", None), (".09.2019", None), ("", None),
+])
+def test_date_normalization_preserves_precision(raw, expected):
+    assert normalize_date(raw) == expected
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("132,432 м", 132.432), ("-4.5", -4.5), (0, 0.0),
+    ("м", None), (None, None), ("NaN", None), ("132 / 133", None),
+])
+def test_elevation_normalization_does_not_invent_missing_values(raw, expected):
+    assert normalize_elevation(raw) == expected
+
+
+def test_extract_identity_from_paragraphs_and_adjacent_cells():
+    values, warnings = extract_identity([
+        "Альтитуда устья: 132,432 м\nАльтитуда ротора: 133,432 м",
+        "Скважина начата 28.08.19",
+    ], [["Скважина окончена", "", "02.09.2019"], ["Глубина фактическая", "175,5 м"]])
+    assert values["drilling_start"] == "2019-08-28"
+    assert values["drilling_end"] == "2019-09-02"
+    assert values["wellhead_elevation"] == 132.432
+    assert warnings == []
+
+
+def test_extraction_preserves_invalid_ambiguous_and_partial_source_dates():
+    values, warnings = extract_identity([
+        "Скважина начата: 31.02.2019", "Скважина окончена: 11.2019",
+        "Альтитуда устья: 132,4 м", "Альтитуда устья: 133,4 м",
+    ], [])
+    assert values["drilling_start"] is None
+    assert values["drilling_start_raw"] == "31.02.2019"
+    assert values["drilling_end"] == "2019-11"
+    assert values["wellhead_elevation"] is None
+    assert set(warnings) == {"drilling_start_invalid", "wellhead_elevation_ambiguous"}
+
+
+def test_source_date_can_be_repeated_with_less_precision():
+    values, warnings = extract_identity(["Скважина начата: 28.08.19", "Начало бурения: 08.2019"], [])
+    assert values["drilling_start"] == "2019-08-28"
+    assert warnings == []
+
+
+@pytest.mark.parametrize("stored, status", [
+    (("28.08.19",), "match"), (("2019-08-28", "08.2019"), "match"),
+    (("08.2019",), "partial"), (("29.08.2019",), "different"),
+    (("28.08.2019", "29.08.2019"), "conflict"),
+    (("08.2019", "09.2019"), "conflict"), (("неизвестно",), "invalid_database"),
+])
+def test_date_comparison_explains_matches_and_conflicts(stored, status):
+    source = document(drilling_start="2019-08-28", drilling_start_raw="28.08.19")
+    metadata = WellMetadata(tuple(("Дата начала бурения", value) for value in stored))
+    assert compare_identity(source, metadata, None)[1].status == status
+
+
+@pytest.mark.parametrize("altitude, status", [(132.43, "match"), (132.442, "match"), (132.45, "different"), (None, "missing")])
+def test_elevation_comparison_accounts_for_database_rounding(altitude, status):
+    source = document(wellhead_elevation=132.432, wellhead_elevation_raw="132,432")
+    assert compare_identity(source, WellMetadata(), altitude)[3].status == status
+
+
+def test_area_search_uses_arbitrary_categories_but_not_drilling_measurements():
+    metadata = WellMetadata((("Залежь", "Северная"), ("Свободная категория", "Сарабикуловский"),
+                             ("Альтитуда устья", "58"), ("Объект", "58")))
+    assert ("Свободная категория", "Сарабикуловский") in metadata.area_entries("Сарабикуловское поднятие")
+    assert ("Альтитуда устья", "58") not in metadata.area_entries("Объект 58")
+    assert ("Объект", "58") in metadata.area_entries("Объект 58")

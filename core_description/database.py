@@ -6,7 +6,7 @@ import json
 import math
 import re
 import unicodedata
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -18,6 +18,7 @@ from models_db.model import (
 
 from .models import ParsedCoreDocument, ParsedCoreInterval
 from .areas import area_names_match
+from .identity import WellMetadata, IdentityComparison, compare_identity, has_identity_matches, has_identity_conflicts
 
 
 class CoreDescriptionSaveError(ValueError):
@@ -35,6 +36,7 @@ class WellMatchCandidate:
     confidence: float
     method: str
     area_name: str | None = None
+    comparisons: tuple[IdentityComparison, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,22 +69,81 @@ def normalize_lookup_value(value: str | None) -> str:
     return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
-def load_well_areas(session: Any, well_ids: Iterable[int]) -> dict[int, list[str]]:
+def load_well_metadata(session: Any, well_ids: Iterable[int]) -> dict[int, WellMetadata]:
     ids = tuple(dict.fromkeys(well_ids))
-    result: dict[int, list[str]] = {}
+    result: dict[int, list[tuple[str, str]]] = {}
     # Keep each query below SQLite's legacy limit of 999 SQL variables.
     batch_size = 500
     for start in range(0, len(ids), batch_size):
         rows = session.query(WellOptionally).filter(
-            WellOptionally.well_id.in_(ids[start:start + batch_size])).all()
+            WellOptionally.well_id.in_(ids[start:start + batch_size])).order_by(WellOptionally.id).all()
         for row in rows:
-            option = normalize_lookup_value(row.option)
-            if option in {'площадь', 'пл', 'area'} and row.value:
-                result.setdefault(row.well_id, []).append(row.value)
+            if row.value and row.value.strip():
+                result.setdefault(row.well_id, []).append((row.option or '', row.value.strip()))
+    return {well_id: WellMetadata(tuple(values)) for well_id, values in result.items()}
+
+
+def load_well_areas(session: Any, well_ids: Iterable[int], area_name: str | None = None) -> dict[int, list[str]]:
+    result = {}
+    for well_id, metadata in load_well_metadata(session, well_ids).items():
+        values = list(dict.fromkeys(value for _, value in metadata.area_entries(area_name)))
+        if values:
+            result[well_id] = values
     return result
 
 
-def match_well(session: Any, well_name: str | None, area_name: str | None = None) -> WellMatchResult:
+def match_well(session: Any, well_name: str | None, area_name: str | None = None,
+               *, document: ParsedCoreDocument | None = None) -> WellMatchResult:
+    """Resolve labels, using independent drilling details to disambiguate a number."""
+    result = _match_well_labels(session, well_name, area_name)
+    if document is None or not any(getattr(document, field) is not None for field in (
+            'drilling_start_raw', 'drilling_start', 'drilling_end_raw', 'drilling_end',
+            'wellhead_elevation_raw', 'wellhead_elevation')):
+        return result
+    wanted = normalize_lookup_value(well_name)
+    wells = session.query(Well).order_by(Well.id).all()
+    exact = [well for well in wells if normalize_lookup_value(well.name) == wanted] if wanted else []
+    exact_ids = {well.id for well in exact}
+    reviewed = exact or [well for well in wells if not wanted or SequenceMatcher(
+        None, wanted, normalize_lookup_value(well.name)).ratio() >= .6]
+    metadata = load_well_metadata(session, (well.id for well in reviewed))
+    candidates = []
+    for well in reviewed:
+        details = metadata.get(well.id, WellMetadata())
+        comparisons = compare_identity(document, details, well.alt)
+        areas = details.area_entries(area_name)
+        area = next((value for _, value in areas if area_names_match(area_name, value)),
+                    areas[0][1] if areas else None)
+        matches = has_identity_matches(comparisons)
+        conflicts = has_identity_conflicts(comparisons)
+        candidates.append(WellMatchCandidate(
+            well.id, well.name, 1.0 if matches and not conflicts else .8,
+            'identity_suggestion', area, comparisons))
+    confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
+                 and has_identity_matches(candidate.comparisons)
+                 and not has_identity_conflicts(candidate.comparisons)]
+    confirmed_by_area = [candidate for candidate in confirmed if any(
+        item.field == 'area' and item.status == 'match' for item in candidate.comparisons)]
+    if confirmed_by_area:
+        confirmed = confirmed_by_area
+    if len(confirmed) == 1:
+        return WellMatchResult('matched', selected=replace(confirmed[0], method='exact_name_identity'))
+    candidates.sort(key=lambda candidate: (
+        has_identity_conflicts(candidate.comparisons),
+        -sum(item.status == 'match' and item.field != 'area' for item in candidate.comparisons),
+        not any(item.field == 'area' and item.status == 'match' for item in candidate.comparisons),
+        candidate.well_name, candidate.well_id))
+    if result.selected and not confirmed:
+        selected = next((candidate for candidate in candidates if candidate.well_id == result.selected.well_id), None)
+        if selected and not has_identity_conflicts(selected.comparisons):
+            return replace(result, selected=replace(result.selected, comparisons=selected.comparisons))
+    warnings = ('multiple_identity_matches',) if len(confirmed) > 1 else result.warnings
+    if any(has_identity_conflicts(candidate.comparisons) for candidate in candidates):
+        warnings += ('identity_conflict',)
+    return WellMatchResult('manual_required', candidates=tuple(candidates[:10]), warnings=warnings)
+
+
+def _match_well_labels(session: Any, well_name: str | None, area_name: str | None = None) -> WellMatchResult:
     """Resolve only unambiguous exact matches; return fuzzy alternatives for review."""
 
     wanted = normalize_lookup_value(well_name)
@@ -90,7 +151,7 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         return WellMatchResult('manual_required', warnings=('well_name_missing',))
     wells = session.query(Well).order_by(Well.id).all()
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted]
-    areas = load_well_areas(session, (well.id for well in exact))
+    areas = load_well_areas(session, (well.id for well in exact), area_name)
     wanted_area = normalize_lookup_value(area_name)
     if exact and wanted_area:
         area_exact = [well for well in exact if any(
@@ -129,7 +190,7 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         if score >= 0.6:
             suggestions.append((well, round(score, 4)))
     if wanted_area:
-        areas = load_well_areas(session, (well.id for well, _score in suggestions))
+        areas = load_well_areas(session, (well.id for well, _score in suggestions), area_name)
         suggestions.sort(key=lambda item: (
             not any(area_names_match(area_name, value) for value in areas.get(item[0].id, ())),
             -item[1], item[0].name, item[0].id))
@@ -137,7 +198,7 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
     else:
         suggestions.sort(key=lambda item: (-item[1], item[0].name, item[0].id))
         suggestions = suggestions[:10]
-        areas = load_well_areas(session, (well.id for well, _score in suggestions))
+        areas = load_well_areas(session, (well.id for well, _score in suggestions), area_name)
     candidates = tuple(WellMatchCandidate(
         well.id, well.name, score, 'fuzzy_suggestion', areas.get(well.id, [None])[0])
         for well, score in suggestions)
@@ -216,6 +277,7 @@ def save_core_import(
             replaced_id = duplicate.id
             session.delete(duplicate)
             session.flush()
+        well_metadata = load_well_metadata(session, [well_id]).get(well_id, WellMetadata())
         document = CoreDescriptionDocument(
             well_id=well_id, source_file_name=Path(parsed_document.source_path).name,
             source_file_hash=parsed_document.file_hash, source_format=parsed_document.source_format,
@@ -226,7 +288,12 @@ def save_core_import(
             match_method=match_method, match_confidence=match_confidence, status='imported',
             diagnostics=_json({'warnings': parsed_document.warnings,
                                'intervals_parsed': len(parsed_document.intervals),
-                               'intervals_selected': len(intervals)}),
+                               'intervals_selected': len(intervals),
+                               'well_identity': {key: getattr(parsed_document, key) for key in (
+                                   'drilling_start_raw', 'drilling_start', 'drilling_end_raw', 'drilling_end',
+                                   'wellhead_elevation_raw', 'wellhead_elevation')},
+                               'well_comparison': [asdict(item) for item in compare_identity(
+                                   parsed_document, well_metadata, well.alt)]}),
         )
         session.add(document)
         session.flush()

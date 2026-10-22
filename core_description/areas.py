@@ -7,7 +7,7 @@ import unicodedata
 
 
 OBJECT_RE = re.compile(r"\bобъект(?:а)?\s*(?:№|номер|n[оo]?[.]?)?\s*(\d+(?:[-/]\d+)?[а-яa-z]?)\b", re.I)
-AREA_KIND_RE = re.compile(r"\b(?:площадь|пл\.|поднятие|месторождение|структура)\b", re.I)
+AREA_KIND_RE = re.compile(r"\b(?:площадь|пл\.|поднятие|месторождение|структура|залежь|area|field|deposit)\b", re.I)
 
 
 def normalize_area_name(value: str | None) -> str:

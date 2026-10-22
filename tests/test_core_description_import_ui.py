@@ -168,6 +168,59 @@ def test_refresh_disables_save_when_selected_well_was_deleted(app, session):
     assert not dialog.save_button.isEnabled()
 
 
+def test_identity_details_are_visible_and_compared_when_selecting(app, session):
+    existing = session.query(Well).filter_by(name="12").one()
+    existing.alt = 133
+    wanted = Well(name="12", alt=132.43)
+    session.add(wanted)
+    session.flush()
+    session.add_all([
+        WellOptionally(well_id=wanted.id, option="Залежь", value="Сарабикуловский"),
+        WellOptionally(well_id=wanted.id, option="Начало бурения", value="28.08.2019"),
+        WellOptionally(well_id=wanted.id, option="Окончание бурения", value="02.09.2019"),
+    ])
+    session.commit()
+    source = _document()
+    source.area_name_raw = source.area_name = "Сарабикуловское поднятие"
+    source.drilling_start, source.drilling_start_raw = "2019-08-28", "28.08.19"
+    source.drilling_end, source.drilling_end_raw = "2019-09-02", "02.09.2019"
+    source.wellhead_elevation, source.wellhead_elevation_raw = 132.432, "132,432"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() == wanted.id
+    assert "28.08.2019" in dialog.well_combo.currentText()
+    assert "02.09.2019" in dialog.well_combo.currentText()
+    assert "132.43" in dialog.well_combo.currentText()
+    assert "Залежь: Сарабикуловский" in dialog.comparison_table.item(0, 2).text()
+    assert all(dialog.comparison_table.item(row, 3).text() == "Совпадает" for row in range(4))
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(existing.id))
+    assert dialog.comparison_table.item(3, 3).text() == "Различается"
+    assert dialog.comparison_table.item(1, 3).text() == "Нет данных для сравнения"
+    assert dialog.match_method == "manual"
+
+
+def test_area_filter_searches_arbitrary_categories_even_without_source_match(app, session):
+    wanted = session.query(Well).filter_by(name="13").one()
+    session.add(WellOptionally(well_id=wanted.id, option="Свободная категория", value="Сарабикуловский"))
+    session.commit()
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+    dialog.area_combo.setEditText("сараб")
+    assert dialog.well_combo.count() == 2
+    assert dialog.well_combo.itemData(1) == wanted.id
+    assert "Сарабикуловский" in dialog.well_combo.itemText(1)
+
+
+def test_missing_database_details_never_display_a_match(app, session):
+    source = _document()
+    source.drilling_start_raw, source.drilling_start = "28.08.2019", "2019-08-28"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.comparison_table.item(1, 1).text() == "28.08.2019"
+    assert dialog.comparison_table.item(1, 2).text() == "—"
+    assert dialog.comparison_table.item(1, 3).text() == "Нет данных для сравнения"
+
+
 def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monkeypatch):
     first, second = _document(), _document()
     first.source_path, second.source_path = "first.docx", "second.docx"

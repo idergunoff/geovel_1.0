@@ -11,8 +11,9 @@ from typing import Any
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from core_description.database import load_well_areas, match_well, save_core_import
+from core_description.database import load_well_metadata, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
+from core_description.identity import WellMetadata, compare_identity, identity_kind, normalize_elevation
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
@@ -129,6 +130,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._well_selections: dict[str, tuple[int | None, str, float]] = {}
         self._wells: list[tuple[int, str, tuple[str, ...]]] = []
         self._recommended_ids: set[int] = set()
+        self._well_metadata: dict[int, WellMetadata] = {}
+        self._well_altitudes: dict[int, float | None] = {}
         self._automatic: dict[str, dict[str, Any]] = {}
         self.batch_items: list[BatchParseItem] = []
         self._thread: QtCore.QThread | None = None
@@ -198,6 +201,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         well_row.addWidget(QtWidgets.QLabel("Скважина БД:"))
         self.well_combo = QtWidgets.QComboBox()
         self.well_combo.setMinimumWidth(260)
+        self.well_combo.setMinimumContentsLength(30)
+        self.well_combo.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.well_combo.view().setMinimumWidth(min(1100, self.screen().availableGeometry().width()))
         self.well_combo.setToolTip("★ — подходящий вариант; проверьте номер и площадь перед выбором.")
         well_row.addWidget(self.well_combo, 2)
         self.match_label = QtWidgets.QLabel("Не сопоставлена")
@@ -205,6 +211,15 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_count_label = QtWidgets.QLabel()
         well_row.addWidget(self.well_count_label)
         layout.addLayout(well_row)
+
+        self.comparison_table = QtWidgets.QTableWidget(4, 4)
+        self.comparison_table.setObjectName("core_well_comparison")
+        self.comparison_table.setHorizontalHeaderLabels(("Признак", "В документе", "В базе данных", "Сравнение"))
+        self.comparison_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.comparison_table.verticalHeader().hide()
+        self.comparison_table.setMaximumHeight(260)
+        self.comparison_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        layout.addWidget(self.comparison_table)
 
         filters = QtWidgets.QHBoxLayout()
         self.depth_from = QtWidgets.QDoubleSpinBox(); self.depth_from.setRange(-1e6, 1e6)
@@ -420,7 +435,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.well_search.clear()
             self.well_search.blockSignals(False)
         wells = self.session.query(Well).order_by(Well.name, Well.id).all()
-        areas = load_well_areas(self.session, (well.id for well in wells))
+        self._well_metadata = load_well_metadata(self.session, (well.id for well in wells))
+        self._well_altitudes = {well.id: well.alt for well in wells}
+        areas = {well_id: tuple(dict.fromkeys(value for _, value in metadata.area_entries(self.document.area_name)))
+                 for well_id, metadata in self._well_metadata.items()}
         self._wells = [(well.id, well.name, tuple(areas.get(well.id, ()))) for well in wells]
         area_names = sorted({value for values in areas.values() for value in values}, key=lambda value: (
             not area_names_match(self.document.area_name, value), value.casefold()))
@@ -430,7 +448,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.area_combo.addItems(area_names)
         self.area_combo.setCurrentText(area_filter)
         self.area_combo.blockSignals(False)
-        result = match_well(self.session, self.document.well_name, self.document.area_name)
+        result = match_well(self.session, self.document.well_name, self.document.area_name, document=self.document)
         self._recommended_ids = {candidate.well_id for candidate in result.candidates}
         if result.selected is not None:
             self._recommended_ids.add(result.selected.well_id)
@@ -447,7 +465,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         elif result.selected and self.well_combo.currentData() == result.selected.well_id:
             self.match_method = result.selected.method
             self.match_confidence = result.selected.confidence
-            self.match_label.setText("Точное совпадение" if self.match_confidence == 1.0
+            self.match_label.setText("Совпадают номер и данные бурения" if self.match_method == "exact_name_identity"
+                                     else "Точное совпадение" if self.match_confidence == 1.0
                                      else "Совпадает номер; проверьте площадь")
         else:
             self.match_method = "manual"
@@ -455,6 +474,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.match_label.setText("Варианты отмечены ★; выберите скважину" if result.candidates
                                      else "Выберите подходящую скважину из списка")
         self._update_summary()
+        self._update_well_comparison()
 
     def _fill_well_combo(self, selected_id: int | None) -> None:
         name_filter = self.well_search.text().strip().casefold()
@@ -466,10 +486,29 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         for well_id, name, areas in self._wells:
             if name_filter and name_filter not in name.casefold():
                 continue
-            if area_filter and not any(area_filter in normalize_area_name(value) for value in areas):
-                continue
+            metadata = self._well_metadata.get(well_id, WellMetadata())
+            displayed_areas = areas
+            if area_filter:
+                found = tuple(value for label, value in metadata.attributes
+                              if identity_kind(label) is None and (
+                                  normalize_area_name(value) == area_filter
+                                  if area_filter.startswith("объект") and area_filter[6:].isdigit()
+                                  else area_filter in normalize_area_name(value)))
+                if not found:
+                    continue
+                displayed_areas = tuple(dict.fromkeys((*areas, *found)))
             prefix = "★ " if well_id in self._recommended_ids else ""
-            self.well_combo.addItem(f"{prefix}{name} — {', '.join(areas) or 'площадь не указана'} (id {well_id})", well_id)
+            start = ", ".join(metadata.values("drilling_start")) or "—"
+            end = ", ".join(metadata.values("drilling_end")) or "—"
+            elevations = metadata.values("wellhead_elevation")
+            altitude = self._well_altitudes.get(well_id)
+            elevation_values = elevations or ((str(altitude),) if altitude is not None else ())
+            elevation = ", ".join(f"{normalized:g} м" if (normalized := normalize_elevation(value)) is not None
+                                  else value for value in elevation_values) or "—"
+            text = (f"{prefix}{name} — {', '.join(displayed_areas) or 'площадь не указана'}; "
+                    f"начало: {start}; окончание: {end}; устье: {elevation} (id {well_id})")
+            self.well_combo.addItem(text, well_id)
+            self.well_combo.setItemData(self.well_combo.count() - 1, text, QtCore.Qt.ToolTipRole)
         index = self.well_combo.findData(selected_id)
         self.well_combo.setCurrentIndex(max(0, index))
         self.well_combo.blockSignals(False)
@@ -481,6 +520,36 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._fill_well_combo(selected_id)
         if selected_id != self.well_combo.currentData():
             self._well_changed()
+
+    def _update_well_comparison(self) -> None:
+        if self.document is None:
+            return
+        well_id = self.well_combo.currentData()
+        comparisons = compare_identity(self.document, self._well_metadata.get(well_id, WellMetadata()),
+                                       self._well_altitudes.get(well_id))
+        labels = {"area": "Площадь / залежь", "drilling_start": "Начало бурения",
+                  "drilling_end": "Окончание бурения", "wellhead_elevation": "Альтитуда устья, м"}
+        statuses = {"match": "Совпадает", "different": "Различается", "missing": "Нет данных для сравнения",
+                    "partial": "Совпадает месяц; дата неполная", "conflict": "Противоречивые данные",
+                    "invalid_source": "Проверьте значение в документе", "invalid_database": "Проверьте значение в базе"}
+        for row, comparison in enumerate(comparisons):
+            status = comparison.status
+            for column, value in enumerate((labels[comparison.field], comparison.source or "—",
+                                            comparison.database or "—", statuses[status])):
+                cell = QtWidgets.QTableWidgetItem(value)
+                cell.setToolTip(value)
+                if status == "match":
+                    cell.setBackground(QtGui.QColor("#dcf5df"))
+                elif status in {"different", "conflict", "invalid_source", "invalid_database"}:
+                    cell.setBackground(QtGui.QColor("#ffe4df"))
+                elif status == "partial":
+                    cell.setBackground(QtGui.QColor("#fff2ce"))
+                self.comparison_table.setItem(row, column, cell)
+        self.comparison_table.resizeRowsToContents()
+        height = (self.comparison_table.horizontalHeader().height()
+                  + sum(self.comparison_table.rowHeight(row) for row in range(self.comparison_table.rowCount()))
+                  + 2 * self.comparison_table.frameWidth())
+        self.comparison_table.setFixedHeight(min(260, height))
 
     def _well_changed(self, *_args: Any) -> None:
         self.match_method = "manual"
@@ -494,6 +563,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 if item.source_path == self.document.source_path:
                     self.documents_table.item(row, 5).setText(self.well_combo.currentText())
         self._update_summary()
+        self._update_well_comparison()
 
     @staticmethod
     def _key(interval: ParsedCoreInterval) -> str:
@@ -637,7 +707,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             if document is None:
                 failed += 1
                 continue
-            match = match_well(self.session, document.well_name, document.area_name)
+            match = match_well(self.session, document.well_name, document.area_name, document=document)
             well_id = match.selected.well_id if match.selected else None
             method = match.selected.method if match.selected else "manual"
             confidence = match.selected.confidence if match.selected else 1.0
