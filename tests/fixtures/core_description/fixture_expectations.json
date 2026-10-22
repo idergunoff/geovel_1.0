@@ -1,6 +1,15 @@
 {
   "schema_version": 1,
   "fixtures": {
+    "extended_rocks_and_saturation.docx": {
+      "well_name": "TEST-505", "area_name": "Учебная",
+      "described_by_raw": "Описал: Петров П.П.", "described_by": "Петров П.П.",
+      "intervals": [
+        {"top_depth": 500.0, "bottom_depth": 501.0, "rocks": ["claystone", "siltstone"], "oil_saturation": "weak_to_medium", "warnings": []},
+        {"top_depth": 501.0, "bottom_depth": 502.0, "rocks": ["marl"], "oil_saturation": "medium_to_intense", "warnings": ["locality_marker"]},
+        {"top_depth": 502.0, "bottom_depth": 503.0, "rocks": ["conglomerate"], "oil_saturation": "weak_to_intense", "warnings": []}
+      ]
+    },
     "standard_separate_columns.docx": {
       "well_name": "TEST-101", "area_name": "Тестовая Северная",
       "described_by_raw": "Описал геолог: Иванов И. И.", "described_by": "Иванов И. И.",

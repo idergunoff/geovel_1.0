@@ -55,7 +55,7 @@ def test_supported_fixtures_have_expected_structural_result(generated):
             assert 0.0 <= actual.confidence <= 1.0
             assert all(match.rule_id for match in actual.semantic_matches)
         assert set(result.warnings) == set(contract.get("document_warnings", []))
-        assert result.dictionary_version == "1.0.0"
+        assert result.dictionary_version == "1.2.0"
 
 
 def test_source_coordinates_and_optional_columns(generated):
@@ -349,6 +349,68 @@ def test_negation_has_priority_and_uncertainty_marks_disputed_result():
     assert oil == "uncertain"
     assert confidence < 1.0
     assert warnings == ["uncertain_wording"]
+
+
+def test_plural_sandstone_with_bitumen_saturation_range():
+    text = (
+        "Песчаники от темно-серых до черных, м/з, массивные, "
+        "слабосцементированные, от средне до интенсивно битумонасыщенные."
+    )
+    rocks, oil, confidence, matches, warnings = analyze_description(text)
+
+    assert [(rock.canonical_value, rock.relation) for rock in rocks] == [
+        ("sandstone", "primary")
+    ]
+    assert oil == "medium_to_intense"
+    assert confidence == 1.0
+    assert warnings == []
+    assert any(
+        match.canonical_value == oil
+        and match.matched_text == "от средне до интенсивно битумонасыщенные"
+        for match in matches
+    )
+    assert all(text[match.start:match.end] == match.matched_text for match in matches)
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Песчаники с прослоями глин", [("sandstone", "primary"), ("clay", "interlayer")]),
+    ("Глина с прослоями песчаников", [("clay", "primary"), ("sandstone", "interlayer")]),
+    ("Известняки с включениями доломитов", [("limestone", "primary"), ("dolomite", "inclusion")]),
+    ("Песчаниковый, глинистый, известняковый, доломитовый", []),
+])
+def test_rock_word_forms_preserve_roles_and_word_boundaries(text, expected):
+    rocks = analyze_description(text)[0]
+    assert [(rock.canonical_value, rock.relation) for rock in rocks] == expected
+
+
+@pytest.mark.parametrize("fluid", ["нефте", "битумо"])
+@pytest.mark.parametrize("ending", ["енный", "енная", "енное", "енные", "ен", "ена", "ено", "ены"])
+@pytest.mark.parametrize("degree, expected", [
+    ("слабо", "weak"), ("средне", "medium"),
+    ("интенсивно", "intense"), ("сильно", "intense"),
+])
+def test_oil_and_bitumen_saturation_word_forms(fluid, ending, degree, expected):
+    assert analyze_description(f"{degree} {fluid}насыщ{ending}")[1] == expected
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("от слабо до средне битумонасыщенные", "weak_to_medium"),
+    ("от средне до сильно нефтенасыщенная", "medium_to_intense"),
+    ("от слабо до интенсивно битумонасыщенный", "weak_to_intense"),
+    ("средненефтенасыщенный", "medium"),
+    ("интенсивно-битумонасыщенные", "intense"),
+    ("средне\nбитумонасыщенные", "medium"),
+    ("БИТУМОНАСЫЩЕННЫЕ", "present"),
+    ("не нефтенасыщенные", "none"),
+    ("не битумонасыщенная", "none"),
+    ("без признаков битума", "none"),
+    ("предположительно средне битумонасыщенные", "uncertain"),
+    ("местами от средне до интенсивно битумонасыщенные", "medium_to_intense"),
+    ("Песчаники от темно-серых до черных, интенсивно трещиноватые", "unknown"),
+    ("Песчаник слабосцементированный, битумонасыщенный", "present"),
+])
+def test_saturation_ranges_context_and_negation(text, expected):
+    assert analyze_description(text)[1] == expected
 
 
 def test_dictionary_validation_rejects_duplicate_ids(tmp_path):
