@@ -6,6 +6,7 @@ from core_description.identity import (
     WellMetadata, compare_identity, extract_identity, normalize_date, normalize_elevation,
 )
 from core_description.models import ParsedCoreDocument
+from core_description.areas import area_name_similarity, area_names_match
 
 
 def document(**fields):
@@ -72,10 +73,26 @@ def test_date_comparison_explains_matches_and_conflicts(stored, status):
     assert compare_identity(source, metadata, None)[1].status == status
 
 
-@pytest.mark.parametrize("altitude, status", [(132.43, "match"), (132.442, "match"), (132.45, "different"), (None, "missing")])
-def test_elevation_comparison_accounts_for_database_rounding(altitude, status):
+@pytest.mark.parametrize("altitude, status", [
+    (132.43, "match"), (133.9, "match"), (134.432, "match"), (130.432, "match"),
+    (134.433, "different"), (130.431, "different"), (None, "missing"),
+])
+def test_elevation_comparison_allows_two_metres(altitude, status):
     source = document(wellhead_elevation=132.432, wellhead_elevation_raw="132,432")
     assert compare_identity(source, WellMetadata(), altitude)[3].status == status
+
+
+@pytest.mark.parametrize('first, second, expected', [
+    ('Мельничное поднятие', 'мельничный уч', True),
+    ('Мельничное поднятие', 'Мелничный участок', True),
+    ('abcd', 'abxy', False), ('abcde', 'abxde', True),
+    ('Объект 58', 'Объект 580', False), ('Объект 58', 'Объект 59', False),
+    ('Мельничный 1', 'Мельничный 2', False), ('', '', False),
+])
+def test_area_similarity_threshold_is_strictly_above_half(first, second, expected):
+    assert area_names_match(first, second) is expected
+    if first == 'abcd':
+        assert area_name_similarity(first, second) == .5
 
 
 def test_area_search_uses_arbitrary_categories_but_not_drilling_measurements():

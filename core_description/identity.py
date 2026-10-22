@@ -9,12 +9,13 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Iterable
 
-from .areas import area_names_match
+from .areas import area_names_match, area_name_similarity, AREA_SIMILARITY_THRESHOLD
 from .models import ParsedCoreDocument
 
 DATE_TOKEN = re.compile(r"(?<!\d)(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-](?:\d{4}|\d{2})|\d{1,2}[./]\d{4}|\d{4}-\d{1,2})(?!\d)")
 NUMBER_TOKEN = re.compile(r"[+-]?\d+(?:[.,]\d+)?")
-ELEVATION_TOLERANCE = 0.01  # DOC headers often retain more decimals than Well.alt.
+ELEVATION_TOLERANCE = 2.0
+MIN_IDENTITY_MATCHES = 2
 
 
 def label_key(value: str) -> str:
@@ -121,8 +122,8 @@ class WellMetadata:
     def area_entries(self, wanted: str | None = None) -> tuple[tuple[str, str], ...]:
         return tuple((label, value) for label, value in self.attributes
                      if identity_kind(label) is None and (any(word in label_key(label) for word in (
-                         "площад", "залеж", "месторожд", "подняти", "структур", "объект", "area", "field", "deposit"))
-                         or label_key(label) == "пл" or area_names_match(wanted, value)))
+                         "площад", "залеж", "месторожд", "подняти", "структур", "участ", "объект", "area", "field", "deposit"))
+                         or label_key(label) in {"пл", "уч"} or area_names_match(wanted, value)))
 
 
 @dataclass(frozen=True)
@@ -131,16 +132,18 @@ class IdentityComparison:
     source: str
     database: str
     status: str
+    similarity: float | None = None
 
 
 def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
                      altitude: float | None) -> tuple[IdentityComparison, ...]:
     result = []
     area_entries = metadata.area_entries(document.area_name)
-    area_status = ("match" if any(area_names_match(document.area_name, value) for _, value in area_entries)
+    similarity = max((area_name_similarity(document.area_name, value) for _, value in area_entries), default=0.0)
+    area_status = ("match" if similarity > AREA_SIMILARITY_THRESHOLD
                    else "different" if document.area_name and area_entries else "missing")
     result.append(IdentityComparison("area", document.area_name_raw or document.area_name or "",
-                                    "; ".join(f"{label}: {value}" for label, value in area_entries), area_status))
+                                    "; ".join(f"{label}: {value}" for label, value in area_entries), area_status, similarity))
     for kind in ("drilling_start", "drilling_end", "wellhead_elevation"):
         raw = getattr(document, kind + "_raw")
         source = getattr(document, kind)
@@ -175,8 +178,8 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
     return tuple(result)
 
 
-def has_identity_matches(comparisons: Iterable[IdentityComparison]) -> bool:
-    return any(item.field != "area" and item.status == "match" for item in comparisons)
+def identity_match_count(comparisons: Iterable[IdentityComparison]) -> int:
+    return len({item.field for item in comparisons if item.status == "match"})
 
 
 def has_identity_conflicts(comparisons: Iterable[IdentityComparison]) -> bool:

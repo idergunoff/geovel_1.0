@@ -52,16 +52,16 @@ def _document():
         ], dictionary_version="1.0")
 
 
-def test_preview_matches_well_and_selects_only_confident_rows(app, session):
+def test_preview_needs_two_matches_and_selects_only_confident_intervals(app, session):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
 
-    assert dialog.well_combo.currentData() is not None
+    assert dialog.well_combo.currentData() is None
     assert dialog.table.rowCount() == 2
     assert dialog.table.item(0, 0).checkState() == QtCore.Qt.Checked
     assert dialog.table.item(1, 0).checkState() == QtCore.Qt.Unchecked
     assert "интервалов: 1" in dialog.summary.text()
-    assert dialog.save_button.isEnabled()
+    assert not dialog.save_button.isEnabled()
 
 
 def test_import_window_is_modeless_and_reused(app, session):
@@ -148,6 +148,7 @@ def test_manual_choice_is_available_without_automatic_matches(app, session):
 def test_refresh_loads_wells_added_in_main_window(app, session):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
+    dialog.well_combo.setCurrentIndex(1)
     selected_id = dialog.well_combo.currentData()
     well = Well(name="new well")
     session.add(well)
@@ -160,6 +161,7 @@ def test_refresh_loads_wells_added_in_main_window(app, session):
 def test_refresh_disables_save_when_selected_well_was_deleted(app, session):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
+    dialog.well_combo.setCurrentIndex(1)
     selected_id = dialog.well_combo.currentData()
     session.delete(session.get(Well, selected_id))
     session.commit()
@@ -170,7 +172,7 @@ def test_refresh_disables_save_when_selected_well_was_deleted(app, session):
 
 def test_identity_details_are_visible_and_compared_when_selecting(app, session):
     existing = session.query(Well).filter_by(name="12").one()
-    existing.alt = 133
+    existing.alt = 135
     wanted = Well(name="12", alt=132.43)
     session.add(wanted)
     session.flush()
@@ -219,6 +221,34 @@ def test_missing_database_details_never_display_a_match(app, session):
     assert dialog.comparison_table.item(1, 1).text() == "28.08.2019"
     assert dialog.comparison_table.item(1, 2).text() == "—"
     assert dialog.comparison_table.item(1, 3).text() == "Нет данных для сравнения"
+
+
+def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monkeypatch):
+    wanted = session.query(Well).filter_by(name="12").one()
+    wanted.alt = 134.432
+    session.add_all([
+        WellOptionally(well_id=wanted.id, option="Участок", value="Мельничный уч"),
+        WellOptionally(well_id=wanted.id, option="Начало бурения", value="28.08.2019"),
+    ])
+    session.commit()
+    source = _document()
+    source.area_name_raw = source.area_name = "Мелничное поднятие"
+    source.wellhead_elevation = 132.432
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, "ready", source)]))
+    assert dialog.well_combo.currentData() == wanted.id
+    assert "2 из 4" in dialog.match_label.text()
+    assert "сходство" in dialog.comparison_table.item(0, 3).text()
+    assert dialog.comparison_table.item(3, 3).text() == "Совпадает"
+    captured = []
+    class Result:
+        intervals_saved = 1
+    monkeypatch.setattr("qt.core_description_import.save_core_import",
+                        lambda *_args, **kwargs: captured.append(kwargs) or Result())
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *_args: None)
+    dialog.save()
+    assert captured[0]["well_id"] == wanted.id
+    assert captured[0]["match_method"] == "exact_name_identity"
 
 
 def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monkeypatch):
@@ -293,6 +323,7 @@ def test_filter_does_not_change_hidden_row_selection(app, session):
 def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
+    dialog.well_combo.setCurrentIndex(1)
     dialog.table.item(0, 3).setText("Известняк")
     dialog.table.item(0, 5).setText("Средняя")
     dialog.table.item(0, 9).setText("1,5")

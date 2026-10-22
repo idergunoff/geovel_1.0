@@ -17,8 +17,11 @@ from models_db.model import (
 )
 
 from .models import ParsedCoreDocument, ParsedCoreInterval
-from .areas import area_names_match
-from .identity import WellMetadata, IdentityComparison, compare_identity, has_identity_matches, has_identity_conflicts
+from .areas import area_names_match, AREA_SIMILARITY_THRESHOLD
+from .identity import (
+    WellMetadata, IdentityComparison, compare_identity, identity_match_count,
+    has_identity_conflicts, MIN_IDENTITY_MATCHES, ELEVATION_TOLERANCE,
+)
 
 
 class CoreDescriptionSaveError(ValueError):
@@ -95,11 +98,8 @@ def load_well_areas(session: Any, well_ids: Iterable[int], area_name: str | None
 def match_well(session: Any, well_name: str | None, area_name: str | None = None,
                *, document: ParsedCoreDocument | None = None) -> WellMatchResult:
     """Resolve labels, using independent drilling details to disambiguate a number."""
-    result = _match_well_labels(session, well_name, area_name)
-    if document is None or not any(getattr(document, field) is not None for field in (
-            'drilling_start_raw', 'drilling_start', 'drilling_end_raw', 'drilling_end',
-            'wellhead_elevation_raw', 'wellhead_elevation')):
-        return result
+    if document is None:
+        return _match_well_labels(session, well_name, area_name)
     wanted = normalize_lookup_value(well_name)
     wells = session.query(Well).order_by(Well.id).all()
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted] if wanted else []
@@ -114,30 +114,20 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         areas = details.area_entries(area_name)
         area = next((value for _, value in areas if area_names_match(area_name, value)),
                     areas[0][1] if areas else None)
-        matches = has_identity_matches(comparisons)
-        conflicts = has_identity_conflicts(comparisons)
+        matches = identity_match_count(comparisons)
         candidates.append(WellMatchCandidate(
-            well.id, well.name, 1.0 if matches and not conflicts else .8,
+            well.id, well.name, matches / 4,
             'identity_suggestion', area, comparisons))
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
-                 and has_identity_matches(candidate.comparisons)
-                 and not has_identity_conflicts(candidate.comparisons)]
-    confirmed_by_area = [candidate for candidate in confirmed if any(
-        item.field == 'area' and item.status == 'match' for item in candidate.comparisons)]
-    if confirmed_by_area:
-        confirmed = confirmed_by_area
+                 and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
     if len(confirmed) == 1:
         return WellMatchResult('matched', selected=replace(confirmed[0], method='exact_name_identity'))
     candidates.sort(key=lambda candidate: (
+        -identity_match_count(candidate.comparisons),
         has_identity_conflicts(candidate.comparisons),
-        -sum(item.status == 'match' and item.field != 'area' for item in candidate.comparisons),
         not any(item.field == 'area' and item.status == 'match' for item in candidate.comparisons),
         candidate.well_name, candidate.well_id))
-    if result.selected and not confirmed:
-        selected = next((candidate for candidate in candidates if candidate.well_id == result.selected.well_id), None)
-        if selected and not has_identity_conflicts(selected.comparisons):
-            return replace(result, selected=replace(result.selected, comparisons=selected.comparisons))
-    warnings = ('multiple_identity_matches',) if len(confirmed) > 1 else result.warnings
+    warnings = ('multiple_identity_matches',) if len(confirmed) > 1 else ('insufficient_identity_matches',)
     if any(has_identity_conflicts(candidate.comparisons) for candidate in candidates):
         warnings += ('identity_conflict',)
     return WellMatchResult('manual_required', candidates=tuple(candidates[:10]), warnings=warnings)
@@ -293,7 +283,11 @@ def save_core_import(
                                    'drilling_start_raw', 'drilling_start', 'drilling_end_raw', 'drilling_end',
                                    'wellhead_elevation_raw', 'wellhead_elevation')},
                                'well_comparison': [asdict(item) for item in compare_identity(
-                                   parsed_document, well_metadata, well.alt)]}),
+                                   parsed_document, well_metadata, well.alt)],
+                               'well_match_policy': {
+                                   'elevation_tolerance_m': ELEVATION_TOLERANCE,
+                                   'area_similarity_above': AREA_SIMILARITY_THRESHOLD,
+                                   'minimum_categories': MIN_IDENTITY_MATCHES}}),
         )
         session.add(document)
         session.flush()

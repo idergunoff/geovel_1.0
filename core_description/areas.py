@@ -1,13 +1,15 @@
-"""Conservative lookup keys for area labels used in core-document headers."""
+"""Normalized names and fuzzy similarity for area labels in core headers."""
 
 from __future__ import annotations
 
 import re
 import unicodedata
+from difflib import SequenceMatcher
 
 
 OBJECT_RE = re.compile(r"\bобъект(?:а)?\s*(?:№|номер|n[оo]?[.]?)?\s*(\d+(?:[-/]\d+)?[а-яa-z]?)\b", re.I)
-AREA_KIND_RE = re.compile(r"\b(?:площадь|пл\.|поднятие|месторождение|структура|залежь|area|field|deposit)\b", re.I)
+AREA_KIND_RE = re.compile(r"\b(?:площадь|пл|поднятие|месторождение|структура|залежь|участок|уч|area|field|deposit)\b[.]?", re.I)
+AREA_SIMILARITY_THRESHOLD = 0.5
 
 
 def normalize_area_name(value: str | None) -> str:
@@ -28,6 +30,16 @@ def normalize_area_name(value: str | None) -> str:
                    for word in words)
 
 
+def area_name_similarity(first: str | None, second: str | None) -> float:
+    first_key, second_key = normalize_area_name(first), normalize_area_name(second)
+    if not first_key or not second_key:
+        return 0.0
+    # Object numbers must remain distinct even when their text is very similar.
+    if (first_key.startswith("объект") or second_key.startswith("объект")
+            or re.findall(r"\d+", first_key) != re.findall(r"\d+", second_key)):
+        return float(first_key == second_key)
+    return SequenceMatcher(None, first_key, second_key, autojunk=False).ratio()
+
+
 def area_names_match(first: str | None, second: str | None) -> bool:
-    key = normalize_area_name(first)
-    return bool(key and key == normalize_area_name(second))
+    return area_name_similarity(first, second) > AREA_SIMILARITY_THRESHOLD
