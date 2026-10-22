@@ -70,6 +70,23 @@ def _libreoffice_command() -> list[str] | None:
     if executable := _libreoffice_executable():
         return [executable]
 
+    # IDEs distributed as Flatpak cannot see host executables. Use the host
+    # bridge only when Flatpak already permits it; do not change permissions.
+    if os.environ.get("FLATPAK_ID") and (spawn := shutil.which("flatpak-spawn")):
+        configured = os.environ.get("LIBREOFFICE_PATH")
+        candidates = [configured] if configured else ["/usr/bin/libreoffice", "/usr/bin/soffice"]
+        for candidate in candidates:
+            command = [spawn, "--host", candidate]
+            try:
+                result = subprocess.run(
+                    [*command, "--version"], check=False, capture_output=True,
+                    text=True, timeout=10,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if result.returncode == 0:
+                return command
+
     flatpak = shutil.which("flatpak")
     if not flatpak:
         return None
@@ -176,7 +193,20 @@ def docx_source(path: Path) -> Iterator[Path]:
             "Install one of them or convert the file to .docx"
         )
 
-    with tempfile.TemporaryDirectory(prefix="geovel-core-") as temporary:
+    temporary_root = None
+    if libreoffice_command and libreoffice_command[1:2] == ["--host"]:
+        # Flatpak's /tmp is private. Its per-app cache has the same absolute
+        # path on the host, allowing both processes to share staged files.
+        application = os.environ["FLATPAK_ID"]
+        if application in {".", ".."} or "/" in application or "\\" in application:
+            raise DocConversionError("Invalid FLATPAK_ID for shared conversion directory")
+        temporary_root = Path.home() / ".var" / "app" / application / "cache"
+        try:
+            temporary_root.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise DocConversionError(f"Cannot prepare shared LibreOffice directory: {error}") from error
+
+    with tempfile.TemporaryDirectory(prefix="geovel-core-", dir=temporary_root) as temporary:
         # Do not pass the user-selected path directly to LibreOffice.  On Windows
         # its command-line converter is unreliable with long and non-ASCII paths
         # (both are common for Russian core-description archives).  Staging the
