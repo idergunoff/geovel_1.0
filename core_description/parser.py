@@ -42,6 +42,9 @@ def _number(value: str) -> Optional[float]:
 
 
 def _normalized_header(value: str) -> str:
+    # Word may wrap a header mid-word; keep this normalization out of data cells.
+    value = value.replace("\u00ad", "")
+    value = re.sub(r"(?<=\w)[-‐]\s*\n\s*(?=\w)", "", value)
     normalized = _space(value).lower().replace("ё", "е")
     return re.sub(r"\s*,?\s*м(?:етр(?:а|ов)?)?\.?$", "", normalized).strip()
 
@@ -120,6 +123,10 @@ def _column_map(rows: list[list[str]]) -> tuple[dict[str, int], int, int]:
         depth_score = 2 if {"top", "bottom"} <= mapping.keys() else 2 if "range" in mapping else 0
         score = depth_score + (2 if "description" in mapping else 0)
         if score > best[2]:
+            best = mapping, row_index + 1, score
+        elif score == best[2] and score and mapping.keys() > best[0].keys():
+            # An optional header can finish on a lower line after depths and
+            # description have already supplied the full structural score.
             best = mapping, row_index + 1, score
     return best
 
