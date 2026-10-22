@@ -93,6 +93,51 @@ def test_thickness_is_extracted_from_merged_headers(generated):
     assert [item.thickness for item in document.intervals] == [1.2, 1.8]
 
 
+@pytest.mark.parametrize("index_header", [
+    "<w:p><w:r><w:t>Геологический</w:t></w:r></w:p><w:p><w:r><w:t>индекс</w:t></w:r></w:p>",
+    "<w:p><w:r><w:t>Геологи-</w:t><w:br/><w:t>ческий индекс</w:t></w:r></w:p>",
+    "<w:p><w:r><w:t>Геологиче\u00adский индекс</w:t></w:r></w:p>",
+])
+def test_geological_index_header_survives_word_paragraphs_and_wrapping(tmp_path, index_header):
+    from zipfile import ZipFile
+    from core_description.docx import WORD_NS
+
+    def cell(text):
+        return f"<w:tc><w:p><w:r><w:t>{text}</w:t></w:r></w:p></w:tc>"
+
+    xml = (
+        f'<w:document xmlns:w="{WORD_NS}"><w:body><w:tbl><w:tr>'
+        + cell("От") + cell("До") + f"<w:tc>{index_header}</w:tc>" + cell("Описание керна")
+        + "</w:tr><w:tr>" + cell("100") + cell("102")
+        + '<w:tc><w:p><w:r><w:t>Р</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="subscript"/></w:rPr><w:t>2</w:t></w:r><w:r><w:t>kz</w:t></w:r></w:p></w:tc>'
+        + cell("Песчаник") + "</w:tr></w:tbl></w:body></w:document>"
+    )
+    path = tmp_path / "wrapped-index.docx"
+    with ZipFile(path, "w") as archive:
+        archive.writestr("word/document.xml", xml)
+    document = parse_core_document(path)
+    assert len(document.intervals) == 1
+    assert document.intervals[0].geological_index_raw == "Р2kz"
+
+
+def test_optional_header_on_lower_line_is_not_lost():
+    from core_description.docx import ExtractedTable
+    from core_description.parser import _column_map, _parse_rows
+
+    rows = [
+        ["От", "До", "Геологический", "Описание керна"],
+        ["", "", "индекс", ""],
+        ["1", "2", "3", "4"],
+        ["100", "102", "P1uf2", "Песчаник"],
+    ]
+    mapping, start, score = _column_map(rows)
+    assert score == 4
+    intervals = _parse_rows(ExtractedTable(rows), 0, mapping, start)
+    assert len(intervals) == 1
+    assert intervals[0].source_row == 3
+    assert intervals[0].geological_index_raw == "P1uf2"
+
+
 def test_cli_emits_json_and_is_independent_of_gui_or_database(generated):
     path = generated / "single_range_column.docx"
     process = subprocess.run(

@@ -31,7 +31,9 @@ class ExtractedDocx:
 def _text(element: ElementTree.Element) -> str:
     pieces: list[str] = []
     for node in element.iter():
-        if node.tag == W + "t" and node.text:
+        if node.tag == W + "p" and pieces:
+            pieces.append("\n")
+        elif node.tag == W + "t" and node.text:
             pieces.append(node.text)
         elif node.tag in {W + "br", W + "cr"}:
             pieces.append("\n")
