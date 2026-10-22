@@ -15,6 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
+from core_description.terminology import SATURATION_LABELS
 from models_db.model import Base, Well
 import models_db.model_cluster  # noqa: E402,F401
 import models_db.model_profile_features  # noqa: E402,F401
@@ -66,7 +67,7 @@ def test_filter_does_not_change_hidden_row_selection(app, session):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
     dialog.table.item(1, 0).setCheckState(QtCore.Qt.Checked)
-    dialog.rock_filter.setText("sandstone")
+    dialog.rock_filter.setText("песчаник")
 
     assert dialog.table.isRowHidden(1)
     dialog._select_visible(False)
@@ -77,8 +78,8 @@ def test_filter_does_not_change_hidden_row_selection(app, session):
 def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
-    dialog.table.item(0, 3).setText("edited sandstone")
-    dialog.table.item(0, 5).setText("medium")
+    dialog.table.item(0, 3).setText("Известняк")
+    dialog.table.item(0, 5).setText("Средняя")
     captured = {}
 
     class Result:
@@ -91,23 +92,69 @@ def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
 
     assert captured["selected_interval_ids"] == {"0:2"}
     assert captured["edits"]["0:2"]["oil_saturation"] == "medium"
-    assert captured["edits"]["0:2"]["rocks"][0]["canonical_value"] == "edited sandstone"
+    assert captured["edits"]["0:2"]["rocks"][0]["canonical_value"] == "limestone"
 
 
-@pytest.mark.parametrize("saturation", ["weak_to_medium", "medium_to_intense", "weak_to_intense"])
+@pytest.mark.parametrize("saturation", list(SATURATION_LABELS))
 def test_saturation_ranges_can_be_filtered_and_selected(app, session, saturation):
     document = _document()
     document.intervals[0].oil_saturation = saturation
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(document)
 
-    assert dialog.table.item(0, 5).text() == saturation
-    assert dialog.saturation_filter.findText(saturation) >= 0
-    dialog.saturation_filter.setCurrentText(saturation)
+    label = SATURATION_LABELS[saturation]
+    assert dialog.table.item(0, 5).text() == label
+    assert dialog.saturation_filter.findData(saturation) >= 0
+    dialog.saturation_filter.setCurrentText(label)
     assert not dialog.table.isRowHidden(0)
-    assert dialog.table.isRowHidden(1)
+    assert dialog.table.isRowHidden(1) == (saturation != "unknown")
 
     dialog._select_visible(False)
     dialog._select_oil()
-    assert dialog.table.item(0, 0).checkState() == QtCore.Qt.Checked
+    expected = QtCore.Qt.Unchecked if saturation in {"none", "unknown"} else QtCore.Qt.Checked
+    assert dialog.table.item(0, 0).checkState() == expected
     assert dialog._edits(0)["oil_saturation"] == saturation
+
+
+def test_russian_rocks_relations_edits_and_restore(app, session):
+    document = _document()
+    document.intervals[0].rocks.append(RockMention("clay", "глины", "interlayer"))
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(document)
+    assert dialog.table.item(0, 3).text() == "Песчаник"
+    assert dialog.table.item(0, 4).text() == "Глина (прослой)"
+    assert "rocks" not in dialog._edits(0)
+
+    dialog.rock_filter.setText("глина")
+    assert not dialog.table.isRowHidden(0)
+    assert dialog.table.isRowHidden(1)
+    dialog.table.item(0, 3).setText("Известняк")
+    dialog.table.item(0, 4).setText("Доломит (включение), Алевролит (переслаивание)")
+    rocks = dialog._edits(0)["rocks"]
+    assert [(r["canonical_value"], r["relation"]) for r in rocks] == [
+        ("limestone", "primary"), ("dolomite", "inclusion"), ("siltstone", "interbedding")]
+
+    dialog.table.item(0, 5).setText("Слабая")
+    dialog.rock_filter.clear()
+    dialog.table.selectRow(0)
+    dialog._restore_selected()
+    assert dialog.table.item(0, 3).text() == "Песчаник"
+    assert dialog.table.item(0, 4).text() == "Глина (прослой)"
+    assert dialog.table.item(0, 5).text() == SATURATION_LABELS["present"]
+    assert "rocks" not in dialog._edits(0)
+    assert dialog._edits(0)["oil_saturation"] == "present"
+
+
+def test_all_dictionary_rock_terms_are_translated_and_reversible():
+    from core_description import load_dictionary
+    from core_description.terminology import ROCK_LABELS, RELATION_LABELS, canonical_term
+
+    dictionary = load_dictionary()
+    for category, labels in (("rock", ROCK_LABELS), ("rock_relation", RELATION_LABELS)):
+        codes = {rule.canonical_value for rule in dictionary.rules if rule.category == category}
+        assert codes <= labels.keys()
+        for code in codes:
+            assert labels[code] != code
+            assert canonical_term(labels[code].lower(), labels) == code
+            assert canonical_term(code, labels) == code
+    assert canonical_term("Особая порода", ROCK_LABELS) == "Особая порода"
