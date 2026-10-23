@@ -94,9 +94,11 @@ def test_number_and_deposit_are_two_visible_matches(app, session):
     source.area_name_raw = source.area_name = 'Верхнее поднятие'
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(source)
-    assert dialog.well_combo.currentData() == well_id
+    assert dialog.well_combo.currentData() is None
+    assert 'даты бурения или альтитуды' in dialog.match_label.text()
+    assert not dialog.save_button.isEnabled()
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(well_id))
     assert dialog.comparison_table.rowCount() == 5
-    assert dialog.match_label.text() == 'Совпадают 2 из 5 признаков'
     assert dialog.comparison_table.item(0, 2).text() == 'Залежь: Верхнее 3'
     assert dialog.comparison_table.item(0, 3).text() == 'Совпадает'
     assert dialog.comparison_table.item(4, 0).text() == 'Номер скважины'
@@ -104,6 +106,27 @@ def test_number_and_deposit_are_two_visible_matches(app, session):
     assert dialog.comparison_table.item(4, 2).text() == '10вр'
     assert dialog.comparison_table.item(4, 3).text() == 'Совпадает'
     assert dialog.save_button.isEnabled()
+
+
+def test_batch_does_not_save_number_and_fuzzy_area_without_confirmation(app, session, monkeypatch):
+    well = session.query(Well).filter_by(name='12').one()
+    well.alt = 263.612
+    session.add(WellOptionally(well_id=well.id, option='Площадь', value='abxye'))
+    session.commit()
+    source = _document()
+    source.area_name_raw = source.area_name = 'abcde'
+    source.wellhead_elevation = 163.612
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
+    assert dialog.well_combo.currentData() is None
+    assert 'даты бурения или альтитуды' in dialog.match_label.text()
+    saved = []
+    monkeypatch.setattr('qt.core_description_import.save_core_import',
+                        lambda *_args, **kwargs: saved.append(kwargs))
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'information', lambda *_args: None)
+    dialog.save()
+    assert saved == []
+    assert dialog.batch_items[0].status == 'needs_review'
 
 
 def test_import_window_is_modeless_and_reused(app, session):
@@ -164,7 +187,7 @@ def test_area_choices_and_recommended_wells_are_visible(app, session, file_area,
     assert dialog.area_combo.itemText(1) == db_area
     assert dialog.well_combo.itemData(1) == other.id
     assert db_area in dialog.well_combo.itemText(1)
-    assert dialog.well_combo.currentData() == other.id
+    assert dialog.well_combo.currentData() is None
     dialog.area_combo.setEditText(search)
     assert dialog.well_combo.count() == 2
     assert dialog.well_combo.itemData(1) == other.id
@@ -309,7 +332,7 @@ def test_area_cell_shows_best_entry_of_selected_well(app, session):
     first_id, second_id = first.id, second.id
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
-    assert dialog.well_combo.currentData() == first_id
+    assert dialog.well_combo.currentData() is None
     dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(first_id))
     assert dialog.comparison_table.item(0, 2).text() == "Участок: Северная"
     assert dialog.comparison_table.item(0, 3).text() == "Совпадает"
