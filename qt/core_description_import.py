@@ -170,7 +170,12 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             "Импорт", "Файл", "Скважина", "Площадь", "Автор", "Скважина БД", "Интервалы", "Статус"))
         self.documents_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.documents_table.setMaximumHeight(180)
-        self.documents_table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.documents_table.setWordWrap(False)
+        self.documents_table.setTextElideMode(QtCore.Qt.ElideNone)
+        documents_header = self.documents_table.horizontalHeader()
+        documents_header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        documents_header.setResizeContentsPrecision(-1)
+        self.documents_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         layout.addWidget(self.documents_table)
 
         progress_row = QtWidgets.QHBoxLayout()
@@ -532,6 +537,18 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_combo.blockSignals(False)
         count = self.well_combo.count() - 1
         self.well_count_label.setText(f"Найдено: {count}" if count else "Нет скважин — измените условия поиска")
+        self._update_document_well()
+
+    def _update_document_well(self) -> None:
+        """Keep the batch row in sync even when combo signals were blocked."""
+        if self.document is None:
+            return
+        text = self.well_combo.currentText() if self.well_combo.currentData() is not None else "ожидает выбора"
+        for row, item in enumerate(self.batch_items):
+            if item.source_path == self.document.source_path:
+                cell = self.documents_table.item(row, 5)
+                cell.setText(text)
+                cell.setToolTip(text)
 
     def _filter_wells(self, *_args: Any) -> None:
         selected_id = self.well_combo.currentData()
@@ -586,9 +603,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         if self.document is not None:
             self._well_selections[self.document.source_path] = (
                 self.well_combo.currentData(), self.match_method, self.match_confidence)
-            for row, item in enumerate(self.batch_items):
-                if item.source_path == self.document.source_path:
-                    self.documents_table.item(row, 5).setText(self.well_combo.currentText())
+        self._update_document_well()
         self._update_summary()
         self._update_well_comparison()
 
