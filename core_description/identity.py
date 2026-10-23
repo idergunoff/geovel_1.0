@@ -136,6 +136,7 @@ class IdentityComparison:
     database: str
     status: str
     similarity: float | None = None
+    database_values: tuple[str, ...] = ()
 
 
 def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
@@ -157,7 +158,8 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
             stored = tuple(dict.fromkeys((*stored, str(altitude))))
         normalize = normalize_elevation if kind == "wellhead_elevation" else normalize_date
         normalized = [normalize(value) for value in stored]
-        valid = [value for value in normalized if value is not None]
+        valid_entries = [(raw_value, value) for raw_value, value in zip(stored, normalized) if value is not None]
+        valid = [value for _, value in valid_entries]
         status = "missing"
         if source is not None and valid:
             if kind == "wellhead_elevation":
@@ -178,8 +180,17 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
             status = "invalid_source"
         elif stored and not valid:
             status = "invalid_database"
+        displayed = valid_entries[0][0] if valid_entries else stored[0] if stored else ""
+        if source is not None and valid_entries:
+            if kind == "wellhead_elevation":
+                displayed = min(valid_entries, key=lambda entry: abs(source - entry[1]))[0]
+            else:
+                # Exact dates precede compatible partial dates; ties keep database order.
+                displayed = min(valid_entries, key=lambda entry: (
+                    entry[1] != source,
+                    not (source.startswith(entry[1]) or entry[1].startswith(source))))[0]
         result.append(IdentityComparison(kind, raw or (str(source) if source is not None else ""),
-                                         "; ".join(stored), status))
+                                         displayed, status, database_values=stored))
     return tuple(result)
 
 

@@ -125,3 +125,26 @@ def test_area_comparison_displays_only_the_entry_used_for_similarity(source_area
 def test_area_comparison_chooses_first_entry_when_best_scores_are_equal():
     metadata = WellMetadata((("Участок", "Северная"), ("Площадь", "Северная")))
     assert compare_identity(document(), metadata, None)[0].database == 'Участок: Северная'
+
+
+@pytest.mark.parametrize('kind, label, source, stored, altitude, expected, status', [
+    ('drilling_start', 'Начало бурения', '2019-08-28', ('29.08.2019', '28.08.19'), None, '28.08.19', 'conflict'),
+    ('drilling_end', 'Окончание бурения', '2019-09-02', ('03.09.2019', '02.09.19'), None, '02.09.19', 'conflict'),
+    ('drilling_start', 'Начало бурения', '2019-08-28', ('08.2019', '28.08.19'), None, '28.08.19', 'match'),
+    ('drilling_end', 'Окончание бурения', '2019-09-02', ('10.2019', '09.2019'), None, '09.2019', 'conflict'),
+    ('drilling_start', 'Начало бурения', None, ('неизвестно', '28.08.19'), None, '28.08.19', 'missing'),
+    ('drilling_end', 'Окончание бурения', '2019-09-02', ('неизвестно', 'ошибка'), None, 'неизвестно', 'invalid_database'),
+    ('wellhead_elevation', 'Альтитуда устья', 132.432, ('150', '132,43 м'), None, '132,43 м', 'conflict'),
+    ('wellhead_elevation', 'Альтитуда устья', 132.432, ('132',), 132.432, '132.432', 'match'),
+    ('wellhead_elevation', 'Альтитуда устья', 132.432, ('неизвестно', '130.5'), None, '130.5', 'conflict'),
+    ('wellhead_elevation', 'Альтитуда устья', 0., ('10', '0'), None, '0', 'conflict'),
+    ('wellhead_elevation', 'Альтитуда устья', 132.432, (), None, '', 'missing'),
+])
+def test_identity_cells_show_one_value_without_losing_conflicts(kind, label, source, stored, altitude, expected, status):
+    source_document = document(**{kind: source})
+    metadata = WellMetadata(tuple((label, value) for value in stored))
+    comparison = next(item for item in compare_identity(source_document, metadata, altitude) if item.field == kind)
+    assert comparison.database == expected
+    assert comparison.status == status
+    values = tuple(dict.fromkeys((*stored, str(altitude)))) if altitude is not None else stored
+    assert comparison.database_values == values
