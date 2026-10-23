@@ -242,7 +242,7 @@ def test_two_metre_tolerance_can_supply_second_category(db_session):
     assert match_well(db_session, '12', source.area_name, document=source).selected is None
 
 
-def test_multiple_qualifying_wells_still_require_manual_selection(db_session):
+def test_multiple_qualifying_wells_select_first_record(db_session):
     wells = [Well(name='12'), Well(name='12')]
     db_session.add_all(wells)
     db_session.flush()
@@ -254,14 +254,15 @@ def test_multiple_qualifying_wells_still_require_manual_selection(db_session):
     source.area_name = 'Мельничное поднятие'
     source.drilling_start = '2019-08-28'
     result = match_well(db_session, '12', source.area_name, document=source)
-    assert result.selected is None
-    assert 'multiple_identity_matches' in result.warnings
+    assert result.selected.well_id == min(well.id for well in wells)
+    assert result.selected.confidence == .5
+    assert result.selected.method == 'exact_name_identity'
 
 
-@pytest.mark.parametrize('counts', [(2, 1), (3, 2), (4, 3), (4, 2), (2, 2), (3, 3), (1, 0), (1, 1), (0, 0)])
+@pytest.mark.parametrize('counts', [(2, 1), (3, 2), (4, 3), (4, 2), (2, 2), (3, 3), (4, 4), (1, 0), (1, 1), (0, 0)])
 @pytest.mark.parametrize('reverse_order', [False, True])
 @pytest.mark.parametrize('use_catalog', [False, True])
-def test_duplicate_wells_select_unique_highest_match_count(db_session, counts, reverse_order, use_catalog):
+def test_duplicate_wells_select_first_highest_match_count(db_session, counts, reverse_order, use_catalog):
     ordered_counts = counts[::-1] if reverse_order else counts
     wells = [Well(name='12'), Well(name='12')]
     db_session.add_all(wells)
@@ -284,7 +285,7 @@ def test_duplicate_wells_select_unique_highest_match_count(db_session, counts, r
     catalog = load_well_catalog(db_session) if use_catalog else None
     result = match_well(db_session, '12', source.area_name, document=source, catalog=catalog)
     best = max(ordered_counts)
-    if best >= 2 and ordered_counts.count(best) == 1:
+    if best >= 2:
         assert result.status == 'matched'
         assert result.selected.well_id == ids[ordered_counts.index(best)]
         assert result.selected.method == 'exact_name_identity'
@@ -293,8 +294,24 @@ def test_duplicate_wells_select_unique_highest_match_count(db_session, counts, r
     else:
         assert result.selected is None
         assert result.status == 'manual_required'
-        expected_warning = 'multiple_identity_matches' if best >= 2 else 'insufficient_identity_matches'
-        assert expected_warning in result.warnings
+        assert 'insufficient_identity_matches' in result.warnings
+
+
+@pytest.mark.parametrize('use_catalog', [False, True])
+def test_tied_match_uses_lowest_id_even_when_name_sorting_differs(db_session, use_catalog):
+    db_session.add_all([Well(id=100, name=' 12 '), Well(id=10, name='12')])
+    db_session.flush()
+    for well_id in (100, 10):
+        db_session.add_all([
+            WellOptionally(well_id=well_id, option='Площадь', value='Северная'),
+            WellOptionally(well_id=well_id, option='Начало бурения', value='28.08.2019'),
+        ])
+    db_session.commit()
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    catalog = load_well_catalog(db_session) if use_catalog else None
+    result = match_well(db_session, '12', source.area_name, document=source, catalog=catalog)
+    assert result.selected.well_id == 10
 
 
 def test_duplicate_area_values_count_as_one_category(db_session):

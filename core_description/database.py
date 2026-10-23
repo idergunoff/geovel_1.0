@@ -149,17 +149,15 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
                  and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
     if confirmed:
-        best_count = max(identity_match_count(candidate.comparisons) for candidate in confirmed)
-        confirmed = [candidate for candidate in confirmed
-                     if identity_match_count(candidate.comparisons) == best_count]
-    if len(confirmed) == 1:
-        return WellMatchResult('matched', selected=replace(confirmed[0], method='exact_name_identity'))
+        best = min(confirmed, key=lambda candidate: (
+            -identity_match_count(candidate.comparisons), candidate.well_id))
+        return WellMatchResult('matched', selected=replace(best, method='exact_name_identity'))
     candidates.sort(key=lambda candidate: (
         -identity_match_count(candidate.comparisons),
         has_identity_conflicts(candidate.comparisons),
         not any(item.field == 'area' and item.status == 'match' for item in candidate.comparisons),
         candidate.well_name, candidate.well_id))
-    warnings = ('multiple_identity_matches',) if len(confirmed) > 1 else ('insufficient_identity_matches',)
+    warnings = ('insufficient_identity_matches',)
     if any(has_identity_conflicts(candidate.comparisons) for candidate in candidates):
         warnings += ('identity_conflict',)
     return WellMatchResult('manual_required', candidates=tuple(candidates[:10]), warnings=warnings)
