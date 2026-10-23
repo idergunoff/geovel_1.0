@@ -239,6 +239,9 @@ def parse_core_document(path: str | Path) -> ParsedCoreDocument:
         header_texts.append(block)
     metadata, described_by = _find_metadata(all_text, all_rows, header_texts)
     well, area, author_raw, warnings = metadata
+    if area is None and (directory_name := source.resolve().parent.name):
+        area = directory_name
+        warnings.append("area_name_from_directory")
     candidates: list[tuple[int, ExtractedTable, dict[str, int], int, int]] = []
     table_index = 0
     for block in extracted.blocks:

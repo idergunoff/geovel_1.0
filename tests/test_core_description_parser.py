@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from xml.sax.saxutils import escape
 from zipfile import ZipFile
@@ -206,6 +208,95 @@ def test_area_inference_ignores_text_after_table_and_conflicting_headers(header_
         ["Ягодное поднятие", header_area], [])
     assert area is None
     assert "area_name_ambiguous" in warnings
+
+
+@pytest.fixture()
+def no_area_document(generated, tmp_path):
+    path = tmp_path / 'no-area.docx'
+    with ZipFile(generated / 'standard_separate_columns.docx') as original, ZipFile(path, 'w') as output:
+        for item in original.infolist():
+            data = original.read(item)
+            if item.filename == 'word/document.xml':
+                data = data.replace('Площадь: Тестовая Северная'.encode(), b'')
+            output.writestr(item, data)
+    return path
+
+
+@pytest.mark.parametrize('relative_path', [False, True])
+def test_missing_area_uses_immediate_source_directory(no_area_document, tmp_path, monkeypatch, relative_path):
+    directory = tmp_path / 'Архив' / 'Мельничное поднятие'
+    directory.mkdir(parents=True)
+    source = directory / '311.docx'
+    shutil.copyfile(no_area_document, source)
+    if relative_path:
+        monkeypatch.chdir(directory)
+        source = Path(source.name)
+    result = parse_core_document(source)
+    assert result.area_name_raw == result.area_name == 'Мельничное поднятие'
+    assert 'area_name_from_directory' in result.warnings
+    assert result.well_name == 'TEST-101'
+    assert len(result.intervals) == 2
+
+
+def test_document_area_takes_priority_over_directory(generated, tmp_path):
+    directory = tmp_path / 'Другая площадь'
+    directory.mkdir()
+    source = directory / '311.docx'
+    shutil.copyfile(generated / 'standard_separate_columns.docx', source)
+    result = parse_core_document(source)
+    assert result.area_name == 'Тестовая Северная'
+    assert 'area_name_from_directory' not in result.warnings
+
+
+def test_doc_directory_fallback_uses_original_path_before_conversion(no_area_document, tmp_path, monkeypatch):
+    directory = tmp_path / 'Мельничное'
+    directory.mkdir()
+    source = directory / '311.doc'
+    source.write_bytes(b'legacy document staged for conversion')
+
+    @contextmanager
+    def converted_document(path):
+        assert path == source
+        yield no_area_document
+
+    monkeypatch.setattr('core_description.parser.docx_source', converted_document)
+    result = parse_core_document(source)
+    assert result.area_name == 'Мельничное'
+    assert 'area_name_from_directory' in result.warnings
+    assert result.source_path == str(source)
+    assert result.source_format == 'doc'
+
+
+def test_directory_fallback_preserves_ambiguous_header_warning(no_area_document, tmp_path):
+    directory = tmp_path / 'Мельничное'
+    directory.mkdir()
+    source = directory / '311.docx'
+    conflicting = ''.join(f'<w:p><w:r><w:t>{text}</w:t></w:r></w:p>'
+                          for text in ('Ягодное поднятие', 'Северное поднятие'))
+    with ZipFile(no_area_document) as original, ZipFile(source, 'w') as output:
+        for item in original.infolist():
+            data = original.read(item)
+            if item.filename == 'word/document.xml':
+                data = data.replace(b'<w:tbl>', conflicting.encode() + b'<w:tbl>', 1)
+            output.writestr(item, data)
+    result = parse_core_document(source)
+    assert result.area_name == 'Мельничное'
+    assert 'area_name_ambiguous' in result.warnings
+    assert 'area_name_from_directory' in result.warnings
+
+
+def test_recursive_batch_uses_each_files_parent_directory(no_area_document, tmp_path):
+    from core_description.batch import parse_batch
+
+    root = tmp_path / 'Архив'
+    for name in ('Мельничное', 'Северная'):
+        directory = root / name
+        directory.mkdir(parents=True)
+        shutil.copyfile(no_area_document, directory / '311.docx')
+    result = parse_batch([root], recursive=True)
+    assert result.failed == 0
+    assert {item.document.area_name for item in result.items} == {'Мельничное', 'Северная'}
+    assert all('area_name_from_directory' in item.document.warnings for item in result.items)
 
 
 def test_cli_emits_json_and_is_independent_of_gui_or_database(generated):

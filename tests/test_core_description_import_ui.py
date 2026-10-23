@@ -64,6 +64,24 @@ def test_preview_needs_two_matches_and_selects_only_confident_intervals(app, ses
     assert not dialog.save_button.isEnabled()
 
 
+def test_directory_area_is_marked_in_preview_and_used_for_matching(app, session):
+    well = session.query(Well).filter_by(name='12').one()
+    well.alt = 132.432
+    session.add(WellOptionally(well_id=well.id, option='Площадь', value='Мельничное'))
+    session.commit()
+    well_id = well.id
+    source = _document()
+    source.area_name_raw = source.area_name = 'Мельничное'
+    source.wellhead_elevation = 132.432
+    source.warnings.append('area_name_from_directory')
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() == well_id
+    assert 'Площадь взята из названия папки' in dialog.metadata.text()
+    assert dialog.comparison_table.item(0, 1).text() == 'Мельничное (из папки)'
+    assert dialog.comparison_table.item(0, 3).text() == 'Совпадает'
+
+
 def test_import_window_is_modeless_and_reused(app, session):
     main = QtWidgets.QMainWindow()
     editor = QtWidgets.QLineEdit()
