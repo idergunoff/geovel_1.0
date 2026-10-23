@@ -148,3 +148,27 @@ def test_identity_cells_show_one_value_without_losing_conflicts(kind, label, sou
     assert comparison.status == status
     values = tuple(dict.fromkeys((*stored, str(altitude)))) if altitude is not None else stored
     assert comparison.database_values == values
+
+
+@pytest.mark.parametrize('source_number, db_number, status', [
+    ('10 Вр', '10вр', 'match'), ('10вр', '10 ВР', 'match'),
+    ('10\u00a0Вр', '10вр', 'match'), ('10 Вр', '10а', 'different'),
+    ('10 Вр', '110 Вр', 'different'), (None, '10 Вр', 'missing'), ('', '', 'missing'),
+])
+def test_well_number_is_a_comparison_criterion(source_number, db_number, status):
+    source = document()
+    source.well_name_raw = source.well_name = source_number
+    comparisons = compare_identity(source, WellMetadata(), None, well_name=db_number)
+    number = next(item for item in comparisons if item.field == 'well_name')
+    assert number.status == status
+    assert number.database == (db_number or '')
+
+
+@pytest.mark.parametrize('first, second, expected', [
+    ('Верхнее поднятие', 'Верхнее 3', True), ('Верхнее 3', 'Верхнее поднятие', True),
+    ('Верхнее 3', 'Верхнее 4', False), ('Верхнее 3', 'Верхнее 30', False),
+    ('Объект 3', 'Объект 4', False), ('Объект 3', 'Верхнее 3', False),
+    ('Верхнее поднятие', 'Нижнее 3', False),
+])
+def test_area_can_match_unnumbered_name_to_numbered_deposit(first, second, expected):
+    assert area_names_match(first, second) is expected

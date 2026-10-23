@@ -17,6 +17,13 @@ DATE_TOKEN = re.compile(r"(?<!\d)(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./
 NUMBER_TOKEN = re.compile(r"[+-]?\d+(?:[.,]\d+)?")
 ELEVATION_TOLERANCE = 2.0
 MIN_IDENTITY_MATCHES = 2
+IDENTITY_FIELD_COUNT = 5
+
+
+def normalize_lookup_value(value: str | None) -> str:
+    """Normalize labels, including spaces within alphanumeric well numbers."""
+    value = unicodedata.normalize('NFKC', value or '').casefold().replace('ё', 'е')
+    return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
 @lru_cache(maxsize=1024)
@@ -140,7 +147,7 @@ class IdentityComparison:
 
 
 def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
-                     altitude: float | None) -> tuple[IdentityComparison, ...]:
+                     altitude: float | None, well_name: str | None = None) -> tuple[IdentityComparison, ...]:
     result = []
     area_entries = metadata.area_entries(document.area_name)
     best_area = max(area_entries, key=lambda entry: area_name_similarity(document.area_name, entry[1]),
@@ -191,6 +198,13 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
                     not (source.startswith(entry[1]) or entry[1].startswith(source))))[0]
         result.append(IdentityComparison(kind, raw or (str(source) if source is not None else ""),
                                          displayed, status, database_values=stored))
+    source_number = normalize_lookup_value(document.well_name)
+    database_number = normalize_lookup_value(well_name)
+    number_status = 'missing'
+    if source_number and database_number:
+        number_status = 'match' if source_number == database_number else 'different'
+    result.append(IdentityComparison('well_name', document.well_name_raw or document.well_name or '',
+                                    well_name or '', number_status))
     return tuple(result)
 
 

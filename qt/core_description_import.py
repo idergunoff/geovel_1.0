@@ -13,7 +13,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from core_description.database import WellCatalog, load_well_catalog, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
-from core_description.identity import WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count
+from core_description.identity import (
+    WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count, IDENTITY_FIELD_COUNT,
+)
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
@@ -132,6 +134,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._well_metadata: Mapping[int, WellMetadata] = {}
         self._well_catalog: WellCatalog | None = None
         self._well_altitudes: dict[int, float | None] = {}
+        self._well_names: dict[int, str] = {}
         self._automatic: dict[str, dict[str, Any]] = {}
         self.batch_items: list[BatchParseItem] = []
         self._thread: QtCore.QThread | None = None
@@ -213,7 +216,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         well_row.addWidget(self.well_count_label)
         layout.addLayout(well_row)
 
-        self.comparison_table = QtWidgets.QTableWidget(4, 4)
+        self.comparison_table = QtWidgets.QTableWidget(IDENTITY_FIELD_COUNT, 4)
         self.comparison_table.setObjectName("core_well_comparison")
         self.comparison_table.setHorizontalHeaderLabels(("Признак", "В документе", "В базе данных", "Сравнение"))
         self.comparison_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -442,6 +445,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         wells = self._well_catalog.wells
         self._well_metadata = self._well_catalog.metadata
         self._well_altitudes = {well.id: well.alt for well in wells}
+        self._well_names = {well.id: well.name for well in wells}
         areas = {well_id: tuple(dict.fromkeys(value for _, value in metadata.area_entries(self.document.area_name)))
                  for well_id, metadata in self._well_metadata.items()}
         self._wells = [(well.id, well.name, tuple(areas.get(well.id, ()))) for well in wells]
@@ -479,7 +483,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.match_method = result.selected.method
             self.match_confidence = result.selected.confidence
             count = identity_match_count(result.selected.comparisons)
-            self.match_label.setText(f"Совпадают номер и {count} из 4 признаков" if self.match_method == "exact_name_identity"
+            self.match_label.setText(f"Совпадают {count} из {IDENTITY_FIELD_COUNT} признаков" if self.match_method == "exact_name_identity"
                                      else "Точное совпадение" if self.match_confidence == 1.0
                                      else "Совпадает номер; проверьте площадь")
         else:
@@ -540,9 +544,11 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             return
         well_id = self.well_combo.currentData()
         comparisons = compare_identity(self.document, self._well_metadata.get(well_id, WellMetadata()),
-                                       self._well_altitudes.get(well_id))
+                                       self._well_altitudes.get(well_id),
+                                       self._well_names.get(well_id))
         labels = {"area": "Площадь / залежь", "drilling_start": "Начало бурения",
-                  "drilling_end": "Окончание бурения", "wellhead_elevation": "Альтитуда устья, м"}
+                  "drilling_end": "Окончание бурения", "wellhead_elevation": "Альтитуда устья, м",
+                  "well_name": "Номер скважины"}
         statuses = {"match": "Совпадает", "different": "Различается", "missing": "Нет данных для сравнения",
                     "partial": "Совпадает месяц; дата неполная", "conflict": "Противоречивые данные",
                     "invalid_source": "Проверьте значение в документе", "invalid_database": "Проверьте значение в базе"}

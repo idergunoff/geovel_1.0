@@ -176,7 +176,7 @@ def test_area_can_match_any_data_of_well_category(db_session, category):
     ('drilling_end', '2019-09-02', 'Скважина окончена', '2019-09-02'),
     ('wellhead_elevation', 132.432, 'Альтитуда устья', '132,43 м'),
 ])
-def test_one_identity_match_is_only_a_suggestion(db_session, field, value, category, stored):
+def test_number_and_one_other_criterion_select_a_well(db_session, field, value, category, stored):
     first, second = Well(name='12'), Well(name='12')
     db_session.add_all([first, second])
     db_session.flush()
@@ -185,19 +185,19 @@ def test_one_identity_match_is_only_a_suggestion(db_session, field, value, categ
     source = _document()
     setattr(source, field, value)
     result = match_well(db_session, '12', source.area_name, document=source)
-    assert result.selected is None
-    candidate = next(item for item in result.candidates if item.well_id == second.id)
-    assert any(item.field == field and item.status == 'match' for item in candidate.comparisons)
+    assert result.selected.well_id == second.id
+    assert {item.field for item in result.selected.comparisons if item.status == 'match'} == {'well_name', field}
 
 
-def test_altitude_alone_does_not_select_a_well(db_session):
+def test_number_and_altitude_select_first_tied_well(db_session):
     first, second = Well(name='12', alt=133), Well(name='12', alt=132.43)
     db_session.add_all([first, second])
     db_session.commit()
     source = _document()
     source.wellhead_elevation = 132.432
     result = match_well(db_session, '12', document=source)
-    assert result.selected is None
+    assert result.selected.well_id == first.id
+    assert result.selected.confidence == 2 / 5
 
 
 def test_well_number_with_letter_suffix_matches_database_record(db_session):
@@ -216,6 +216,42 @@ def test_well_number_with_letter_suffix_matches_database_record(db_session):
     assert result.selected.method == 'exact_name_identity'
 
 
+@pytest.mark.parametrize('use_catalog', [False, True])
+def test_number_and_numbered_deposit_supply_two_required_matches(db_session, use_catalog):
+    well = Well(name='10вр')
+    db_session.add(well)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=well.id, option='Залежь', value='Верхнее 3'))
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '10 Вр'
+    source.area_name_raw = source.area_name = 'Верхнее поднятие'
+    catalog = load_well_catalog(db_session) if use_catalog else None
+    result = match_well(db_session, source.well_name, source.area_name, document=source, catalog=catalog)
+    assert result.selected.well_id == well.id
+    assert {item.field for item in result.selected.comparisons if item.status == 'match'} == {'well_name', 'area'}
+    assert result.selected.confidence == 2 / 5
+
+
+@pytest.mark.parametrize('source_number', ['10 Вр', None])
+def test_four_other_matches_do_not_confirm_a_different_or_missing_number(db_session, source_number):
+    well = Well(name='110 Вр', alt=132.432)
+    db_session.add(well)
+    db_session.flush()
+    db_session.add_all(WellOptionally(well_id=well.id, option=label, value=value) for label, value in [
+        ('Площадь', 'Северная'), ('Начало бурения', '28.08.2019'), ('Окончание бурения', '02.09.2019')])
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = source_number
+    source.drilling_start = '2019-08-28'
+    source.drilling_end = '2019-09-02'
+    source.wellhead_elevation = 132.432
+    result = match_well(db_session, source.well_name, source.area_name, document=source)
+    assert result.selected is None
+    assert {item.field for item in result.candidates[0].comparisons if item.status == 'match'} == {
+        'area', 'drilling_start', 'drilling_end', 'wellhead_elevation'}
+
+
 @pytest.mark.parametrize('count', [0, 1, 2, 3, 4])
 def test_automatic_selection_requires_two_distinct_categories(db_session, count):
     well = Well(name='12', alt=134 if count >= 4 else None)
@@ -232,10 +268,10 @@ def test_automatic_selection_requires_two_distinct_categories(db_session, count)
     source.drilling_end = '2019-09-02'
     source.wellhead_elevation = 132.432
     result = match_well(db_session, '12', source.area_name, document=source)
-    if count >= 2:
+    if count >= 1:
         assert result.selected.well_id == well.id
         assert result.selected.method == 'exact_name_identity'
-        assert sum(item.status == 'match' for item in result.selected.comparisons) == count
+        assert sum(item.status == 'match' for item in result.selected.comparisons) == count + 1
     else:
         assert result.selected is None
 
@@ -244,9 +280,6 @@ def test_two_metre_tolerance_can_supply_second_category(db_session):
     well = Well(name='12', alt=134.432)
     db_session.add(well)
     db_session.flush()
-    db_session.add_all([
-        WellOptionally(well_id=well.id, option='Участок', value='мельничный уч'),
-    ])
     db_session.commit()
     source = _document()
     source.area_name = 'Мельничное поднятие'
@@ -271,7 +304,7 @@ def test_multiple_qualifying_wells_select_first_record(db_session):
     source.drilling_start = '2019-08-28'
     result = match_well(db_session, '12', source.area_name, document=source)
     assert result.selected.well_id == min(well.id for well in wells)
-    assert result.selected.confidence == .5
+    assert result.selected.confidence == 3 / 5
     assert result.selected.method == 'exact_name_identity'
 
 
@@ -301,12 +334,12 @@ def test_duplicate_wells_select_first_highest_match_count(db_session, counts, re
     catalog = load_well_catalog(db_session) if use_catalog else None
     result = match_well(db_session, '12', source.area_name, document=source, catalog=catalog)
     best = max(ordered_counts)
-    if best >= 2:
+    if best + 1 >= 2:
         assert result.status == 'matched'
         assert result.selected.well_id == ids[ordered_counts.index(best)]
         assert result.selected.method == 'exact_name_identity'
-        assert result.selected.confidence == best / 4
-        assert sum(item.status == 'match' for item in result.selected.comparisons) == best
+        assert result.selected.confidence == (best + 1) / 5
+        assert sum(item.status == 'match' for item in result.selected.comparisons) == best + 1
     else:
         assert result.selected is None
         assert result.status == 'manual_required'
@@ -339,7 +372,9 @@ def test_duplicate_area_values_count_as_one_category(db_session):
     db_session.commit()
     source = _document()
     source.area_name = 'Мельничное поднятие'
-    assert match_well(db_session, '12', source.area_name, document=source).selected is None
+    result = match_well(db_session, '12', source.area_name, document=source)
+    assert result.selected.well_id == well.id
+    assert {item.field for item in result.selected.comparisons if item.status == 'match'} == {'well_name', 'area'}
 
 
 @pytest.mark.parametrize('different_field', ['area', 'drilling_start', 'drilling_end', 'wellhead_elevation'])
@@ -358,12 +393,12 @@ def test_three_matches_can_select_despite_a_fourth_difference(db_session, differ
     source.wellhead_elevation = 132.432
     result = match_well(db_session, '12', source.area_name, document=source)
     assert result.selected.well_id == well.id
-    assert sum(item.status == 'match' for item in result.selected.comparisons) == 3
+    assert sum(item.status == 'match' for item in result.selected.comparisons) == 4
     assert next(item.status for item in result.selected.comparisons if item.field == different_field) == 'different'
 
 
 @pytest.mark.parametrize('problem', ['multiple_matches', 'partial_date', 'conflicting_date', 'similar_number'])
-def test_ambiguous_or_conflicting_evidence_needs_manual_selection(db_session, problem):
+def test_partial_dates_and_similar_numbers_do_not_supply_exact_matches(db_session, problem):
     name = '120' if problem == 'similar_number' else '12'
     first, second = Well(name=name), Well(name=name)
     db_session.add_all([first, second])
@@ -380,8 +415,11 @@ def test_ambiguous_or_conflicting_evidence_needs_manual_selection(db_session, pr
     if problem == 'conflicting_date':
         source.drilling_end = '2019-09-02'
     result = match_well(db_session, '12', document=source)
-    assert result.selected is None
-    assert result.candidates
+    if problem in {'multiple_matches', 'conflicting_date'}:
+        assert result.selected.well_id == first.id
+    else:
+        assert result.selected is None
+        assert result.candidates
 
 
 def test_conflicting_metadata_blocks_an_otherwise_exact_label_match(db_session):
@@ -407,7 +445,10 @@ def test_identity_evidence_is_retained_when_saving(db_session):
     assert diagnostics['well_identity']['wellhead_elevation_raw'] == '132,432 м'
     assert diagnostics['well_comparison'][3]['status'] == 'match'
     assert diagnostics['well_match_policy'] == {
-        'elevation_tolerance_m': 2.0, 'area_similarity_above': 0.5, 'minimum_categories': 2}
+        'elevation_tolerance_m': 2.0, 'area_similarity_above': 0.5, 'minimum_categories': 2,
+        'total_categories': 5, 'well_number_included': True}
+    assert diagnostics['well_comparison'][4]['field'] == 'well_name'
+    assert diagnostics['well_comparison'][4]['status'] == 'match'
 
 
 @pytest.mark.parametrize('area_name', ['Северная', None])

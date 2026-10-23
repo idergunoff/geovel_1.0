@@ -38,9 +38,16 @@ def area_name_similarity(first: str | None, second: str | None) -> float:
     if not first_key or not second_key:
         return 0.0
     # Object numbers must remain distinct even when their text is very similar.
-    if (first_key.startswith("объект") or second_key.startswith("объект")
-            or re.findall(r"\d+", first_key) != re.findall(r"\d+", second_key)):
+    if first_key.startswith("объект") or second_key.startswith("объект"):
         return float(first_key == second_key)
+    first_numbers, second_numbers = re.findall(r"\d+", first_key), re.findall(r"\d+", second_key)
+    if first_numbers != second_numbers:
+        if first_numbers and second_numbers:
+            return 0.0
+        # A general area can refer to a numbered deposit with the same base name.
+        first_key, second_key = re.sub(r"\d+$", "", first_key), re.sub(r"\d+$", "", second_key)
+        if re.findall(r"\d+", first_key) != re.findall(r"\d+", second_key):
+            return 0.0
     return SequenceMatcher(None, first_key, second_key, autojunk=False).ratio()
 
 

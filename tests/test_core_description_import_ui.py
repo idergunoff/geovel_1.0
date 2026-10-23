@@ -82,6 +82,30 @@ def test_directory_area_is_marked_in_preview_and_used_for_matching(app, session)
     assert dialog.comparison_table.item(0, 3).text() == 'Совпадает'
 
 
+def test_number_and_deposit_are_two_visible_matches(app, session):
+    well = Well(name='10вр')
+    session.add(well)
+    session.flush()
+    session.add(WellOptionally(well_id=well.id, option='Залежь', value='Верхнее 3'))
+    session.commit()
+    well_id = well.id
+    source = _document()
+    source.well_name_raw = source.well_name = '10 Вр'
+    source.area_name_raw = source.area_name = 'Верхнее поднятие'
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() == well_id
+    assert dialog.comparison_table.rowCount() == 5
+    assert dialog.match_label.text() == 'Совпадают 2 из 5 признаков'
+    assert dialog.comparison_table.item(0, 2).text() == 'Залежь: Верхнее 3'
+    assert dialog.comparison_table.item(0, 3).text() == 'Совпадает'
+    assert dialog.comparison_table.item(4, 0).text() == 'Номер скважины'
+    assert dialog.comparison_table.item(4, 1).text() == '10 Вр'
+    assert dialog.comparison_table.item(4, 2).text() == '10вр'
+    assert dialog.comparison_table.item(4, 3).text() == 'Совпадает'
+    assert dialog.save_button.isEnabled()
+
+
 def test_import_window_is_modeless_and_reused(app, session):
     main = QtWidgets.QMainWindow()
     editor = QtWidgets.QLineEdit()
@@ -140,7 +164,7 @@ def test_area_choices_and_recommended_wells_are_visible(app, session, file_area,
     assert dialog.area_combo.itemText(1) == db_area
     assert dialog.well_combo.itemData(1) == other.id
     assert db_area in dialog.well_combo.itemText(1)
-    assert dialog.well_combo.currentData() is None
+    assert dialog.well_combo.currentData() == other.id
     dialog.area_combo.setEditText(search)
     assert dialog.well_combo.count() == 2
     assert dialog.well_combo.itemData(1) == other.id
@@ -285,7 +309,7 @@ def test_area_cell_shows_best_entry_of_selected_well(app, session):
     first_id, second_id = first.id, second.id
     dialog = CoreDescriptionImportDialog(session)
     dialog.set_document(_document())
-    assert dialog.comparison_table.item(0, 2).text() == "—"
+    assert dialog.well_combo.currentData() == first_id
     dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(first_id))
     assert dialog.comparison_table.item(0, 2).text() == "Участок: Северная"
     assert dialog.comparison_table.item(0, 3).text() == "Совпадает"
@@ -338,7 +362,7 @@ def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monke
     dialog = CoreDescriptionImportDialog(session)
     dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, "ready", source)]))
     assert dialog.well_combo.currentData() == wanted.id
-    assert "2 из 4" in dialog.match_label.text()
+    assert "3 из 5" in dialog.match_label.text()
     assert "сходство" in dialog.comparison_table.item(0, 3).text()
     assert dialog.comparison_table.item(3, 3).text() == "Совпадает"
     captured = []
@@ -398,14 +422,14 @@ def test_batch_selects_and_saves_best_duplicate(app, session, monkeypatch, equal
         session.add(WellOptionally(well_id=stronger.id, option='Окончание бурения', value='02.09.2019'))
     session.commit()
     expected_id = weaker.id if equal_counts else stronger.id
-    expected_count = 2 if equal_counts else 3
+    expected_count = 3 if equal_counts else 4
     source = _document()
     source.drilling_start = '2019-08-28'
     source.drilling_end = '2019-09-02'
     dialog = CoreDescriptionImportDialog(session)
     dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
     assert dialog.well_combo.currentData() == expected_id
-    assert f'{expected_count} из 4' in dialog.match_label.text()
+    assert f'{expected_count} из 5' in dialog.match_label.text()
     captured = []
 
     class Result:
@@ -417,7 +441,7 @@ def test_batch_selects_and_saves_best_duplicate(app, session, monkeypatch, equal
     dialog.save()
     assert captured[0]['well_id'] == expected_id
     assert captured[0]['match_method'] == 'exact_name_identity'
-    assert captured[0]['match_confidence'] == expected_count / 4
+    assert captured[0]['match_confidence'] == expected_count / 5
 
 
 def test_cleared_choice_does_not_block_rematching_two_against_one(app, session):
@@ -443,7 +467,7 @@ def test_cleared_choice_does_not_block_rematching_two_against_one(app, session):
     dialog.refresh_wells_button.click()
     assert dialog.well_combo.currentData() == stronger_id
     assert dialog.match_method == 'exact_name_identity'
-    assert '2 из 4' in dialog.match_label.text()
+    assert '3 из 5' in dialog.match_label.text()
 
 
 def test_closing_waits_for_worker_without_blocking_gui(app, session, monkeypatch):
