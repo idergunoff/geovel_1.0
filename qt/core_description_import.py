@@ -464,6 +464,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             not any(area_names_match(self.document.area_name, area) for area in item[2]),
             item[1].casefold(), item[0]))
         stored = self._well_selections.get(self.document.source_path)
+        if stored is not None and stored[0] is None:
+            # An empty choice (e.g. hidden by a filter) must not veto a new match.
+            self._well_selections.pop(self.document.source_path)
+            stored = None
         selected_id = stored[0] if stored else result.selected.well_id if result.selected else None
         self._fill_well_combo(selected_id)
         if stored and self.well_combo.currentData() is not None:
