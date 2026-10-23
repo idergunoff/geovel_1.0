@@ -96,6 +96,43 @@ def test_well_identity_is_extracted_before_core_table(generated, tmp_path, metad
     assert 'well_name_ambiguous' not in document.warnings
 
 
+@pytest.mark.parametrize('well_name', ['10 Вр', '10Вр', 'TEST-101'])
+@pytest.mark.parametrize('footer', ['Скважину документировал:', 'Работы по скважинам завершены',
+                                    'Наблюдение за скважиной'])
+def test_well_number_preserves_letters_and_ignores_inflected_mentions(generated, tmp_path, well_name, footer):
+    source = tmp_path / 'well-with-letters.docx'
+    with ZipFile(generated / 'standard_separate_columns.docx') as original, ZipFile(source, 'w') as output:
+        for item in original.infolist():
+            data = original.read(item)
+            if item.filename == 'word/document.xml':
+                data = data.replace(b'TEST-101', well_name.encode())
+                paragraph = f'<w:p><w:r><w:t>{escape(footer)}</w:t></w:r></w:p>'
+                data = data.replace(b'</w:body>', paragraph.encode() + b'</w:body>')
+            output.writestr(item, data)
+    result = parse_core_document(source)
+    assert result.well_name_raw == result.well_name == well_name
+    assert 'well_name_ambiguous' not in result.warnings
+    assert len(result.intervals) == 2
+
+
+@pytest.mark.parametrize('label', ['СКВАЖИНА № ', 'Скв. ', 'Скв.', '№ скв. ', '№ скважины: '])
+def test_alphanumeric_well_number_supports_existing_labels(label):
+    from core_description.parser import _find_metadata
+
+    (well, _area, _author, warnings), _ = _find_metadata([label + '10 Вр'], [])
+    assert well == '10 Вр'
+    assert 'well_name_missing' not in warnings
+
+
+def test_different_real_well_numbers_still_report_ambiguity():
+    from core_description.parser import _find_metadata
+
+    (well, _area, _author, warnings), _ = _find_metadata(
+        ['СКВАЖИНА № 10 Вр', 'СКВАЖИНА № 11 Вр', 'Скважину документировал:'], [])
+    assert well is None
+    assert 'well_name_ambiguous' in warnings
+
+
 @pytest.mark.parametrize("number_position", ["before", "after", "both"])
 def test_column_number_rows_are_skipped_without_losing_source_coordinates(number_position):
     from core_description.docx import ExtractedTable

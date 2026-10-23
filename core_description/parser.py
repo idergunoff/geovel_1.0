@@ -17,7 +17,7 @@ from .identity import extract_identity, identity_kind
 NUMBER = r"[+-]?\d+(?:[\s\u00a0]*[.,]\d+)?"
 RANGE_RE = re.compile(rf"^\s*({NUMBER})\s*(?:-|–|—)\s*({NUMBER})\s*(?:м\b)?", re.I)
 WELL_RE = re.compile(
-    r"(?:№\s*скв(?:ажины)?\.?|скв(?:ажина|ажины|\.)?)\s*(?:№|:)?\s*([^,;\n]+)", re.I
+    r"(?<!\w)(?:№\s*)?(?:скважин[аы]|скв\.?)(?![а-яёa-z])\s*(?:№|:)?\s*([^,;\n]+)", re.I
 )
 AREA_RE = re.compile(r"\b(?:площадь|пл\.)\s*(?:№|:)?\s*(.+)", re.I)
 AREA_HEADER_KIND = r"(?:поднятие|месторождение|структура)"
