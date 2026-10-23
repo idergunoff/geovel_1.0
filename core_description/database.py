@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import re
-import unicodedata
 from dataclasses import asdict, dataclass, field, replace
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -21,6 +19,7 @@ from .areas import area_names_match, AREA_SIMILARITY_THRESHOLD
 from .identity import (
     WellMetadata, IdentityComparison, compare_identity, identity_match_count,
     has_identity_conflicts, MIN_IDENTITY_MATCHES, ELEVATION_TOLERANCE,
+    IDENTITY_FIELD_COUNT, normalize_lookup_value,
 )
 
 
@@ -63,13 +62,6 @@ class SaveCoreImportResult:
     rocks_saved: int
     replaced_document_id: int | None = None
     warnings: list[str] = field(default_factory=list)
-
-
-def normalize_lookup_value(value: str | None) -> str:
-    """Normalize document/database labels without inventing missing content."""
-
-    value = unicodedata.normalize('NFKC', value or '').casefold().replace('ё', 'е')
-    return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
 def load_well_metadata(session: Any, well_ids: Iterable[int] | None = None) -> dict[int, WellMetadata]:
@@ -138,13 +130,13 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
     candidates = []
     for well in reviewed:
         details = metadata.get(well.id, WellMetadata())
-        comparisons = compare_identity(document, details, well.alt)
+        comparisons = compare_identity(document, details, well.alt, well.name)
         areas = details.area_entries(area_name)
         area = next((value for _, value in areas if area_names_match(area_name, value)),
                     areas[0][1] if areas else None)
         matches = identity_match_count(comparisons)
         candidates.append(WellMatchCandidate(
-            well.id, well.name, matches / 4,
+            well.id, well.name, matches / IDENTITY_FIELD_COUNT,
             'identity_suggestion', area, comparisons))
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
                  and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
@@ -313,11 +305,13 @@ def save_core_import(
                                    'drilling_start_raw', 'drilling_start', 'drilling_end_raw', 'drilling_end',
                                    'wellhead_elevation_raw', 'wellhead_elevation')},
                                'well_comparison': [asdict(item) for item in compare_identity(
-                                   parsed_document, well_metadata, well.alt)],
+                                   parsed_document, well_metadata, well.alt, well.name)],
                                'well_match_policy': {
                                    'elevation_tolerance_m': ELEVATION_TOLERANCE,
                                    'area_similarity_above': AREA_SIMILARITY_THRESHOLD,
-                                   'minimum_categories': MIN_IDENTITY_MATCHES}}),
+                                   'minimum_categories': MIN_IDENTITY_MATCHES,
+                                   'total_categories': IDENTITY_FIELD_COUNT,
+                                   'well_number_included': True}}),
         )
         session.add(document)
         session.flush()
