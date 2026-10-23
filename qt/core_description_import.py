@@ -7,11 +7,11 @@ import json
 from html import escape
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from core_description.database import load_well_metadata, match_well, save_core_import
+from core_description.database import WellCatalog, load_well_catalog, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
 from core_description.identity import WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
@@ -20,7 +20,6 @@ from core_description.parser import CoreDescriptionParseError, parse_core_docume
 from core_description.terminology import (
     ROCK_LABELS, SATURATION_LABELS, RELATION_LABELS, canonical_term, display_term,
 )
-from models_db.model import Well
 
 
 SATURATIONS = tuple(SATURATION_LABELS)
@@ -130,7 +129,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self._well_selections: dict[str, tuple[int | None, str, float]] = {}
         self._wells: list[tuple[int, str, tuple[str, ...]]] = []
         self._recommended_ids: set[int] = set()
-        self._well_metadata: dict[int, WellMetadata] = {}
+        self._well_metadata: Mapping[int, WellMetadata] = {}
+        self._well_catalog: WellCatalog | None = None
         self._well_altitudes: dict[int, float | None] = {}
         self._automatic: dict[str, dict[str, Any]] = {}
         self.batch_items: list[BatchParseItem] = []
@@ -287,7 +287,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_combo.currentIndexChanged.connect(self._well_changed)
         self.well_search.textChanged.connect(self._filter_wells)
         self.area_combo.currentTextChanged.connect(self._filter_wells)
-        self.refresh_wells_button.clicked.connect(lambda: self._load_wells(reset_filters=False))
+        self.refresh_wells_button.clicked.connect(lambda: self._load_wells(reset_filters=False, refresh=True))
         self.table.itemChanged.connect(self._table_changed)
         for widget in (self.depth_from, self.depth_to, self.saturation_filter, self.state_filter):
             widget.valueChanged.connect(self.apply_filters) if hasattr(widget, "valueChanged") else widget.currentIndexChanged.connect(self.apply_filters)
@@ -427,7 +427,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.table.resizeRowsToContents()
         self.apply_filters(); self._update_summary()
 
-    def _load_wells(self, reset_filters: bool = True) -> None:
+    def _load_wells(self, reset_filters: bool = True, *, refresh: bool = False) -> None:
         if self.document is None:
             return
         area_filter = "Все площади" if reset_filters else self.area_combo.currentText()
@@ -435,8 +435,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.well_search.blockSignals(True)
             self.well_search.clear()
             self.well_search.blockSignals(False)
-        wells = self.session.query(Well).order_by(Well.name, Well.id).all()
-        self._well_metadata = load_well_metadata(self.session, (well.id for well in wells))
+        if self._well_catalog is None or refresh:
+            self._well_catalog = load_well_catalog(self.session)
+        wells = self._well_catalog.wells
+        self._well_metadata = self._well_catalog.metadata
         self._well_altitudes = {well.id: well.alt for well in wells}
         areas = {well_id: tuple(dict.fromkeys(value for _, value in metadata.area_entries(self.document.area_name)))
                  for well_id, metadata in self._well_metadata.items()}
@@ -449,7 +451,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.area_combo.addItems(area_names)
         self.area_combo.setCurrentText(area_filter)
         self.area_combo.blockSignals(False)
-        result = match_well(self.session, self.document.well_name, self.document.area_name, document=self.document)
+        result = match_well(self.session, self.document.well_name, self.document.area_name,
+                            document=self.document, catalog=self._well_catalog)
         self._recommended_ids = {candidate.well_id for candidate in result.candidates}
         if result.selected is not None:
             self._recommended_ids.add(result.selected.well_id)

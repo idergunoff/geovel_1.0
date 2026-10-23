@@ -12,7 +12,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from core_description.database import (
-    DuplicateCoreDocumentError, check_duplicates, match_well, save_core_import,
+    DuplicateCoreDocumentError, check_duplicates, load_well_catalog, load_well_metadata,
+    match_well, save_core_import,
 )
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.semantics import enrich_intervals
@@ -59,6 +60,29 @@ def _document(file_hash='a' * 64):
         described_by='Иванов И.И.', intervals=[interval_one, interval_two],
         dictionary_version='1.0',
     )
+
+
+@pytest.mark.parametrize('wanted', ['12', '№ 12', '13', 'unknown', None])
+def test_catalog_matching_preserves_candidates_and_identity_evidence(db_session, wanted):
+    db_session.add_all([Well(id=1, name='12', alt=100), Well(id=2, name='12', alt=120),
+                        Well(id=3, name='13', alt=120)])
+    db_session.flush()
+    db_session.add_all([
+        WellOptionally(well_id=1, option='Площадь', value='Южная'),
+        WellOptionally(well_id=2, option='Площадь', value=' Северная '),
+        WellOptionally(well_id=2, option='Начало бурения', value='01.02.1980'),
+        WellOptionally(well_id=2, option='Площадь', value=''),
+        WellOptionally(well_id=3, option='Свободная категория', value='Северная'),
+    ])
+    db_session.commit()
+    document = _document()
+    document.drilling_start = '1980-02-01'
+    document.wellhead_elevation = 120
+    expected = match_well(db_session, wanted, document.area_name, document=document)
+    catalog = load_well_catalog(db_session)
+    assert catalog.metadata == load_well_metadata(db_session, [1, 2, 3])
+    assert match_well(db_session, wanted, document.area_name,
+                      document=document, catalog=catalog) == expected
 
 
 def test_match_well_uses_area_to_resolve_duplicate_names(db_session):
