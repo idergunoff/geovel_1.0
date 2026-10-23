@@ -258,6 +258,45 @@ def test_multiple_qualifying_wells_still_require_manual_selection(db_session):
     assert 'multiple_identity_matches' in result.warnings
 
 
+@pytest.mark.parametrize('counts', [(2, 1), (3, 2), (4, 3), (4, 2), (2, 2), (3, 3), (1, 0), (1, 1), (0, 0)])
+@pytest.mark.parametrize('reverse_order', [False, True])
+@pytest.mark.parametrize('use_catalog', [False, True])
+def test_duplicate_wells_select_unique_highest_match_count(db_session, counts, reverse_order, use_catalog):
+    ordered_counts = counts[::-1] if reverse_order else counts
+    wells = [Well(name='12'), Well(name='12')]
+    db_session.add_all(wells)
+    db_session.flush()
+    for index, (well, count) in enumerate(zip(wells, ordered_counts)):
+        # The weaker duplicate can match other categories, rather than a subset.
+        categories = [0, 1, 2, 3] if index == ordered_counts.index(max(ordered_counts)) else [3, 2, 1, 0]
+        matching = set(categories[:count])
+        well.alt = 132.432 if 3 in matching else 150
+        entries = [('Площадь', 'Северная' if 0 in matching else 'Объект 999'),
+                   ('Начало бурения', '28.08.2019' if 1 in matching else '29.08.2019'),
+                   ('Окончание бурения', '02.09.2019' if 2 in matching else '03.09.2019')]
+        db_session.add_all(WellOptionally(well_id=well.id, option=label, value=value) for label, value in entries)
+    db_session.commit()
+    ids = [well.id for well in wells]
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    source.drilling_end = '2019-09-02'
+    source.wellhead_elevation = 132.432
+    catalog = load_well_catalog(db_session) if use_catalog else None
+    result = match_well(db_session, '12', source.area_name, document=source, catalog=catalog)
+    best = max(ordered_counts)
+    if best >= 2 and ordered_counts.count(best) == 1:
+        assert result.status == 'matched'
+        assert result.selected.well_id == ids[ordered_counts.index(best)]
+        assert result.selected.method == 'exact_name_identity'
+        assert result.selected.confidence == best / 4
+        assert sum(item.status == 'match' for item in result.selected.comparisons) == best
+    else:
+        assert result.selected is None
+        assert result.status == 'manual_required'
+        expected_warning = 'multiple_identity_matches' if best >= 2 else 'insufficient_identity_matches'
+        assert expected_warning in result.warnings
+
+
 def test_duplicate_area_values_count_as_one_category(db_session):
     well = Well(name='12')
     db_session.add(well)

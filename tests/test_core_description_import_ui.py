@@ -365,6 +365,66 @@ def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monk
     assert captured == [(first.source_path, ids[0], "manual"), (second.source_path, ids[1], "manual")]
 
 
+def test_batch_selects_and_saves_duplicate_with_more_matches(app, session, monkeypatch):
+    weaker = session.query(Well).filter_by(name='12').one()
+    stronger = Well(name='12')
+    session.add(stronger)
+    session.flush()
+    for well in (weaker, stronger):
+        session.add_all([
+            WellOptionally(well_id=well.id, option='Площадь', value='Северная'),
+            WellOptionally(well_id=well.id, option='Начало бурения', value='28.08.2019'),
+        ])
+    session.add(WellOptionally(well_id=stronger.id, option='Окончание бурения', value='02.09.2019'))
+    session.commit()
+    stronger_id = stronger.id
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    source.drilling_end = '2019-09-02'
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
+    assert dialog.well_combo.currentData() == stronger_id
+    assert '3 из 4' in dialog.match_label.text()
+    captured = []
+
+    class Result:
+        intervals_saved = 1
+
+    monkeypatch.setattr('qt.core_description_import.save_core_import',
+                        lambda *_args, **kwargs: captured.append(kwargs) or Result())
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'information', lambda *_args: None)
+    dialog.save()
+    assert captured[0]['well_id'] == stronger_id
+    assert captured[0]['match_method'] == 'exact_name_identity'
+    assert captured[0]['match_confidence'] == .75
+
+
+def test_cleared_choice_does_not_block_rematching_two_against_one(app, session):
+    stronger = session.query(Well).filter_by(name='12').one()
+    weaker = Well(name='12', alt=132.432)
+    session.add(weaker)
+    session.flush()
+    session.add_all([
+        WellOptionally(well_id=stronger.id, option='Площадь', value='Северная'),
+        WellOptionally(well_id=stronger.id, option='Начало бурения', value='28.08.2019'),
+    ])
+    session.commit()
+    stronger_id = stronger.id
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    source.wellhead_elevation = 132.432
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() == stronger_id
+    dialog.well_search.setText('no such well')
+    dialog.well_search.clear()
+    assert dialog.well_combo.currentData() is None
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == stronger_id
+    assert dialog.match_method == 'exact_name_identity'
+    assert '2 из 4' in dialog.match_label.text()
+
+
 def test_closing_waits_for_worker_without_blocking_gui(app, session, monkeypatch):
     import threading
 

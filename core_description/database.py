@@ -148,6 +148,10 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
             'identity_suggestion', area, comparisons))
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
                  and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
+    if confirmed:
+        best_count = max(identity_match_count(candidate.comparisons) for candidate in confirmed)
+        confirmed = [candidate for candidate in confirmed
+                     if identity_match_count(candidate.comparisons) == best_count]
     if len(confirmed) == 1:
         return WellMatchResult('matched', selected=replace(confirmed[0], method='exact_name_identity'))
     candidates.sort(key=lambda candidate: (
