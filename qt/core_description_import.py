@@ -412,10 +412,12 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         """Populate the preview; public to allow deterministic UI tests."""
         self.document = document
         self.path_label.setText(document.source_path)
+        warnings = ["Площадь взята из названия папки — проверьте значение"
+                    if warning == "area_name_from_directory" else warning for warning in document.warnings]
         self.metadata.setText(
             f"Скважина: {document.well_name_raw or '—'}; площадь: {document.area_name_raw or '—'}; "
             f"описал: {document.described_by or '—'}" +
-            (f"; предупреждения: {', '.join(document.warnings)}" if document.warnings else ""))
+            (f"; предупреждения: {', '.join(warnings)}" if warnings else ""))
         self._load_wells()
         self.table.blockSignals(True); self.table.setRowCount(0); self._automatic.clear()
         for interval in document.intervals:
@@ -551,6 +553,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 status_text += f" (сходство {comparison.similarity:.1%})"
             for column, value in enumerate((labels[comparison.field], comparison.source or "—",
                                             comparison.database or "—", status_text)):
+                if (column == 1 and comparison.field == "area"
+                        and "area_name_from_directory" in self.document.warnings):
+                    value += " (из папки)"
                 cell = QtWidgets.QTableWidgetItem(value)
                 cell.setToolTip("Все значения в базе:\n" + "\n".join(comparison.database_values)
                                 if column == 2 and len(comparison.database_values) > 1 else value)
