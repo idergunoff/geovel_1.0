@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -67,6 +68,60 @@ def test_source_coordinates_and_optional_columns(generated):
     assert [(row.source_table, row.source_row) for row in result.intervals] == [(0, 1), (0, 2)]
     assert result.intervals[0].manifestation_raw == "битум"
     assert result.intervals[1].manifestation_raw is None
+
+
+@pytest.mark.parametrize('wrapper', ['sdt', 'customXml'])
+@pytest.mark.parametrize('wrapped_part', ['data_row', 'description_cell', 'table'])
+def test_word_content_controls_do_not_hide_core_table_data(tmp_path, wrapper, wrapped_part):
+    def wrap(value):
+        content = f'<w:sdtContent>{value}</w:sdtContent>' if wrapper == 'sdt' else value
+        return f'<w:{wrapper}>{content}</w:{wrapper}>'
+
+    def cell(value):
+        return f'<w:tc><w:p><w:r><w:t>{value}</w:t></w:r></w:p></w:tc>'
+
+    description_header = cell('Описание породы')
+    description_data = cell('Песчаник серый')
+    if wrapped_part == 'description_cell':
+        description_header, description_data = wrap(description_header), wrap(description_data)
+    header = '<w:tr>' + cell('От') + cell('До') + description_header + '</w:tr>'
+    data = '<w:tr>' + cell('100') + cell('102') + description_data + '</w:tr>'
+    if wrapped_part == 'data_row':
+        data = wrap(data)
+    table = '<w:tbl>' + header + data + '</w:tbl>'
+    if wrapped_part == 'table':
+        table = wrap(table)
+    source = tmp_path / 'word-content-controls.docx'
+    with ZipFile(source, 'w') as archive:
+        archive.writestr('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/'
+                         f'wordprocessingml/2006/main"><w:body>{table}</w:body></w:document>')
+    result = parse_core_document(source)
+    assert len(result.intervals) == 1
+    assert result.intervals[0].top_depth == 100
+    assert result.intervals[0].bottom_depth == 102
+    assert result.intervals[0].raw_description == 'Песчаник серый'
+    assert result.intervals[0].source_row == 1
+
+
+def test_content_controls_preserve_order_without_flattening_nested_tables(tmp_path):
+    from core_description.docx import ExtractedTable, extract_docx
+
+    source = tmp_path / 'nested-controls.docx'
+    xml = '''<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      <w:body><w:p><w:r><w:t>Before</w:t></w:r></w:p>
+        <w:sdt><w:sdtContent><w:customXml><w:tbl>
+          <w:tr><w:tc><w:p><w:r><w:t>First</w:t></w:r></w:p>
+            <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Nested</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+          </w:tc></w:tr>
+          <w:sdt><w:sdtContent><w:tr><w:customXml><w:tc>
+            <w:p><w:r><w:t>Second</w:t></w:r></w:p>
+          </w:tc></w:customXml></w:tr></w:sdtContent></w:sdt>
+        </w:tbl></w:customXml></w:sdtContent></w:sdt>
+        <w:customXml><w:p><w:r><w:t>After</w:t></w:r></w:p></w:customXml>
+      </w:body></w:document>'''
+    with ZipFile(source, 'w') as archive:
+        archive.writestr('word/document.xml', xml)
+    assert extract_docx(source).blocks == ['Before', ExtractedTable([['First\nNested'], ['Second']]), 'After']
 
 
 @pytest.mark.parametrize("metadata_table", [False, True])
@@ -452,7 +507,7 @@ def test_doc_conversion_finds_libreoffice_outside_path(tmp_path, monkeypatch):
     monkeypatch.delenv("PROGRAMFILES(X86)", raising=False)
     monkeypatch.delenv("LOCALAPPDATA", raising=False)
     monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: None)
-    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    monkeypatch.setattr("core_description.converter._run_libreoffice", convert)
 
     with docx_source(source) as converted:
         assert converted.read_bytes() == b"converted"
@@ -495,7 +550,7 @@ def test_doc_conversion_uses_user_flatpak_install(tmp_path, monkeypatch):
     monkeypatch.delenv("LIBREOFFICE_PATH", raising=False)
     monkeypatch.setattr("core_description.converter.Path.home", lambda: tmp_path)
     monkeypatch.setattr("core_description.converter.shutil.which", which)
-    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    monkeypatch.setattr("core_description.converter._run_libreoffice", convert)
 
     with docx_source(source) as converted:
         assert converted.read_bytes() == b"converted"
@@ -553,7 +608,7 @@ def test_doc_conversion_stages_user_path_before_calling_libreoffice(tmp_path, mo
         return Result()
 
     monkeypatch.setattr("core_description.converter.shutil.which", lambda _name: "soffice")
-    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    monkeypatch.setattr("core_description.converter._run_libreoffice", convert)
 
     with docx_source(source) as converted:
         assert converted.read_bytes() == b"converted"
@@ -588,7 +643,7 @@ def test_doc_import_uses_isolated_profiles_and_existing_parser(tmp_path, monkeyp
 
     prefix = ["flatpak-spawn", "--host", "/usr/bin/libreoffice"] if host_bridge else ["soffice"]
     monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: prefix)
-    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    monkeypatch.setattr("core_description.converter._run_libreoffice", convert)
     for _ in range(2):
         result = parse_core_document(source)
         assert result.source_format == "doc"
@@ -641,12 +696,76 @@ def test_failed_doc_conversion_cleans_temporary_files(tmp_path, monkeypatch, fai
         return subprocess.CompletedProcess(command, 1 if failure == "exit_error" else 0, "", "")
 
     monkeypatch.setattr("core_description.converter._libreoffice_command", lambda: ["soffice"])
-    monkeypatch.setattr("core_description.converter.subprocess.run", convert)
+    monkeypatch.setattr("core_description.converter._run_libreoffice", convert)
     with pytest.raises(CoreDescriptionParseError, match="LibreOffice"):
         parse_core_document(source)
     assert staging_directories
     assert all(not directory.exists() for directory in staging_directories)
     assert source.read_bytes() == b"legacy"
+
+
+@pytest.mark.parametrize('output', ['complete', 'truncated', 'invalid_xml', 'missing'])
+def test_conversion_timeout_accepts_only_readable_docx(tmp_path, monkeypatch, generated, output):
+    source = tmp_path / 'legacy.doc'
+    source.write_bytes(b'original')
+    staged = []
+
+    def convert(command, **kwargs):
+        staged.append(Path(command[-1]).parent)
+        target = Path(command[command.index('--outdir') + 1]) / 'source.docx'
+        if output == 'complete':
+            shutil.copyfile(generated / 'standard_separate_columns.docx', target)
+        elif output == 'truncated':
+            target.write_bytes(b'PK\x03\x04partial docx')
+        elif output == 'invalid_xml':
+            with ZipFile(target, 'w') as archive:
+                archive.writestr('word/document.xml', '<broken>')
+        raise subprocess.TimeoutExpired(command, kwargs['timeout'])
+
+    monkeypatch.setattr('core_description.converter._libreoffice_command', lambda: ['soffice'])
+    monkeypatch.setattr('core_description.converter._run_libreoffice', convert)
+    if output == 'complete':
+        result = parse_core_document(source)
+        assert result.well_name == 'TEST-101'
+        assert len(result.intervals) == 2
+    else:
+        with pytest.raises(CoreDescriptionParseError, match='timed out after 120 seconds.*no readable DOCX'):
+            parse_core_document(source)
+    assert all(not directory.exists() for directory in staged)
+    assert source.read_bytes() == b'original'
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason='Linux process-group cleanup')
+def test_conversion_timeout_stops_only_its_own_process_group(tmp_path):
+    from core_description.converter import _run_libreoffice
+
+    child_pid_path = tmp_path / 'child.pid'
+    script = '''import pathlib, subprocess, sys, time
+child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+pathlib.Path(sys.argv[1]).write_text(str(child.pid))
+time.sleep(30)
+'''
+    unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+    try:
+        with pytest.raises(subprocess.TimeoutExpired):
+            _run_libreoffice([sys.executable, '-c', script, str(child_pid_path)], timeout=1)
+        assert unrelated.poll() is None
+        child_pid = int(child_pid_path.read_text())
+        status = Path(f'/proc/{child_pid}/status')
+        # A killed child may briefly remain a zombie awaiting the system reaper.
+        deadline = time.monotonic() + 2
+        while True:
+            try:
+                state = status.read_text()
+            except FileNotFoundError:
+                break
+            if 'State:\tZ' in state:
+                break
+            assert time.monotonic() < deadline, 'Converter child is still running'
+            time.sleep(0.01)
+    finally:
+        unrelated.kill()
+        unrelated.wait()
 
 
 def test_rock_relations_and_explanations_are_preserved():

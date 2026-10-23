@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator
 from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile
 
@@ -42,11 +43,24 @@ def _text(element: ElementTree.Element) -> str:
     return "".join(pieces).strip()
 
 
+def _children(element: ElementTree.Element, tags: set[str]) -> Iterator[ElementTree.Element]:
+    """Read structural children through Word content controls, in source order.
+
+    Only these transparent wrappers are traversed: a descendant search would
+    also collect rows/cells from nested tables and change their meaning.
+    """
+    for child in element:
+        if child.tag in tags:
+            yield child
+        elif child.tag in {W + "sdt", W + "sdtContent", W + "customXml"}:
+            yield from _children(child, tags)
+
+
 def _table(element: ElementTree.Element) -> ExtractedTable:
     rows: list[list[str]] = []
-    for row in element.findall(W + "tr"):
+    for row in _children(element, {W + "tr"}):
         values: list[str] = []
-        for cell in row.findall(W + "tc"):
+        for cell in _children(row, {W + "tc"}):
             value = _text(cell)
             span_node = cell.find(f"{W}tcPr/{W}gridSpan")
             span = 1
@@ -88,7 +102,7 @@ def extract_docx(path: Path) -> ExtractedDocx:
     if body is None:
         raise DocxExtractionError("DOCX document has no body")
     blocks: list[str | ExtractedTable] = []
-    for child in body:
+    for child in _children(body, {W + "p", W + "tbl"}):
         if child.tag == W + "p":
             blocks.append(_text(child))
         elif child.tag == W + "tbl":
