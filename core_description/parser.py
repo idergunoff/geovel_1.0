@@ -25,7 +25,13 @@ AREA_HEADER_NAME = r'[\w\s\-–—«»"().№/]+'
 AREA_HEADER_RE = re.compile(
     rf"^(?:{AREA_HEADER_NAME}\b{AREA_HEADER_KIND}|"
     rf"{AREA_HEADER_KIND}\b\s*[:–—-]?\s*{AREA_HEADER_NAME})\s*$", re.I)
-AUTHOR_RE = re.compile(r"^\s*описал(?:а)?(?:\s+геолог)?\s*:?[\s\-–—]*(.+?)\s*$", re.I)
+AUTHOR_LABEL = r"(?:описал(?:а)?(?:\s+геолог)?|(?:скважину\s+)?документировал(?:а)?)"
+AUTHOR_RE = re.compile(rf"^\s*{AUTHOR_LABEL}\b\s*:?[\s\-–—]*(.+?)\s*$", re.I)
+AUTHOR_LABEL_RE = re.compile(rf"^\s*{AUTHOR_LABEL}\s*:?\s*$", re.I)
+PERSON_WORD = r"[А-ЯЁA-Z][а-яёa-z]+(?:[-‑][А-ЯЁA-Z][а-яёa-z]+)*"
+AUTHOR_INITIALS_RE = re.compile(
+    rf"(?<!\w){PERSON_WORD}\s+[А-ЯЁA-Z]\s*\.\s*(?:[А-ЯЁA-Z]\s*\.)?\s*$", re.I)
+AUTHOR_FULL_NAME_RE = re.compile(rf"{PERSON_WORD}(?:\s+{PERSON_WORD}){{1,2}}")
 
 
 class CoreDescriptionParseError(ValueError):
@@ -34,6 +40,15 @@ class CoreDescriptionParseError(ValueError):
 
 def _space(value: str) -> str:
     return re.sub(r"\s+", " ", value.replace("\u00a0", " ")).strip(" \t\r\n:;,-–—")
+
+
+def _signature_name(value: str) -> str | None:
+    """Read a person's name while preserving role/company text in the raw signature."""
+    value = _space(value)
+    if match := AUTHOR_INITIALS_RE.search(value):
+        return _space(match.group())
+    value = re.sub(r"^геолог\s+", "", value, flags=re.I)
+    return value if AUTHOR_FULL_NAME_RE.fullmatch(value) else None
 
 
 def _number(value: str) -> Optional[float]:
@@ -62,13 +77,18 @@ def _find_metadata(
     wells: list[str] = []
     areas: list[str] = []
     authors: list[tuple[str, str]] = []
-    for text in texts:
+    for index, text in enumerate(texts):
         if identity_kind(text) is None and (match := WELL_RE.search(text)):
             wells.append(_space(match.group(1)))
         if match := AREA_RE.search(text):
             areas.append(_space(match.group(1)))
-        if match := AUTHOR_RE.match(text):
-            authors.append((text.strip(), _space(match.group(1))))
+        if AUTHOR_LABEL_RE.fullmatch(text):
+            following = next((line for line in texts[index + 1:] if line.strip()), "")
+            if name := _signature_name(following):
+                authors.append((text.strip() + "\n" + following.strip(), name))
+        elif match := AUTHOR_RE.match(text):
+            value = _space(match.group(1))
+            authors.append((text.strip(), _signature_name(value) or value))
     # Converted forms often place a label and its value into adjacent cells.
     for row in table_rows:
         for index, cell in enumerate(row[:-1]):

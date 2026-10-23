@@ -133,6 +133,57 @@ def test_different_real_well_numbers_still_report_ambiguity():
     assert 'well_name_ambiguous' in warnings
 
 
+@pytest.mark.parametrize('label', ['Скважину документировал:', 'Скважину документировала:',
+                                  'Документировал:', 'Описал геолог:'])
+@pytest.mark.parametrize('separate_paragraph', [False, True])
+def test_author_signature_reads_name_after_role_and_organization(generated, tmp_path, label, separate_paragraph):
+    source = tmp_path / 'documented-by.docx'
+    signature = 'геолог ООО «Пример»                Иванов И.И.'
+    lines = [label, signature] if separate_paragraph else [label + ' ' + signature]
+    paragraphs = ''.join(f'<w:p><w:r><w:t>{escape(line)}</w:t></w:r></w:p>' for line in lines)
+    with ZipFile(generated / 'standard_separate_columns.docx') as original, ZipFile(source, 'w') as output:
+        for item in original.infolist():
+            data = original.read(item)
+            if item.filename == 'word/document.xml':
+                data = data.replace('Описал геолог: Иванов И. И.'.encode(), b'')
+                data = data.replace(b'</w:body>', paragraphs.encode() + b'</w:body>')
+            output.writestr(item, data)
+    result = parse_core_document(source)
+    assert result.described_by == 'Иванов И.И.'
+    assert label in result.described_by_raw
+    assert signature in result.described_by_raw
+    assert 'description_author_missing' not in result.warnings
+    assert result.well_name == 'TEST-101'
+    assert 'well_name_ambiguous' not in result.warnings
+
+
+@pytest.mark.parametrize('following, expected', [
+    ('Иванов И. И.', 'Иванов И. И.'),
+    ('геолог Иванов Иван Иванович', 'Иванов Иван Иванович'),
+    ('СКВАЖИНА № 10 Вр', None), ('Конструкция скважины:', None), ('', None),
+])
+def test_separate_author_label_requires_person_signature(following, expected):
+    from core_description.parser import _find_metadata
+
+    (_well, _area, raw, warnings), author = _find_metadata(
+        ['Скважину документировал:', '', following], [])
+    assert author == expected
+    if expected:
+        assert raw == 'Скважину документировал:\n' + following
+    else:
+        assert raw is None
+        assert 'description_author_missing' in warnings
+
+
+def test_different_documenting_authors_remain_ambiguous():
+    from core_description.parser import _find_metadata
+
+    (_well, _area, raw, warnings), author = _find_metadata(
+        ['Скважину документировал: Иванов И.И.', 'Скважину документировала: Петрова А.А.'], [])
+    assert raw is None and author is None
+    assert 'description_author_ambiguous' in warnings
+
+
 @pytest.mark.parametrize("number_position", ["before", "after", "both"])
 def test_column_number_rows_are_skipped_without_losing_source_coordinates(number_position):
     from core_description.docx import ExtractedTable
