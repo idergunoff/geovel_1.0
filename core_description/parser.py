@@ -20,8 +20,11 @@ WELL_RE = re.compile(
     r"(?:№\s*скв(?:ажины)?\.?|скв(?:ажина|ажины|\.)?)\s*(?:№|:)?\s*([^,;\n]+)", re.I
 )
 AREA_RE = re.compile(r"\b(?:площадь|пл\.)\s*(?:№|:)?\s*(.+)", re.I)
+AREA_HEADER_KIND = r"(?:поднятие|месторождение|структура)"
+AREA_HEADER_NAME = r'[\w\s\-–—«»"().№/]+'
 AREA_HEADER_RE = re.compile(
-    r"^[\w\s\-–—«»\"().№/]+\b(?:поднятие|месторождение|структура)\s*$", re.I)
+    rf"^(?:{AREA_HEADER_NAME}\b{AREA_HEADER_KIND}|"
+    rf"{AREA_HEADER_KIND}\b\s*[:–—-]?\s*{AREA_HEADER_NAME})\s*$", re.I)
 AUTHOR_RE = re.compile(r"^\s*описал(?:а)?(?:\s+геолог)?\s*:?[\s\-–—]*(.+?)\s*$", re.I)
 
 
