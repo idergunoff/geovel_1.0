@@ -200,6 +200,22 @@ def test_altitude_alone_does_not_select_a_well(db_session):
     assert result.selected is None
 
 
+def test_well_number_with_letter_suffix_matches_database_record(db_session):
+    well = Well(name='10 Вр', alt=163.612)
+    db_session.add(well)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=well.id, option='Начало бурения', value='28.08.2015'))
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '10 Вр'
+    source.drilling_start = '2015-08-28'
+    source.wellhead_elevation = 163.612
+    result = match_well(db_session, source.well_name, document=source)
+    assert result.selected.well_id == well.id
+    assert result.selected.well_name == '10 Вр'
+    assert result.selected.method == 'exact_name_identity'
+
+
 @pytest.mark.parametrize('count', [0, 1, 2, 3, 4])
 def test_automatic_selection_requires_two_distinct_categories(db_session, count):
     well = Well(name='12', alt=134 if count >= 4 else None)
