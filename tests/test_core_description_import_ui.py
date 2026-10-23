@@ -365,7 +365,8 @@ def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monk
     assert captured == [(first.source_path, ids[0], "manual"), (second.source_path, ids[1], "manual")]
 
 
-def test_batch_selects_and_saves_duplicate_with_more_matches(app, session, monkeypatch):
+@pytest.mark.parametrize('equal_counts', [False, True])
+def test_batch_selects_and_saves_best_duplicate(app, session, monkeypatch, equal_counts):
     weaker = session.query(Well).filter_by(name='12').one()
     stronger = Well(name='12')
     session.add(stronger)
@@ -375,16 +376,18 @@ def test_batch_selects_and_saves_duplicate_with_more_matches(app, session, monke
             WellOptionally(well_id=well.id, option='Площадь', value='Северная'),
             WellOptionally(well_id=well.id, option='Начало бурения', value='28.08.2019'),
         ])
-    session.add(WellOptionally(well_id=stronger.id, option='Окончание бурения', value='02.09.2019'))
+    if not equal_counts:
+        session.add(WellOptionally(well_id=stronger.id, option='Окончание бурения', value='02.09.2019'))
     session.commit()
-    stronger_id = stronger.id
+    expected_id = weaker.id if equal_counts else stronger.id
+    expected_count = 2 if equal_counts else 3
     source = _document()
     source.drilling_start = '2019-08-28'
     source.drilling_end = '2019-09-02'
     dialog = CoreDescriptionImportDialog(session)
     dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
-    assert dialog.well_combo.currentData() == stronger_id
-    assert '3 из 4' in dialog.match_label.text()
+    assert dialog.well_combo.currentData() == expected_id
+    assert f'{expected_count} из 4' in dialog.match_label.text()
     captured = []
 
     class Result:
@@ -394,9 +397,9 @@ def test_batch_selects_and_saves_duplicate_with_more_matches(app, session, monke
                         lambda *_args, **kwargs: captured.append(kwargs) or Result())
     monkeypatch.setattr(QtWidgets.QMessageBox, 'information', lambda *_args: None)
     dialog.save()
-    assert captured[0]['well_id'] == stronger_id
+    assert captured[0]['well_id'] == expected_id
     assert captured[0]['match_method'] == 'exact_name_identity'
-    assert captured[0]['match_confidence'] == .75
+    assert captured[0]['match_confidence'] == expected_count / 4
 
 
 def test_cleared_choice_does_not_block_rematching_two_against_one(app, session):
