@@ -12,8 +12,22 @@ branch_labels = None
 depends_on = None
 
 
+def _create_table(name, *columns):
+    # Keep data in tables already created by the application or a failed upgrade.
+    if op.get_context().as_sql or not sa.inspect(op.get_bind()).has_table(name):
+        op.create_table(name, *columns)
+
+
+def _create_index(name, table, columns, **kwargs):
+    indexes = set() if op.get_context().as_sql else {
+        index['name'] for index in sa.inspect(op.get_bind()).get_indexes(table)
+    }
+    if name not in indexes:
+        op.create_index(name, table, columns, **kwargs)
+
+
 def upgrade():
-    op.create_table(
+    _create_table(
         'core_description_document',
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('well_id', sa.Integer(), sa.ForeignKey('well.id'), nullable=False),
@@ -31,10 +45,10 @@ def upgrade():
         sa.Column('diagnostics', sa.Text(), nullable=False),
         sa.UniqueConstraint('source_file_hash', name='uq_core_description_document_hash'),
     )
-    op.create_index('ix_core_description_document_well_id', 'core_description_document', ['well_id'])
-    op.create_index('ix_core_description_document_source_file_hash', 'core_description_document',
+    _create_index('ix_core_description_document_well_id', 'core_description_document', ['well_id'])
+    _create_index('ix_core_description_document_source_file_hash', 'core_description_document',
                     ['source_file_hash'], unique=True)
-    op.create_table(
+    _create_table(
         'core_description_interval',
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('document_id', sa.Integer(), sa.ForeignKey('core_description_document.id', ondelete='CASCADE'), nullable=False),
@@ -52,11 +66,11 @@ def upgrade():
         sa.Column('recognition_details', sa.Text(), nullable=False),
         sa.CheckConstraint('top_depth < bottom_depth', name='ck_core_description_interval_depths'),
     )
-    op.create_index('ix_core_description_interval_document_id', 'core_description_interval', ['document_id'])
-    op.create_index('ix_core_description_interval_well_id', 'core_description_interval', ['well_id'])
-    op.create_index('ix_core_description_interval_well_depths', 'core_description_interval',
+    _create_index('ix_core_description_interval_document_id', 'core_description_interval', ['document_id'])
+    _create_index('ix_core_description_interval_well_id', 'core_description_interval', ['well_id'])
+    _create_index('ix_core_description_interval_well_depths', 'core_description_interval',
                     ['well_id', 'top_depth', 'bottom_depth'])
-    op.create_table(
+    _create_table(
         'core_description_rock',
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('interval_id', sa.Integer(), sa.ForeignKey('core_description_interval.id', ondelete='CASCADE'), nullable=False),
@@ -65,7 +79,7 @@ def upgrade():
         sa.Column('confidence', sa.Float(), nullable=False),
         sa.Column('match_start', sa.Integer()), sa.Column('match_end', sa.Integer()),
     )
-    op.create_index('ix_core_description_rock_interval_id', 'core_description_rock', ['interval_id'])
+    _create_index('ix_core_description_rock_interval_id', 'core_description_rock', ['interval_id'])
 
 
 def downgrade():

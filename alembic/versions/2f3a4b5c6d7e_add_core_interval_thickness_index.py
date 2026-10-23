@@ -13,8 +13,13 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('core_description_interval', sa.Column('thickness', sa.Float(), nullable=True))
-    op.add_column('core_description_interval', sa.Column('geological_index_raw', sa.Text(), nullable=True))
+    columns = set() if op.get_context().as_sql else {
+        column['name'] for column in sa.inspect(op.get_bind()).get_columns('core_description_interval')
+    }
+    if 'thickness' not in columns:
+        op.add_column('core_description_interval', sa.Column('thickness', sa.Float(), nullable=True))
+    if 'geological_index_raw' not in columns:
+        op.add_column('core_description_interval', sa.Column('geological_index_raw', sa.Text(), nullable=True))
 
 
 def downgrade():
