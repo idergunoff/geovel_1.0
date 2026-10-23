@@ -72,18 +72,43 @@ def normalize_lookup_value(value: str | None) -> str:
     return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
-def load_well_metadata(session: Any, well_ids: Iterable[int]) -> dict[int, WellMetadata]:
-    ids = tuple(dict.fromkeys(well_ids))
+def load_well_metadata(session: Any, well_ids: Iterable[int] | None = None) -> dict[int, WellMetadata]:
+    """Read scalar attributes; a full catalogue needs just one table scan."""
+    ids = tuple(dict.fromkeys(well_ids)) if well_ids is not None else None
     result: dict[int, list[tuple[str, str]]] = {}
     # Keep each query below SQLite's legacy limit of 999 SQL variables.
     batch_size = 500
-    for start in range(0, len(ids), batch_size):
-        rows = session.query(WellOptionally).filter(
-            WellOptionally.well_id.in_(ids[start:start + batch_size])).order_by(WellOptionally.id).all()
+    batches = (None,) if ids is None else (
+        ids[start:start + batch_size] for start in range(0, len(ids), batch_size))
+    for batch in batches:
+        query = session.query(WellOptionally.well_id, WellOptionally.option, WellOptionally.value)
+        if batch is not None:
+            query = query.filter(WellOptionally.well_id.in_(batch))
+        rows = query.order_by(WellOptionally.id).all()
         for row in rows:
             if row.value and row.value.strip():
                 result.setdefault(row.well_id, []).append((row.option or '', row.value.strip()))
     return {well_id: WellMetadata(tuple(values)) for well_id, values in result.items()}
+
+
+@dataclass(frozen=True)
+class WellLookupRecord:
+    id: int
+    name: str
+    alt: float | None
+
+
+@dataclass(frozen=True)
+class WellCatalog:
+    wells: tuple[WellLookupRecord, ...]
+    metadata: Mapping[int, WellMetadata]
+
+
+def load_well_catalog(session: Any) -> WellCatalog:
+    """Load one reusable lookup snapshot without materializing ORM entities."""
+    wells = tuple(WellLookupRecord(*row) for row in session.query(
+        Well.id, Well.name, Well.alt).order_by(Well.name, Well.id).all())
+    return WellCatalog(wells, load_well_metadata(session))
 
 
 def load_well_areas(session: Any, well_ids: Iterable[int], area_name: str | None = None) -> dict[int, list[str]]:
@@ -96,17 +121,20 @@ def load_well_areas(session: Any, well_ids: Iterable[int], area_name: str | None
 
 
 def match_well(session: Any, well_name: str | None, area_name: str | None = None,
-               *, document: ParsedCoreDocument | None = None) -> WellMatchResult:
+               *, document: ParsedCoreDocument | None = None,
+               catalog: WellCatalog | None = None) -> WellMatchResult:
     """Resolve labels, using independent drilling details to disambiguate a number."""
     if document is None:
         return _match_well_labels(session, well_name, area_name)
     wanted = normalize_lookup_value(well_name)
-    wells = session.query(Well).order_by(Well.id).all()
+    wells = (catalog.wells if catalog is not None else
+             session.query(Well.id, Well.name, Well.alt).order_by(Well.id).all())
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted] if wanted else []
     exact_ids = {well.id for well in exact}
     reviewed = exact or [well for well in wells if not wanted or SequenceMatcher(
         None, wanted, normalize_lookup_value(well.name)).ratio() >= .6]
-    metadata = load_well_metadata(session, (well.id for well in reviewed))
+    metadata = (catalog.metadata if catalog is not None else
+                load_well_metadata(session, (well.id for well in reviewed)))
     candidates = []
     for well in reviewed:
         details = metadata.get(well.id, WellMetadata())
@@ -139,7 +167,7 @@ def _match_well_labels(session: Any, well_name: str | None, area_name: str | Non
     wanted = normalize_lookup_value(well_name)
     if not wanted:
         return WellMatchResult('manual_required', warnings=('well_name_missing',))
-    wells = session.query(Well).order_by(Well.id).all()
+    wells = session.query(Well.id, Well.name).order_by(Well.id).all()
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted]
     areas = load_well_areas(session, (well.id for well in exact), area_name)
     wanted_area = normalize_lookup_value(area_name)

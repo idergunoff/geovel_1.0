@@ -7,6 +7,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import date
+from functools import lru_cache
 from typing import Iterable
 
 from .areas import area_names_match, area_name_similarity, AREA_SIMILARITY_THRESHOLD
@@ -18,11 +19,13 @@ ELEVATION_TOLERANCE = 2.0
 MIN_IDENTITY_MATCHES = 2
 
 
+@lru_cache(maxsize=1024)
 def label_key(value: str) -> str:
     text = unicodedata.normalize("NFKC", value).casefold().replace("ё", "е")
     return re.sub(r"[^а-яa-z0-9]", "", text)
 
 
+@lru_cache(maxsize=1024)
 def identity_kind(label: str) -> str | None:
     key = label_key(label)
     if (re.search(r"начал.*(?:бур|проход)|скв(?:ажина)?начат|начат.*бур|бур.*(?:начал|начат)", key)

@@ -11,7 +11,7 @@ pytest.importorskip("PyQt5")
 pytest.importorskip("sqlalchemy")
 
 from PyQt5 import QtCore, QtTest, QtWidgets
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
@@ -168,6 +168,38 @@ def test_refresh_disables_save_when_selected_well_was_deleted(app, session):
     dialog.refresh_wells_button.click()
     assert dialog.well_combo.currentData() is None
     assert not dialog.save_button.isEnabled()
+
+
+def test_well_catalog_is_loaded_once_and_explicitly_refreshed(app, session):
+    # More than 500 wells catches per-batch scans of well_optionally.
+    session.add_all(Well(name=str(number)) for number in range(1000, 2001))
+    session.commit()
+    queries = []
+
+    def record_query(_connection, _cursor, statement, *_args):
+        queries.append(statement)
+
+    engine = session.get_bind()
+    event.listen(engine, "before_cursor_execute", record_query)
+    try:
+        dialog = CoreDescriptionImportDialog(session)
+        assert queries == []
+        dialog.set_document(_document())
+        assert len(queries) == 2
+        queries.clear()
+
+        other = _document()
+        other.source_path = "other.docx"
+        other.well_name = "13"
+        dialog.set_document(other)
+        dialog.well_search.setText("13")
+        assert queries == []
+
+        dialog.refresh_wells_button.click()
+        assert len(queries) == 2
+        assert dialog.well_search.text() == "13"
+    finally:
+        event.remove(engine, "before_cursor_execute", record_query)
 
 
 def test_identity_details_are_visible_and_compared_when_selecting(app, session):

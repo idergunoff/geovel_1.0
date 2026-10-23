@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from difflib import SequenceMatcher
+from functools import lru_cache
 
 
 OBJECT_RE = re.compile(r"\bобъект(?:а)?\s*(?:№|номер|n[оo]?[.]?)?\s*(\d+(?:[-/]\d+)?[а-яa-z]?)\b", re.I)
@@ -12,6 +13,7 @@ AREA_KIND_RE = re.compile(r"\b(?:площадь|пл|поднятие|место
 AREA_SIMILARITY_THRESHOLD = 0.5
 
 
+@lru_cache(maxsize=8192)
 def normalize_area_name(value: str | None) -> str:
     """Compare grammatical variants, preserving proper names and object numbers.
 
@@ -30,6 +32,7 @@ def normalize_area_name(value: str | None) -> str:
                    for word in words)
 
 
+@lru_cache(maxsize=8192)
 def area_name_similarity(first: str | None, second: str | None) -> float:
     first_key, second_key = normalize_area_name(first), normalize_area_name(second)
     if not first_key or not second_key:
