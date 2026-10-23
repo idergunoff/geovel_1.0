@@ -429,6 +429,7 @@ def test_batch_selects_and_saves_best_duplicate(app, session, monkeypatch, equal
     dialog = CoreDescriptionImportDialog(session)
     dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
     assert dialog.well_combo.currentData() == expected_id
+    assert dialog.documents_table.item(0, 5).text() == dialog.well_combo.currentText()
     assert f'{expected_count} из 5' in dialog.match_label.text()
     captured = []
 
@@ -442,6 +443,32 @@ def test_batch_selects_and_saves_best_duplicate(app, session, monkeypatch, equal
     assert captured[0]['well_id'] == expected_id
     assert captured[0]['match_method'] == 'exact_name_identity'
     assert captured[0]['match_confidence'] == expected_count / 5
+
+
+def test_document_well_cell_follows_filter_clear_and_catalog_refresh(app, session):
+    well = session.query(Well).filter_by(name='12').one()
+    well.alt = 132.432
+    session.commit()
+    source = _document()
+    source.wellhead_elevation = well.alt
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(BatchParseResult(items=[BatchParseItem(source.source_path, 'ready', source)]))
+    cell = dialog.documents_table.item(0, 5)
+    assert dialog.well_combo.currentData() == well.id
+    assert cell.text() == dialog.well_combo.currentText()
+    assert cell.toolTip() == cell.text()
+    dialog.well_search.setText('no such well')
+    assert dialog.well_combo.currentData() is None
+    assert cell.text() == 'ожидает выбора'
+    dialog.well_search.clear()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == well.id
+    assert cell.text() == dialog.well_combo.currentText()
+    session.delete(well)
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() is None
+    assert cell.text() == 'ожидает выбора'
 
 
 def test_cleared_choice_does_not_block_rematching_two_against_one(app, session):
