@@ -101,3 +101,27 @@ def test_area_search_uses_arbitrary_categories_but_not_drilling_measurements():
     assert ("Свободная категория", "Сарабикуловский") in metadata.area_entries("Сарабикуловское поднятие")
     assert ("Альтитуда устья", "58") not in metadata.area_entries("Объект 58")
     assert ("Объект", "58") in metadata.area_entries("Объект 58")
+
+
+@pytest.mark.parametrize('source_area, attributes, expected, status', [
+    ('Северная', (("Площадь", "Южная"), ("Участок", "Северная"),
+                  ("Месторождение", "Западное")), 'Участок: Северная', 'match'),
+    ('Сарабикуловское поднятие', (("Площадь", "Южная"),
+                                ("Свободная категория", "Сарабикуловский")),
+     'Свободная категория: Сарабикуловский', 'match'),
+    ('Объект 58', (("Объект", "580"), ("Участок", "58")), 'Участок: 58', 'match'),
+    ('abcd', (("Площадь", "wxyz"), ("Участок", "abxy")), 'Участок: abxy', 'different'),
+    (None, (("Площадь", "Южная"), ("Участок", "Северная")), 'Площадь: Южная', 'missing'),
+    ('Северная', (), '', 'missing'),
+])
+def test_area_comparison_displays_only_the_entry_used_for_similarity(source_area, attributes, expected, status):
+    source = document()
+    source.area_name_raw = source.area_name = source_area
+    comparison = compare_identity(source, WellMetadata(attributes), None)[0]
+    assert comparison.database == expected
+    assert comparison.status == status
+
+
+def test_area_comparison_chooses_first_entry_when_best_scores_are_equal():
+    metadata = WellMetadata((("Участок", "Северная"), ("Площадь", "Северная")))
+    assert compare_identity(document(), metadata, None)[0].database == 'Участок: Северная'

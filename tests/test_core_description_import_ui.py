@@ -255,6 +255,26 @@ def test_missing_database_details_never_display_a_match(app, session):
     assert dialog.comparison_table.item(1, 3).text() == "Нет данных для сравнения"
 
 
+def test_area_cell_shows_best_entry_of_selected_well(app, session):
+    first, second = session.query(Well).order_by(Well.id).all()
+    session.add_all([
+        WellOptionally(well_id=first.id, option="Площадь", value="Южная"),
+        WellOptionally(well_id=first.id, option="Участок", value="Северная"),
+        WellOptionally(well_id=first.id, option="Месторождение", value="Западное"),
+        WellOptionally(well_id=second.id, option="Залежь", value="Восточная"),
+    ])
+    session.commit()
+    first_id, second_id = first.id, second.id
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+    assert dialog.comparison_table.item(0, 2).text() == "—"
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(first_id))
+    assert dialog.comparison_table.item(0, 2).text() == "Участок: Северная"
+    assert dialog.comparison_table.item(0, 3).text() == "Совпадает"
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(second_id))
+    assert dialog.comparison_table.item(0, 2).text() == "Залежь: Восточная"
+
+
 def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monkeypatch):
     wanted = session.query(Well).filter_by(name="12").one()
     wanted.alt = 134.432

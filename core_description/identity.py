@@ -142,11 +142,13 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
                      altitude: float | None) -> tuple[IdentityComparison, ...]:
     result = []
     area_entries = metadata.area_entries(document.area_name)
-    similarity = max((area_name_similarity(document.area_name, value) for _, value in area_entries), default=0.0)
+    best_area = max(area_entries, key=lambda entry: area_name_similarity(document.area_name, entry[1]),
+                    default=None)
+    similarity = area_name_similarity(document.area_name, best_area[1]) if best_area else 0.0
     area_status = ("match" if similarity > AREA_SIMILARITY_THRESHOLD
                    else "different" if document.area_name and area_entries else "missing")
     result.append(IdentityComparison("area", document.area_name_raw or document.area_name or "",
-                                    "; ".join(f"{label}: {value}" for label, value in area_entries), area_status, similarity))
+                                    f"{best_area[0]}: {best_area[1]}" if best_area else "", area_status, similarity))
     for kind in ("drilling_start", "drilling_end", "wellhead_elevation"):
         raw = getattr(document, kind + "_raw")
         source = getattr(document, kind)
