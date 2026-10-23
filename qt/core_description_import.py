@@ -548,7 +548,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             for column, value in enumerate((labels[comparison.field], comparison.source or "—",
                                             comparison.database or "—", status_text)):
                 cell = QtWidgets.QTableWidgetItem(value)
-                cell.setToolTip(value)
+                cell.setToolTip("Все значения в базе:\n" + "\n".join(comparison.database_values)
+                                if column == 2 and len(comparison.database_values) > 1 else value)
                 if status == "match":
                     cell.setBackground(QtGui.QColor("#dcf5df"))
                 elif status in {"different", "conflict", "invalid_source", "invalid_database"}:

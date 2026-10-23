@@ -275,6 +275,37 @@ def test_area_cell_shows_best_entry_of_selected_well(app, session):
     assert dialog.comparison_table.item(0, 2).text() == "Залежь: Восточная"
 
 
+def test_identity_cells_keep_other_values_in_tooltips_and_show_conflicts(app, session):
+    first, second = session.query(Well).order_by(Well.id).all()
+    first.alt = 132.432
+    session.add_all([
+        WellOptionally(well_id=first.id, option="Начало бурения", value="29.08.2019"),
+        WellOptionally(well_id=first.id, option="Начало бурения", value="28.08.2019"),
+        WellOptionally(well_id=first.id, option="Окончание бурения", value="03.09.2019"),
+        WellOptionally(well_id=first.id, option="Окончание бурения", value="02.09.2019"),
+        WellOptionally(well_id=first.id, option="Альтитуда устья", value="150"),
+    ])
+    session.commit()
+    first_id, second_id = first.id, second.id
+    source = _document()
+    source.drilling_start = '2019-08-28'
+    source.drilling_end = '2019-09-02'
+    source.wellhead_elevation = 132.432
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(first_id))
+    for row, selected, other in [(1, '28.08.2019', '29.08.2019'),
+                                 (2, '02.09.2019', '03.09.2019'), (3, '132.432', '150')]:
+        cell = dialog.comparison_table.item(row, 2)
+        assert cell.text() == selected
+        assert selected in cell.toolTip() and other in cell.toolTip()
+        assert dialog.comparison_table.item(row, 3).text() == 'Противоречивые данные'
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(second_id))
+    for row in (1, 2, 3):
+        assert dialog.comparison_table.item(row, 2).text() == '—'
+        assert dialog.comparison_table.item(row, 2).toolTip() == '—'
+
+
 def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monkeypatch):
     wanted = session.query(Well).filter_by(name="12").one()
     wanted.alt = 134.432
