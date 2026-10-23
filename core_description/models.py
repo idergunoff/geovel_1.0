@@ -65,7 +65,7 @@ class ParsedCoreDocument:
     described_by: Optional[str]
     intervals: list[ParsedCoreInterval] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    parser_version: str = "3.3"
+    parser_version: str = "3.4"
     dictionary_version: Optional[str] = None
     drilling_start_raw: Optional[str] = None
     drilling_start: Optional[str] = None

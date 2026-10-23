@@ -171,6 +171,8 @@ def test_optional_header_on_lower_line_is_not_lost():
     "Сарабикуловское поднятие", "Ягодное поднятие", "Сарабикуловская",
     "Нефтеперспективный объект 58", "Нефтеперспективный объект №58",
     "Перспективный объект № 8094", "Площадь: Сарабикуловское поднятие",
+    "поднятие Мельничное", "Поднятие: Мельничное",
+    "месторождение Северное", "структура Южная",
 ])
 @pytest.mark.parametrize("single_paragraph", [False, True])
 def test_area_is_read_from_unlabelled_header(tmp_path, header_area, single_paragraph):
@@ -191,16 +193,17 @@ def test_area_is_read_from_unlabelled_header(tmp_path, header_area, single_parag
     assert result.well_name == "12"
 
 
-def test_area_inference_ignores_text_after_table_and_conflicting_headers():
+@pytest.mark.parametrize('header_area', ['Сарабикуловское поднятие', 'поднятие Мельничное'])
+def test_area_inference_ignores_text_after_table_and_conflicting_headers(header_area):
     from core_description.parser import _find_metadata
 
     header = ["Геологический журнал", "ТГРУ", "Описание керна", "Скважина № 12"]
     (well, area, _author, _warnings), _ = _find_metadata(
-        header + ["Сарабикуловское поднятие"], [], header)
+        header + [header_area], [], header)
     assert well == "12"
     assert area is None
     (_well, area, _author, warnings), _ = _find_metadata(
-        ["Ягодное поднятие", "Сарабикуловское поднятие"], [])
+        ["Ягодное поднятие", header_area], [])
     assert area is None
     assert "area_name_ambiguous" in warnings
 
