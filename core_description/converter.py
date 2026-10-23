@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+
+from .docx import DocxExtractionError, extract_docx
 
 
 class DocConversionError(RuntimeError):
@@ -114,18 +117,54 @@ def _powershell_executable() -> str | None:
     return None
 
 
+def _run_libreoffice(command: list[str], *, timeout: float) -> subprocess.CompletedProcess:
+    """Bound the lifetime of the converter, including its Linux child processes."""
+    with subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        start_new_session=os.name == "posix",
+    ) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except BaseException:
+            # Killing just the launcher can leave soffice.bin alive, holding
+            # the pipes and temporary profile. Never touch desktop instances.
+            if os.name == "posix":
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                process.kill()
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                # A host bridge may leave a remote process holding the pipes.
+                # Do not wait indefinitely for processes outside our group.
+                process.stdout.close()
+                process.stderr.close()
+                process.wait()
+            raise
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
 def _run_conversion(command: list[str], converted: Path, converter_name: str) -> None:
     """Run a converter and require it to create the requested DOCX file."""
 
     try:
-        result = subprocess.run(
-            command,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
+        result = _run_libreoffice(command, timeout=120)
+    except subprocess.TimeoutExpired as error:
+        # Some LibreOffice versions finish writing the document but hang on
+        # shutdown. Only accept a complete, readable DOCX after stopping them.
+        try:
+            extract_docx(converted)
+        except DocxExtractionError:
+            raise DocConversionError(
+                f"{converter_name} conversion timed out after 120 seconds; "
+                "no readable DOCX was produced. Open the DOC in LibreOffice, "
+                "save it as DOCX and load the saved file"
+            ) from error
+        return
+    except OSError as error:
         raise DocConversionError(f"{converter_name} conversion failed: {error}") from error
     if result.returncode != 0 or not converted.is_file():
         details = (result.stderr or result.stdout).strip()
@@ -235,6 +274,9 @@ def docx_source(path: Path) -> Iterator[Path]:
                 # already running desktop instance (or another import).
                 f"-env:UserInstallation={(work_dir / 'profile').as_uri()}",
                 "--headless",
+                "--norestore",
+                "--nodefault",
+                "--nofirststartwizard",
                 "--convert-to",
                 "docx",
                 "--outdir",
