@@ -20,6 +20,7 @@ from .identity import (
     WellMetadata, IdentityComparison, compare_identity, identity_match_count,
     has_identity_conflicts, MIN_IDENTITY_MATCHES, ELEVATION_TOLERANCE,
     IDENTITY_FIELD_COUNT, normalize_lookup_value,
+    CONFIRMING_IDENTITY_FIELDS, has_date_or_elevation_match,
 )
 
 
@@ -139,7 +140,8 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
             well.id, well.name, matches / IDENTITY_FIELD_COUNT,
             'identity_suggestion', area, comparisons))
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
-                 and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
+                 and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES
+                 and has_date_or_elevation_match(candidate.comparisons)]
     if confirmed:
         best = min(confirmed, key=lambda candidate: (
             -identity_match_count(candidate.comparisons), candidate.well_id))
@@ -150,6 +152,9 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         not any(item.field == 'area' and item.status == 'match' for item in candidate.comparisons),
         candidate.well_name, candidate.well_id))
     warnings = ('insufficient_identity_matches',)
+    if exact and not any(has_date_or_elevation_match(candidate.comparisons)
+                         for candidate in candidates if candidate.well_id in exact_ids):
+        warnings += ('drilling_or_elevation_match_required',)
     if any(has_identity_conflicts(candidate.comparisons) for candidate in candidates):
         warnings += ('identity_conflict',)
     return WellMatchResult('manual_required', candidates=tuple(candidates[:10]), warnings=warnings)
@@ -311,7 +316,8 @@ def save_core_import(
                                    'area_similarity_above': AREA_SIMILARITY_THRESHOLD,
                                    'minimum_categories': MIN_IDENTITY_MATCHES,
                                    'total_categories': IDENTITY_FIELD_COUNT,
-                                   'well_number_included': True}}),
+                                   'well_number_included': True,
+                                   'required_one_of': sorted(CONFIRMING_IDENTITY_FIELDS)}}),
         )
         session.add(document)
         session.flush()

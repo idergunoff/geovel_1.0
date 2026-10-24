@@ -18,6 +18,7 @@ NUMBER_TOKEN = re.compile(r"[+-]?\d+(?:[.,]\d+)?")
 ELEVATION_TOLERANCE = 2.0
 MIN_IDENTITY_MATCHES = 2
 IDENTITY_FIELD_COUNT = 5
+CONFIRMING_IDENTITY_FIELDS = frozenset({'drilling_start', 'drilling_end', 'wellhead_elevation'})
 
 
 def normalize_lookup_value(value: str | None) -> str:
@@ -210,6 +211,10 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
 
 def identity_match_count(comparisons: Iterable[IdentityComparison]) -> int:
     return len({item.field for item in comparisons if item.status == "match"})
+
+
+def has_date_or_elevation_match(comparisons: Iterable[IdentityComparison]) -> bool:
+    return any(item.field in CONFIRMING_IDENTITY_FIELDS and item.status == 'match' for item in comparisons)
 
 
 def has_identity_conflicts(comparisons: Iterable[IdentityComparison]) -> bool:

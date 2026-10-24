@@ -494,8 +494,11 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         else:
             self.match_method = "manual"
             self.match_confidence = 1.0
-            self.match_label.setText("Варианты отмечены ★; выберите скважину" if result.candidates
-                                     else "Выберите подходящую скважину из списка")
+            if 'drilling_or_elevation_match_required' in result.warnings:
+                self.match_label.setText("Для автовыбора нужно совпадение даты бурения или альтитуды")
+            else:
+                self.match_label.setText("Варианты отмечены ★; выберите скважину" if result.candidates
+                                         else "Выберите подходящую скважину из списка")
         self._update_summary()
         self._update_well_comparison()
 
