@@ -134,3 +134,40 @@ def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(datas
     assert dialog.candidates[0].resolution is None
     assert dialog.table.item(0, 10).text() == ''
     dialog.close()
+
+
+def test_comparison_colors_follow_absolute_error_and_tolerance(dataset, monkeypatch):
+    from dataclasses import replace
+    from PyQt5 import QtWidgets
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+    from regression_target.service import Resolution
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'list_canonical_targets', lambda *_args: [])
+    db, obj, profiles, well, selected, second = dataset
+    report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1)])
+    dialog = PredictionWellCheckDialog(db, [replace(report.samples[0]) for _ in range(4)], 'Test')
+    for c, value in zip(dialog.candidates, [2, 3, -8, None]):
+        c.resolution = Resolution('resolved', value=value) if value is not None else Resolution('missing')
+    dialog.absolute_tolerance.setValue(0.1)
+    dialog._render()
+    colors = [dialog.table.item(row, 11).background().color() for row in range(4)]
+    assert colors[0].name() == '#d9f2df'
+    assert colors[2].name() == '#f4a6a6'  # largest magnitude, including negative delta
+    assert colors[1].green() > colors[2].green()  # small error is closer to yellow
+    assert colors[3].name() == '#eeeeee'
+    assert dialog.table.item(2, 1).background().color() == colors[2]
+    dialog.absolute_tolerance.setValue(1)
+    assert dialog.table.item(1, 11).background().color().name() == '#d9f2df'
+    dialog.absolute_tolerance.setValue(10)
+    assert dialog.table.item(2, 11).background().color().name() == '#d9f2df'
+    assert dialog.table.horizontalHeaderItem(11).text() == 'Δ'
+    assert 'минус прогноз' in dialog.table.horizontalHeaderItem(11).toolTip()
+    assert dialog.table.horizontalHeaderItem(7).text() == 'Параметр'
+    assert dialog.table.columnWidth(3) > dialog.table.fontMetrics().horizontalAdvance(
+        dialog.table.item(0, 3).text())
+    assert dialog.table.horizontalHeader().sectionResizeMode(3) == QtWidgets.QHeaderView.Interactive
+    dialog.close()
