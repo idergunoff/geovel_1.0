@@ -1184,7 +1184,12 @@ def update_list_param_mlp(db=False):
         Пересобирает таблицу
     """
     analisis_id = get_MLP_id()
-    analis = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+    analis = session.query(AnalysisMLP).filter_by(id=analisis_id).first()
+    if analis is None:
+        ui.listWidget_param_mlp.clear()
+        ui.label_count_param_mlp.setText('<i><u>0</u></i> параметров')
+        update_line_edit_exception_mlp()
+        return
     if not analis.up_data:
         update_list_param_mlp_no_update()
         set_color_button_updata()
