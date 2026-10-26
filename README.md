@@ -39,6 +39,43 @@ python -m pip install -r requirements.txt
 PyTorch включён для функций нейросетей; для ускорения на NVIDIA установите
 подходящую сборку по инструкции https://pytorch.org/get-started/locally/.
 
+## Установка на Python 3.10
+
+Если обновить Python нельзя, используйте отдельный **`requirements-py310.txt`**.
+Он рассчитан на 64-разрядный CPython 3.10 и содержит более ранние версии библиотек.
+Устанавливайте его в чистое окружение, отдельно от `requirements.txt`.
+
+Windows:
+
+```text
+py -3.10 -m venv .venv310
+.venv310\Scripts\python.exe -m pip install --upgrade pip
+.venv310\Scripts\python.exe -m pip install -r requirements-py310.txt
+.venv310\Scripts\python.exe -m pip check
+.venv310\Scripts\python.exe geovel.py
+```
+
+Linux / macOS:
+
+```sh
+python3.10 -m venv .venv310
+.venv310/bin/python -m pip install --upgrade pip
+.venv310/bin/python -m pip install -r requirements-py310.txt
+.venv310/bin/python -m pip check
+.venv310/bin/python geovel.py
+```
+
+В IDE с уже выбранным Python 3.10: `python -m pip install -r requirements-py310.txt`.
+Для разработки на Python 3.10 используйте `requirements-dev-py310.txt`
+вместо `requirements-dev.txt`.
+
+Для этого набора проверены установка в чистое окружение CPython 3.10 на Linux,
+совместимость установленных пакетов, импорты библиотек и пробное обучение
+scikit-learn/PyTorch/skorch. Для Windows проверено разрешение зависимостей;
+запуск на Windows отдельно не проверялся. Это список прямых зависимостей,
+а не полный lock-файл. `setuptools` зафиксирован отдельно, поскольку `nolds`
+использует удалённый в новых версиях модуль `pkg_resources`.
+
 ## Системные компоненты и дополнительные возможности
 
 - **Linux:** Qt требует графического сеанса и системных библиотек. Для Ubuntu/Debian
