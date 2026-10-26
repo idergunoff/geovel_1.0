@@ -8,6 +8,7 @@ pycache/
 
 # Local virtual environment
 .venv/
+.venv310/
 
 # Generated core-description DOCX contract fixtures
 /tests/fixtures/core_description/generated/
