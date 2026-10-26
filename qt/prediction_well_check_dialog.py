@@ -3,8 +3,9 @@ import csv
 import json
 from dataclasses import dataclass
 
-from PyQt5 import QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
+from prediction_comparison_statistics import comparison_statistics
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
 
 
@@ -17,6 +18,16 @@ class PredictionCandidate(WizardCandidate):
 
 class PredictionWellCheckDialog(RegressionTargetWizard):
     SETTINGS_GROUP = 'prediction_well_check'
+    STATISTICS = (
+        ('minimum', 'Мин. |Δ|', 'Минимальная абсолютная ошибка; ниже указаны скважина и профиль.'),
+        ('maximum', 'Макс. |Δ|', 'Максимальная абсолютная ошибка; ниже указаны скважина и профиль.'),
+        ('mae', 'Средняя |Δ| (MAE)', 'Среднее абсолютных ошибок по всем рассчитанным парам.'),
+        ('median', 'Медиана |Δ|', 'Медиана абсолютных ошибок; менее чувствительна к выбросам, чем среднее.'),
+        ('rmse', 'RMSE', 'Корень из среднего квадрата ошибок. Сильнее реагирует на большие отклонения.'),
+        ('bias', 'Смещение', 'Средняя разница «скважина − прогноз». Плюс: прогноз занижен; минус: завышен.'),
+        ('p90', 'P90 |Δ|', '90-й процентиль абсолютных ошибок с линейной интерполяцией между соседними значениями.'),
+        ('match_percent', 'В допуске', 'Количество и доля рассчитанных пар с абсолютной ошибкой не больше допуска.'),
+    )
     HEADERS = (
         ('Выбор', 'Служебный столбец выбора строк'),
         ('Скважина', 'Название скважины'),
@@ -94,6 +105,109 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             'красный — максимальная ошибка среди всех строк с рассчитанными значениями.')
         legend.setWordWrap(True)
         self.layout().insertWidget(self.layout().count() - 1, legend)
+        self._build_statistics_ui()
+
+    def _build_statistics_ui(self):
+        group = QtWidgets.QGroupBox('Статистика сравнения')
+        grid = QtWidgets.QGridLayout(group)
+        self.statistics_labels = {}
+        for index, (key, title, tooltip) in enumerate(self.STATISTICS):
+            label = QtWidgets.QLabel(title)
+            label.setToolTip(tooltip)
+            value = QtWidgets.QLabel('—')
+            value.setWordWrap(True)
+            value.setTextFormat(QtCore.Qt.PlainText)
+            value.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+            value.setToolTip(tooltip)
+            self.statistics_labels[key] = value
+            row, col = divmod(index, 4)
+            grid.addWidget(label, row * 2, col)
+            grid.addWidget(value, row * 2 + 1, col)
+            grid.setColumnStretch(col, 1)
+        self.statistics_scope = QtWidgets.QLabel()
+        self.statistics_scope.setWordWrap(True)
+        grid.addWidget(self.statistics_scope, 4, 0, 1, 4)
+        tools = QtWidgets.QHBoxLayout()
+        self.minimum_button = QtWidgets.QPushButton('К минимальной ошибке')
+        self.maximum_button = QtWidgets.QPushButton('К максимальной ошибке')
+        self.statistics_export_button = QtWidgets.QPushButton('Экспорт статистики CSV')
+        self.minimum_button.clicked.connect(lambda: self._show_extreme('minimum_rows'))
+        self.maximum_button.clicked.connect(lambda: self._show_extreme('maximum_rows'))
+        self.statistics_export_button.clicked.connect(self._export_statistics_csv)
+        tools.addWidget(self.minimum_button)
+        tools.addWidget(self.maximum_button)
+        tools.addStretch()
+        tools.addWidget(self.statistics_export_button)
+        grid.addLayout(tools, 5, 0, 1, 4)
+        self.layout().insertWidget(self.layout().count() - 1, group)
+
+    @staticmethod
+    def _location(candidate):
+        return (f'{candidate.well_name} (id{candidate.well_id}), '
+                f'{candidate.profile_name}, прогноз id{candidate.prediction_id}')
+
+    def _render_statistics(self):
+        self.statistics = comparison_statistics(self.candidates, self.absolute_tolerance.value())
+        stats = self.statistics
+        for key, _, tooltip in self.STATISTICS:
+            label = self.statistics_labels[key]
+            value = getattr(stats, key)
+            text = '—' if value is None else f'{value:.6g}'
+            if key == 'match_percent' and value is not None:
+                text = f'{stats.within_tolerance} из {stats.count} ({value:.1f}%)'
+            if key in ('minimum', 'maximum'):
+                rows = getattr(stats, key + '_rows')
+                if rows:
+                    first = rows[0]
+                    text += f' — {first.well_name}, {first.profile_name}'
+                    if len(rows) > 1:
+                        text += f' (+{len(rows) - 1})'
+                    tooltip += '\n' + '\n'.join(self._location(c) for c in rows)
+            label.setText(text)
+            label.setToolTip(tooltip)
+        self.statistics_scope.setText(
+            f'Рассчитанных пар: {stats.count}; уникальных скважин: {stats.well_count}; '
+            f'без результата / исключено: {stats.excluded_count}. '
+            f'Допуск: {stats.tolerance:g}. '
+            'Все ошибки — в единицах выбранного параметра. '
+            'Каждая пара скважина / прогноз имеет одинаковый вес; повторные скважины учитываются отдельно. '
+            'Скрытие строк без данных не меняет статистику.')
+        self.minimum_button.setEnabled(bool(stats.count))
+        self.maximum_button.setEnabled(bool(stats.count))
+
+    def _show_extreme(self, field):
+        candidates = getattr(self.statistics, field)
+        if not candidates:
+            return
+        for row in range(self.table.rowCount()):
+            if self._candidate_for_row(row) is candidates[0]:
+                self.table.selectRow(row)
+                self.table.scrollToItem(self.table.item(row, 11))
+                return
+
+    def _export_statistics_csv(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Экспорт статистики', 'prediction_well_statistics.csv', 'CSV (*.csv)')
+        if not path:
+            return
+        stats = self.statistics
+        with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
+            writer = csv.writer(stream, delimiter=';')
+            writer.writerow(('metric', 'value', 'description', 'well_id', 'well',
+                             'profile_id', 'profile', 'prediction_id'))
+            writer.writerow(('parameter', self.canonical_combo.currentText()))
+            writer.writerow(('settings', json.dumps(self._settings.as_dict(), ensure_ascii=False)
+                             if self._settings else ''))
+            for key in ('count', 'well_count', 'excluded_count', 'within_tolerance', 'tolerance'):
+                writer.writerow((key, getattr(stats, key)))
+            for key, _, tooltip in self.STATISTICS:
+                rows = getattr(stats, key + '_rows', ())
+                if rows:
+                    for c in rows:
+                        writer.writerow((key, getattr(stats, key), tooltip, c.well_id, c.well_name,
+                                         c.profile_id, c.profile_name, c.prediction_id))
+                else:
+                    writer.writerow((key, getattr(stats, key), tooltip))
 
     def _update_parameter_header(self):
         super()._update_parameter_header()
@@ -135,6 +249,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             self.table.item(row, 9).setToolTip('Исправленный прогноз' if candidate.corrected else 'Исходный прогноз')
         self.table.resizeColumnsToContents()
         self.summary.setText(self.summary.text().split('; уже добавлено:')[0])
+        self._render_statistics()
 
     def _export_csv(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
