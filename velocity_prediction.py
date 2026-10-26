@@ -402,6 +402,66 @@ def correct_profile_model_predict():
     CorrModelPred.exec_()
 
 
+def check_object_prediction_wells():
+    """Compare saved predictions of the selected model throughout the object."""
+    from PyQt5 import QtCore
+    from prediction_well_check import collect_prediction_wells
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    item = ui.listWidget_model_pred.currentItem()
+    if item is None:
+        QMessageBox.information(MainWindow, 'Нет прогноза', 'Выберите сохранённый прогноз в Formation AI.')
+        return
+    prediction = session.query(ProfileModelPrediction).filter_by(
+        id=item.text().split(' id')[-1]).first()
+    object_id = get_object_id()
+    if prediction is None or object_id is None:
+        QMessageBox.information(MainWindow, 'Нет данных', 'Выберите объект и сохранённый прогноз.')
+        return
+    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+    try:
+        report = collect_prediction_wells(
+            session, object_id, prediction, get_list_nearest_well,
+            use_corrected=ui.checkBox_corr_pred.isChecked())
+    finally:
+        QtWidgets.QApplication.restoreOverrideCursor()
+    description = (
+        f'Выбран прогноз: {item.text()}. Модель {prediction.type_model} id{prediction.model_id}. '
+        f'Расстояние до профиля ≤ {ui.spinBox_well_distance.value()} м. '
+        'Значение берётся в ближайшей точке профиля. '
+        'Отдельная строка для каждой пары скважина / сохранённый прогноз. '
+        f'Профилей без прогноза этой модели: {report.profiles_without_prediction}. '
+        f'Ошибок данных: {len(report.issues)}. '
+        'Единицы прогноза и параметра скважины должны совпадать; преобразование не выполняется.')
+    if not report.samples:
+        message = QMessageBox(QMessageBox.Information, 'Нет данных для сравнения', description, parent=MainWindow)
+        if report.issues:
+            message.setDetailedText('\n'.join(report.issues))
+        message.exec_()
+        return
+
+    def open_candidate_log(well_id, details):
+        from well_log import show_well_log
+        update_list_well(select_well=True, selected_well_id=well_id)
+        selected = details.get('selected', {}).get('details', {}) if details else {}
+        show_well_log(selected_curve_id=selected.get('well_log_id'),
+                      selected_depth=selected.get('depth'),
+                      selected_interval=selected.get('interval') or [None, None], parent=dialog)
+
+    dialog = PredictionWellCheckDialog(session, report.samples, description, MainWindow, open_candidate_log)
+    if report.issues:
+        issues_button = QtWidgets.QPushButton('Показать ошибки данных')
+        def show_issues():
+            box = QMessageBox(QMessageBox.Information, 'Пропущенные данные',
+                              f'Ошибок: {len(report.issues)}', parent=dialog)
+            box.setDetailedText('\n'.join(report.issues))
+            box.exec_()
+        issues_button.clicked.connect(show_issues)
+        dialog.layout().insertWidget(1, issues_button)
+    dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    dialog.show()
+
+
 def check_uf():
     predict = session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
     list_predict_uf = json.loads(predict.prediction)
