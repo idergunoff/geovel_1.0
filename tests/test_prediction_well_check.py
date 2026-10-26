@@ -171,3 +171,55 @@ def test_comparison_colors_follow_absolute_error_and_tolerance(dataset, monkeypa
         dialog.table.item(0, 3).text())
     assert dialog.table.horizontalHeader().sectionResizeMode(3) == QtWidgets.QHeaderView.Interactive
     dialog.close()
+
+
+def test_statistics_refresh_navigation_and_export(dataset, monkeypatch, tmp_path):
+    from dataclasses import replace
+    from PyQt5 import QtWidgets
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+    from regression_target.service import Resolution
+    import csv
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'list_canonical_targets', lambda *_args: [])
+    db, obj, profiles, well, selected, second = dataset
+    report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1)])
+    samples = [report.samples[0], report.samples[1], replace(report.samples[0])]
+    dialog = PredictionWellCheckDialog(db, samples, 'Test')
+    assert dialog.statistics.count == 0
+    assert dialog.statistics_labels['mae'].text() == '—'
+    assert not dialog.maximum_button.isEnabled()
+    for c, delta in zip(dialog.candidates, [2, -4, None]):
+        c.resolution = (Resolution('resolved', value=c.stored_value + delta)
+                        if delta is not None else Resolution('ambiguous'))
+    dialog._render()
+    assert dialog.statistics.count == 2 and dialog.statistics.well_count == 1
+    assert dialog.statistics_labels['mae'].text() == '3'
+    assert dialog.statistics_labels['bias'].text() == '-1'
+    assert dialog.candidates[1].profile_name in dialog.statistics_labels['maximum'].text()
+    dialog.maximum_button.click()
+    assert dialog.table.currentRow() == 1
+    dialog.minimum_button.click()
+    assert dialog.table.currentRow() == 0
+    dialog.absolute_tolerance.setValue(2)
+    assert dialog.statistics_labels['match_percent'].text() == '1 из 2 (50.0%)'
+    dialog.hide_missing_check.setChecked(True)
+    assert dialog.statistics.count == 2
+    path = tmp_path / 'statistics.csv'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_a: (str(path), ''))
+    dialog.statistics_export_button.click()
+    with path.open(encoding='utf-8-sig') as f:
+        rows = list(csv.DictReader(f, delimiter=';'))
+    maximum = next(r for r in rows if r['metric'] == 'maximum')
+    assert maximum['value'] == '4.0'
+    assert maximum['well_id'] == str(well.id)
+    assert maximum['profile_id'] == str(profiles[1].id)
+    assert next(r for r in rows if r['metric'] == 'count')['value'] == '2'
+    dialog._invalidate_results()
+    assert dialog.statistics.count == 0
+    assert dialog.statistics_labels['mae'].text() == '—'
+    assert not dialog.minimum_button.isEnabled()
+    dialog.close()
