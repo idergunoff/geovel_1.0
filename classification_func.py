@@ -16,6 +16,7 @@ from random_search import push_random_search
 from random_param import push_random_param
 from feature_selection import *
 from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+from training_feature_mask import TrainingFeatureMask
 
 LOGGER = logging.getLogger(__name__)
 
@@ -124,6 +125,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.setupUi(Classifier)
     Classifier.show()
     Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    training_mask = TrainingFeatureMask(
+        list_param, data_train.columns, ui_cls.checkBox_mask_param, ui_cls.listWidget_mask_param,
+        get_list_param_by_mask,
+        lambda message: QtWidgets.QMessageBox.warning(Classifier, 'Проверка маски признаков', message),
+    )
     max_pca = min(len(list_param), len(data_train.index))
     # max_pca -= int(round(max_pca/5, 0))
     ui_cls.spinBox_pca.setMaximum(max_pca)
@@ -151,7 +157,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         ui_cls.listWidget_mask_param.clear()
         for i in session.query(ParameterMask).all():
             item = QListWidgetItem(f'{i.count_param} id{i.id}')
-            item.setToolTip(i.mask_info)
+            training_mask.annotate_item(item, i)
             ui_cls.listWidget_mask_param.addItem(item)
 
 
@@ -351,9 +357,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         return model_class, text_model
 
-    def build_stacking_voting_model():
+    def build_stacking_voting_model(training_sample):
         """ Построить модель стекинга """
-        nonlocal list_param, training_sample
 
         estimators, list_model = [], []
 
@@ -436,10 +441,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             estimators.append(('svc', svc))
             list_model.append('svc')
 
-        if ui_cls.checkBox_mask_param.isChecked():
-            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
-            training_sample = np.array(data_train[list_param].values.tolist())
-
         final_model, final_text_model = choice_model_classifier(ui_cls.buttonGroup.checkedButton().text(), training_sample)
 
         list_model_text = ', '.join(list_model)
@@ -458,6 +459,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     def draw_yellow_brick():
         """ Отрисовка графиков YellowBrick (не используем) """
 
+        list_param = training_mask.resolve()
+        if list_param is None:
+            return
         training_sample = np.array(data_train[list_param].values.tolist())
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         list_marker = get_list_marker_mlp(type_case)
@@ -472,7 +476,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_cov():
         """ Кросс-объектная валидация """
-        nonlocal list_param
+        list_param = training_mask.resolve()
+        if list_param is None:
+            return
 
         def get_obj_title(prof_well_index):
             prof_id = prof_well_index.split('_')[0]
@@ -497,9 +503,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         data_train_cov['obj_title'] = data_train_cov['prof_well_index'].apply(get_obj_title)
         data_train_cov['x_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_x)
         data_train_cov['y_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_y)
-
-        if ui_cls.checkBox_mask_param.isChecked():
-            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
 
         training_sample = np.array(data_train_cov[list_param].values.tolist())
 
@@ -606,10 +609,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_model_class_by_cvw():
         """ Кросс-валидация по скважинам """
-        nonlocal training_sample, list_param
-        if ui_cls.checkBox_mask_param.isChecked():
-            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
-            training_sample = np.array(data_train[list_param].values.tolist())
+        list_param = training_mask.resolve()
+        if list_param is None:
+            return
+        training_sample = np.array(data_train[list_param].values.tolist())
 
         list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
         data_train_by_well = data_train.copy()
@@ -696,17 +699,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_model_class():
         """ Создание и тренировка модели """
-        nonlocal training_sample, list_param
-        # global training_sample, markup
+        list_param = training_mask.resolve()
+        if list_param is None:
+            return
+        training_sample = np.array(data_train[list_param].values.tolist())
         start_time = datetime.datetime.now()
         labels = set_marks()
         labels_dict = {value: key for key, value in labels.items()}
-
-        if ui_cls.checkBox_mask_param.isChecked():
-            list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
-            training_sample = np.array(data_train[list_param].values.tolist())
-
-
 
         # Разделение данных на обучающую и тестовую выборки
         if ui_cls.checkBox_cvw.isChecked():
@@ -795,8 +794,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if not ui_cls.checkBox_baggig.isChecked():
                 imp_name_params, imp_params = [], []
                 if not ui_cls.checkBox_calibr.isChecked():
-                    if ui_cls.checkBox_mask_param.isChecked():
-                        list_param = get_list_param_by_mask(ui_cls.listWidget_mask_param.currentItem().text().split(" id")[-1])
                     for n, i in enumerate(model_class.feature_importances_):
                         if ui_cls.checkBox_all_imp.isChecked():
                             imp_name_params.append(list_param[n])
@@ -953,7 +950,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             pipe_steps.append(('pca', pca))
         text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
         if ui_cls.checkBox_stack_vote.isChecked():
-            model_class, text_model, model_name = build_stacking_voting_model()
+            model_class, text_model, model_name = build_stacking_voting_model(training_sample_train)
         else:
             model_name = ui_cls.buttonGroup.checkedButton().text()
             model_class, text_model = choice_model_classifier(model_name, training_sample_train)
