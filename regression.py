@@ -11,6 +11,7 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_gro
     plot_graphs_by_group
 from func import *
 from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+from training_feature_mask import TrainingFeatureMask
 
 LOGGER = logging.getLogger(__name__)
 from build_table import *
@@ -1241,6 +1242,11 @@ def train_regression_model():
     ui_r.setupUi(Regressor)
     Regressor.show()
     Regressor.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    training_mask = TrainingFeatureMask(
+        list_param_reg, data_train.columns, ui_r.checkBox_mask_param, ui_r.listWidget_mask_param,
+        get_list_param_by_mask,
+        lambda message: QtWidgets.QMessageBox.warning(Regressor, 'Проверка маски признаков', message),
+    )
 
     ui_r.spinBox_pca.setMaximum(len(list_param_reg))
     ui_r.spinBox_pca.setValue(len(list_param_reg) // 2)
@@ -1249,7 +1255,7 @@ def train_regression_model():
         ui_r.listWidget_mask_param.clear()
         for i in session.query(ParameterMask).all():
             item = QListWidgetItem(f'{i.count_param} id{i.id}')
-            item.setToolTip(i.mask_info)
+            training_mask.annotate_item(item, i)
             ui_r.listWidget_mask_param.addItem(item)
 
     update_list_saved_mask()
@@ -2129,7 +2135,10 @@ def train_regression_model():
 
     def calc_model_reg():
         """ Создание и тренировка модели """
-        nonlocal training_sample, list_param_reg
+        list_param_reg = training_mask.resolve()
+        if list_param_reg is None:
+            return
+        training_sample = np.array(data_train[list_param_reg].values.tolist())
 
         start_time = datetime.datetime.now()
         # Нормализация данных
@@ -2152,10 +2161,6 @@ def train_regression_model():
             maxabs_scaler = MaxAbsScaler()
             pipe_steps.append(('scaler', maxabs_scaler))
             text_scaler += '\nMaxAbsScaler'
-
-        if ui_r.checkBox_mask_param.isChecked():
-            list_param = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
-            training_sample = np.array(data_train[list_param].values.tolist())
 
         # Разделение данных на обучающую и тестовую выборки
         x_train, x_test, y_train, y_test = train_test_split(
@@ -2235,8 +2240,6 @@ def train_regression_model():
 
         try:
             ipm_name_params, imp_params = [], []
-            if ui_r.checkBox_mask_param.isChecked():
-                list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
             for n, i in enumerate(pipe['model'].feature_importances_):
                 if i >= np.mean(pipe['model'].feature_importances_):
                     ipm_name_params.append(list_param_reg[n])
@@ -2358,7 +2361,9 @@ def train_regression_model():
 
     def calc_cov():
         """ Кросс-объектная валидация """
-        nonlocal list_param_reg
+        list_param_reg = training_mask.resolve()
+        if list_param_reg is None:
+            return
 
         def get_obj_title(prof_well_index):
             prof_id = prof_well_index.split('_')[0]
@@ -2384,9 +2389,6 @@ def train_regression_model():
         data_train_cov['x_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_x)
         data_train_cov['y_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_y)
 
-
-        if ui_r.checkBox_mask_param.isChecked():
-            list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
 
         training_sample = np.array(data_train_cov[list_param_reg].values.tolist())
 
@@ -2517,10 +2519,9 @@ def train_regression_model():
 
     def calc_model_regression_by_cvw():
         """ Кросс-валидация по скважинам """
-        nonlocal list_param_reg
-
-        if ui_r.checkBox_mask_param.isChecked():
-            list_param_reg = get_list_param_by_mask(ui_r.listWidget_mask_param.currentItem().text().split(" id")[-1])
+        list_param_reg = training_mask.resolve()
+        if list_param_reg is None:
+            return
 
         training_sample = np.array(data_train[list_param_reg].values.tolist())
 
