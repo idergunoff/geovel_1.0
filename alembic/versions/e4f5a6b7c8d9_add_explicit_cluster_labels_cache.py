@@ -19,10 +19,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     for table_name in ('cluster_calculation_cache', 'well_log_cluster_calculation_cache'):
+        columns = set() if op.get_context().as_sql else {
+            column['name'] for column in sa.inspect(op.get_bind()).get_columns(table_name)
+        }
         with op.batch_alter_table(table_name) as batch_op:
-            batch_op.add_column(sa.Column('labels_json', sa.Text(), nullable=False, server_default='[]'))
-            batch_op.add_column(sa.Column('kept_row_indices_json', sa.Text(), nullable=False, server_default='[]'))
-            batch_op.add_column(sa.Column('assignments_json', sa.Text(), nullable=False, server_default='[]'))
+            for name in ('labels_json', 'kept_row_indices_json', 'assignments_json'):
+                if name not in columns:
+                    batch_op.add_column(sa.Column(name, sa.Text(), nullable=False, server_default='[]'))
 
 
 def downgrade() -> None:

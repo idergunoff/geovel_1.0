@@ -17,31 +17,24 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('canonical_well_log', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('canonical_name_norm', sa.String(), nullable=True))
+    for table, source in (('canonical_well_log', 'canonical_name'), ('alias_well_log', 'alias_name')):
+        normalized = f'{source}_norm'
+        inspector = sa.inspect(op.get_bind())
+        columns = {column['name']: column for column in inspector.get_columns(table)}
+        if normalized not in columns:
+            op.add_column(table, sa.Column(normalized, sa.String(), nullable=True))
 
-    op.execute("""
-        UPDATE canonical_well_log
-        SET canonical_name_norm = lower(trim(canonical_name))
-        WHERE canonical_name IS NOT NULL
-    """)
+        # Preserve values already normalized by the application's Unicode casefold.
+        op.execute(f'UPDATE {table} SET {normalized} = lower(trim({source})) '
+                   f'WHERE {normalized} IS NULL AND {source} IS NOT NULL')
 
-    with op.batch_alter_table('canonical_well_log', schema=None) as batch_op:
-        batch_op.alter_column('canonical_name_norm', existing_type=sa.String(), nullable=False)
-        batch_op.create_index('ix_canonical_well_log_canonical_name_norm', ['canonical_name_norm'], unique=True)
-
-    with op.batch_alter_table('alias_well_log', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('alias_name_norm', sa.String(), nullable=True))
-
-    op.execute("""
-        UPDATE alias_well_log
-        SET alias_name_norm = lower(trim(alias_name))
-        WHERE alias_name IS NOT NULL
-    """)
-
-    with op.batch_alter_table('alias_well_log', schema=None) as batch_op:
-        batch_op.alter_column('alias_name_norm', existing_type=sa.String(), nullable=False)
-        batch_op.create_index('ix_alias_well_log_alias_name_norm', ['alias_name_norm'], unique=True)
+        indexes = {index['name'] for index in inspector.get_indexes(table)}
+        index_name = f'ix_{table}_{normalized}'
+        with op.batch_alter_table(table, schema=None) as batch_op:
+            if normalized not in columns or columns[normalized]['nullable']:
+                batch_op.alter_column(normalized, existing_type=sa.String(), nullable=False)
+            if index_name not in indexes:
+                batch_op.create_index(index_name, [normalized], unique=True)
 
 
 def downgrade() -> None:

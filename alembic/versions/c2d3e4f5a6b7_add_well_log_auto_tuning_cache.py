@@ -18,8 +18,21 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _create_table(name, *columns):
+    if op.get_context().as_sql or not sa.inspect(op.get_bind()).has_table(name):
+        op.create_table(name, *columns)
+
+
+def _create_index(name, table, columns, **kwargs):
+    indexes = set() if op.get_context().as_sql else {
+        index['name'] for index in sa.inspect(op.get_bind()).get_indexes(table)
+    }
+    if name not in indexes:
+        op.create_index(name, table, columns, **kwargs)
+
+
 def upgrade() -> None:
-    op.create_table(
+    _create_table(
         'well_log_cluster_auto_tuning_cache',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('dataset_id', sa.Integer(), nullable=False),
@@ -29,13 +42,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['dataset_id'], ['well_log_cluster_dataset.id']),
         sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(
+    _create_index(
         'ix_well_log_cluster_auto_tuning_cache_dataset_id',
         'well_log_cluster_auto_tuning_cache',
         ['dataset_id'],
         unique=False
     )
-    op.create_index(
+    _create_index(
         'ix_well_log_cluster_auto_tuning_cache_cache_key',
         'well_log_cluster_auto_tuning_cache',
         ['cache_key'],

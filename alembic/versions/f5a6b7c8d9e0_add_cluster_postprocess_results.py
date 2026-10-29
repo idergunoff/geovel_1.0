@@ -19,6 +19,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     for table_name in ('cluster_calculation_cache', 'well_log_cluster_calculation_cache'):
+        columns = set() if op.get_context().as_sql else {
+            column['name'] for column in sa.inspect(op.get_bind()).get_columns(table_name)
+        }
+        if 'postprocess_results_json' in columns:
+            continue
         with op.batch_alter_table(table_name) as batch_op:
             batch_op.add_column(
                 sa.Column('postprocess_results_json', sa.Text(), nullable=False, server_default='{}')
