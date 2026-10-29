@@ -685,16 +685,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         fig_cvw.show()
 
     def set_marks():
-        """ Установка маркеров для модели PyTorch """
-
-        list_cat = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-        labels = {}
-        labels[list_cat[0]] = 0
-        labels[list_cat[1]] = 1
-        if len(list_cat) > 2:
-            for index, i in enumerate(list_cat[2:]):
-                labels[i] = index
-        return labels
+        """ Кодирование классов текущей обучающей задачи для PyTorch """
+        return {title: index for index, title in enumerate(list_marker)}
 
 
     def calc_model_class():
@@ -704,8 +696,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             return
         training_sample = np.array(data_train[list_param].values.tolist())
         start_time = datetime.datetime.now()
-        labels = set_marks()
-        labels_dict = {value: key for key, value in labels.items()}
 
         # Разделение данных на обучающую и тестовую выборки
         if ui_cls.checkBox_cvw.isChecked():
@@ -719,6 +709,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
          text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
 
         if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
+            labels = set_marks()
+            labels_dict = {value: key for key, value in labels.items()}
             markup_train = [labels[i] for i in markup_train]
             markup_train = np.array(markup_train, dtype=np.float32)
             markup_test = [labels[i] for i in markup_test]
