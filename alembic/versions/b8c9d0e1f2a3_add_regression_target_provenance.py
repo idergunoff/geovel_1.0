@@ -13,11 +13,18 @@ depends_on = None
 
 
 def upgrade():
+    columns = set() if op.get_context().as_sql else {
+        column['name'] for column in sa.inspect(op.get_bind()).get_columns('markup_reg')
+    }
     with op.batch_alter_table('markup_reg') as batch_op:
-        batch_op.add_column(sa.Column('target_source_type', sa.String(), nullable=True))
-        batch_op.add_column(sa.Column('target_source_config', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('target_source_details', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('target_is_manual_override', sa.Boolean(), nullable=True, server_default=sa.false()))
+        for column in (
+            sa.Column('target_source_type', sa.String(), nullable=True),
+            sa.Column('target_source_config', sa.Text(), nullable=True),
+            sa.Column('target_source_details', sa.Text(), nullable=True),
+            sa.Column('target_is_manual_override', sa.Boolean(), nullable=True, server_default=sa.false()),
+        ):
+            if column.name not in columns:
+                batch_op.add_column(column)
 
 
 def downgrade():

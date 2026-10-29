@@ -93,6 +93,22 @@ scikit-learn/PyTorch/skorch. Для Windows проверено разрешен�
   [импорт описаний керна](docs/core_description_import_guide.md).
 - Установка пакетов не переносит существующую базу данных, проекты и обученные модели.
 
+## Обновление существующей базы
+
+После обновления проекта выполните миграции перед запуском приложения.
+Сначала закройте GeoVel и сделайте резервную копию `geovel_db.sqlite`.
+Из папки проекта, используя Python того же виртуального окружения:
+
+```text
+venv\Scripts\python.exe -m alembic current
+venv\Scripts\python.exe -m alembic upgrade head
+venv\Scripts\python.exe -m alembic current
+```
+
+Если окружение называется `.venv`, замените `venv` на `.venv`.
+В Linux/macOS используйте `.venv/bin/python`.
+Подробнее: [обновление старой базы и ошибки миграций](docs/database_upgrade.md).
+
 ## Для разработчиков
 
 `requirements-dev.txt` дополнительно устанавливает pytest и python-docx

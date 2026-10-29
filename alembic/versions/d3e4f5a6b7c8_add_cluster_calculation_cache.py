@@ -17,8 +17,21 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _create_table(name, *columns):
+    if op.get_context().as_sql or not sa.inspect(op.get_bind()).has_table(name):
+        op.create_table(name, *columns)
+
+
+def _create_index(name, table, columns, **kwargs):
+    indexes = set() if op.get_context().as_sql else {
+        index['name'] for index in sa.inspect(op.get_bind()).get_indexes(table)
+    }
+    if name not in indexes:
+        op.create_index(name, table, columns, **kwargs)
+
+
 def _create_cache_table(table_name: str, owner_column: str, owner_table: str) -> None:
-    op.create_table(
+    _create_table(
         table_name,
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column(owner_column, sa.Integer(), nullable=False),
@@ -30,8 +43,8 @@ def _create_cache_table(table_name: str, owner_column: str, owner_table: str) ->
         sa.ForeignKeyConstraint([owner_column], [f'{owner_table}.id']),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index(f'ix_{table_name}_{owner_column}', table_name, [owner_column], unique=False)
-    op.create_index(f'ix_{table_name}_cache_key', table_name, ['cache_key'], unique=True)
+    _create_index(f'ix_{table_name}_{owner_column}', table_name, [owner_column], unique=False)
+    _create_index(f'ix_{table_name}_cache_key', table_name, ['cache_key'], unique=True)
 
 
 def upgrade() -> None:
