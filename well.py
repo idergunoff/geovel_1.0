@@ -16,6 +16,8 @@ from well_import import (
     normalize_text,
 )
 from well_deduplication import build_spatial_index, nearby_wells
+from core_description.presentation import CORE_COLOR, core_summary_html, load_core_intervals
+from qt.core_description_view import open_core_description_view
 
 
 def add_well():
@@ -422,6 +424,7 @@ def delete_data_well():
 
 def show_data_well():
     ui.textEdit_datawell.clear()
+    ui.pushButton_view_core_description.setEnabled(False)
     if ui.checkBox_profile_intersec.isChecked():
         inter = session.query(Intersection).filter_by(id=get_well_id()).first()
         if inter:
@@ -463,6 +466,8 @@ def show_data_well():
             return
 
         count_well_log = session.query(WellLog).filter_by(well_id=well.id).count()
+        has_core = session.query(CoreDescriptionDocument.id).filter_by(well_id=well.id).first() is not None
+        ui.pushButton_view_core_description.setEnabled(has_core)
 
         text_content = []
         if count_well_log > 0:
@@ -470,6 +475,9 @@ def show_data_well():
                 f'<p style="background-color:#ADFCDF">'
                 f'<b>Количество каротажных кривых:</b> {count_well_log}</p>'
             )
+        if has_core:
+            text_content.append(
+                f'<p style="background-color:{CORE_COLOR}"><b>Есть описание керна</b></p>')
 
         text_content.extend([
             f'<p><b>Скважина №</b> {well.name}</p>',
@@ -481,7 +489,29 @@ def show_data_well():
         for opt in session.query(WellOptionally).filter_by(well_id=well.id):
             text_content.append(f'<p><b>{opt.option}:</b> {opt.value}</p>')
 
+        if has_core:
+            text_content.append(core_summary_html(load_core_intervals(session, well.id)))
+
         ui.textEdit_datawell.setHtml(''.join(text_content))
+
+
+def show_core_description():
+    if ui.checkBox_profile_intersec.isChecked():
+        return
+    well_id = get_well_id()
+    well = session.get(Well, well_id) if well_id is not None else None
+    if well is None:
+        set_info('Скважина не выбрана', 'red')
+        return
+    return open_core_description_view(session, well, MainWindow)
+
+
+def refresh_core_descriptions():
+    """Refresh availability after single or batch import, preserving selection."""
+    well_id = get_well_id()
+    update_list_well(select_well=True, selected_well_id=well_id)
+    search_well()
+    show_data_well()
 
 
 

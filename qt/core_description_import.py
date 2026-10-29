@@ -116,6 +116,8 @@ class BatchParseWorker(QtCore.QObject):
 class CoreDescriptionImportDialog(QtWidgets.QDialog):
     """Preview, correct and selectively persist one parsed document."""
 
+    descriptions_saved = QtCore.pyqtSignal()
+
     COLUMNS = (
         "Сохранить", "Верх", "Низ", "Основная порода", "Дополнительные породы",
         "Нефтенасыщенность", "Уверенность", "Исходное описание", "Состояние",
@@ -734,6 +736,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                                       match_confidence=self.match_confidence)
         except Exception as error:
             QtWidgets.QMessageBox.critical(self, "Ошибка сохранения", str(error)); return
+        self.descriptions_saved.emit()
         QtWidgets.QMessageBox.information(self, "Импорт завершён", f"Сохранено интервалов: {result.intervals_saved}")
         self.accept()
 
@@ -782,6 +785,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 continue
             item.status = "saved"; self.documents_table.item(row, 7).setText("сохранён")
             saved_documents += 1; saved_intervals += result.intervals_saved
+        if saved_documents:
+            self.descriptions_saved.emit()
         QtWidgets.QMessageBox.information(
             self, "Пакетный импорт",
             f"Сохранено документов: {saved_documents}; интервалов: {saved_intervals}; "
