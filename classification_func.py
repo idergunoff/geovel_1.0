@@ -17,6 +17,8 @@ from random_param import push_random_param
 from feature_selection import *
 from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
 from training_feature_mask import TrainingFeatureMask
+from geochem_preprocessing import ComponentSelector
+from qt.l1_controls import configure_l1_controls
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ class Model(nn.Module):
 
 
 
-def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str):
+def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str, *, all_components=None):
     """
     Обучить классификатор
 
@@ -70,6 +72,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param mark: название столбца в data_train с маркерами
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
+    :param all_components: все геохимические компоненты до отбора параметров и маски
     """
     #### старая не оптимизированная версия кода. Работает долго
     # list_nan_param, count_nan = set(), 0
@@ -142,6 +145,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         text_label += f'{list_marker[i_mark]}-{list(markup).count(list_marker[i_mark])}, '
 
     ui_cls.label.setText(text_label)
+
+    def input_features(selected):
+        if type_case == 'geochem' and ui_cls.checkBox_norm_l1_all.isChecked():
+            return list(all_components if all_components is not None else training_mask.features)
+        return list(selected)
 
     def push_checkbutton_smote():
         if ui_cls.checkBox_adasyn.isChecked():
@@ -462,7 +470,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         list_param = training_mask.resolve()
         if list_param is None:
             return
-        training_sample = np.array(data_train[list_param].values.tolist())
+        training_sample = np.array(data_train[input_features(list_param)].values.tolist())
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         list_marker = get_list_marker_mlp(type_case)
 
@@ -504,7 +512,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         data_train_cov['x_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_x)
         data_train_cov['y_coord'] = data_train_cov['prof_well_index'].apply(get_coordinates_y)
 
-        training_sample = np.array(data_train_cov[list_param].values.tolist())
+        training_sample = np.array(data_train_cov[input_features(list_param)].values.tolist())
 
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
@@ -612,7 +620,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         list_param = training_mask.resolve()
         if list_param is None:
             return
-        training_sample = np.array(data_train[list_param].values.tolist())
+        training_sample = np.array(data_train[input_features(list_param)].values.tolist())
 
         list_well = [i.split('_')[1] for i in data_train['prof_well_index'].values.tolist()]
         data_train_by_well = data_train.copy()
@@ -649,8 +657,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             data_test_well = data_train_by_well[data_train_by_well['well_id'].isin(lcvw)]
             data_train_well = data_train_by_well[~data_train_by_well['well_id'].isin(lcvw)]
 
-            training_sample_train = np.array(data_train_well[list_param].values.tolist())
-            training_sample_test = np.array(data_test_well[list_param].values.tolist())
+            training_sample_train = np.array(data_train_well[input_features(list_param)].values.tolist())
+            training_sample_test = np.array(data_test_well[input_features(list_param)].values.tolist())
             markup_train = np.array(sum(data_train_well[[mark]].values.tolist(), []))
             markup_test = np.array(sum(data_test_well[[mark]].values.tolist(), []))
 
@@ -694,13 +702,13 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         list_param = training_mask.resolve()
         if list_param is None:
             return
-        training_sample = np.array(data_train[list_param].values.tolist())
+        training_sample = np.array(data_train[input_features(list_param)].values.tolist())
         start_time = datetime.datetime.now()
 
         # Разделение данных на обучающую и тестовую выборки
         if ui_cls.checkBox_cvw.isChecked():
             training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(data_train,
-                list_marker, mark, list_param, random_seed=ui.spinBox_seed.value(), test_size=0.2)
+                list_marker, mark, input_features(list_param), random_seed=ui.spinBox_seed.value(), test_size=0.2)
         else:
             training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
                 training_sample, markup, test_size=0.20, random_state=ui.spinBox_seed.value(), stratify=markup)
@@ -881,7 +889,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if type_case == 'georadar':
             save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save, ui_cls)
         if type_case == 'geochem':
-            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train)
+            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, input_features(list_param), data_train)
 
 
     def build_pipeline(markup_train, training_sample_train):
@@ -898,10 +906,17 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             power_t = PowerTransformer(method='yeo-johnson', standardize=True)
             pipe_steps.append(('power_t', power_t))
             text_scaler += '\nYeo–Johnson до StandardScaler (standardize=True)'
-        if ui_cls.checkBox_norm_l1.isChecked():
+        if ui_cls.checkBox_norm_l1_all.isChecked() and type_case == 'geochem':
+            selected = training_mask.resolve()
+            required = input_features(selected)
+            pipe_steps.append(('norm_l1_all', Normalizer(norm='l1')))
+            indices = tuple(required.index(name) for name in selected)
+            pipe_steps.append(('select_components', ComponentSelector(indices)))
+            text_scaler += '\nNormalizer(l1) по всем компонентам; выбраны: ' + ', '.join(selected)
+        elif ui_cls.checkBox_norm_l1.isChecked():
             norm_l1 = Normalizer(norm='l1')
             pipe_steps.append(('norm_l1', norm_l1))
-            text_scaler += '\nNormalizer(l1)'
+            text_scaler += '\nNormalizer(l1) по выбранным компонентам'
         if ui_cls.checkBox_stdscaler.isChecked():
             std_scaler = StandardScaler()
             pipe_steps.append(('std_scaler', std_scaler))
@@ -941,11 +956,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             pca = PCA(n_components=n_comp, random_state=0, svd_solver='auto')
             pipe_steps.append(('pca', pca))
         text_pca = f'\nPCA: n_components={n_comp}' if ui_cls.checkBox_pca.isChecked() else ''
+        model_sample = training_sample_train
+        if ui_cls.checkBox_norm_l1_all.isChecked() and type_case == 'geochem':
+            model_sample = np.asarray(training_sample_train)[:, indices]
         if ui_cls.checkBox_stack_vote.isChecked():
-            model_class, text_model, model_name = build_stacking_voting_model(training_sample_train)
+            model_class, text_model, model_name = build_stacking_voting_model(model_sample)
         else:
             model_name = ui_cls.buttonGroup.checkedButton().text()
-            model_class, text_model = choice_model_classifier(model_name, training_sample_train)
+            model_class, text_model = choice_model_classifier(model_name, model_sample)
         if ui_cls.checkBox_baggig.isChecked():
             model_class = BaggingClassifier(estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
                                             random_state=0, n_jobs=-1)
@@ -1946,6 +1964,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     ui_cls.pushButton_gen.clicked.connect(genetic_algorithm)
     from app_settings import bind_form
     bind_form(Classifier, "classifier_form")
+    configure_l1_controls(ui_cls, allow_all=type_case == 'geochem')
     Classifier.exec_()
 
 

@@ -10,6 +10,7 @@ from scipy import stats
 from func import *
 from classification_func import train_classifier
 from geochem_preprocessing import transform_components
+from qt.l1_controls import configure_l1_controls
 from krige import draw_map
 from qt.mask_info_form import Ui_Form_Mask_Info
 
@@ -380,6 +381,7 @@ def tsne_geochem():
     TSNE_form = QtWidgets.QDialog()
     ui_tsne = Ui_TSNE_PCA()
     ui_tsne.setupUi(TSNE_form)
+    configure_l1_controls(ui_tsne)
     TSNE_form.show()
     TSNE_form.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
 
@@ -487,8 +489,7 @@ def tsne_geochem():
 
         data_plot_new.reset_index(inplace=True, drop=True)
 
-        list_drop_param = get_list_check_checkbox(ui_tsne.listWidget_check_param, is_checked=False)
-        data_plot_new = data_plot_new.drop(list_drop_param, axis=1)
+        selected_params = get_list_check_checkbox(ui_tsne.listWidget_check_param)
 
         try:
             data_tsne = transform_components(
@@ -496,6 +497,8 @@ def tsne_geochem():
                 logarithm=ui_tsne.checkBox_log.isChecked(),
                 power_transform=ui_tsne.checkBox_power_trans.isChecked(),
                 normalize_l1=ui_tsne.checkBox_norm_l1.isChecked(),
+                normalize_l1_all=ui_tsne.checkBox_norm_l1_all.isChecked(),
+                selected_columns=selected_params,
                 standardize=ui_tsne.checkBox_standart.isChecked(),
             )
 
@@ -584,14 +587,14 @@ def tsne_geochem():
             data_plot_new.reset_index(inplace=True, drop=True)
 
             selected_params = get_list_check_checkbox(ui_tsne.listWidget_check_param)
-            # Нормируем только выбранные компоненты: при изменении маски сумма
-            # должна быть пересчитана по новому набору.
-            data_numeric = data_plot_new[selected_params]
+            data_numeric = data_plot_new.drop(['well', 'point', 'color'], axis=1)
             data_numeric = transform_components(
                 data_numeric,
                 logarithm=ui_tsne.checkBox_log.isChecked(),
                 power_transform=ui_tsne.checkBox_power_trans.isChecked(),
                 normalize_l1=ui_tsne.checkBox_norm_l1.isChecked(),
+                normalize_l1_all=ui_tsne.checkBox_norm_l1_all.isChecked(),
+                selected_columns=selected_params,
                 standardize=ui_tsne.checkBox_standart.isChecked(),
             )
 
@@ -1384,10 +1387,15 @@ def del_g_train_point():
     else:
         pass
 
-def build_geochem_table():
+def build_geochem_table(include_all_components=False):
     parameters = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
     list_param = [i.param.title for i in parameters]
-    data = pd.DataFrame(columns=['title', 'category'] + list_param)
+    if include_all_components:
+        parameters = session.query(GeochemParameter).filter_by(geochem_id=get_geochem_id()).all()
+        component_names = [p.title for p in parameters]
+    else:
+        component_names = list_param
+    data = pd.DataFrame(columns=['title', 'category'] + component_names)
 
     for point in session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
             GeochemMaket.id == get_maket_id()).all():
@@ -1397,13 +1405,15 @@ def build_geochem_table():
         dict_point['title'] = point.title
         dict_point['category'] = point.category.title
         for p in parameters:
+            param_id = p.id if include_all_components else p.param_id
+            param_title = p.title if include_all_components else p.param.title
             if point.type_point == 'field':
                 value = session.query(GeochemPointValue).filter_by(g_point_id=point.point_id,
-                                                                       g_param_id=p.param_id).first()
+                                                                       g_param_id=param_id).first()
             else:
                 value = session.query(GeochemWellPointValue).filter_by(g_well_point_id=point.point_well_id,
-                                                                         g_param_id=p.param_id).first()
-            dict_point[p.param.title] = value.value
+                                                                         g_param_id=param_id).first()
+            dict_point[param_title] = value.value if value is not None else np.nan
 
         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
     return data, list_param
@@ -1550,12 +1560,14 @@ def build_geochem_table_model_points():
 
 
 def train_model_geochem():
-    data_train, list_param = build_geochem_table()
+    data_train, list_param = build_geochem_table(include_all_components=True)
+    all_components = data_train.columns.tolist()[2:]
     colors = {}
     if session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).first():
         for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
             colors[c.title] = c.color
-        train_classifier(data_train, list_param, list_param, colors, 'category', 'title', 'geochem')
+        train_classifier(data_train, list_param, list_param, colors, 'category', 'title', 'geochem',
+                         all_components=all_components)
 
 
 def calc_geochem_classification():
@@ -1687,6 +1699,7 @@ def draw_point_graph():
     PointGraph = QtWidgets.QDialog()
     ui_pg = Ui_GraphParam()
     ui_pg.setupUi(PointGraph)
+    configure_l1_controls(ui_pg)
     PointGraph.show()
     PointGraph.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
@@ -1711,12 +1724,12 @@ def draw_point_graph():
 
         data_plot_new = data_plot.copy()
 
-        # Все преобразования, включая L1, считаются по текущему набору
-        # компонентов, а не по скрытым столбцам исходной таблицы.
         data_numeric = transform_components(
-            data_plot_new[list_param],
+            data_plot_new.drop(['well', 'point', 'color'], axis=1),
             power_transform=ui_pg.checkBox_power_trans.isChecked(),
             normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            normalize_l1_all=ui_pg.checkBox_norm_l1_all.isChecked(),
+            selected_columns=list_param,
             standardize=ui_pg.checkBox_standart.isChecked(),
         )
         data_plot_new.loc[:, list_param] = data_numeric
@@ -1737,12 +1750,12 @@ def draw_point_graph():
 
         data_plot_new = data_plot.copy()
 
-        # Все преобразования, включая L1, считаются по текущему набору
-        # компонентов, а не по скрытым столбцам исходной таблицы.
         data_numeric = transform_components(
-            data_plot_new[list_param],
+            data_plot_new.drop(['well', 'point', 'color'], axis=1),
             power_transform=ui_pg.checkBox_power_trans.isChecked(),
             normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            normalize_l1_all=ui_pg.checkBox_norm_l1_all.isChecked(),
+            selected_columns=list_param,
             standardize=ui_pg.checkBox_standart.isChecked(),
         )
         data_plot_new.loc[:, list_param] = data_numeric
@@ -1852,12 +1865,12 @@ def draw_point_graph():
 
         data_plot_new = data_plot.copy()
 
-        # Все преобразования, включая L1, считаются по текущему набору
-        # компонентов, а не по скрытым столбцам исходной таблицы.
         data_numeric = transform_components(
-            data_plot_new[list_param],
+            data_plot_new.drop(['well', 'point', 'color'], axis=1),
             power_transform=ui_pg.checkBox_power_trans.isChecked(),
             normalize_l1=ui_pg.checkBox_norm_l1.isChecked(),
+            normalize_l1_all=ui_pg.checkBox_norm_l1_all.isChecked(),
+            selected_columns=list_param,
             standardize=ui_pg.checkBox_standart.isChecked(),
         )
         data_plot_new.loc[:, list_param] = data_numeric
@@ -2184,6 +2197,7 @@ def draw_point_graph():
     ui_pg.checkBox_standart.clicked.connect(draw_graph)
     ui_pg.checkBox_power_trans.clicked.connect(draw_graph)
     ui_pg.checkBox_norm_l1.clicked.connect(draw_graph)
+    ui_pg.checkBox_norm_l1_all.clicked.connect(draw_graph)
     ui_pg.pushButton_save_mask.clicked.connect(save_geochem_mask)
     ui_pg.listWidget_masks.itemSelectionChanged.connect(on_mask_selected)
     ui_pg.pushButton_mask_info.clicked.connect(update_mask_info)

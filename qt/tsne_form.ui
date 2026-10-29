@@ -371,7 +371,20 @@
          <item>
           <widget class="QCheckBox" name="checkBox_norm_l1">
            <property name="text">
-            <string>norm l1</string>
+            <string>norm l1 по выбранным</string>
+           </property>
+           <property name="toolTip">
+            <string>Сумма модулей считается только по выбранным компонентам.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_norm_l1_all">
+           <property name="text">
+            <string>norm l1 по всем</string>
+           </property>
+           <property name="toolTip">
+            <string>Сумма модулей считается по всем компонентам; затем остаются только выбранные.</string>
            </property>
           </widget>
          </item>

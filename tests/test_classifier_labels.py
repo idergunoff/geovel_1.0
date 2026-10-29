@@ -19,7 +19,7 @@ def load_callbacks(scope):
     tree = ast.parse((ROOT / 'classification_func.py').read_text(encoding='utf-8'))
     callbacks = [node for node in ast.walk(tree)
                  if isinstance(node, ast.FunctionDef)
-                 and node.name in {'set_marks', 'calc_model_class'}]
+                 and node.name in {'set_marks', 'calc_model_class', 'input_features'}]
     exec(compile(ast.Module(body=callbacks, type_ignores=[]),
                  str(ROOT / 'classification_func.py'), 'exec'), scope)
     return scope
@@ -50,6 +50,7 @@ def test_geochem_training_uses_its_own_categories(model_name, radar_markers, mar
         training_mask=SimpleNamespace(resolve=lambda: ['Cu']),
         ui_cls=SimpleNamespace(
             checkBox_cvw=SimpleNamespace(isChecked=lambda: False),
+            checkBox_norm_l1_all=SimpleNamespace(isChecked=lambda: False),
             buttonGroup=SimpleNamespace(checkedButton=lambda: SimpleNamespace(text=lambda: model_name)),
         ),
         ui=SimpleNamespace(spinBox_seed=SimpleNamespace(value=lambda: 42)),
