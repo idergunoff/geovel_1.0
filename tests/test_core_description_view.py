@@ -1,28 +1,34 @@
 """Saved core descriptions in the well card, list and read-only table."""
 
 import ast
+import json
 import os
+from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtTest, QtWidgets
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import selectinload, sessionmaker
 
 from core_description.database import save_core_import
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.presentation import (
-    CORE_COLOR, CORE_MARKER, core_summary_html, core_well_ids, load_core_intervals,
+    CORE_COLOR, CORE_MARKER, OIL_LAYER_COLOR, core_summary_html, core_well_ids,
+    load_core_intervals, secondary_rock_text,
 )
+from core_description.semantics import enrich_intervals
+from core_description.terminology import SATURATION_LABELS
 from models_db.model import (
     Base, CoreDescriptionDocument, CoreDescriptionInterval, Well, WellLog, WellOptionally,
 )
 import models_db.model_cluster  # register relationships
 import models_db.model_profile_features
-from qt.core_description_view import CoreDescriptionViewDialog, open_core_description_view
+from qt.core_description_view import CoreDescriptionViewDialog, open_core_description_view, saved_description_html
+from qt.core_description_import import DescriptionDelegate
 from well_selection import find_well_row, well_id_from_text
 
 
@@ -76,8 +82,10 @@ def test_summary_orders_depths_escapes_index_and_preserves_reported_thickness(da
     intervals = load_core_intervals(db, wells[1].id)
     assert [i.top_depth for i in intervals] == [100, 102]
     html = core_summary_html(intervals)
-    assert "C1 &lt;a&gt; — 100–102 — 1.5 — Песчаник — Интенсивная" in html
-    assert "— — 102–103 — — — Аргиллит — Не определена" in html
+    assert "C1 &lt;a&gt; — 100 — 1.5 — Песчаник — Интенсивная" in html
+    assert "— — 102 — — — Аргиллит</p>" in html
+    assert "Не определена" not in html
+    assert "100–102" not in html
     assert core_well_ids(db) == {wells[1].id, wells[3].id}
     assert load_core_intervals(db, wells[0].id) == []
 
@@ -92,9 +100,15 @@ def test_view_contains_only_selected_well_is_readonly_and_has_full_details(app, 
     assert dialog.table.item(0, 0).text() == "C1 <a>"
     assert dialog.table.item(0, 4).text() == "Песчаник"
     assert dialog.table.item(0, 6).text() == "Интенсивная"
-    assert dialog.table.item(0, 12).text() == "core-1.docx"
+    assert dialog.table.columnCount() == 8
+    assert dialog.table.item(0, 5).text() == ""
+    assert dialog.table.item(1, 6).text() == ""
+    assert dialog.table.item(0, 0).background().color().name() == OIL_LAYER_COLOR.lower()
     assert "Песчаник <слой> & нефть" in dialog.details.toPlainText()
     assert "Описал: Иванов" in dialog.details.toPlainText()
+    assert "core-1.docx" in dialog.details.toPlainText()
+    assert "Уверенность: 1" in dialog.details.toPlainText()
+    assert "Правки вручную: Нет" in dialog.details.toPlainText()
     dialog.table.selectRow(1)
     assert "Аргиллит" in dialog.details.toPlainText()
     empty = CoreDescriptionViewDialog(db, wells[0], parent)
@@ -146,7 +160,7 @@ def test_well_card_presence_summary_order_and_empty_selection(app, dataset):
     text = ui.textEdit_datawell.toPlainText()
     assert text.index("Есть описание керна") < text.index("Скважина №")
     assert text.index("Площадь") < text.index("Описание керна")
-    assert "C1 <a> — 100–102 — 1.5 — Песчаник — Интенсивная" in text
+    assert "C1 <a> — 100 — 1.5 — Песчаник — Интенсивная" in text
     assert ui.pushButton_view_core_description.isEnabled()
     current[0] = wells[3].id
     ns["show_data_well"]()
@@ -203,3 +217,83 @@ def test_marked_well_is_identified_when_adding_to_cluster_dataset(app, dataset):
         MainWindow=None, QMessageBox=SimpleNamespace(warning=lambda *args: messages.append(args[-1]))))
     ns["add_selected_well_to_cluster_dataset"]()
     assert messages == [f'У скважины "{wells[1].name}" отсутствует каротаж (well_log).']
+
+
+@pytest.mark.parametrize("saturation", list(SATURATION_LABELS))
+def test_any_oil_indication_including_odor_highlights_summary_and_table(app, dataset, saturation):
+    db, wells = dataset
+    interval = load_core_intervals(db, wells[1].id)[0]
+    interval.oil_saturation = saturation
+    db.flush()
+    positive = saturation not in {"unknown", "none"}
+    assert (OIL_LAYER_COLOR in core_summary_html([interval])) == positive
+    dialog = CoreDescriptionViewDialog(db, wells[1])
+    color = dialog.table.item(0, 0).background().color().name()
+    assert (color == OIL_LAYER_COLOR.lower()) == positive
+    if saturation == "unknown":
+        assert dialog.table.item(0, 6).text() == ""
+    dialog.close()
+
+
+def test_secondary_rocks_are_short_and_rock_only_oil_indications_are_highlighted(dataset):
+    db, wells = dataset
+    interval = load_core_intervals(db, wells[1].id)[0]
+    interval.oil_saturation = "unknown"
+    interval.rocks[0].oil_saturation = "odor"
+    assert OIL_LAYER_COLOR in core_summary_html([interval])
+    interval = SimpleNamespace(rocks=[
+        SimpleNamespace(id=1, rock_name="sandstone", role="primary"),
+        SimpleNamespace(id=2, rock_name="clay", role="secondary"),
+        SimpleNamespace(id=3, rock_name="siltstone", role="interlayer"),
+        SimpleNamespace(id=4, rock_name="clay", role="secondary"),
+    ])
+    assert secondary_rock_text(interval) == "Глина, Алевролит (прослой)"
+
+
+def test_saved_description_highlighting_preserves_text_and_wraps_to_full_height(app, dataset):
+    db, wells = dataset
+    interval = load_core_intervals(db, wells[1].id)[0]
+    text = "🪨 <Песчаник> & глина, запах нефти.\n" + "Полное длинное описание слоя. " * 40
+    parsed = ParsedCoreInterval(100, 102, text, 0, 2)
+    enrich_intervals([parsed])
+    interval.raw_description = text
+    interval.recognition_details = json.dumps({"matches": [asdict(m) for m in parsed.semantic_matches]})
+    db.commit()
+    dialog = CoreDescriptionViewDialog(db, wells[1])
+    rich = QtGui.QTextDocument()
+    rich.setHtml(dialog.table.item(0, 7).data(DescriptionDelegate.HTML_ROLE))
+    assert rich.toPlainText() == text
+    assert {m.category for m in parsed.semantic_matches} >= {"rock", "oil_indicator"}
+    for match in parsed.semantic_matches:
+        if match.category not in {"rock", "oil_indicator", "oil_saturation"}:
+            continue
+        cursor = QtGui.QTextCursor(rich)
+        cursor.setPosition(len(text[:match.start].encode("utf-16-le")) // 2)
+        cursor.movePosition(QtGui.QTextCursor.NextCharacter, QtGui.QTextCursor.KeepAnchor)
+        expected = DescriptionDelegate.ROCK_COLOR if match.category == "rock" else DescriptionDelegate.OIL_COLOR
+        assert cursor.charFormat().background().color().name() == expected
+    dialog.table.horizontalHeader().setStretchLastSection(False)
+    dialog.table.setColumnWidth(7, 560)
+    dialog.table.resizeRowsToContents()
+    wide = dialog.table.rowHeight(0)
+    dialog.table.setColumnWidth(7, 260)
+    QtTest.QTest.qWait(100)
+    assert dialog.table.rowHeight(0) > wide
+    delegate = dialog.table.itemDelegateForColumn(7)
+    option = QtWidgets.QStyleOptionViewItem()
+    option.widget = dialog.table
+    option.font = dialog.table.font()
+    option.rect.setWidth(dialog.table.columnWidth(7))
+    index = dialog.table.model().index(0, 7)
+    assert dialog.table.rowHeight(0) >= delegate.sizeHint(option, index).height()
+    assert not dialog.table.grab().isNull()
+    dialog.close()
+
+
+@pytest.mark.parametrize("details", ["{}", "broken json", "null", '{"matches": null}',
+                                      '{"matches": [null, {"category": "rock", "start": "0", "end": 5}]}'])
+def test_missing_or_invalid_saved_spans_keep_plain_description(details):
+    interval = SimpleNamespace(raw_description="<Песчаник> & нефть", recognition_details=details)
+    rich = QtGui.QTextDocument()
+    rich.setHtml(saved_description_html(interval))
+    assert rich.toPlainText() == interval.raw_description

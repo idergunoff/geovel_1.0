@@ -2,12 +2,14 @@
 
 import json
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from core_description.presentation import (
-    load_core_intervals, number_text, primary_rock_text, saturation_text,
+    OIL_LAYER_COLOR, has_oil, load_core_intervals, number_text, primary_rock_text,
+    secondary_rock_text, saturation_text,
 )
 from core_description.terminology import ROCK_LABELS, RELATION_LABELS, display_term
+from qt.core_description_import import DescriptionDelegate
 
 
 def _pretty_json(value):
@@ -17,12 +19,24 @@ def _pretty_json(value):
         return str(value or "—")
 
 
+def saved_description_html(interval):
+    try:
+        details = json.loads(interval.recognition_details)
+    except (ValueError, TypeError):
+        details = {}
+    matches = details.get("matches", []) if isinstance(details, dict) else []
+    if not isinstance(matches, list):
+        matches = []
+    return DescriptionDelegate.highlighted_matches(
+        interval.raw_description,
+        ((m.get("category"), m.get("start"), m.get("end"))
+         for m in matches if isinstance(m, dict)))
+
+
 class CoreDescriptionViewDialog(QtWidgets.QDialog):
     COLUMNS = (
         "Индекс", "Кровля, м", "Подошва, м", "Мощность, м", "Основная порода",
-        "Все породы (роль; нефтенасыщенность)", "Нефтенасыщенность", "Исходное описание",
-        "Нормализованное описание", "Уверенность", "Требует проверки", "Правки вручную",
-        "Файл", "Площадь в документе", "Автор", "Дата импорта (UTC)",
+        "Второстепенные породы", "Нефтенасыщенность", "Исходное описание",
     )
 
     def __init__(self, session, well, parent=None):
@@ -50,31 +64,37 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.table.setWordWrap(False)
+        self.table.setWordWrap(True)
+        self.table.setTextElideMode(QtCore.Qt.ElideNone)
+        self.table.setItemDelegateForColumn(7, DescriptionDelegate(self.table))
         self.table.setAlternatingRowColors(True)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        header.setStretchLastSection(True)
+        self._resize_timer = QtCore.QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self.table.resizeRowsToContents)
+        header.sectionResized.connect(lambda *_: self._resize_timer.start(50))
         for row, interval in enumerate(self.intervals):
-            document = interval.document
-            rocks = "; ".join(
-                f"{display_term(rock.rock_name, ROCK_LABELS)} "
-                f"({display_term(rock.role, RELATION_LABELS)}; {saturation_text(rock.oil_saturation)})"
-                for rock in sorted(interval.rocks, key=lambda rock: rock.id or 0))
             values = (
                 interval.geological_index_raw or "—", number_text(interval.top_depth),
                 number_text(interval.bottom_depth), number_text(interval.thickness),
-                primary_rock_text(interval), rocks or "—", saturation_text(interval.oil_saturation),
-                interval.raw_description, interval.normalized_description,
-                number_text(interval.confidence), "Да" if interval.needs_review else "Нет",
-                "Да" if interval.manually_edited else "Нет", document.source_file_name,
-                document.area_name_raw or "—", document.described_by or document.described_by_raw or "—",
-                document.imported_at.strftime("%d.%m.%Y %H:%M") if document.imported_at else "—",
+                primary_rock_text(interval), secondary_rock_text(interval),
+                saturation_text(interval.oil_saturation, omit_unknown=True), interval.raw_description,
             )
             for column, value in enumerate(values):
                 item = QtWidgets.QTableWidgetItem(value)
                 item.setToolTip(value)
+                if has_oil(interval):
+                    item.setBackground(QtGui.QColor(OIL_LAYER_COLOR))
+                    item.setForeground(QtGui.QColor("#17212b"))
                 self.table.setItem(row, column, item)
-        self.table.resizeColumnsToContents()
-        for column in range(self.table.columnCount()):
-            self.table.setColumnWidth(column, min(330, self.table.columnWidth(column)))
+            self.table.item(row, 7).setData(DescriptionDelegate.HTML_ROLE, saved_description_html(interval))
+        for column in range(7):
+            self.table.resizeColumnToContents(column)
+            self.table.setColumnWidth(column, min(200, self.table.columnWidth(column)))
+        self.table.setColumnWidth(7, 560)
+        self.table.resizeRowsToContents()
         splitter.addWidget(self.table)
         self.details = QtWidgets.QPlainTextEdit()
         self.details.setReadOnly(True)
@@ -97,7 +117,10 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
         interval = self.intervals[row]
         document = interval.document
         parts = [f"Исходное описание:\n{interval.raw_description}",
-                 f"Нормализованное описание:\n{interval.normalized_description}"]
+                 f"Нормализованное описание:\n{interval.normalized_description}",
+                 f"Уверенность: {number_text(interval.confidence)}\n"
+                 f"Требует проверки: {'Да' if interval.needs_review else 'Нет'}\n"
+                 f"Правки вручную: {'Да' if interval.manually_edited else 'Нет'}"]
         for rock in sorted(interval.rocks, key=lambda rock: rock.id or 0):
             parts.append(
                 f"Порода: {display_term(rock.rock_name, ROCK_LABELS)}; "
