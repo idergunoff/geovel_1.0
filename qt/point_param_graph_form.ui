@@ -241,11 +241,24 @@
          <item row="1" column="0">
           <widget class="QCheckBox" name="checkBox_norm_l1">
            <property name="text">
-            <string>norm l1</string>
+            <string>norm l1 по выбранным</string>
+           </property>
+           <property name="toolTip">
+            <string>Сумма модулей считается только по выбранным компонентам.</string>
            </property>
           </widget>
          </item>
          <item row="2" column="0">
+          <widget class="QCheckBox" name="checkBox_norm_l1_all">
+           <property name="text">
+            <string>norm l1 по всем</string>
+           </property>
+           <property name="toolTip">
+            <string>Сумма модулей считается по всем компонентам; затем остаются только выбранные.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
           <widget class="QCheckBox" name="checkBox_standart">
            <property name="text">
             <string>standart</string>
@@ -255,7 +268,7 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item row="4" column="0">
           <spacer name="verticalSpacer_5">
            <property name="orientation">
             <enum>Qt::Vertical</enum>

@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 
 from training_feature_mask import TrainingFeatureMask, validate_mask_features
+from qt.l1_controls import configure_l1_controls
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,7 +142,7 @@ def test_training_and_validation_buttons_warn_without_crashing(qt_app, monkeypat
     monkeypatch.setattr(app_settings, 'bind_form', lambda *args: None)
     monkeypatch.setattr(QtWidgets.QMessageBox, 'warning', lambda parent, title, text: messages.append(text))
     scope = dict(
-        pd=pd, np=np, QtWidgets=QtWidgets, QtCore=QtCore,
+        pd=pd, np=np, QtWidgets=QtWidgets, QtCore=QtCore, configure_l1_controls=configure_l1_controls,
         Ui_ClassifierForm=Ui_ClassifierForm, Ui_RegressorForm=Ui_RegressorForm,
         QListWidgetItem=QtWidgets.QListWidgetItem, TrainingFeatureMask=TrainingFeatureMask,
         ParameterMask=object(), session=SimpleNamespace(query=lambda _: SimpleNamespace(all=lambda: [record])),
@@ -196,7 +197,7 @@ def test_training_uses_selected_features_then_restores_full_sample(controls, kin
         def __getattr__(self, _):
             return SimpleNamespace(isChecked=lambda: False, value=lambda: 0)
 
-    scope = dict(training_mask=c.selector, data_train=data, np=np, datetime=datetime,
+    scope = dict(training_mask=c.selector, data_train=data, np=np, datetime=datetime, type_case="geochem",
                  set_marks=lambda: {0: 0, 1: 1}, markup=np.array([0, 1]), target=[0, 1],
                  ui_cls=UncheckedControls(), ui_r=UncheckedControls(), ui=UncheckedControls(),
                  train_test_split=split)
@@ -204,7 +205,11 @@ def test_training_uses_selected_features_then_restores_full_sample(controls, kin
                   else ('regression.py', 'calc_model_reg'))
     tree = ast.parse((ROOT / file).read_text(encoding='utf-8'))
     callback = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name)
-    exec(compile(ast.Module(body=[callback], type_ignores=[]), file, 'exec'), scope)
+    callbacks = [callback]
+    if kind == 'classification':
+        callbacks.append(next(node for node in ast.walk(tree)
+                              if isinstance(node, ast.FunctionDef) and node.name == 'input_features'))
+    exec(compile(ast.Module(body=callbacks, type_ignores=[]), file, 'exec'), scope)
     run = scope[name]
     with pytest.raises(ReachedSplit):
         run()

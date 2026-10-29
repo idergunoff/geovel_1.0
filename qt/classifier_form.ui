@@ -1610,14 +1610,14 @@
            <layout class="QGridLayout" name="gridLayout_36">
             <item row="0" column="0">
              <layout class="QGridLayout" name="gridLayout_30">
-              <item row="5" column="0">
+              <item row="6" column="0">
                <widget class="QCheckBox" name="checkBox_robscaler">
                 <property name="text">
                  <string>RobustScaler</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
+              <item row="8" column="0">
                <widget class="QCheckBox" name="checkBox_mxabsscaler">
                 <property name="text">
                  <string>MaxAbsScaler</string>
@@ -1634,14 +1634,14 @@
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="7" column="0">
                <widget class="QCheckBox" name="checkBox_mnmxscaler">
                 <property name="text">
                  <string>MinMaxScaler</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
+              <item row="5" column="0">
                <widget class="QCheckBox" name="checkBox_power_trans_after">
                 <property name="text">
                  <string>PowerTransform (Yeo–Johnson) после StandardScaler</string>
@@ -1651,7 +1651,7 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="4" column="0">
                <widget class="QCheckBox" name="checkBox_stdscaler">
                 <property name="text">
                  <string>StandardScaler</string>
@@ -1664,7 +1664,23 @@
               <item row="2" column="0">
                <widget class="QCheckBox" name="checkBox_norm_l1">
                 <property name="text">
-                 <string>Normalizer(l1)</string>
+                 <string>norm l1 по выбранным</string>
+                </property>
+                <property name="toolTip">
+                 <string>Сумма модулей считается только по выбранным компонентам.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QCheckBox" name="checkBox_norm_l1_all">
+                <property name="visible">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>norm l1 по всем</string>
+                </property>
+                <property name="toolTip">
+                 <string>Сумма модулей считается по всем компонентам; затем остаются только выбранные.</string>
                 </property>
                </widget>
               </item>
