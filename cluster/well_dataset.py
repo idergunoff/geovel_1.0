@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .common import *
+from well_selection import well_id_from_text
 from .models import (
     AUTO_SILHOUETTE_ADAPTIVE_ALPHA,
     AUTO_SILHOUETTE_COARSE_MAX_SAMPLES,
@@ -321,8 +322,8 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
             candidate = ui.listWidget_well.item(idx)
             if candidate is None:
                 continue
-            candidate_well_id = str(candidate.text()).split(' id')[-1].strip()
-            if candidate_well_id == str(well_id):
+            candidate_well_id = well_id_from_text(candidate.text())
+            if candidate_well_id == well_id:
                 selected_item = candidate
                 break
 
@@ -351,8 +352,8 @@ def open_cluster_well_interval_form(item: QListWidgetItem | None = None) -> None
             candidate = ui.listWidget_well.item(idx)
             if candidate is None:
                 continue
-            candidate_well_id = str(candidate.text()).split(' id')[-1].strip()
-            if candidate_well_id == str(well_id):
+            candidate_well_id = well_id_from_text(candidate.text())
+            if candidate_well_id == well_id:
                 selected_item = candidate
                 break
 
@@ -693,7 +694,9 @@ def add_selected_well_to_cluster_dataset() -> None:
         return
 
     try:
-        well_id = int(current_well_item.text().split(' id')[-1])
+        well_id = well_id_from_text(current_well_item.text())
+        if well_id is None:
+            raise ValueError('Missing well id')
     except (TypeError, ValueError, AttributeError):
         QMessageBox.warning(MainWindow, 'ADD WELL', 'Не удалось определить id выбранной скважины.')
         return

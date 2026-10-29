@@ -15,6 +15,7 @@ from mapinfo_export import (
 )
 from profile_object_selection import choose_profile_object_ids
 from well_selection import find_well_row, well_id_from_text
+from core_description.presentation import CORE_COLOR, CORE_MARKER, core_well_ids
 
 
 list_param_geovel = [
@@ -1722,9 +1723,9 @@ def update_list_well(select_well=False, selected_well_id=None):
             radarogramma.removeItem(globals()[key])
     ui.listWidget_well.clear()
 
-    # Создаем два временных списка
-    wells_with_logs = []
-    wells_without_logs = []
+    wells_with_data = []
+    wells_without_data = []
+    count_with_logs = 0
 
     if ui.checkBox_profile_intersec.isChecked():
         intersections = session.query(Intersection).order_by(Intersection.name).all()
@@ -1737,6 +1738,26 @@ def update_list_well(select_well=False, selected_well_id=None):
             for intersec in intersections:
                 ui.listWidget_well.addItem(f'{intersec.name} id{intersec.id}')
     else:
+        described_wells = core_well_ids(session)
+
+        def make_well_item(well, text):
+            nonlocal count_with_logs
+            has_core = well.id in described_wells
+            item = QListWidgetItem(text + (f' {CORE_MARKER}' if has_core else ''))
+            item.setData(Qt.UserRole, well.id)
+            tips = []
+            if well.well_logs:
+                count_with_logs += 1
+                item.setBackground(QBrush(QColor('#FBD59E')))
+                tips.append(f'Обнаружено {len(well.well_logs)} каротажных кривых')
+            elif has_core:
+                item.setBackground(QBrush(QColor(CORE_COLOR)))
+            if has_core:
+                tips.append(f'{CORE_MARKER} Есть описание керна')
+            item.setToolTip('\n'.join(tips))
+            (wells_with_data if well.well_logs or has_core else wells_without_data).append(item)
+            return item
+
         if ui.checkBox_profile_well.isChecked():
             wells = get_list_nearest_well(get_profile_id())
             wells = [(well, index, distance, None) for well, index, distance in (wells or [])]
@@ -1751,45 +1772,29 @@ def update_list_well(select_well=False, selected_well_id=None):
                     profile_text = f' [{w[3].title}]' if w[3] is not None else ''
                     item_text = (f'скв.№ {w[0].name}{profile_text} - ({w[1]}) '
                                  f'{round(w[2], 2)} м. id{w[0].id}')
-                    item = QListWidgetItem(item_text)
+                    make_well_item(w[0], item_text)
 
                     # Обновляем максимальный ID скважины (если нужно выбрать новую)
                     if select_well and selected_well_id is None:
                         selected_well_id = w[0].id
 
-                    # Проверяем наличие логов для скважины
-                    if w[0].well_logs:  # Если есть связанные логи
-                        item.setBackground(QBrush(QColor('#FBD59E')))
-                        item.setToolTip(f"Обнаружено {len(w[0].well_logs)} каротажных кривых")
-                        wells_with_logs.append(item)
-                    else:
-                        wells_without_logs.append(item)
-
-                for item in wells_with_logs + wells_without_logs:
+                for item in wells_with_data + wells_without_data:
                     ui.listWidget_well.addItem(item)
                 draw_wells()
         else:
             wells = session.query(Well).options(selectinload(Well.well_logs)).order_by(Well.name).all()
             for w in wells:
                 item_text = f'скв.№ {w.name} id{w.id}'
-                item = QListWidgetItem(item_text)
+                make_well_item(w, item_text)
 
                 # Обновляем максимальный ID скважины (если нужно выбрать новую)
                 if select_well and selected_well_id is None:
                     selected_well_id = w.id
 
-                if w.well_logs:
-                    item.setBackground(QBrush(QColor('#FBD59E')))
-                    wells_with_logs.append(item)
-                    item.setToolTip(f"Обнаружено {len(w.well_logs)} каротажных кривых")
-                else:
-                    wells_without_logs.append(item)
-
-                # Сначала добавляем скважины с логами, затем без
-            for item in wells_with_logs + wells_without_logs:
+            for item in wells_with_data + wells_without_data:
                 ui.listWidget_well.addItem(item)
 
-        ui.label_11.setText(f'Wells: {len(wells_with_logs)} / {ui.listWidget_well.count()}')
+        ui.label_11.setText(f'Wells: {count_with_logs} / {ui.listWidget_well.count()}')
     # ui.listWidget_well.setCurrentRow(0)
     if select_well and selected_well_id is not None:
         items = (ui.listWidget_well.item(i) for i in range(ui.listWidget_well.count()))
@@ -1936,7 +1941,9 @@ def draw_wells():
     #     if key.startswith('well_'):
     #         radarogramma.removeItem(globals()[key])
     for i in range(ui.listWidget_well.count()):
-        well_id = ui.listWidget_well.item(i).text().split(' id')[-1]
+        well_id = well_id_from_text(ui.listWidget_well.item(i).text())
+        if well_id is None:
+            continue
         draw_intersection(well_id) if ui.checkBox_profile_intersec.isChecked() else draw_well(well_id)
 
 

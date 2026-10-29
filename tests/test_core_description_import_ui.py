@@ -403,8 +403,10 @@ def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monk
 
     monkeypatch.setattr("qt.core_description_import.save_core_import", save)
     monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *args: None)
+    saved_signal = QtTest.QSignalSpy(dialog.descriptions_saved)
     dialog.save()
     assert captured == [(first.source_path, ids[0], "manual"), (second.source_path, ids[1], "manual")]
+    assert len(saved_signal) == 1
 
 
 @pytest.mark.parametrize('equal_counts', [False, True])
@@ -551,7 +553,9 @@ def test_edited_values_are_passed_to_persistence(app, session, monkeypatch):
     monkeypatch.setattr("qt.core_description_import.save_core_import",
                         lambda *args, **kwargs: captured.update(kwargs) or Result())
     monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *args: None)
+    saved_signal = QtTest.QSignalSpy(dialog.descriptions_saved)
     dialog.save()
+    assert len(saved_signal) == 1
 
     assert captured["selected_interval_ids"] == {"0:2"}
     assert captured["edits"]["0:2"]["oil_saturation"] == "medium"

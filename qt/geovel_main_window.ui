@@ -1923,6 +1923,22 @@
                   </property>
                  </widget>
                 </item>
+                <item row="2" column="2">
+                 <widget class="QPushButton" name="pushButton_view_core_description">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(201, 242, 242);</string>
+                  </property>
+                  <property name="text">
+                   <string>Описание</string>
+                  </property>
+                  <property name="toolTip">
+                   <string>Открыть описание керна выбранной скважины</string>
+                  </property>
+                 </widget>
+                </item>
                </layout>
               </item>
              </layout>

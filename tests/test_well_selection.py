@@ -18,10 +18,12 @@ def test_well_id_from_text_reads_only_final_id_suffix():
     assert well_id_from_text("скв.№ 10 id10") == 10
     assert well_id_from_text("скв.№ id42 [profile] id7") == 7
     assert well_id_from_text("скважина без идентификатора") is None
+    assert well_id_from_text("скв.№ 10 id10 ▤") == 10
+    assert well_id_from_text("скв.№ 10 id10 unexpected") is None
 
 
 def test_find_well_row_does_not_confuse_id_with_longer_id_prefix():
-    items = [Item("скв.№ первая id10"), Item("скв.№ вторая id1")]
+    items = [Item("скв.№ первая id10 ▤"), Item("скв.№ вторая id1 ▤")]
 
     assert find_well_row(items, 1) == 1
     assert find_well_row(items, 10) == 0

@@ -1,13 +1,15 @@
 """Helpers for reliably identifying wells represented by UI list items."""
 
+CORE_MARKER = "▤"
+
 
 def well_id_from_text(text: str) -> int | None:
-    """Return the numeric id from the final `` id<number>`` list-item suffix."""
+    """Read the final id, optionally followed by the core-description marker."""
     _prefix, separator, raw_id = str(text).rpartition(" id")
     if not separator:
         return None
     try:
-        return int(raw_id.strip())
+        return int(raw_id.strip().removesuffix(f" {CORE_MARKER}").strip())
     except (TypeError, ValueError):
         return None
 

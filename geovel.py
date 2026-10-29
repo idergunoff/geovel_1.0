@@ -39,10 +39,15 @@ MainWindow.show()
 m_width, m_height = get_width_height_monitor()
 MainWindow.resize(m_width - 100, m_height - 200)
 
-# The same entry point will be extended to batch import at stage 6.
-ui.pushButton_core_description.clicked.connect(
-    lambda: open_core_description_import(session, MainWindow)
-)
+def import_core_description():
+    dialog = open_core_description_import(session, MainWindow)
+    if not getattr(dialog, '_well_refresh_connected', False):
+        dialog.descriptions_saved.connect(refresh_core_descriptions)
+        dialog._well_refresh_connected = True
+
+
+ui.pushButton_core_description.clicked.connect(import_core_description)
+ui.pushButton_view_core_description.clicked.connect(show_core_description)
 
 
 
