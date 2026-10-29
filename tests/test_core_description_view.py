@@ -12,6 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PyQt5 import QtCore, QtGui, QtTest, QtWidgets
 from sqlalchemy import create_engine, event
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload, sessionmaker
 
 from core_description.database import save_core_import
@@ -23,7 +24,7 @@ from core_description.presentation import (
 from core_description.semantics import enrich_intervals
 from core_description.terminology import SATURATION_LABELS
 from models_db.model import (
-    Base, CoreDescriptionDocument, CoreDescriptionInterval, Well, WellLog, WellOptionally,
+    Base, CoreDescriptionDocument, CoreDescriptionInterval, CoreDescriptionRock, Well, WellLog, WellOptionally,
 )
 import models_db.model_cluster  # register relationships
 import models_db.model_profile_features
@@ -150,7 +151,8 @@ def test_well_card_presence_summary_order_and_empty_selection(app, dataset):
     db, wells = dataset
     ui = SimpleNamespace(textEdit_datawell=QtWidgets.QTextEdit(),
                          checkBox_profile_intersec=QtWidgets.QCheckBox(),
-                         pushButton_view_core_description=QtWidgets.QPushButton())
+                         pushButton_view_core_description=QtWidgets.QPushButton(),
+                         pushButton_remove_core_description=QtWidgets.QPushButton())
     current = [wells[1].id]
     ns = _functions("well.py", {"show_data_well"}, dict(
         ui=ui, session=db, Well=Well, WellLog=WellLog, CoreDescriptionDocument=CoreDescriptionDocument,
@@ -162,6 +164,7 @@ def test_well_card_presence_summary_order_and_empty_selection(app, dataset):
     assert text.index("Площадь") < text.index("Описание керна")
     assert "C1 <a> — 100 — 1.5 — Песчаник — Интенсивная" in text
     assert ui.pushButton_view_core_description.isEnabled()
+    assert ui.pushButton_remove_core_description.isEnabled()
     current[0] = wells[3].id
     ns["show_data_well"]()
     text = ui.textEdit_datawell.toPlainText()
@@ -170,9 +173,124 @@ def test_well_card_presence_summary_order_and_empty_selection(app, dataset):
     ns["show_data_well"]()
     assert "Описание керна" not in ui.textEdit_datawell.toPlainText()
     assert not ui.pushButton_view_core_description.isEnabled()
+    assert not ui.pushButton_remove_core_description.isEnabled()
+    current[0] = wells[1].id
+    ns["show_data_well"]()
     current[0] = None
     ns["show_data_well"]()
     assert ui.textEdit_datawell.toPlainText() == ""
+    assert not ui.pushButton_remove_core_description.isEnabled()
+
+
+@pytest.fixture()
+def removal(app, dataset, monkeypatch):
+    db, wells = dataset
+    parent = QtWidgets.QWidget()
+    ui = SimpleNamespace(checkBox_profile_intersec=QtWidgets.QCheckBox())
+    current = [wells[1].id]
+    confirmations, refreshes, errors, messages = [], [], [], []
+
+    def confirm(*args):
+        confirmations.append(args)
+        return QtWidgets.QMessageBox.Yes
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, "question", confirm)
+    monkeypatch.setattr(QtWidgets.QMessageBox, "critical", lambda *args: errors.append(args))
+    ns = _functions("well.py", {"remove_core_description"}, dict(
+        ui=ui, session=db, Well=Well, CoreDescriptionDocument=CoreDescriptionDocument,
+        CoreDescriptionInterval=CoreDescriptionInterval, selectinload=selectinload,
+        SQLAlchemyError=SQLAlchemyError, QMessageBox=QtWidgets.QMessageBox,
+        MainWindow=parent, CoreDescriptionViewDialog=CoreDescriptionViewDialog,
+        get_well_id=lambda: current[0],
+        refresh_core_descriptions=lambda: refreshes.append(current[0]),
+        set_info=lambda *args: messages.append(args)))
+    yield SimpleNamespace(
+        run=ns["remove_core_description"], db=db, wells=wells, parent=parent,
+        ui=ui, current=current, confirmations=confirmations, refreshes=refreshes,
+        errors=errors, messages=messages)
+    parent.close()
+    parent.deleteLater()
+
+
+def test_removal_deletes_all_core_records_only_for_selected_well(removal):
+    r = removal
+    # Production SQLite may have foreign keys disabled; ORM deletion must still
+    # remove intervals and rocks, including descriptions from multiple documents.
+    assert r.db.connection().exec_driver_sql("PRAGMA foreign_keys").scalar() == 0
+    r.wells[3].name = r.wells[1].name
+    r.db.add(CoreDescriptionDocument(
+        well_id=r.current[0], source_file_name="another.docx", source_file_hash="a" * 64,
+        source_format="docx", parser_version="1", match_method="manual", match_confidence=1))
+    r.db.commit()
+    selected_view = CoreDescriptionViewDialog(r.db, r.wells[1], r.parent)
+    other_view = CoreDescriptionViewDialog(r.db, r.wells[3], r.parent)
+    selected_view.show()
+    other_view.show()
+
+    r.run()
+
+    assert core_well_ids(r.db) == {r.wells[3].id}
+    assert r.db.query(CoreDescriptionDocument).count() == 1
+    assert r.db.query(CoreDescriptionInterval).count() == 2
+    assert r.db.query(CoreDescriptionRock).count() == 2
+    assert load_core_intervals(r.db, r.wells[1].id) == []
+    assert len(load_core_intervals(r.db, r.wells[3].id)) == 2
+    assert r.db.query(Well).count() == 4
+    assert r.db.query(WellLog).count() == 2
+    assert r.db.query(WellOptionally).count() == 1
+    assert not selected_view.isVisible()
+    assert other_view.isVisible()
+    assert r.refreshes == [r.wells[1].id]
+    assert r.confirmations[0][-1] == QtWidgets.QMessageBox.No
+    assert r.errors == []
+
+
+def test_removal_cancel_keeps_descriptions_and_windows(removal, monkeypatch):
+    r = removal
+    monkeypatch.setattr(QtWidgets.QMessageBox, "question", lambda *args: QtWidgets.QMessageBox.No)
+    viewer = CoreDescriptionViewDialog(r.db, r.wells[1], r.parent)
+    viewer.show()
+
+    r.run()
+
+    assert r.db.query(CoreDescriptionDocument).count() == 2
+    assert r.db.query(CoreDescriptionInterval).count() == 4
+    assert r.db.query(CoreDescriptionRock).count() == 4
+    assert viewer.isVisible()
+    assert r.refreshes == []
+
+
+def test_removal_failure_rolls_back_all_records(removal, monkeypatch):
+    r = removal
+
+    def fail_commit():
+        r.db.flush()
+        raise SQLAlchemyError("test database error")
+
+    monkeypatch.setattr(r.db, "commit", fail_commit)
+    r.run()
+
+    assert r.db.query(CoreDescriptionDocument).count() == 2
+    assert r.db.query(CoreDescriptionInterval).count() == 4
+    assert r.db.query(CoreDescriptionRock).count() == 4
+    assert len(r.errors) == 1
+    assert r.refreshes == []
+    assert r.messages[-1][1] == "red"
+
+
+@pytest.mark.parametrize("well_index,intersections", [(None, False), (0, False), (1, True)])
+def test_removal_ignores_missing_selection_empty_core_and_intersections(removal, well_index, intersections):
+    r = removal
+    r.current[0] = r.wells[well_index].id if well_index is not None else None
+    r.ui.checkBox_profile_intersec.setChecked(intersections)
+
+    r.run()
+
+    assert r.db.query(CoreDescriptionDocument).count() == 2
+    assert r.db.query(CoreDescriptionInterval).count() == 4
+    assert r.db.query(CoreDescriptionRock).count() == 4
+    assert r.confirmations == []
+    assert r.refreshes == []
 
 
 def test_availability_and_interval_loading_use_bounded_queries(dataset):

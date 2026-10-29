@@ -1,4 +1,5 @@
 import numpy as np
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
 from func import *
@@ -17,7 +18,7 @@ from well_import import (
 )
 from well_deduplication import build_spatial_index, nearby_wells
 from core_description.presentation import CORE_COLOR, core_summary_html, load_core_intervals
-from qt.core_description_view import open_core_description_view
+from qt.core_description_view import CoreDescriptionViewDialog, open_core_description_view
 
 
 def add_well():
@@ -425,6 +426,7 @@ def delete_data_well():
 def show_data_well():
     ui.textEdit_datawell.clear()
     ui.pushButton_view_core_description.setEnabled(False)
+    ui.pushButton_remove_core_description.setEnabled(False)
     if ui.checkBox_profile_intersec.isChecked():
         inter = session.query(Intersection).filter_by(id=get_well_id()).first()
         if inter:
@@ -468,6 +470,7 @@ def show_data_well():
         count_well_log = session.query(WellLog).filter_by(well_id=well.id).count()
         has_core = session.query(CoreDescriptionDocument.id).filter_by(well_id=well.id).first() is not None
         ui.pushButton_view_core_description.setEnabled(has_core)
+        ui.pushButton_remove_core_description.setEnabled(has_core)
 
         text_content = []
         if count_well_log > 0:
@@ -506,8 +509,49 @@ def show_core_description():
     return open_core_description_view(session, well, MainWindow)
 
 
+def remove_core_description():
+    """Delete all saved core descriptions of the selected well after confirmation."""
+    if ui.checkBox_profile_intersec.isChecked():
+        return
+    well_id = get_well_id()
+    well = session.get(Well, well_id) if well_id is not None else None
+    if well is None:
+        set_info('Скважина не выбрана', 'red')
+        return
+    well_name = well.name
+    try:
+        # Load the full graph so ORM cascades also work with SQLite foreign keys off.
+        documents = session.query(CoreDescriptionDocument).options(
+            selectinload(CoreDescriptionDocument.intervals).selectinload(CoreDescriptionInterval.rocks)
+        ).filter_by(well_id=well_id).all()
+        if not documents:
+            set_info(f'Для скважины «{well_name}» описание керна не загружено', 'red')
+            return
+        answer = QMessageBox.question(
+            MainWindow, 'Удаление описания керна',
+            f'Удалить все описания керна скважины «{well_name}»?\n\n'
+            'Будут удалены загруженные документы, интервалы и сведения о породах.',
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer != QMessageBox.Yes:
+            return
+        for document in documents:
+            session.delete(document)
+        session.commit()
+    except SQLAlchemyError as error:
+        session.rollback()
+        set_info('Не удалось удалить описание керна', 'red')
+        QMessageBox.critical(MainWindow, 'Ошибка удаления описания керна', str(error))
+        return
+
+    for dialog in MainWindow.findChildren(CoreDescriptionViewDialog):
+        if dialog.well_id == well_id:
+            dialog.close()
+    refresh_core_descriptions()
+    set_info(f'Описание керна скважины «{well_name}» удалено', 'green')
+
+
 def refresh_core_descriptions():
-    """Refresh availability after single or batch import, preserving selection."""
+    """Refresh availability after import or deletion, preserving selection."""
     well_id = get_well_id()
     update_list_well(select_well=True, selected_well_id=well_id)
     search_well()

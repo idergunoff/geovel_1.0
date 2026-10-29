@@ -1903,13 +1903,29 @@
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="3">
+                <item row="2" column="4">
                  <widget class="QPushButton" name="pushButton_rem_dupl_wells">
                   <property name="styleSheet">
                    <string notr="true">background-color: rgb(255, 113, 153);</string>
                   </property>
                   <property name="text">
                    <string>remove dupl</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="3">
+                 <widget class="QPushButton" name="pushButton_remove_core_description">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(255, 185, 185);</string>
+                  </property>
+                  <property name="text">
+                   <string>Удалить описание</string>
+                  </property>
+                  <property name="toolTip">
+                   <string>Удалить все описания керна выбранной скважины</string>
                   </property>
                  </widget>
                 </item>
