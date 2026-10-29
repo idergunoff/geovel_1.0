@@ -36,14 +36,20 @@ class DescriptionDelegate(QtWidgets.QStyledItemDelegate):
 
     @classmethod
     def highlighted_text(cls, interval: ParsedCoreInterval) -> str:
-        text = interval.raw_description
+        return cls.highlighted_matches(interval.raw_description,
+                                       ((m.category, m.start, m.end) for m in interval.semantic_matches))
+
+    @classmethod
+    def highlighted_matches(cls, text: str, matches) -> str:
+        """Render the same spans from a parser result or saved recognition details."""
         spans = []
-        for match in interval.semantic_matches:
-            color = (cls.ROCK_COLOR if match.category == "rock" else cls.OIL_COLOR
-                     if match.category in {"oil_indicator", "oil_saturation", "negation", "uncertainty"}
+        for category, start, end in matches:
+            color = (cls.ROCK_COLOR if category == "rock" else cls.OIL_COLOR
+                     if category in {"oil_indicator", "oil_saturation", "negation", "uncertainty"}
                      else None)
-            if color and 0 <= match.start < match.end <= len(text):
-                spans.append((match.start, match.end, color))
+            if (color and isinstance(start, int) and isinstance(end, int)
+                    and 0 <= start < end <= len(text)):
+                spans.append((start, end, color))
         boundaries = sorted({0, len(text)} | {point for start, end, _ in spans for point in (start, end)})
         pieces = []
         for start, end in zip(boundaries, boundaries[1:]):
