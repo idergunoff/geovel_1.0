@@ -314,6 +314,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.cancel_button.clicked.connect(self.cancel_batch)
         self.export_button.clicked.connect(self.export_report)
         self.documents_table.currentCellChanged.connect(self._document_row_changed)
+        self.documents_table.itemChanged.connect(self._document_item_changed)
         self.well_combo.currentIndexChanged.connect(self._well_changed)
         self.well_search.textChanged.connect(self._filter_wells)
         self.area_combo.currentTextChanged.connect(self._filter_wells)
@@ -364,6 +365,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             return
         self.batch_items = []
         self._well_selections.clear()
+        self._well_catalog = None
+        self.document = None
+        self.table.setRowCount(0)
         self.documents_table.setRowCount(0)
         self.progress_bar.setRange(0, 0); self.progress_bar.setValue(0); self.progress_bar.setVisible(True)
         self.save_button.setEnabled(False)
@@ -417,14 +421,60 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.documents_table.blockSignals(True); self.documents_table.setRowCount(0)
         for item in result.items:
             self._append_document(item)
+        self._match_batch_wells()
         self.documents_table.blockSignals(False)
         self.progress_bar.setRange(0, max(1, result.processed)); self.progress_bar.setValue(result.processed)
         self.cancel_button.setEnabled(False); self.open_button.setEnabled(True); self.directory_button.setEnabled(True)
         self.export_button.setEnabled(bool(result.items))
-        if result.items:
-            self.documents_table.setCurrentCell(0, 1)
+        preview_row = next((row for row, item in enumerate(result.items) if item.document is not None), None)
+        if preview_row is not None:
+            self.documents_table.setCurrentCell(preview_row, 1)
+        self._update_summary()
         suffix = "; отменено" if result.cancelled else ""
         self.summary.setText(f"Обработано: {result.processed}; успешно: {result.succeeded}; ошибок: {result.failed}{suffix}")
+
+    def _ensure_well_catalog(self, *, refresh: bool = False) -> None:
+        if self._well_catalog is None or refresh:
+            self._well_catalog = load_well_catalog(self.session)
+            self._well_metadata = self._well_catalog.metadata
+            self._well_altitudes = {well.id: well.alt for well in self._well_catalog.wells}
+            self._well_names = {well.id: well.name for well in self._well_catalog.wells}
+
+    def _match_batch_wells(self) -> None:
+        """Resolve every parsed file against one catalogue, before opening any preview."""
+        if not any(item.document is not None for item in self.batch_items):
+            return
+        self._ensure_well_catalog()
+        blocker = QtCore.QSignalBlocker(self.documents_table)
+        for row, item in enumerate(self.batch_items):
+            document = item.document
+            if document is None:
+                continue
+            result = match_well(self.session, document.well_name, document.area_name,
+                                document=document, catalog=self._well_catalog)
+            stored = self._well_selections.get(document.source_path)
+            if stored is not None and stored[1] == "manual" and stored[0] in self._well_names:
+                selection = stored
+            elif result.selected is not None:
+                selection = (result.selected.well_id, result.selected.method, result.selected.confidence)
+            else:
+                selection = (None, "manual", 1.0)
+            self._well_selections[document.source_path] = selection
+            well_id = selection[0]
+            text = "ожидает выбора"
+            if well_id is not None:
+                areas = tuple(dict.fromkeys(value for _, value in self._well_metadata.get(
+                    well_id, WellMetadata()).area_entries(document.area_name)))
+                text = self._well_text(well_id, areas, recommended=selection[1] != "manual")
+            cell = self.documents_table.item(row, 5)
+            cell.setText(text)
+            cell.setToolTip(text)
+            cell.setData(QtCore.Qt.UserRole, well_id)
+        del blocker
+
+    def _document_item_changed(self, item: QtWidgets.QTableWidgetItem) -> None:
+        if item.column() == 0:
+            self._update_summary()
 
     def _append_document(self, item: BatchParseItem) -> None:
         row = self.documents_table.rowCount(); self.documents_table.insertRow(row)
@@ -488,12 +538,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.well_search.blockSignals(True)
             self.well_search.clear()
             self.well_search.blockSignals(False)
-        if self._well_catalog is None or refresh:
-            self._well_catalog = load_well_catalog(self.session)
+        self._ensure_well_catalog(refresh=refresh)
+        if refresh:
+            self._match_batch_wells()
         wells = self._well_catalog.wells
-        self._well_metadata = self._well_catalog.metadata
-        self._well_altitudes = {well.id: well.alt for well in wells}
-        self._well_names = {well.id: well.name for well in wells}
         areas = {well_id: tuple(dict.fromkeys(value for _, value in metadata.area_entries(self.document.area_name)))
                  for well_id, metadata in self._well_metadata.items()}
         self._wells = [(well.id, well.name, tuple(areas.get(well.id, ()))) for well in wells]
@@ -522,6 +570,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             # An empty choice (e.g. hidden by a filter) must not veto a new match.
             self._well_selections.pop(self.document.source_path)
             stored = None
+        if stored is not None and stored[1] != "manual":
+            stored = None  # Automatic choices follow the current catalogue after a refresh.
         selected_id = stored[0] if stored else result.selected.well_id if result.selected else None
         self._fill_well_combo(selected_id)
         if stored and self.well_combo.currentData() is not None:
@@ -539,6 +589,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.match_confidence = 1.0
             self.match_label.setText("Варианты отмечены ★; выберите скважину" if result.candidates
                                      else "Выберите подходящую скважину из списка")
+        if self.batch_items:
+            self._well_selections[self.document.source_path] = (
+                self.well_combo.currentData(), self.match_method, self.match_confidence)
         self._update_summary()
         self._update_well_comparison()
 
@@ -574,16 +627,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 if not found:
                     continue
                 displayed_areas = tuple(dict.fromkeys((*areas, *found)))
-            prefix = "★ " if well_id in self._recommended_ids else ""
-            start = ", ".join(metadata.values("drilling_start")) or "—"
-            end = ", ".join(metadata.values("drilling_end")) or "—"
-            elevations = metadata.values("wellhead_elevation")
-            altitude = self._well_altitudes.get(well_id)
-            elevation_values = elevations or ((str(altitude),) if altitude is not None else ())
-            elevation = ", ".join(f"{normalized:g} м" if (normalized := normalize_elevation(value)) is not None
-                                  else value for value in elevation_values) or "—"
-            text = (f"{prefix}{name} — {', '.join(displayed_areas) or 'площадь не указана'}; "
-                    f"начало: {start}; окончание: {end}; устье: {elevation} (id {well_id})")
+            text = self._well_text(well_id, displayed_areas, recommended=well_id in self._recommended_ids)
             self.well_combo.addItem(text, well_id)
             self.well_combo.setItemData(self.well_combo.count() - 1, text, QtCore.Qt.ToolTipRole)
         index = self.well_combo.findData(selected_id)
@@ -592,6 +636,20 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         count = self.well_combo.count() - 1
         self.well_count_label.setText(f"Найдено: {count}" if count else "Нет скважин — измените условия поиска")
         self._update_document_well()
+
+    def _well_text(self, well_id: int, areas: tuple[str, ...], *, recommended: bool = False) -> str:
+        """Use identical well details in the batch column and the preview selector."""
+        metadata = self._well_metadata.get(well_id, WellMetadata())
+        prefix = "★ " if recommended else ""
+        start = ", ".join(metadata.values("drilling_start")) or "—"
+        end = ", ".join(metadata.values("drilling_end")) or "—"
+        elevations = metadata.values("wellhead_elevation")
+        altitude = self._well_altitudes.get(well_id)
+        elevation_values = elevations or ((str(altitude),) if altitude is not None else ())
+        elevation = ", ".join(f"{normalized:g} м" if (normalized := normalize_elevation(value)) is not None
+                              else value for value in elevation_values) or "—"
+        return (f"{prefix}{self._well_names[well_id]} — {', '.join(areas) or 'площадь не указана'}; "
+                f"начало: {start}; окончание: {end}; устье: {elevation} (id {well_id})")
 
     def _update_document_well(self) -> None:
         """Keep the batch row in sync even when combo signals were blocked."""
@@ -603,6 +661,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 cell = self.documents_table.item(row, 5)
                 cell.setText(text)
                 cell.setToolTip(text)
+                cell.setData(QtCore.Qt.UserRole, self.well_combo.currentData())
 
     def _filter_wells(self, *_args: Any) -> None:
         selected_id = self.well_combo.currentData()
@@ -740,6 +799,26 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
 
     def _update_summary(self, *_args: Any) -> None:
         count = sum(self.table.item(row, 0).checkState() == QtCore.Qt.Checked for row in range(self.table.rowCount()))
+        if self.batch_items:
+            documents = intervals = 0
+            for row, item in enumerate(self.batch_items):
+                check = self.documents_table.item(row, 0)
+                document = item.document
+                if check is None or check.checkState() != QtCore.Qt.Checked or document is None:
+                    continue
+                well_id = self._well_selections.get(document.source_path, (None, "manual", 1.0))[0]
+                if self.document is not None and document.source_path == self.document.source_path:
+                    well_id = self.well_combo.currentData()
+                    selected_count = count
+                else:
+                    selected_count = sum(interval.selected_by_default and not interval.errors and interval.confidence >= .8
+                                         for interval in document.intervals)
+                if well_id is not None and selected_count:
+                    documents += 1
+                    intervals += selected_count
+            self.summary.setText(f"Выбрано документов: {documents}; интервалов: {intervals}")
+            self.save_button.setEnabled(bool(documents and self._thread is None))
+            return
         self.summary.setText(f"Выбрано документов: {1 if count else 0}; интервалов: {count}")
         self.save_button.setEnabled(bool(count and self.well_combo.currentData() is not None
                                          and self._thread is None))
@@ -804,12 +883,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             if document is None:
                 failed += 1
                 continue
-            match = match_well(self.session, document.well_name, document.area_name, document=document)
-            well_id = match.selected.well_id if match.selected else None
-            method = match.selected.method if match.selected else "manual"
-            confidence = match.selected.confidence if match.selected else 1.0
-            if document.source_path in self._well_selections:
-                well_id, method, confidence = self._well_selections[document.source_path]
+            well_id, method, confidence = self._well_selections.get(document.source_path, (None, "manual", 1.0))
             edits: dict[str, dict[str, Any]] = {}
             if document.source_path == current_path and self.well_combo.currentData() is not None:
                 well_id = self.well_combo.currentData(); method = self.match_method; confidence = self.match_confidence
