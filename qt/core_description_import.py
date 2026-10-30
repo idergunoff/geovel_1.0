@@ -6,6 +6,7 @@ import csv
 import json
 from html import escape
 from dataclasses import asdict
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -15,6 +16,7 @@ from core_description.database import WellCatalog, load_well_catalog, match_well
 from core_description.areas import area_names_match, normalize_area_name
 from core_description.identity import (
     WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count, IDENTITY_FIELD_COUNT,
+    normalize_lookup_value,
 )
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
@@ -163,12 +165,11 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.open_button.setObjectName("open_core_description")
         self.directory_button = QtWidgets.QPushButton("Добавить каталог…")
         self.directory_button.setObjectName("open_core_description_directory")
-        self.recursive_check = QtWidgets.QCheckBox("включая подкаталоги")
+        self.directory_button.setToolTip("Найти файлы .doc и .docx в каталоге и всех вложенных папках")
         self.path_label = QtWidgets.QLabel("Файл не выбран")
         self.path_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         source.addWidget(self.open_button)
         source.addWidget(self.directory_button)
-        source.addWidget(self.recursive_check)
         source.addWidget(self.path_label, 1)
         layout.addLayout(source)
 
@@ -220,7 +221,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_combo.setMinimumContentsLength(30)
         self.well_combo.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self.well_combo.view().setMinimumWidth(min(1100, self.screen().availableGeometry().width()))
-        self.well_combo.setToolTip("★ — подходящий вариант; проверьте номер и площадь перед выбором.")
+        self.well_combo.setToolTip(
+            "Сначала — совпадения по названию скважины. ★ — автоматическая рекомендация; "
+            "проверьте номер и площадь перед выбором.")
         well_row.addWidget(self.well_combo, 2)
         self.match_label = QtWidgets.QLabel("Не сопоставлена")
         self.match_label.setWordWrap(True)
@@ -317,7 +320,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def choose_directory(self) -> None:
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Каталог описаний керна")
         if path:
-            self.start_batch([path], recursive=self.recursive_check.isChecked())
+            self.start_batch([path], recursive=True)
 
     def load_file(self, path: str | Path) -> None:
         try:
@@ -509,12 +512,23 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
 
     def _fill_well_combo(self, selected_id: int | None) -> None:
         name_filter = self.well_search.text().strip().casefold()
+        document_name = (self.document.well_name or self.document.well_name_raw) if self.document else None
+        wanted = normalize_lookup_value(name_filter or document_name)
+
+        def name_rank(item: tuple[int, str, tuple[str, ...]]) -> tuple[int, float]:
+            name = normalize_lookup_value(item[1])
+            if not wanted:
+                return 0, 0.0
+            group = 0 if name == wanted else 1 if wanted in name else 2
+            return group, -SequenceMatcher(None, wanted, name, autojunk=False).ratio()
+
         area_text = self.area_combo.currentText().strip()
         area_filter = normalize_area_name(area_text) if area_text != "Все площади" else ""
         self.well_combo.blockSignals(True)
         self.well_combo.clear()
         self.well_combo.addItem("— выберите скважину —", None)
-        for well_id, name, areas in self._wells:
+        # Stable sorting preserves identity/area recommendations for equal names.
+        for well_id, name, areas in sorted(self._wells, key=name_rank):
             if name_filter and name_filter not in name.casefold():
                 continue
             metadata = self._well_metadata.get(well_id, WellMetadata())
