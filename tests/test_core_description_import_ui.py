@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.terminology import SATURATION_LABELS
 from models_db.model import Base, Well, WellOptionally
-from core_description.batch import BatchParseItem, BatchParseResult
+from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 import models_db.model_cluster  # noqa: E402,F401
 import models_db.model_profile_features  # noqa: E402,F401
 from qt.core_description_import import CoreDescriptionImportDialog, open_core_description_import
@@ -145,6 +145,118 @@ def test_search_filters_by_well_number_not_database_id(app, session):
     assert "Нет скважин" in dialog.well_count_label.text()
     dialog.well_search.clear()
     assert dialog.well_combo.count() == 3
+
+
+def test_manual_list_keeps_all_same_name_wells_above_other_area_matches(app, session):
+    automatic = session.query(Well).filter_by(name="12").one()
+    unrelated = session.query(Well).filter_by(name="13").one()
+    same_name = [Well(name="12") for _ in range(12)]
+    session.add_all(same_name)
+    session.flush()
+    session.add_all([
+        WellOptionally(well_id=automatic.id, option="Площадь", value="Северная"),
+        WellOptionally(well_id=unrelated.id, option="Площадь", value="Северная"),
+    ])
+    session.commit()
+    automatic_id, unrelated_id = automatic.id, unrelated.id
+    same_name_ids = {automatic_id, *(well.id for well in same_name)}
+    manual_id = same_name[-1].id
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(_document())
+
+    ids = [dialog.well_combo.itemData(index) for index in range(1, dialog.well_combo.count())]
+    assert dialog.well_combo.currentData() == automatic_id
+    assert set(ids[:len(same_name_ids)]) == same_name_ids
+    assert ids[-1] == unrelated_id
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(manual_id))
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == manual_id
+    assert dialog.match_method == "manual"
+
+
+@pytest.mark.parametrize("parsed_name", ["10 Вр", None])
+def test_manual_list_orders_normalized_exact_contains_and_fuzzy_names(app, session, parsed_name):
+    exact, contains, prefixed, fuzzy = [Well(name=name) for name in ("10вр", "10вр1", "скв.10вр", "10др")]
+    session.add_all([exact, contains, prefixed, fuzzy])
+    session.flush()
+    session.add(WellOptionally(well_id=fuzzy.id, option="Площадь", value="Северная"))
+    session.commit()
+    source = _document()
+    source.well_name, source.well_name_raw = parsed_name, "10 Вр"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+
+    ids = [dialog.well_combo.itemData(index) for index in range(1, dialog.well_combo.count())]
+    assert ids[0] == exact.id
+    assert set(ids[1:3]) == {contains.id, prefixed.id}
+    assert ids.index(fuzzy.id) > 2
+    assert dialog.well_combo.currentData() is None
+
+
+def test_manual_search_reorders_by_typed_name_and_preserves_selection(app, session):
+    selected = Well(name="131")
+    session.add(selected)
+    session.commit()
+    selected_id = selected.id
+    exact_search_id = session.query(Well).filter_by(name="13").one().id
+    source = _document()
+    source.well_name = source.well_name_raw = "131"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.itemData(1) == selected_id
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(selected_id))
+
+    dialog.well_search.setText("13")
+    assert dialog.well_combo.itemData(1) == exact_search_id
+    assert dialog.well_combo.currentData() == selected_id
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.itemData(1) == exact_search_id
+    assert dialog.well_combo.currentData() == selected_id
+    assert dialog.match_method == "manual"
+    dialog.well_search.clear()
+    assert dialog.well_combo.itemData(1) == selected_id
+    assert dialog.well_combo.currentData() == selected_id
+
+
+def test_search_before_loading_a_document_keeps_an_empty_list(app, session):
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.well_search.setText("12")
+    dialog.area_combo.setEditText("Северная")
+    assert dialog.well_combo.count() == 1
+    assert dialog.well_combo.currentData() is None
+    assert not dialog.save_button.isEnabled()
+
+
+def test_directory_import_finds_word_files_at_every_depth(app, session, monkeypatch, tmp_path):
+    nested = tmp_path / "Северная" / "архив"
+    nested.mkdir(parents=True)
+    sources = [tmp_path / "root.docx", nested.parent / "older.DOC", nested / "deep.DOCX"]
+    for path in sources:
+        path.write_bytes(b"test document")
+    (nested / "ignore.txt").write_text("text", encoding="utf-8")
+    (tmp_path / "ignore.pdf").write_bytes(b"pdf")
+
+    def parser(path):
+        document = _document()
+        document.source_path = str(path)
+        return document
+
+    monkeypatch.setattr(QtWidgets.QFileDialog, "getExistingDirectory", lambda *args: str(tmp_path))
+    monkeypatch.setattr("qt.core_description_import.parse_batch",
+                        lambda paths, **kwargs: parse_batch(paths, parser=parser, **kwargs))
+    dialog = CoreDescriptionImportDialog(session)
+    try:
+        dialog.directory_button.click()
+        timer = QtCore.QElapsedTimer()
+        timer.start()
+        while dialog._thread is not None and timer.elapsed() < 5000:
+            QtTest.QTest.qWait(10)
+        assert dialog._thread is None
+        assert {item.source_path for item in dialog.batch_items} == {str(path.resolve()) for path in sources}
+        assert all(item.status == "ready" for item in dialog.batch_items)
+        assert dialog.documents_table.rowCount() == len(sources)
+    finally:
+        dialog.close()
 
 
 @pytest.mark.parametrize("file_area, db_area, search", [
