@@ -21,9 +21,11 @@ from core_description.identity import (
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
 from core_description.parser import CoreDescriptionParseError, parse_core_document
+from core_description.semantics import DictionaryValidationError
 from core_description.terminology import (
     ROCK_LABELS, SATURATION_LABELS, RELATION_LABELS, canonical_term, display_term,
 )
+from qt.core_description_dictionary import CoreDescriptionDictionaryDialog
 
 
 SATURATIONS = tuple(SATURATION_LABELS)
@@ -171,7 +173,15 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         source.addWidget(self.open_button)
         source.addWidget(self.directory_button)
         source.addWidget(self.path_label, 1)
+        self.dictionary_button = QtWidgets.QPushButton("Словари парсера…")
+        self.dictionary_button.setObjectName("edit_core_description_dictionary")
+        self.dictionary_button.setToolTip("Добавить, изменить или удалить слова и правила распознавания по разделам")
+        source.addWidget(self.dictionary_button)
         layout.addLayout(source)
+        self.dictionary_notice = QtWidgets.QLabel()
+        self.dictionary_notice.setWordWrap(True)
+        self.dictionary_notice.hide()
+        layout.addWidget(self.dictionary_notice)
 
         self.documents_table = QtWidgets.QTableWidget(0, 8)
         self.documents_table.setObjectName("core_description_documents")
@@ -300,6 +310,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
 
         self.open_button.clicked.connect(self.choose_file)
         self.directory_button.clicked.connect(self.choose_directory)
+        self.dictionary_button.clicked.connect(self.edit_dictionary)
         self.cancel_button.clicked.connect(self.cancel_batch)
         self.export_button.clicked.connect(self.export_report)
         self.documents_table.currentCellChanged.connect(self._document_row_changed)
@@ -311,6 +322,23 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         for widget in (self.depth_from, self.depth_to, self.saturation_filter, self.state_filter):
             widget.valueChanged.connect(self.apply_filters) if hasattr(widget, "valueChanged") else widget.currentIndexChanged.connect(self.apply_filters)
         self.rock_filter.textChanged.connect(self.apply_filters)
+
+    def edit_dictionary(self) -> None:
+        if self._thread is not None:
+            return
+        try:
+            editor = CoreDescriptionDictionaryDialog(self)
+        except DictionaryValidationError as error:
+            QtWidgets.QMessageBox.critical(self, "Ошибка словаря", str(error))
+            return
+        editor.dictionary_saved.connect(self._dictionary_saved)
+        editor.exec_()
+
+    def _dictionary_saved(self, version: str) -> None:
+        self.dictionary_notice.setText(
+            f"Словари сохранены (версия {version}). Чтобы применить изменения к открытым описаниям, "
+            "загрузите документы повторно.")
+        self.dictionary_notice.show()
 
     def choose_file(self) -> None:
         paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Описания керна", "", "Word (*.doc *.docx)")
@@ -325,9 +353,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def load_file(self, path: str | Path) -> None:
         try:
             document = parse_core_document(path)
-        except CoreDescriptionParseError as error:
+        except (CoreDescriptionParseError, DictionaryValidationError) as error:
             QtWidgets.QMessageBox.critical(self, "Ошибка разбора", str(error)); return
         self.set_document(document)
+        self.dictionary_notice.hide()
 
     def start_batch(self, paths: list[str], recursive: bool = False) -> None:
         """Start parsing without blocking Qt's event loop."""
@@ -338,6 +367,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.documents_table.setRowCount(0)
         self.progress_bar.setRange(0, 0); self.progress_bar.setValue(0); self.progress_bar.setVisible(True)
         self.save_button.setEnabled(False)
+        self.dictionary_button.setEnabled(False)
         self.cancel_button.setEnabled(True); self.open_button.setEnabled(False); self.directory_button.setEnabled(False)
         thread = QtCore.QThread(self)
         worker = BatchParseWorker(paths, recursive)
@@ -372,6 +402,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _batch_thread_finished(self) -> None:
         self._worker = None
         self._thread = None
+        self.dictionary_button.setEnabled(True)
         if self._close_pending:
             self.reject()
         else:
@@ -381,6 +412,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.progress_bar.setRange(0, total); self.progress_bar.setValue(done)
 
     def _batch_finished(self, result: BatchParseResult) -> None:
+        self.dictionary_notice.hide()
         self.batch_items = result.items
         self.documents_table.blockSignals(True); self.documents_table.setRowCount(0)
         for item in result.items:
