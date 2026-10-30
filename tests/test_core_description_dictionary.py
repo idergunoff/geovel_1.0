@@ -144,3 +144,102 @@ def test_residual_odor_and_patchy_saturation(text, expected):
     assert all(text[m.start:m.end] == m.matched_text for m in matches)
     if expected in {"residual", "odor", "patchy"}:
         assert any(m.canonical_value == expected and m.category == "oil_saturation" for m in matches)
+
+
+@pytest.mark.parametrize("double_n", [False, True])
+@pytest.mark.parametrize("degree, expected", [
+    ("", "present"), ("слабо", "weak"), ("средне", "medium"),
+    ("интенсивно", "intense"), ("сильно", "intense"),
+    ("слабо и средне", "weak_to_medium"),
+    ("средне, интенсивно", "medium_to_intense"),
+    ("от слабо до сильно", "weak_to_intense"),
+    ("остаточно", "residual"), ("пятнами", "patchy"),
+])
+def test_bitumino_spelling_and_inflections_with_all_degrees(double_n, degree, expected):
+    endings = ["ый", "ая", "ое", "ые", "ого", "ой", "ому", "ым", "ом", "ую", "ою", "ых", "ыми", "а", "о", "ы"]
+    if not double_n:
+        endings.append("")
+    for ending in endings:
+        word = "битуминонасыщен" + ("н" if double_n else "") + ending
+        text = f"Песчаник {degree} {word}."
+        _, oil, _, matches, _ = analyze_description(text)
+        assert oil == expected, text
+        assert any(word in match.matched_text for match in matches), text
+        assert all(text[match.start:match.end] == match.matched_text for match in matches)
+
+
+@pytest.mark.parametrize("fluid", ["битумо", "битумино", "нефте"])
+@pytest.mark.parametrize("degree, expected", [("weak", "weak"), ("medium", "medium"), ("intense", "intense"), ("strong", "intense")])
+@pytest.mark.parametrize("after_noun", [False, True])
+def test_saturation_nouns_and_degree_adjectives_in_all_cases(fluid, degree, expected, after_noun):
+    # Singular/plural forms of both насыщение and насыщенность, with agreeing adjectives.
+    noun_endings = ["ие", "ия", "ию", "ием", "ии", "ия", "ий", "иям", "иями", "иях",
+                    "ность", "ности", "ностью", "ностей", "ностям", "ностями", "ностях"]
+    hard_endings = ["ое", "ого", "ому", "ым", "ом", "ые", "ых", "ым", "ыми", "ых",
+                    "ая", "ой", "ой", "ых", "ым", "ыми", "ых"]
+    soft_endings = ["ее", "его", "ему", "им", "ем", "ие", "их", "им", "ими", "их",
+                    "яя", "ей", "ей", "их", "им", "ими", "их"]
+    stems = {"weak": "слаб", "medium": "средн", "intense": "интенсивн", "strong": "сильн"}
+    adjective_endings = soft_endings if degree == "medium" else hard_endings
+    for noun_ending, adjective_ending in zip(noun_endings, adjective_endings):
+        noun = fluid + "насыщен" + noun_ending
+        adjective = stems[degree] + adjective_ending
+        phrase = f"{noun}: {adjective}" if after_noun else f"{adjective} {noun}"
+        text = "Песчаник " + phrase
+        _, oil, _, matches, _ = analyze_description(text)
+        assert oil == expected, text
+        assert any(match.canonical_value == expected and match.matched_text == phrase for match in matches), text
+
+
+@pytest.mark.parametrize("fluid", ["битумо", "битумино", "нефте"])
+@pytest.mark.parametrize("phrase, expected", [
+    ("со слабым {fluid}насыщением", "weak"),
+    ("с {fluid}насыщением", "present"),
+    ("с {fluid}насыщенностью", "present"),
+    ("со слабым и средним {fluid}насыщением", "weak_to_medium"),
+    ("от среднего до интенсивного {fluid}насыщения", "medium_to_intense"),
+    ("от слабой до сильной {fluid}насыщенности", "weak_to_intense"),
+    ("{fluid}насыщение от слабого до среднего", "weak_to_medium"),
+    ("{fluid}насыщенность: средняя и интенсивная", "medium_to_intense"),
+    ("{fluid}насыщение — от слабого до сильного", "weak_to_intense"),
+    ("{fluid}насыщенность:слабая", "weak"),
+    ("с остаточным {fluid}насыщением", "residual"),
+    ("{fluid}насыщение пятнами", "patchy"),
+])
+def test_saturation_noun_phrases_and_ranges(fluid, phrase, expected):
+    text = phrase.format(fluid=fluid)
+    _, oil, _, matches, _ = analyze_description(text)
+    assert oil == expected
+    assert all(text[match.start:match.end] == match.matched_text for match in matches)
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("БИТУМИНОНАСЫЩЕНЫЕ", "present"),
+    ("слабобитуминонасыщеные", "weak"),
+    ("средне-битуминонасыщеные", "medium"),
+    ("без битумонасыщения", "none"),
+    ("без слабого битуминонасыщения", "none"),
+    ("без слабого и среднего битумонасыщения", "none"),
+    ("без остаточной битумонасыщенности", "none"),
+    ("битумонасыщение отсутствует", "none"),
+    ("битумонасыщенность: отсутствует", "none"),
+    ("слабое битумонасыщение не отмечается", "none"),
+    ("битуминонасыщение не обнаружено", "none"),
+    ("не битуминонасыщеные", "none"),
+    ("не сильно битуминонасыщеные", "none"),
+    ("без признаков нефти, со слабым битумонасыщением", "none"),
+    ("возможно со слабым битумонасыщением", "uncertain"),
+    ("интенсивно трещиноватый, со слабым битумонасыщением", "weak"),
+    ("слабо сцементированный, с интенсивным битуминонасыщением", "intense"),
+    ("со слабым запахом битума", "odor"),
+    ("со слабым цементом", "unknown"),
+    ("со средними прослоями", "unknown"),
+    ("с интенсивной трещиноватостью", "unknown"),
+    ("слабая окраска, битумонасыщение", "present"),
+    ("битумонасыщение. Слабая окраска", "present"),
+    ("со слабым битумонасыщениемподобным", "unknown"),
+    ("слабо битуминонасыщеноподобный", "unknown"),
+    ("антибитуминонасыщеные", "unknown"),
+])
+def test_new_word_forms_preserve_negation_context_and_boundaries(text, expected):
+    assert analyze_description(text)[1] == expected

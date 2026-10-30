@@ -1,6 +1,7 @@
 """User dictionary persistence and its effect on actual document parsing."""
 
 from copy import deepcopy
+import json
 from pathlib import Path
 
 import pytest
@@ -118,3 +119,66 @@ def test_document_and_batch_parser_use_saved_revision(dictionary_file, tmp_path)
     assert result.succeeded == 1
     assert result.items[0].document.dictionary_version == saved["version"]
     assert result.items[0].document.intervals[0].rocks[0].canonical_value == "Глауконитит"
+
+
+def _legacy_user_dictionary():
+    suffix = r"(?:нефте|битумо)насыщен(?:н(?:ый|ая|ое|ые|ого|ой|ых|ую|ым|ыми|ом)|[аоы])?(?!\w)"
+    return {"schema_version": 1, "version": "1.3.0+user.20261030070000", "rules": [
+        _rule(id="oil.weak.01", category="oil_saturation", canonical_value="weak", pattern_type="regex",
+              patterns=[r"(?<!\w)слабо[\s-]*" + suffix], priority=234, comment="Проверено пользователем"),
+        _rule(id="oil.present.01", category="oil_indicator", canonical_value="present", pattern_type="regex",
+              patterns=[r"(?<!\w)" + suffix]),
+        _rule(id="oil.none.01", category="negation", canonical_value="none", pattern_type="regex",
+              patterns=[r"(?<!\w)не\s+" + suffix]),
+        _rule(),
+    ]}
+
+
+def test_existing_user_dictionary_receives_new_forms_without_writing_on_read(dictionary_file):
+    legacy = _legacy_user_dictionary()
+    dictionary_file.parent.mkdir(parents=True)
+    dictionary_file.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
+    before = dictionary_file.read_bytes()
+
+    upgraded = semantics.load_dictionary_payload()
+    assert upgraded["version"] == "1.4.0+user.20261030070000"
+    assert {rule["id"] for rule in upgraded["rules"]} == {rule["id"] for rule in legacy["rules"]}
+    assert upgraded["rules"][-1] == legacy["rules"][-1]
+    assert upgraded["rules"][0]["priority"] == 234
+    assert upgraded["rules"][0]["comment"] == "Проверено пользователем"
+    assert semantics.analyze_description("Со слабым битумонасыщением")[1] == "weak"
+    assert semantics.analyze_description("Слабо битуминонасыщеные")[1] == "weak"
+    assert semantics.analyze_description("Битуминонасыщеные")[1] == "present"
+    assert semantics.analyze_description("Без слабого битумонасыщения")[1] == "none"
+    assert semantics.analyze_description("Глауконитит")[0][0].canonical_value == "Глауконитит"
+    assert dictionary_file.read_bytes() == before
+    # Explicit paths remain an exact view of the requested historical file.
+    assert semantics.load_dictionary_payload(dictionary_file) == legacy
+
+
+def test_dictionary_upgrade_preserves_disabled_removed_and_moved_rules(dictionary_file):
+    legacy = _legacy_user_dictionary()
+    legacy["rules"][0]["enabled"] = False
+    legacy["rules"] = [rule for rule in legacy["rules"] if rule["id"] != "oil.none.01"]
+    moved = deepcopy(legacy["rules"][1])
+    moved["category"] = "ignore"
+    legacy["rules"][1] = moved
+    dictionary_file.parent.mkdir(parents=True)
+    dictionary_file.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
+
+    upgraded = semantics.load_dictionary_payload()
+    assert not upgraded["rules"][0]["enabled"]
+    assert not any(rule["id"] == "oil.none.01" for rule in upgraded["rules"])
+    assert upgraded["rules"][1] == moved
+    assert semantics.analyze_description("Со слабым битумонасыщением")[1] == "unknown"
+
+
+def test_upgraded_dictionary_can_be_customized_without_readding_new_forms(dictionary_file):
+    dictionary_file.parent.mkdir(parents=True)
+    dictionary_file.write_text(json.dumps(_legacy_user_dictionary(), ensure_ascii=False), encoding="utf-8")
+    upgraded = semantics.load_dictionary_payload()
+    upgraded["rules"][0]["patterns"] = [r"слабый пользовательский признак"]
+    upgraded["rules"] = [rule for rule in upgraded["rules"] if rule["id"] != "oil.none.01"]
+    saved = semantics.save_dictionary(upgraded)
+    assert semantics.load_dictionary_payload() == saved
+    assert semantics.analyze_description("Со слабым битумонасыщением")[1] == "present"

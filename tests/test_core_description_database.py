@@ -533,7 +533,7 @@ def test_extended_dictionary_results_and_evidence_survive_save(db_session):
     saved = db_session.query(CoreDescriptionInterval).one()
     assert saved.raw_description == interval.raw_description
     assert saved.oil_saturation == 'weak_to_intense'
-    assert db_session.query(CoreDescriptionDocument).one().dictionary_version == '1.3.0'
+    assert db_session.query(CoreDescriptionDocument).one().dictionary_version == '1.4.0'
     assert {(rock.rock_name, rock.role) for rock in db_session.query(CoreDescriptionRock)} == {
         ('siltstone', 'primary'), ('marl', 'interlayer'),
     }

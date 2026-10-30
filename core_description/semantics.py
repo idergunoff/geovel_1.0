@@ -68,7 +68,32 @@ def load_dictionary_payload(path: str | Path | None = None) -> dict[str, Any]:
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise DictionaryValidationError(f"Cannot load semantic dictionary: {error}") from error
     validate_dictionary(payload)
+    if path is None and source == user_dictionary_path():
+        payload = _upgrade_user_dictionary(payload)
     return payload
+
+
+def _upgrade_user_dictionary(payload: dict[str, Any]) -> dict[str, Any]:
+    """Add the 1.4 word forms to saved 1.3 dictionaries without restoring removed rules."""
+    version, separator, metadata = payload["version"].partition("+")
+    if version != "1.3.0":
+        return payload
+    try:
+        updates = json.loads(Path(__file__).with_name("dictionary.updates.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise DictionaryValidationError(f"Cannot load dictionary updates: {error}") from error
+    upgraded = deepcopy(payload)
+    for rule in upgraded["rules"]:
+        if (rule["pattern_type"] != "regex"
+                or updates["rule_categories"].get(rule["id"]) != rule["category"]):
+            continue
+        for old, new in updates["replacements"]:
+            rule["patterns"] = [pattern.replace(old, new) for pattern in rule["patterns"]]
+        rule["patterns"].extend(pattern for pattern in updates["append_patterns"].get(rule["id"], [])
+                                if pattern not in rule["patterns"])
+    upgraded["version"] = updates["to_version"] + (separator + metadata if separator else "")
+    validate_dictionary(upgraded)
+    return upgraded
 
 
 def validate_dictionary(payload: Any) -> SemanticDictionary:
