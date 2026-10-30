@@ -48,6 +48,7 @@ def import_core_description():
 
 ui.pushButton_core_description.clicked.connect(import_core_description)
 ui.pushButton_view_core_description.clicked.connect(show_core_description)
+ui.pushButton_remove_core_description.clicked.connect(remove_core_description)
 
 
 
