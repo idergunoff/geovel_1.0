@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval, RockMention
 from core_description.terminology import SATURATION_LABELS
-from models_db.model import Base, Well, WellOptionally
+from models_db.model import Base, CoreDescriptionDocument, Well, WellOptionally
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 import models_db.model_cluster  # noqa: E402,F401
 import models_db.model_profile_features  # noqa: E402,F401
@@ -228,6 +228,10 @@ def test_search_before_loading_a_document_keeps_an_empty_list(app, session):
 
 
 def test_directory_import_finds_word_files_at_every_depth(app, session, monkeypatch, tmp_path):
+    well = session.query(Well).filter_by(name="12").one()
+    session.add(WellOptionally(well_id=well.id, option="Площадь", value="Северная"))
+    session.commit()
+    well_id = well.id
     nested = tmp_path / "Северная" / "архив"
     nested.mkdir(parents=True)
     sources = [tmp_path / "root.docx", nested.parent / "older.DOC", nested / "deep.DOCX"]
@@ -255,6 +259,10 @@ def test_directory_import_finds_word_files_at_every_depth(app, session, monkeypa
         assert {item.source_path for item in dialog.batch_items} == {str(path.resolve()) for path in sources}
         assert all(item.status == "ready" for item in dialog.batch_items)
         assert dialog.documents_table.rowCount() == len(sources)
+        assert all(dialog.documents_table.item(row, 5).data(QtCore.Qt.UserRole) == well_id
+                   for row in range(len(sources)))
+        assert all("ожидает выбора" not in dialog.documents_table.item(row, 5).text()
+                   for row in range(len(sources)))
     finally:
         dialog.close()
 
@@ -486,6 +494,136 @@ def test_two_relaxed_matches_are_selected_and_saved_in_batch(app, session, monke
     dialog.save()
     assert captured[0]["well_id"] == wanted.id
     assert captured[0]["match_method"] == "exact_name_identity"
+
+
+@pytest.fixture()
+def matched_batch(session):
+    wells = session.query(Well).order_by(Well.id).all()
+    documents = []
+    for well, area, file_hash in zip(wells, ("Северная", "Южная"), ("a", "b")):
+        session.add(WellOptionally(well_id=well.id, option="Площадь", value=area))
+        source = _document()
+        source.source_path = f"well-{well.name}.docx"
+        source.file_hash = file_hash * 64
+        source.well_name_raw = source.well_name = well.name
+        source.area_name_raw = source.area_name = area
+        documents.append(BatchParseItem(source.source_path, "ready", source))
+    session.commit()
+    return BatchParseResult(items=documents), [well.id for well in wells]
+
+
+def test_entire_batch_is_matched_without_opening_each_file_and_with_one_catalog(app, session, matched_batch, monkeypatch):
+    result, well_ids = matched_batch
+    unknown = _document()
+    unknown.source_path, unknown.well_name = "unknown.docx", "UNKNOWN"
+    result.items.extend([BatchParseItem(unknown.source_path, "ready", unknown),
+                         BatchParseItem("broken.docx", "error", error="Cannot read document")])
+    dialog = CoreDescriptionImportDialog(session)
+    previews = []
+    original = dialog.set_document
+
+    def preview(document):
+        previews.append(document.source_path)
+        original(document)
+
+    monkeypatch.setattr(dialog, "set_document", preview)
+    queries = []
+    def record_query(_connection, _cursor, statement, *_args):
+        queries.append(statement)
+    engine = session.get_bind()
+    event.listen(engine, "before_cursor_execute", record_query)
+    try:
+        dialog._batch_finished(result)
+    finally:
+        event.remove(engine, "before_cursor_execute", record_query)
+    assert len(queries) == 2
+    assert previews == [result.items[0].source_path]
+    for row, well_id in enumerate(well_ids):
+        cell = dialog.documents_table.item(row, 5)
+        assert cell.data(QtCore.Qt.UserRole) == well_id
+        assert f"id {well_id}" in cell.text()
+        assert cell.text().startswith("★ ")
+        assert cell.toolTip() == cell.text()
+        assert dialog._well_selections[result.items[row].source_path] == (well_id, "exact_name_identity", 2 / 5)
+    assert "Южная" in dialog.documents_table.item(1, 5).text()
+    assert dialog.documents_table.item(2, 5).text() == "ожидает выбора"
+    assert dialog.documents_table.item(3, 5).text() == "—"
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == well_ids[1]
+    assert dialog.match_method == "exact_name_identity"
+    assert "2 из 5" in dialog.match_label.text()
+    assert dialog.documents_table.item(1, 5).text() == dialog.well_combo.currentText()
+
+
+def test_auto_matched_files_are_saved_without_visiting_each_preview(app, session, matched_batch, monkeypatch):
+    result, well_ids = matched_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *_args: None)
+    assert dialog.documents_table.currentRow() == 0
+    assert dialog.save_button.isEnabled()
+    dialog.save_button.click()
+    saved = session.query(CoreDescriptionDocument).order_by(CoreDescriptionDocument.id).all()
+    assert [document.well_id for document in saved] == well_ids
+    assert all(document.match_method == "exact_name_identity" for document in saved)
+    assert all(document.match_confidence == 2 / 5 for document in saved)
+    assert [item.status for item in result.items] == ["saved", "saved"]
+
+
+def test_matched_files_can_be_saved_when_first_file_requires_manual_choice(app, session, matched_batch, monkeypatch):
+    result, well_ids = matched_batch
+    result.items[0].document.well_name = "UNKNOWN"
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *_args: None)
+    assert dialog.documents_table.currentRow() == 0
+    assert dialog.well_combo.currentData() is None
+    assert dialog.save_button.isEnabled()
+    dialog.documents_table.item(1, 0).setCheckState(QtCore.Qt.Unchecked)
+    assert not dialog.save_button.isEnabled()
+    dialog.documents_table.item(1, 0).setCheckState(QtCore.Qt.Checked)
+    assert dialog.save_button.isEnabled()
+    assert "документов: 1; интервалов: 1" in dialog.summary.text()
+    dialog.save_button.click()
+    saved = session.query(CoreDescriptionDocument).all()
+    assert len(saved) == 1 and saved[0].well_id == well_ids[1]
+    assert result.items[0].status == "needs_review"
+
+
+def test_first_parse_error_does_not_block_other_auto_matched_files(app, session, matched_batch, monkeypatch):
+    result, well_ids = matched_batch
+    result.items.insert(0, BatchParseItem("broken.docx", "error", error="Cannot read document"))
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *_args: None)
+    assert dialog.documents_table.currentRow() == 1
+    assert dialog.well_combo.currentData() == well_ids[0]
+    assert dialog.save_button.isEnabled()
+    dialog.save_button.click()
+    assert session.query(CoreDescriptionDocument).count() == 2
+
+
+def test_refresh_updates_all_automatic_rows_and_keeps_manual_choice(app, session, matched_batch):
+    result, well_ids = matched_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(well_ids[1]))
+    original = session.get(Well, well_ids[1])
+    original.name = "13 старая"
+    replacement = Well(name="13")
+    session.add(replacement)
+    session.flush()
+    session.add(WellOptionally(well_id=replacement.id, option="Площадь", value="Южная"))
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == well_ids[1]
+    assert dialog.match_method == "manual"
+    assert "13 старая" in dialog.documents_table.item(0, 5).text()
+    assert dialog._well_selections[result.items[1].source_path][0] == replacement.id
+    assert dialog.documents_table.item(1, 5).data(QtCore.Qt.UserRole) == replacement.id
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == replacement.id
+    assert dialog.match_method == "exact_name_identity"
 
 
 def test_batch_keeps_manual_choices_when_switching_and_saving(app, session, monkeypatch):
