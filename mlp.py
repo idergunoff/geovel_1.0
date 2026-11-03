@@ -1482,7 +1482,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:
-            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            depth = [i * 100 / 40 for i in relief_display_depth(profile)]
             coeff = 512 / (512 + np.max(depth))
             list_up = [int((x + y) * coeff) for x, y in zip(list_up, depth)]
             list_down = [int((x + y) * coeff) for x, y in zip(list_down, depth)]
@@ -1704,7 +1704,7 @@ def calc_object_class():
 
         if ui.checkBox_save_prof_mlp.isChecked():
             if session.query(ProfileModelPrediction).filter_by(
-                    profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
+                    is_stale=False, profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
 
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()

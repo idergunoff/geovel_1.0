@@ -353,3 +353,84 @@ def test_incomplete_saved_prediction_is_replaced_by_complete_result(runtime, for
     assert predict('model_reg_test_id2', formation) == [20, 40, 60]
     assert predict('model_reg_test_id2', formation) == [20, 40, 60]
     assert len(CountingModel.calls) == 1
+
+
+def _terrain_grids(runtime, formation):
+    runtime.functions.update({name: cls for name, cls in vars(model_profile_features).items()
+                              if name.endswith('Profile')})
+    for name in ('wavelet', 'fractal', 'entropy', 'nonlinear', 'morphology', 'frequency',
+                 'envelope', 'autocorr', 'emd', 'hht'):
+        runtime.functions[f'list_{name}_features'] = []
+    for name in ('morphology', 'frequency', 'envelope', 'autocorr', 'emd', 'hht'):
+        runtime.functions[f'list_{name}_feature'] = []
+    obj = db_models.GeoradarObject(title='Terrain test')
+    formation.profile.research = db_models.Research(object=obj)
+    common = db_models.CommonGrid(title='Common', type='r', is_local=False,
+        grid_table=json.dumps([[x, y, 100] for x in range(0, 41, 10) for y in range(5)]))
+    local = db_models.CommonGrid(title='Local', type='r', is_local=True,
+        grid_table=json.dumps([[x, y, 200] for x in range(0, 41, 10) for y in range(5)]))
+    runtime.db.add_all([obj, common, local])
+    runtime.db.commit()
+    return obj, common, local
+
+
+def test_prediction_table_refreshes_land_after_binding(runtime, formation, tmp_path):
+    from terrain_service import bind_grid
+    obj, common, local = _terrain_grids(runtime, formation)
+    model = add_model(runtime, tmp_path, 'reg', 1, ['land'])
+    build = runtime.functions['build_table_test']
+    cache = {}
+    first, _ = build('regmod', model, formation, model_table_cache=cache)
+    assert first['land'].tolist() == [100]*3
+    bind_grid(runtime.db, obj.id, local.id)
+    runtime.db.commit()
+    second, _ = build('regmod', model, formation, model_table_cache=cache)
+    assert second['land'].tolist() == [200]*3
+    assert json.loads(formation.profile.abs_relief) == [200]*3
+
+
+def test_stale_nested_prediction_is_recomputed_instead_of_prefetched(runtime, formation, tmp_path):
+    from terrain_service import bind_grid
+    obj, common, local = _terrain_grids(runtime, formation)
+    nested = add_model(runtime, tmp_path, 'reg', 2, ['land'])
+    parent = add_model(runtime, tmp_path, 'reg', 1, ['model_reg_nested_id2'])
+    build = runtime.functions['build_table_test']
+    first, _ = build('regmod', parent, formation)
+    assert first['model_reg_nested_id2'].tolist() == [200]*3
+    bind_grid(runtime.db, obj.id, local.id)
+    runtime.db.commit()
+    cache = runtime.functions['_prefetch_profile_data'](
+        [SimpleNamespace(profile_id=formation.profile_id)], ['model_reg_nested_id2'])
+    assert (formation.profile_id, 'model_reg_nested_id2') not in cache
+    second, _ = build('regmod', parent, formation)
+    assert second['model_reg_nested_id2'].tolist() == [400]*3
+    third, _ = build('regmod', parent, formation)
+    assert third['model_reg_nested_id2'].tolist() == [400]*3
+    assert len(CountingModel.calls) == 2
+
+
+def test_saved_training_snapshot_is_unchanged_but_new_build_uses_current_land(runtime, formation, tmp_path, monkeypatch):
+    import os
+    from collections import Counter
+    from terrain_service import bind_grid
+    obj, common, local = _terrain_grids(runtime, formation)
+    snapshot = tmp_path/'old.parquet'
+    pd.DataFrame({'prof_well_index': ['7_1_0'], 'target_value': [42], 'land': [100]}).to_parquet(snapshot)
+    saved_bytes = snapshot.read_bytes()
+    analysis = db_models.AnalysisReg(title='Terrain analysis', data=str(snapshot), up_data=True)
+    runtime.db.add(analysis); runtime.db.flush()
+    runtime.db.add(db_models.MarkupReg(analysis=analysis, profile=formation.profile, formation=formation,
+                                       target_value=42, list_measure='[0, 1, 2]', type_markup='test'))
+    runtime.db.commit()
+    runtime.functions.update(get_regmod_id=lambda: analysis.id, get_list_param_regmod=lambda: ['land'],
+                             os=os, Counter=Counter, TRAIN_TABLE_ROW_CHUNK_SIZE=1000)
+    bind_grid(runtime.db, obj.id, local.id)
+    runtime.db.commit()
+    old, _ = runtime.functions['build_table_train'](True, 'regmod')
+    assert old.land.tolist() == [100]
+    assert snapshot.read_bytes() == saved_bytes
+    monkeypatch.chdir(tmp_path)
+    (tmp_path/'data_tables'/'reg').mkdir(parents=True)
+    new, _ = runtime.functions['build_table_train_no_db']('regmod', analysis.id, ['land'])
+    assert new.land.tolist() == [200]*3
+    assert snapshot.read_bytes() == saved_bytes

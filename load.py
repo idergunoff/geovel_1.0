@@ -104,6 +104,16 @@ def load_param():
             y_pulc_l.append(y)
         dict_signal = {'x_wgs': json.dumps(x_wgs_l), 'y_wgs': json.dumps(y_wgs_l),
                        'x_pulc': json.dumps(x_pulc_l), 'y_pulc': json.dumps(y_pulc_l)}
+        profile = session.get(Profile, get_profile_id())
+        old_x, old_y = profile.x_pulc, profile.y_pulc
+        profile.x_pulc, profile.y_pulc = dict_signal['x_pulc'], dict_signal['y_pulc']
+        try:
+            if profile.research.object.relief_grid_id is not None:
+                resolve_grid(session, profile)
+        except TerrainError:
+            profile.x_pulc, profile.y_pulc = old_x, old_y
+            raise
+        invalidate_profile(session, profile)
         session.query(Profile).filter(Profile.id == get_profile_id()).update(dict_signal, synchronize_session="fetch")
         session.commit()
         set_info(f'Загружены координаты ("{get_object_name()}", "{get_profile_name()}")', 'green')
@@ -137,7 +147,7 @@ def load_param():
             # считываем сетку грида из БД
             pd_grid_uf = pd.DataFrame(json.loads(grid_db.grid_table_uf))
             pd_grid_m = pd.DataFrame(json.loads(grid_db.grid_table_m))
-            pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
+            terrain_heights = ensure_profile_terrain(session, profile)
         # задаем списки для хранения данных о скважинах
         T_top_l, T_bottom_l, dT_l, A_top_l, A_bottom_l, dA_l, A_sum_l, A_mean_l, dVt_l, Vt_top_l, Vt_sum_l, \
         Vt_mean_l, dAt_l, At_top_l, At_sum_l, At_mean_l, dPht_l, Pht_top_l, Pht_sum_l, Pht_mean_l, Wt_top_l, \
@@ -286,14 +296,11 @@ def load_param():
                     pd_grid_uf['dist_x'] = abs(pd_grid_uf[0] - x_pulc_l[i])
                     pd_grid_m['dist_y'] = abs(pd_grid_m[1] - y_pulc_l[i])
                     pd_grid_m['dist_x'] = abs(pd_grid_m[0] - x_pulc_l[i])
-                    pd_grid_r['dist_y'] = abs(pd_grid_r[1] - y_pulc_l[i])
-                    pd_grid_r['dist_x'] = abs(pd_grid_r[0] - x_pulc_l[i])
                     i_uf = pd_grid_uf.loc[pd_grid_uf['dist_y'] == pd_grid_uf['dist_y'].min()].loc[
                         pd_grid_uf['dist_x'] == pd_grid_uf['dist_x'].min()].iat[0, 2]
                     i_m = pd_grid_m.loc[pd_grid_m['dist_y'] == pd_grid_m['dist_y'].min()].loc[
                         pd_grid_m['dist_x'] == pd_grid_m['dist_x'].min()].iat[0, 2]
-                    i_r = pd_grid_r.loc[pd_grid_r['dist_y'] == pd_grid_r['dist_y'].min()].loc[
-                        pd_grid_r['dist_x'] == pd_grid_r['dist_x'].min()].iat[0, 2]
+                    i_r = terrain_heights[i]
                     im = i_m if i_m > 0 else 0
                     width_l.append(im)
                     list_param_2.append(width_l[-1])
@@ -376,7 +383,10 @@ def load_param():
                 dict_signal['speed'] = json.dumps(speed_l)
                 dict_signal['speed_cover'] = json.dumps(speed_cover_l)
             form_krot = session.query(Formation).filter(Formation.profile_id == get_profile_id(), Formation.title == 'KROT').first()
+            dict_signal.pop('land', None)
+            dict_signal.pop('speed_cover', None)
             session.query(Formation).filter(Formation.id == form_krot.id).update(dict_signal, synchronize_session="fetch")
+            ensure_formation_terrain(session, form_krot)
             session.commit()
             update_formation_combobox()
 
@@ -528,7 +538,13 @@ def move_profile():
         return
     try:
         profile = session.query(Profile).filter_by(id = get_profile_id()).first()
-        profile.research_id = ui.lineEdit_string.text()
+        from terrain_service import move_profile_to_research
+        try:
+            research_id = int(ui.lineEdit_string.text())
+        except ValueError:
+            set_info('Введите числовой id исследования.', 'red')
+            return
+        move_profile_to_research(session, profile, research_id)
         session.commit()
         update_profile_combobox()
     except AttributeError:
@@ -671,27 +687,13 @@ def load_m_grid():
 
 
 def load_r_grid():
-    try:
-        file_name = QFileDialog.getOpenFileName(
-            caption=f'Выберите grid-файл карты рельефа по объекту "{get_object_name()}"',
-            filter='*.dat')[0]
-        set_info(file_name, 'blue')
-        fn = file_name.split('/')[-1].split('.')[0]
-        tab_grid = pd.read_table(file_name, delimiter=' ', header=0).values.tolist()
-        tab_grid = [row for row in tab_grid if not is_invalid(row[2])]
-        new_common_grid = CommonGrid(title = fn, type='r', grid_table=json.dumps(tab_grid))
-        session.add(new_common_grid)
-        # if session.query(Grid).filter(Grid.object_id == get_object_id()).count() > 0:
-        #     session.query(Grid).filter(Grid.object_id == get_object_id()).update(
-        #         {'grid_table_r': json.dumps(tab_grid)}, synchronize_session="fetch"
-        #     )
-        # else:
-        #     new_grid = Grid(object_id=get_object_id(), grid_table_r=json.dumps(tab_grid))
-        #     session.add(new_grid)
-        session.commit()
-        set_info(f'Загружен grid-файл карты рельефа', 'green')
-    except FileNotFoundError:
-        return
+    from qt.terrain_manager import TerrainManager
+    dialog = TerrainManager(session, MainWindow, get_object_id())
+    dialog.exec_()
+    check_grid_relief()
+    if get_profile_id():
+        calc_relief_profile(session.get(Profile, get_profile_id()))
+    update_list_model_prediction()
 
 
 def save_signal():

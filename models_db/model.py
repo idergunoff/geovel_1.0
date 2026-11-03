@@ -22,6 +22,7 @@ class GeoradarObject(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String)
+    relief_grid_id = Column(Integer, ForeignKey('common_grid.id'))
 
     researches = relationship('Research', back_populates='object')
     grid = relationship('Grid', back_populates='object')
@@ -60,6 +61,7 @@ class Profile(Base):
     y_pulc = Column(Text)
     abs_relief = Column(Text)
     depth_relief = Column(Text)
+    relief_source_key = Column(String)
 
     research = relationship('Research', back_populates='profiles')
     current = relationship('CurrentProfile', back_populates='profile')
@@ -96,6 +98,7 @@ class ProfileModelPrediction(Base):
     model_id = Column(Integer)
     type_model = Column(String)
     prediction = Column(Text)
+    is_stale = Column(Boolean, default=False, server_default='0', nullable=False)
 
     profile = relationship('Profile', back_populates='predictions')
     binding_layer_predictions = relationship('BindingLayerPrediction', back_populates='prediction')
@@ -255,6 +258,10 @@ class CommonGrid(Base):
     title = Column(String)
     type = Column(String)
     grid_table = Column(Text)
+    comment = Column(Text)
+    source_name = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    is_local = Column(Boolean, default=False, server_default='0', nullable=False)
 
 
 class FFTSpectr(Base):
@@ -344,6 +351,7 @@ class Formation(Base):
     width = Column(Text)
     top = Column(Text)
     land = Column(Text)
+    land_source_key = Column(String)
     speed = Column(Text)
     speed_cover = Column(Text)
 

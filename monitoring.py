@@ -750,14 +750,11 @@ def load_wellhead():
     if h_well_id:
         try:
             x, y = float(ui.lineEdit_string.text().split(';')[0]), float(ui.lineEdit_string.text().split(';')[1])
-            grid_db = session.query(Grid).filter(Grid.object_id == get_obj_monitor_id()).first()
-            if grid_db:
-                pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
-                save_wellhead_to_db(x, y, pd_grid_r, h_well_id)
-                session.commit()
-                update_list_param_h_well()
-            else:
-                set_info(f'Не загружени grid-файл рельефа для {get_obj_monitor_name()} площади', 'red')
+            save_wellhead_to_db(x, y, h_well_id)
+            session.commit()
+            update_list_param_h_well()
+        except TerrainError:
+            raise
         except ValueError:
             set_info('Введите координаты устья горизонтальной скважины - "x;y"', 'red')
     else:
@@ -766,12 +763,6 @@ def load_wellhead():
 
 def load_wellhead_batch():
     """Загрузить координаты устья горизонтальной скважины"""
-    grid_db = session.query(Grid).filter(Grid.object_id == get_obj_monitor_id()).first()
-    if grid_db:
-        pd_grid_r = pd.DataFrame(json.loads(grid_db.grid_table_r))
-    else:
-        set_info(f'Не загружени grid-файл рельефа для {get_obj_monitor_name()} площади', 'red')
-        return
     file_name = QFileDialog.getOpenFileName(MainWindow, 'Выбрать файл с координатами устья скважин', '', 'Текстовые файлы (*.txt)')[0]
     if file_name:
         with open(file_name, 'r') as input_file:
@@ -786,19 +777,17 @@ def load_wellhead_batch():
                 if not h_well:
                     set_info(f'Не загружена скважина {well_name} для {get_obj_monitor_name()}', 'red')
                 else:
-                    save_wellhead_to_db(float(x), float(y), pd_grid_r, h_well.id)
+                    save_wellhead_to_db(float(x), float(y), h_well.id)
                     set_info(f'Загружены координаты устья скважины {well_name} для {get_obj_monitor_name()}', 'green')
             session.commit()
             update_list_param_h_well()
             set_info('Готово!', 'green')
 
 
-def save_wellhead_to_db(x, y, land_grid, h_well_id):
+def save_wellhead_to_db(x, y, h_well_id):
     """Сохранить координаты устья горизонтальной скважины"""
-    land_grid['dist_y'] = abs(land_grid[1] - y)
-    land_grid['dist_x'] = abs(land_grid[0] - x)
-    z = land_grid.loc[land_grid['dist_y'] == land_grid['dist_y'].min()].loc[
-        land_grid['dist_x'] == land_grid['dist_x'].min()].iat[0, 2]
+    well = session.get(HorizontalWell, h_well_id)
+    z = sample_object_terrain(session, well.object_id, [[x, y]])[0]
     session.query(HorizontalWell).filter(HorizontalWell.id == h_well_id).update({
         'x_coord': x,
         'y_coord': y,
@@ -870,7 +859,7 @@ def show_inclinometry():
             xs = json.loads(p.x_pulc)
             ys = json.loads(p.y_pulc)
             try:
-                zs = json.loads(session.query(Formation.land).filter(Formation.profile_id == p.id).first()[0])
+                zs = ensure_profile_terrain(session, p)
             except TypeError:
                 set_info('Для профилей не рассчитан рельеф', 'red')
                 return

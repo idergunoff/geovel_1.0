@@ -224,17 +224,15 @@ def add_param_in_new_formation(new_formation_id, new_formation_profile_id):
 
         grid_uf = check_profile_all_grid(formation.profile_id, 'uf', min_dist=ui.spinBox_calc_dist_grid.value())
         grid_m = check_profile_all_grid(formation.profile_id, 'm', min_dist=ui.spinBox_calc_dist_grid.value())
-        grid_r = check_profile_all_grid(formation.profile_id, 'r', min_dist=ui.spinBox_calc_dist_grid.value())
-        tree_grid_uf, tree_grid_m, tree_grid_r = None, None, None
+        terrain_heights = ensure_formation_terrain(session, formation)
+        grid_r = bool(terrain_heights)
+        tree_grid_uf, tree_grid_m = None, None
         if grid_uf:
             tree_grid_uf = cKDTree(np.array(grid_uf)[:, :2])
             grid_val_uf = np.array(grid_uf)[:, 2]
         if grid_m:
             tree_grid_m = cKDTree(np.array(grid_m)[:, :2])
             grid_val_m = np.array(grid_m)[:, 2]
-        if grid_r:
-            tree_grid_r = cKDTree(np.array(grid_r)[:, :2])
-            grid_val_r = np.array(grid_r)[:, 2]
         # width_json = session.query(Formation.width).filter(Formation.profile_id == get_profile_id()).first()[0]
         # top_json = session.query(Formation.top).filter(Formation.profile_id == get_profile_id()).first()[0]
         # land_json = session.query(Formation.land).filter(Formation.profile_id == get_profile_id()).first()[0]
@@ -443,7 +441,7 @@ def add_param_in_new_formation(new_formation_id, new_formation_profile_id):
                 speed_l.append(i_m * 100 / (layer_down[i] * 8 - layer_up[i] * 8))
                 list_param_2.append(speed_l[-1])
             if grid_r:
-                i_r = idw_interpolation(tree_grid_r, x_pulc[i], y_pulc[i], grid_val_r)
+                i_r = terrain_heights[i]
                 land_l.append(i_r)
                 list_param_2.append(land_l[-1])
                 if grid_uf:

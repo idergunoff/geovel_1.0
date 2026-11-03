@@ -7,6 +7,9 @@ import re
 import types
 from matplotlib import font_manager
 from object import *
+from terrain_service import (TerrainError, resolve_grid, surface, ensure_profile_terrain,
+                             ensure_formation_terrain, invalidate_profile, display_heights,
+                             sample_object_terrain)
 from mapinfo_export import (
     ProfileExportError,
     determine_export_zone,
@@ -331,7 +334,7 @@ def _get_profile_abs_relief_reference(profile):
         return None
 
     try:
-        abs_relief = [float(i) for i in json.loads(profile.abs_relief)]
+        abs_relief = [float(i) for i in relief_display_heights(profile)]
     except (TypeError, ValueError, json.JSONDecodeError):
         return None
 
@@ -464,7 +467,7 @@ def draw_image(radar):
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:
-            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            depth = [i * 100 / 40 for i in relief_display_depth(profile)]
             coeff = 512 / (512 + np.max(depth))
             left_axis.setScale(8 / coeff)
     else:
@@ -717,6 +720,8 @@ def check_profile_grid_by_start_stop(p_id, g_id, min_dist=100):
 
 
 def check_profile_all_grid(p_id, type_grid, min_dist=100):
+    if type_grid == 'r':
+        return surface(resolve_grid(session, session.get(Profile, p_id))).data.tolist()
     grids = session.query(CommonGrid).filter(CommonGrid.type == type_grid).all()
     for g in grids:
         if check_profile_grid_by_start_stop(p_id, g.id, min_dist):
@@ -1549,92 +1554,47 @@ def interpolate_relief_pd(pd_grid: pd.DataFrame, x: float, y: float) -> float:
     return value
 
 
-def calc_relief_profile(profile: Profile) -> None:
-    """
-    calculate relief for profile and save to db
-    :param profile: Profile
-    :return: None
-    """
-    if profile.abs_relief:
-        return
-
-    # grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-    # if not grid:
-    #     return
-
-    grid_list = session.query(CommonGrid.id).filter(CommonGrid.type == 'r').all()
-
-    if not grid_list:
-        ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
-        return
-    else:
-        flag = True
-        grid_id = None
-
-        for check_grid in grid_list:
-            if check_profile_grid_by_start_stop(profile.id, check_grid.id, min_dist=ui.spinBox_calc_dist_grid.value()):
-                flag = False
-                grid_id = check_grid
-                break
-            else:
-                print('no grid')
-        ui.pushButton_r.setStyleSheet(
-            'background: rgb(191, 255, 191)' if flag else 'background: rgb(255, 185, 185)'
-        )
-
-    set_info('Расчёт рельейфа для профиля...', 'blue')
-    grid = session.query(CommonGrid).filter(CommonGrid.id == grid_id.id).first()
-    pd_grid = pd.DataFrame(json.loads(grid.grid_table), columns=['x', 'y', 'value'])
-
-    list_x = json.loads(profile.x_pulc)
-    list_y = json.loads(profile.y_pulc)
-
-    list_abs_relief = []
-    tree_grid = cKDTree(np.array(json.loads(grid.grid_table))[:, :2])
-    grid_val = np.array(json.loads(grid.grid_table))[:, 2]
-    ui.progressBar.setMaximum(len(list_x))
-    for i in range(len(list_x)):
-        ui.progressBar.setValue(i)
-        i_r = idw_interpolation(tree_grid, list_x[i], list_y[i], grid_val)
-        list_abs_relief.append(round(i_r, 2))
+def calc_relief_profile(profile: Profile) -> bool:
     try:
-        list_abs_relief = savgol_filter(list_abs_relief, 71, 3).tolist()
-    except ValueError:
-        pass
-
-    list_depth_relief = [max(list_abs_relief) - i for i in list_abs_relief]
-    profile.abs_relief = json.dumps(list_abs_relief)
-    profile.depth_relief = json.dumps(list_depth_relief)
-    session.commit()
-    set_info('Рельеф для профиля сохранён в БД', 'green')
+        ensure_profile_terrain(session, profile)
+        session.commit()
+        return True
+    except TerrainError as exc:
+        set_info(str(exc), 'red')
+        return False
 
 
 def recalc_relief():
-    session.query(Profile).filter_by(id=get_profile_id()).update({'abs_relief': None, 'depth_relief': None})
-    session.commit()
-    calc_relief_profile(session.query(Profile).filter_by(id=get_profile_id()).first())
+    profile = session.get(Profile, get_profile_id())
+    if profile:
+        # Validate first: an unavailable source must not erase usable old data.
+        resolve_grid(session, profile)
+        invalidate_profile(session, profile)
+        calc_relief_profile(profile)
+
+
+def relief_display_heights(profile):
+    scale = (ui.doubleSpinBox_relief_smoothing.value()
+             if hasattr(ui, 'checkBox_relief_smoothing') and ui.checkBox_relief_smoothing.isChecked() else 0)
+    return display_heights(profile, scale)
+
+
+def relief_display_depth(profile):
+    heights = relief_display_heights(profile)
+    reference = max(heights)
+    return [reference - value for value in heights]
 
 
 def check_grid_relief():
-    grid = session.query(Grid).filter(Grid.object_id == get_object_id()).first()
-    if not grid:
-        return
-    list_x, list_y = [], []
-    for pr in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
+    profiles = session.query(Profile).filter_by(research_id=get_research_id()).all()
+    covered = bool(profiles)
+    for profile in profiles:
         try:
-            list_x += json.loads(pr.x_pulc)
-            list_y += json.loads(pr.y_pulc)
-        except TypeError:
-            continue
-    pd_relief = pd.DataFrame(json.loads(grid.grid_table_r), columns=['x', 'y', 'z'])
-    try:
-        if not (pd_relief['x'].max() > max(list_x) > pd_relief['x'].min() and
-                pd_relief['y'].max() > max(list_y) > pd_relief['y'].min() and
-                pd_relief['x'].max() > min(list_x) > pd_relief['x'].min() and
-                pd_relief['y'].max() > min(list_y) > pd_relief['y'].min()):
-            ui.pushButton_r.setStyleSheet('background: rgb(255, 185, 185)')
-    except ValueError:
-        return
+            resolve_grid(session, profile)
+        except TerrainError:
+            covered = False
+            break
+    ui.pushButton_r.setStyleSheet('background: rgb(191, 255, 191)' if covered else 'background: rgb(255, 185, 185)')
 
 
 def check_coordinates_research():
@@ -3307,7 +3267,7 @@ def update_list_model_prediction():
         else:
             model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
         try:
-            item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
+            item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title}{" [устарел: рельеф изменён]" if p.is_stale else ""} id{p.id}')
             item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '
