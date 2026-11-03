@@ -512,6 +512,238 @@ def matched_batch(session):
     return BatchParseResult(items=documents), [well.id for well in wells]
 
 
+@pytest.fixture()
+def shared_area_batch(session):
+    source, wrong = session.query(Well).order_by(Well.id).all()
+    wanted = Well(name=wrong.name)
+    session.add(wanted)
+    session.flush()
+    session.add_all([
+        WellOptionally(well_id=source.id, option="Площадь", value="Северная"),
+        WellOptionally(well_id=wrong.id, option="Площадь", value="Южная"),
+        WellOptionally(well_id=wanted.id, option="Площадь", value="Северная"),
+    ])
+    session.commit()
+    items = []
+    for index, well in enumerate((source, wrong)):
+        document = _document()
+        document.source_path = f"shared-{index}.docx"
+        document.file_hash = str(index) * 64
+        document.well_name = document.well_name_raw = well.name
+        document.area_name = document.area_name_raw = "Южная"
+        items.append(BatchParseItem(document.source_path, "ready", document))
+    return BatchParseResult(items=items), (source.id, wrong.id, wanted.id)
+
+
+def test_shared_area_replaces_wrong_automatic_match_and_saves_unvisited_file(
+        app, session, shared_area_batch, monkeypatch):
+    result, (source_id, wrong_id, wanted_id) = shared_area_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    assert dialog._well_selections[result.items[1].source_path][0] == wrong_id
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    source_selection = dialog._well_selections[result.items[0].source_path]
+    dialog.table.item(0, 1).setText("100.5")
+    assert dialog.match_area_button.isEnabled()
+
+    queries = []
+    def record_query(_connection, _cursor, statement, *_args):
+        queries.append(statement)
+    engine = session.get_bind()
+    event.listen(engine, "before_cursor_execute", record_query)
+    try:
+        dialog.match_area_button.click()
+    finally:
+        event.remove(engine, "before_cursor_execute", record_query)
+    assert queries == []
+    assert dialog.documents_table.currentRow() == 0
+    assert dialog.well_combo.currentData() == source_id
+    assert dialog.table.item(0, 1).text() == "100.5"
+    assert dialog._well_selections[result.items[0].source_path] == source_selection
+    assert dialog._well_selections[result.items[1].source_path] == (wanted_id, "batch_area_identity", 2 / 5)
+    assert dialog.documents_table.item(1, 5).data(QtCore.Qt.UserRole) == wanted_id
+    assert "Северная" in dialog.documents_table.item(1, 5).text()
+    assert "найдено 1 из 1" in dialog.batch_area_notice.text()
+    # The applied search area does not rewrite the source header.
+    assert result.items[1].document.area_name == "Южная"
+    assert dialog.documents_table.item(1, 3).text() == "Южная"
+    monkeypatch.setattr(QtWidgets.QMessageBox, "information", lambda *_args: None)
+    dialog.save_button.click()
+    saved = session.query(CoreDescriptionDocument).order_by(CoreDescriptionDocument.id).all()
+    assert [document.well_id for document in saved] == [source_id, wanted_id]
+    assert saved[1].match_method == "batch_area_identity"
+    assert saved[1].area_name_raw == "Южная"
+
+
+def test_shared_area_survives_switching_and_catalogue_refresh(app, session, shared_area_batch):
+    result, (source_id, wrong_id, wanted_id) = shared_area_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == wanted_id
+    assert dialog.area_combo.currentText() == "Северная"
+    assert dialog.well_combo.findData(wrong_id) == -1
+    assert dialog.match_method == "batch_area_identity"
+    assert "По площади «Северная»" in dialog.match_label.text()
+    session.get(Well, wanted_id).name = "13 старая"
+    replacement = Well(name="13")
+    session.add(replacement)
+    session.flush()
+    session.add(WellOptionally(well_id=replacement.id, option="Площадь", value="Северная"))
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == replacement.id
+    dialog.documents_table.setCurrentCell(0, 1)
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == replacement.id
+    assert dialog.documents_table.item(1, 5).data(QtCore.Qt.UserRole) == replacement.id
+
+
+@pytest.mark.parametrize("area,name,count", [
+    ("Северная 2", "13", 1),  # A similar area is outside the explicitly selected area.
+    ("Северная", "13", 2),  # Duplicate numbers require a manual choice.
+    ("Северная", "13а", 1),  # A fuzzy well number is only a suggestion.
+    ("Северная", None, 1),  # A missing well number must not select an arbitrary well.
+])
+def test_shared_area_leaves_missing_or_ambiguous_wells_unselected(
+        app, session, shared_area_batch, area, name, count):
+    result, (source_id, _wrong_id, wanted_id) = shared_area_batch
+    session.query(WellOptionally).filter_by(well_id=wanted_id).one().value = area
+    if count == 2:
+        duplicate = Well(name="13")
+        session.add(duplicate)
+        session.flush()
+        session.add(WellOptionally(well_id=duplicate.id, option="Площадь", value=area))
+    session.commit()
+    result.items[1].document.well_name = result.items[1].document.well_name_raw = name
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    assert dialog._well_selections[result.items[1].source_path][0] is None
+    assert dialog.documents_table.item(1, 5).text() == "ожидает выбора"
+    assert "требуют выбора: 1" in dialog.batch_area_notice.text()
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() is None
+    assert dialog.area_combo.currentText() == "Северная"
+    if area == "Северная 2":
+        assert dialog.well_combo.findData(wanted_id) == -1
+
+
+def test_shared_area_keeps_manual_and_saved_rows_and_processes_unchecked_files(
+        app, session, shared_area_batch):
+    result, (source_id, wrong_id, wanted_id) = shared_area_batch
+    from dataclasses import replace
+    original = result.items[1].document
+    for name in ("manual", "saved"):
+        document = replace(original, source_path=f"{name}.docx")
+        result.items.append(BatchParseItem(document.source_path, "ready", document))
+    result.items.append(BatchParseItem("broken.docx", "error", error="Cannot parse"))
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.documents_table.setCurrentCell(2, 1)
+    dialog.well_combo.setCurrentIndex(0)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(wrong_id))
+    result.items[3].status = "saved"
+    dialog.documents_table.item(3, 7).setText("сохранён")
+    dialog.documents_table.item(1, 0).setCheckState(QtCore.Qt.Unchecked)
+    dialog.documents_table.setCurrentCell(0, 1)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    assert dialog._well_selections[original.source_path][0] == wanted_id
+    assert dialog.documents_table.item(1, 0).checkState() == QtCore.Qt.Unchecked
+    assert dialog._well_selections["manual.docx"] == (wrong_id, "manual", 1.0)
+    assert dialog._well_selections["saved.docx"][0] == wrong_id
+    assert set(dialog._batch_areas) == {original.source_path}
+    assert dialog.documents_table.item(3, 7).text() == "сохранён"
+    assert dialog.documents_table.item(4, 7).text() == "ошибка: Cannot parse"
+    dialog.documents_table.setCurrentCell(4, 1)
+    assert not dialog.match_area_button.isEnabled()
+
+
+def test_shared_area_requires_known_area_and_allows_explicit_choice_when_multiple(
+        app, session, shared_area_batch):
+    result, (source_id, _wrong_id, _wanted_id) = shared_area_batch
+    session.add(WellOptionally(well_id=source_id, option="Участок", value="Западная"))
+    session.commit()
+    dialog = CoreDescriptionImportDialog(session)
+    assert not dialog.match_area_button.isEnabled()
+    dialog._batch_finished(result)
+    assert not dialog.match_area_button.isEnabled()
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    assert not dialog.match_area_button.isEnabled()
+    dialog.area_combo.setCurrentText("Северная")
+    assert dialog.match_area_button.isEnabled()
+    dialog.match_area_button.click()
+    assert set(dialog._batch_areas.values()) == {"Северная"}
+
+
+def test_manual_choice_outside_shared_area_survives_switching(app, session, shared_area_batch):
+    result, (source_id, wrong_id, _wanted_id) = shared_area_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    dialog.documents_table.setCurrentCell(1, 1)
+    dialog.area_combo.setCurrentText("Все площади")
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(wrong_id))
+    dialog.documents_table.setCurrentCell(0, 1)
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == wrong_id
+    assert dialog.match_method == "manual"
+
+
+def test_shared_area_accepts_explicit_area_in_arbitrary_category(app, session, shared_area_batch):
+    result, (source_id, _wrong_id, wanted_id) = shared_area_batch
+    for well_id in (source_id, wanted_id):
+        session.query(WellOptionally).filter_by(well_id=well_id).one().option = "Свободная категория"
+    session.commit()
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    assert not dialog.match_area_button.isEnabled()
+    dialog.area_combo.setEditText("Северная")
+    assert dialog.match_area_button.isEnabled()
+    dialog.match_area_button.click()
+    assert dialog._well_selections[result.items[1].source_path][0] == wanted_id
+
+
+def test_shared_area_disabled_without_database_area_or_other_parsed_files(app, session):
+    result = BatchParseResult(items=[BatchParseItem("core.docx", "ready", _document()),
+                                    BatchParseItem("broken.docx", "error", error="Cannot parse")])
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    well_id = session.query(Well).filter_by(name="12").one().id
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(well_id))
+    assert not dialog.match_area_button.isEnabled()
+    session.add(WellOptionally(well_id=well_id, option="Площадь", value="Северная"))
+    session.commit()
+    dialog.refresh_wells_button.click()
+    assert not dialog.match_area_button.isEnabled()
+
+
+def test_starting_new_batch_clears_shared_area(app, session, shared_area_batch, monkeypatch):
+    result, (source_id, _wrong_id, _wanted_id) = shared_area_batch
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    assert dialog._batch_areas
+    monkeypatch.setattr(QtCore.QThread, "start", lambda _thread: None)
+    dialog.start_batch(["another-directory"], recursive=True)
+    try:
+        assert not dialog._batch_areas
+        assert dialog.batch_area_notice.isHidden()
+        assert not dialog.match_area_button.isEnabled()
+    finally:
+        # No worker was started; release the test's idle thread and worker normally.
+        dialog._worker.deleteLater()
+        dialog._thread.deleteLater()
+        dialog._batch_thread_finished()
+
+
 def test_entire_batch_is_matched_without_opening_each_file_and_with_one_catalog(app, session, matched_batch, monkeypatch):
     result, well_ids = matched_batch
     unknown = _document()

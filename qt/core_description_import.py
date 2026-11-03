@@ -5,14 +5,14 @@ from __future__ import annotations
 import csv
 import json
 from html import escape
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Mapping
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from core_description.database import WellCatalog, load_well_catalog, match_well, save_core_import
+from core_description.database import WellCatalog, WellMatchResult, load_well_catalog, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
 from core_description.identity import (
     WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count, IDENTITY_FIELD_COUNT,
@@ -141,6 +141,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.match_method = "manual"
         self.match_confidence = 1.0
         self._well_selections: dict[str, tuple[int | None, str, float]] = {}
+        self._batch_areas: dict[str, str] = {}
         self._wells: list[tuple[int, str, tuple[str, ...]]] = []
         self._recommended_ids: set[int] = set()
         self._well_metadata: Mapping[int, WellMetadata] = {}
@@ -196,6 +197,19 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         documents_header.setResizeContentsPrecision(-1)
         self.documents_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         layout.addWidget(self.documents_table)
+
+        self.match_area_button = QtWidgets.QPushButton("Искать текущую площадь для остальных файлов")
+        self.match_area_button.setObjectName("match_core_descriptions_in_current_area")
+        self.match_area_button.setToolTip(
+            "Взять площадь выбранной скважины БД и повторить поиск для остальных файлов. "
+            "Ручные назначения и сохранённые документы сохраняются. "
+            "Если площадей несколько, выберите нужную в поле «Площадь БД».")
+        self.match_area_button.setEnabled(False)
+        layout.addWidget(self.match_area_button)
+        self.batch_area_notice = QtWidgets.QLabel()
+        self.batch_area_notice.setWordWrap(True)
+        self.batch_area_notice.hide()
+        layout.addWidget(self.batch_area_notice)
 
         progress_row = QtWidgets.QHBoxLayout()
         self.progress_bar = QtWidgets.QProgressBar(); self.progress_bar.setVisible(False)
@@ -319,6 +333,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.well_search.textChanged.connect(self._filter_wells)
         self.area_combo.currentTextChanged.connect(self._filter_wells)
         self.refresh_wells_button.clicked.connect(lambda: self._load_wells(reset_filters=False, refresh=True))
+        self.match_area_button.clicked.connect(self._match_remaining_in_area)
         self.table.itemChanged.connect(self._table_changed)
         for widget in (self.depth_from, self.depth_to, self.saturation_filter, self.state_filter):
             widget.valueChanged.connect(self.apply_filters) if hasattr(widget, "valueChanged") else widget.currentIndexChanged.connect(self.apply_filters)
@@ -365,6 +380,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             return
         self.batch_items = []
         self._well_selections.clear()
+        self._batch_areas.clear()
+        self.batch_area_notice.hide()
+        self.match_area_button.setEnabled(False)
         self._well_catalog = None
         self.document = None
         self.table.setRowCount(0)
@@ -440,7 +458,74 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self._well_altitudes = {well.id: well.alt for well in self._well_catalog.wells}
             self._well_names = {well.id: well.name for well in self._well_catalog.wells}
 
-    def _match_batch_wells(self) -> None:
+    def _match_document(self, document: ParsedCoreDocument) -> WellMatchResult:
+        """Keep a user-applied batch area across previews and catalogue refreshes."""
+        area = self._batch_areas.get(document.source_path)
+        catalog = self._well_catalog
+        if area is not None:
+            catalog = WellCatalog(tuple(well for well in catalog.wells if any(
+                normalize_area_name(value) == normalize_area_name(area)
+                for _, value in catalog.metadata.get(well.id, WellMetadata()).area_entries(area))),
+                catalog.metadata)
+            document = replace(document, area_name=area, area_name_raw=area)
+        result = match_well(self.session, document.well_name, document.area_name,
+                            document=document, catalog=catalog)
+        if area is not None and result.selected is not None:
+            # A shared area must not silently break a tie between duplicate numbers.
+            wanted = normalize_lookup_value(document.well_name)
+            best_count = identity_match_count(result.selected.comparisons)
+            tied = sum(normalize_lookup_value(well.name) == wanted and identity_match_count(
+                compare_identity(document, catalog.metadata.get(well.id, WellMetadata()), well.alt, well.name)
+            ) == best_count for well in catalog.wells)
+            if tied > 1:
+                return WellMatchResult("manual_required", warnings=("multiple_exact_wells",))
+            result = replace(result, selected=replace(result.selected, method="batch_area_identity"))
+        return result
+
+    def _current_batch_area(self) -> str | None:
+        if self.document is None or self.well_combo.currentData() is None:
+            return None
+        metadata = self._well_metadata.get(self.well_combo.currentData(), WellMetadata())
+        area_text = self.area_combo.currentText()
+        entries = metadata.area_entries(self.document.area_name)
+        if area_text != "Все площади":
+            entries += metadata.area_entries(area_text)
+        areas = {normalize_area_name(value): value for _, value in entries
+                 if normalize_area_name(value)}
+        selected = normalize_area_name(area_text)
+        if selected in areas:
+            return areas[selected]
+        source = normalize_area_name(self.document.area_name)
+        if source in areas:
+            return areas[source]
+        matching = [value for value in areas.values() if area_names_match(self.document.area_name, value)]
+        if len(matching) == 1:
+            return matching[0]
+        return next(iter(areas.values())) if len(areas) == 1 else None
+
+    def _match_remaining_in_area(self) -> None:
+        area = self._current_batch_area()
+        if area is None or not self.match_area_button.isEnabled():
+            return
+        current_path = self.document.source_path
+        targets = []
+        for item in self.batch_items:
+            if item.document is None or item.source_path == current_path or item.status == "saved":
+                continue
+            stored = self._well_selections.get(item.source_path)
+            if stored and stored[0] is not None and stored[1] == "manual":
+                continue
+            self._batch_areas[item.source_path] = area
+            targets.append(item.source_path)
+        self._match_batch_wells(skip_paths={current_path})
+        found = sum(self._well_selections[path][0] is not None for path in targets)
+        self._update_summary()
+        self.batch_area_notice.setText(
+            f"Поиск в площади «{area}»: найдено {found} из {len(targets)}; "
+            f"требуют выбора: {len(targets) - found}. Ручные назначения сохранены.")
+        self.batch_area_notice.show()
+
+    def _match_batch_wells(self, *, skip_paths: set[str] | None = None) -> None:
         """Resolve every parsed file against one catalogue, before opening any preview."""
         if not any(item.document is not None for item in self.batch_items):
             return
@@ -448,10 +533,9 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         blocker = QtCore.QSignalBlocker(self.documents_table)
         for row, item in enumerate(self.batch_items):
             document = item.document
-            if document is None:
+            if document is None or item.status == "saved" or document.source_path in (skip_paths or ()):
                 continue
-            result = match_well(self.session, document.well_name, document.area_name,
-                                document=document, catalog=self._well_catalog)
+            result = self._match_document(document)
             stored = self._well_selections.get(document.source_path)
             if stored is not None and stored[1] == "manual" and stored[0] in self._well_names:
                 selection = stored
@@ -493,6 +577,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _document_row_changed(self, row: int, _column: int, *_args: Any) -> None:
         if 0 <= row < len(self.batch_items) and self.batch_items[row].document is not None:
             self.set_document(self.batch_items[row].document)  # type: ignore[arg-type]
+        self._update_batch_area_button()
 
     def export_report(self) -> None:
         path, selected = QtWidgets.QFileDialog.getSaveFileName(self, "Сохранить отчёт", "core-import-report.json",
@@ -533,7 +618,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
     def _load_wells(self, reset_filters: bool = True, *, refresh: bool = False) -> None:
         if self.document is None:
             return
-        area_filter = "Все площади" if reset_filters else self.area_combo.currentText()
+        area_filter = (self._batch_areas.get(self.document.source_path, "Все площади")
+                       if reset_filters else self.area_combo.currentText())
         if reset_filters:
             self.well_search.blockSignals(True)
             self.well_search.clear()
@@ -553,8 +639,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.area_combo.addItems(area_names)
         self.area_combo.setCurrentText(area_filter)
         self.area_combo.blockSignals(False)
-        result = match_well(self.session, self.document.well_name, self.document.area_name,
-                            document=self.document, catalog=self._well_catalog)
+        result = self._match_document(self.document)
         self._recommended_ids = {candidate.well_id for candidate in result.candidates}
         if result.selected is not None:
             self._recommended_ids.add(result.selected.well_id)
@@ -581,7 +666,10 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.match_method = result.selected.method
             self.match_confidence = result.selected.confidence
             count = identity_match_count(result.selected.comparisons)
-            self.match_label.setText(f"Совпадают {count} из {IDENTITY_FIELD_COUNT} признаков" if self.match_method == "exact_name_identity"
+            self.match_label.setText(f"По площади «{self._batch_areas[self.document.source_path]}»; "
+                                     f"совпадают {count} из {IDENTITY_FIELD_COUNT} признаков"
+                                     if self.match_method == "batch_area_identity" else
+                                     f"Совпадают {count} из {IDENTITY_FIELD_COUNT} признаков" if self.match_method == "exact_name_identity"
                                      else "Точное совпадение" if self.match_confidence == 1.0
                                      else "Совпадает номер; проверьте площадь")
         else:
@@ -609,6 +697,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
 
         area_text = self.area_combo.currentText().strip()
         area_filter = normalize_area_name(area_text) if area_text != "Все площади" else ""
+        batch_area = self._batch_areas.get(self.document.source_path) if self.document else None
         self.well_combo.blockSignals(True)
         self.well_combo.clear()
         self.well_combo.addItem("— выберите скважину —", None)
@@ -622,7 +711,8 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 found = tuple(value for label, value in metadata.attributes
                               if identity_kind(label) is None and (
                                   normalize_area_name(value) == area_filter
-                                  if area_filter.startswith("объект") and area_filter[6:].isdigit()
+                                  if (batch_area is not None and area_filter == normalize_area_name(batch_area))
+                                  or (area_filter.startswith("объект") and area_filter[6:].isdigit())
                                   else area_filter in normalize_area_name(value) or area_names_match(area_text, value)))
                 if not found:
                     continue
@@ -636,6 +726,16 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         count = self.well_combo.count() - 1
         self.well_count_label.setText(f"Найдено: {count}" if count else "Нет скважин — измените условия поиска")
         self._update_document_well()
+        self._update_batch_area_button()
+
+    def _update_batch_area_button(self) -> None:
+        row = self.documents_table.currentRow()
+        valid_row = (0 <= row < len(self.batch_items) and self.batch_items[row].document is self.document
+                     and self.document is not None)
+        self.match_area_button.setEnabled(bool(
+            valid_row and self._thread is None and self._current_batch_area() is not None
+            and any(item.document is not None and item.document is not self.document
+                    and item.status != "saved" for item in self.batch_items)))
 
     def _well_text(self, well_id: int, areas: tuple[str, ...], *, recommended: bool = False) -> str:
         """Use identical well details in the batch column and the preview selector."""
@@ -714,6 +814,13 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         self.match_label.setText("Выбрана вручную" if self.well_combo.currentData() is not None
                                  else "Требуется ручной выбор")
         if self.document is not None:
+            area = self._batch_areas.get(self.document.source_path)
+            well_id = self.well_combo.currentData()
+            if area is not None and well_id is not None and not any(
+                    normalize_area_name(value) == normalize_area_name(area)
+                    for _, value in self._well_metadata.get(well_id, WellMetadata()).area_entries(area)):
+                # A deliberate manual choice outside the scope supersedes the batch filter.
+                self._batch_areas.pop(self.document.source_path)
             self._well_selections[self.document.source_path] = (
                 self.well_combo.currentData(), self.match_method, self.match_confidence)
         self._update_document_well()
@@ -798,6 +905,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
                 self.table.selectRow(row); self.table.scrollToItem(self.table.item(row, 0)); return
 
     def _update_summary(self, *_args: Any) -> None:
+        self._update_batch_area_button()
         count = sum(self.table.item(row, 0).checkState() == QtCore.Qt.Checked for row in range(self.table.rowCount()))
         if self.batch_items:
             documents = intervals = 0
