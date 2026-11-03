@@ -106,6 +106,75 @@ def test_number_and_deposit_are_two_visible_matches(app, session):
     assert dialog.save_button.isEnabled()
 
 
+@pytest.mark.parametrize('source_number, stored', [
+    ('56 Ул', '56'), ('56', '56 Ул'), ('3 З-К', '3'), ('3', '3 З-К'),
+])
+def test_suffix_variants_are_selected_and_remain_visible_when_searching(app, session, source_number, stored):
+    wanted, wrong = Well(name=stored), Well(name=stored)
+    session.add_all([wanted, wrong])
+    session.flush()
+    session.add_all([
+        WellOptionally(well_id=wanted.id, option='Площадь', value='Северная'),
+        WellOptionally(well_id=wrong.id, option='Площадь', value='Южная'),
+    ])
+    session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = source_number
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() == wanted.id
+    assert dialog.match_method == 'number_area_identity'
+    assert dialog.comparison_table.item(4, 3).text() == 'Совпадает'
+    dialog.well_search.setText(source_number)
+    assert dialog.well_combo.currentData() == wanted.id
+    assert dialog.well_combo.findData(wanted.id) > 0
+    if source_number[0].isdigit() and not source_number.isdigit():
+        assert dialog.well_combo.findData(wrong.id) == -1
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == wanted.id
+
+
+def test_typed_area_enables_suffix_search_when_document_area_missing(app, session):
+    well = Well(name='3')
+    session.add(well)
+    session.flush()
+    session.add(WellOptionally(well_id=well.id, option='Площадь', value='Северная'))
+    session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '3 З-К'
+    source.area_name_raw = source.area_name = None
+    dialog = CoreDescriptionImportDialog(session)
+    dialog.set_document(source)
+    assert dialog.well_combo.currentData() is None
+    dialog.well_search.setText('3 З-К')
+    assert dialog.well_combo.findData(well.id) == -1
+    dialog.area_combo.setEditText('Северная')
+    assert dialog.well_combo.findData(well.id) > 0
+
+
+@pytest.mark.parametrize('source_number, stored', [('56 Ул', '56'), ('3', '3 З-К')])
+def test_shared_area_applies_to_suffix_variants_and_saves_them(
+        app, session, shared_area_batch, monkeypatch, source_number, stored):
+    result, (source_id, _wrong_id, wanted_id) = shared_area_batch
+    session.get(Well, wanted_id).name = stored
+    session.commit()
+    result.items[1].document.well_name_raw = result.items[1].document.well_name = source_number
+    dialog = CoreDescriptionImportDialog(session)
+    dialog._batch_finished(result)
+    dialog.well_combo.setCurrentIndex(dialog.well_combo.findData(source_id))
+    dialog.match_area_button.click()
+    assert dialog.documents_table.item(1, 5).data(QtCore.Qt.UserRole) == wanted_id
+    dialog.documents_table.setCurrentCell(1, 1)
+    assert dialog.well_combo.currentData() == wanted_id
+    dialog.refresh_wells_button.click()
+    assert dialog.well_combo.currentData() == wanted_id
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'information', lambda *_args: None)
+    dialog.save_button.click()
+    saved = session.query(CoreDescriptionDocument).filter_by(well_id=wanted_id).one()
+    assert saved.well_name_raw == source_number
+    assert saved.match_method == 'batch_area_identity'
+
+
 def test_import_window_is_modeless_and_reused(app, session):
     main = QtWidgets.QMainWindow()
     editor = QtWidgets.QLineEdit()
@@ -604,7 +673,7 @@ def test_shared_area_survives_switching_and_catalogue_refresh(app, session, shar
 @pytest.mark.parametrize("area,name,count", [
     ("Северная 2", "13", 1),  # A similar area is outside the explicitly selected area.
     ("Северная", "13", 2),  # Duplicate numbers require a manual choice.
-    ("Северная", "13а", 1),  # A fuzzy well number is only a suggestion.
+    ("Северная", "130а", 1),  # Different digits are only a suggestion.
     ("Северная", None, 1),  # A missing well number must not select an arbitrary well.
 ])
 def test_shared_area_leaves_missing_or_ambiguous_wells_unselected(

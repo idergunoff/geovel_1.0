@@ -4,6 +4,7 @@ import pytest
 
 from core_description.identity import (
     WellMetadata, compare_identity, extract_identity, normalize_date, normalize_elevation,
+    well_number_variants_match,
 )
 from core_description.models import ParsedCoreDocument
 from core_description.areas import area_name_similarity, area_names_match
@@ -162,6 +163,29 @@ def test_well_number_is_a_comparison_criterion(source_number, db_number, status)
     number = next(item for item in comparisons if item.field == 'well_name')
     assert number.status == status
     assert number.database == (db_number or '')
+
+
+@pytest.mark.parametrize('first, second, expected', [
+    ('56 Ул', '56', True), ('3 З-К', '3', True), ('3-З-К', '3', True),
+    ('56\u00a0Ул', '56', True), ('56', '56', True),
+    ('56 Ул', '156', False), ('3 З-К', '30', False),
+    ('56 Ул', '56 З-К', False), ('3-1', '31', False), ('3/1', '31', False),
+    ('3.1', '31', False), ('3 З-К 1', '31', False), ('03 Ул', '3', False),
+    ('Ул', '', False), (None, '3', False),
+])
+def test_number_variants_preserve_digits_and_only_relax_missing_suffix(first, second, expected):
+    assert well_number_variants_match(first, second) is expected
+    assert well_number_variants_match(second, first) is expected
+
+
+@pytest.mark.parametrize('source_number, db_number', [('56 Ул', '56'), ('3', '3 З-К')])
+@pytest.mark.parametrize('area, status', [('Северная', 'match'), ('Южная', 'different'), (None, 'different')])
+def test_letter_suffix_is_ignored_only_with_area_evidence(source_number, db_number, area, status):
+    source = document()
+    source.well_name_raw = source.well_name = source_number
+    metadata = WellMetadata((("Площадь", area),)) if area else WellMetadata()
+    comparisons = compare_identity(source, metadata, None, well_name=db_number)
+    assert comparisons[-1].status == status
 
 
 @pytest.mark.parametrize('first, second, expected', [

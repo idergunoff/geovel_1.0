@@ -26,6 +26,20 @@ def normalize_lookup_value(value: str | None) -> str:
     return re.sub(r'[^\w]+', '', value, flags=re.UNICODE)
 
 
+def well_number_variants_match(first: str | None, second: str | None) -> bool:
+    """Match a bare number with the same number followed by a letter suffix.
+
+    Callers must also confirm the area. Preserve compound numeric identifiers
+    and conflicting letter suffixes rather than flattening every digit sequence.
+    """
+    pattern = r"(\d+)\s*(?:[-–—]?\s*[^\W\d_]+(?:[\s\-–—]*[^\W\d_]+)*)?"
+    first_match = re.fullmatch(pattern, unicodedata.normalize("NFKC", first or "").strip())
+    second_match = re.fullmatch(pattern, unicodedata.normalize("NFKC", second or "").strip())
+    return bool(first_match and second_match and first_match[1] == second_match[1]
+                and (normalize_lookup_value(first) == first_match[1]
+                     or normalize_lookup_value(second) == second_match[1]))
+
+
 @lru_cache(maxsize=1024)
 def label_key(value: str) -> str:
     text = unicodedata.normalize("NFKC", value).casefold().replace("ё", "е")
@@ -202,7 +216,8 @@ def compare_identity(document: ParsedCoreDocument, metadata: WellMetadata,
     database_number = normalize_lookup_value(well_name)
     number_status = 'missing'
     if source_number and database_number:
-        number_status = 'match' if source_number == database_number else 'different'
+        number_status = ('match' if source_number == database_number or (
+            area_status == 'match' and well_number_variants_match(document.well_name, well_name)) else 'different')
     result.append(IdentityComparison('well_name', document.well_name_raw or document.well_name or '',
                                     well_name or '', number_status))
     return tuple(result)

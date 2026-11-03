@@ -216,6 +216,93 @@ def test_well_number_with_letter_suffix_matches_database_record(db_session):
     assert result.selected.method == 'exact_name_identity'
 
 
+@pytest.mark.parametrize('source_number, stored', [
+    ('56 Ул', '56'), ('56', '56 Ул'), ('3 З-К', '3'), ('3', '3 З-К'),
+])
+@pytest.mark.parametrize('mode', ['labels', 'document', 'catalog'])
+def test_number_with_or_without_letters_matches_in_same_area(db_session, source_number, stored, mode):
+    well = Well(name=stored)
+    db_session.add(well)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=well.id, option='Площадь', value='Северная'))
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = source_number
+    result = match_well(db_session, source_number, source.area_name,
+                        document=None if mode == 'labels' else source,
+                        catalog=load_well_catalog(db_session) if mode == 'catalog' else None)
+    assert result.selected.well_id == well.id
+    assert result.selected.method == ('number_area' if mode == 'labels' else 'number_area_identity')
+    if mode != 'labels':
+        assert {item.field for item in result.selected.comparisons if item.status == 'match'} == {'area', 'well_name'}
+
+
+@pytest.mark.parametrize('area', ['Южная', None])
+@pytest.mark.parametrize('source_number, stored', [('3 З-К', '3'), ('3', '3 З-К')])
+@pytest.mark.parametrize('use_document', [False, True])
+def test_suffix_fallback_requires_matching_area_even_when_dates_match(
+        db_session, area, source_number, stored, use_document):
+    well = Well(name=stored)
+    db_session.add(well)
+    db_session.flush()
+    db_session.add(WellOptionally(well_id=well.id, option='Начало бурения', value='28.08.2019'))
+    if area:
+        db_session.add(WellOptionally(well_id=well.id, option='Площадь', value=area))
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = source_number
+    source.drilling_start = '2019-08-28'
+    assert match_well(db_session, source_number, source.area_name,
+                      document=source if use_document else None).selected is None
+
+
+@pytest.mark.parametrize('use_document', [False, True])
+def test_exact_name_in_other_area_does_not_hide_suffix_variant(db_session, use_document):
+    wrong, wanted = Well(name='3 З-К'), Well(name='3')
+    db_session.add_all([wrong, wanted])
+    db_session.flush()
+    db_session.add_all([
+        WellOptionally(well_id=wrong.id, option='Площадь', value='Южная'),
+        WellOptionally(well_id=wrong.id, option='Начало бурения', value='28.08.2019'),
+        WellOptionally(well_id=wanted.id, option='Площадь', value='Северная'),
+    ])
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '3 З-К'
+    source.drilling_start = '2019-08-28'
+    result = match_well(db_session, source.well_name, source.area_name,
+                        document=source if use_document else None)
+    assert result.selected.well_id == wanted.id
+
+
+@pytest.mark.parametrize('use_document', [False, True])
+def test_equal_suffix_variants_in_area_require_manual_choice(db_session, use_document):
+    wells = [Well(name='3 З-К'), Well(name='3 Ул')]
+    db_session.add_all(wells)
+    db_session.flush()
+    db_session.add_all(WellOptionally(well_id=well.id, option='Площадь', value='Северная') for well in wells)
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '3'
+    result = match_well(db_session, source.well_name, source.area_name,
+                        document=source if use_document else None)
+    assert result.selected is None
+    assert {candidate.well_id for candidate in result.candidates} == {well.id for well in wells}
+
+
+def test_exact_suffix_in_same_area_takes_precedence_over_bare_number(db_session):
+    bare, exact = Well(name='3', alt=132.432), Well(name='3 З-К')
+    db_session.add_all([bare, exact])
+    db_session.flush()
+    db_session.add_all(WellOptionally(well_id=well.id, option='Площадь', value='Северная')
+                       for well in (bare, exact))
+    db_session.commit()
+    source = _document()
+    source.well_name_raw = source.well_name = '3 З-К'
+    source.wellhead_elevation = 132.432
+    assert match_well(db_session, source.well_name, source.area_name, document=source).selected.well_id == exact.id
+
+
 @pytest.mark.parametrize('use_catalog', [False, True])
 def test_number_and_numbered_deposit_supply_two_required_matches(db_session, use_catalog):
     well = Well(name='10вр')
