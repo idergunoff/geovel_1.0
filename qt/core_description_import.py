@@ -16,7 +16,7 @@ from core_description.database import WellCatalog, WellMatchResult, load_well_ca
 from core_description.areas import area_names_match, normalize_area_name
 from core_description.identity import (
     WellMetadata, compare_identity, identity_kind, normalize_elevation, identity_match_count, IDENTITY_FIELD_COUNT,
-    normalize_lookup_value,
+    normalize_lookup_value, well_number_variants_match,
 )
 from core_description.batch import BatchParseItem, BatchParseResult, parse_batch
 from core_description.models import ParsedCoreDocument, ParsedCoreInterval
@@ -669,6 +669,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             self.match_label.setText(f"По площади «{self._batch_areas[self.document.source_path]}»; "
                                      f"совпадают {count} из {IDENTITY_FIELD_COUNT} признаков"
                                      if self.match_method == "batch_area_identity" else
+                                     "Совпадает номер без букв и площадь" if self.match_method == "number_area_identity" else
                                      f"Совпадают {count} из {IDENTITY_FIELD_COUNT} признаков" if self.match_method == "exact_name_identity"
                                      else "Точное совпадение" if self.match_confidence == 1.0
                                      else "Совпадает номер; проверьте площадь")
@@ -687,23 +688,30 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
         name_filter = self.well_search.text().strip().casefold()
         document_name = (self.document.well_name or self.document.well_name_raw) if self.document else None
         wanted = normalize_lookup_value(name_filter or document_name)
+        area_text = self.area_combo.currentText().strip()
+        area_filter = normalize_area_name(area_text) if area_text != "Все площади" else ""
+        lookup_area = area_text if area_filter else self.document.area_name if self.document else None
+
+        def number_variant(well_id: int, name: str) -> bool:
+            return well_number_variants_match(name_filter or document_name, name) and any(
+                area_names_match(lookup_area, value) for _, value in self._well_metadata.get(
+                    well_id, WellMetadata()).area_entries(lookup_area))
 
         def name_rank(item: tuple[int, str, tuple[str, ...]]) -> tuple[int, float]:
             name = normalize_lookup_value(item[1])
             if not wanted:
                 return 0, 0.0
-            group = 0 if name == wanted else 1 if wanted in name else 2
+            group = 0 if name == wanted else 1 if number_variant(item[0], item[1]) else 2 if wanted in name else 3
             return group, -SequenceMatcher(None, wanted, name, autojunk=False).ratio()
 
-        area_text = self.area_combo.currentText().strip()
-        area_filter = normalize_area_name(area_text) if area_text != "Все площади" else ""
         batch_area = self._batch_areas.get(self.document.source_path) if self.document else None
         self.well_combo.blockSignals(True)
         self.well_combo.clear()
         self.well_combo.addItem("— выберите скважину —", None)
         # Stable sorting preserves identity/area recommendations for equal names.
         for well_id, name, areas in sorted(self._wells, key=name_rank):
-            if name_filter and name_filter not in name.casefold():
+            if (name_filter and name_filter not in name.casefold()
+                    and wanted not in normalize_lookup_value(name) and not number_variant(well_id, name)):
                 continue
             metadata = self._well_metadata.get(well_id, WellMetadata())
             displayed_areas = areas

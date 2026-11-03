@@ -19,7 +19,7 @@ from .areas import area_names_match, AREA_SIMILARITY_THRESHOLD
 from .identity import (
     WellMetadata, IdentityComparison, compare_identity, identity_match_count,
     has_identity_conflicts, MIN_IDENTITY_MATCHES, ELEVATION_TOLERANCE,
-    IDENTITY_FIELD_COUNT, normalize_lookup_value,
+    IDENTITY_FIELD_COUNT, normalize_lookup_value, well_number_variants_match,
 )
 
 
@@ -123,7 +123,10 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
              session.query(Well.id, Well.name, Well.alt).order_by(Well.id).all())
     exact = [well for well in wells if normalize_lookup_value(well.name) == wanted] if wanted else []
     exact_ids = {well.id for well in exact}
-    reviewed = exact or [well for well in wells if not wanted or SequenceMatcher(
+    number_variants = [well for well in wells if well.id not in exact_ids
+                       and well_number_variants_match(well_name, well.name)]
+    number_ids = {well.id for well in number_variants}
+    reviewed = [*exact, *number_variants] or [well for well in wells if not wanted or SequenceMatcher(
         None, wanted, normalize_lookup_value(well.name)).ratio() >= .6]
     metadata = (catalog.metadata if catalog is not None else
                 load_well_metadata(session, (well.id for well in reviewed)))
@@ -131,6 +134,8 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
     for well in reviewed:
         details = metadata.get(well.id, WellMetadata())
         comparisons = compare_identity(document, details, well.alt, well.name)
+        if well.id in number_ids and comparisons[0].status != 'match':
+            continue
         areas = details.area_entries(area_name)
         area = next((value for _, value in areas if area_names_match(area_name, value)),
                     areas[0][1] if areas else None)
@@ -140,6 +145,21 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
             'identity_suggestion', area, comparisons))
     confirmed = [candidate for candidate in candidates if candidate.well_id in exact_ids
                  and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
+    number_matches = [candidate for candidate in candidates if candidate.well_id in number_ids
+                      and identity_match_count(candidate.comparisons) >= MIN_IDENTITY_MATCHES]
+    ambiguous_number = False
+    if number_matches:
+        exact_in_area = [candidate for candidate in confirmed if candidate.comparisons[0].status == 'match']
+        if exact_in_area:
+            confirmed = exact_in_area
+        else:
+            best_count = max(identity_match_count(candidate.comparisons) for candidate in number_matches)
+            best = [candidate for candidate in number_matches
+                    if identity_match_count(candidate.comparisons) == best_count]
+            if len(best) == 1:
+                return WellMatchResult('matched', selected=replace(best[0], method='number_area_identity'))
+            confirmed = []
+            ambiguous_number = True
     if confirmed:
         best = min(confirmed, key=lambda candidate: (
             -identity_match_count(candidate.comparisons), candidate.well_id))
@@ -149,14 +169,14 @@ def match_well(session: Any, well_name: str | None, area_name: str | None = None
         has_identity_conflicts(candidate.comparisons),
         not any(item.field == 'area' and item.status == 'match' for item in candidate.comparisons),
         candidate.well_name, candidate.well_id))
-    warnings = ('insufficient_identity_matches',)
+    warnings = ('multiple_number_area_wells',) if ambiguous_number else ('insufficient_identity_matches',)
     if any(has_identity_conflicts(candidate.comparisons) for candidate in candidates):
         warnings += ('identity_conflict',)
     return WellMatchResult('manual_required', candidates=tuple(candidates[:10]), warnings=warnings)
 
 
 def _match_well_labels(session: Any, well_name: str | None, area_name: str | None = None) -> WellMatchResult:
-    """Resolve only unambiguous exact matches; return fuzzy alternatives for review."""
+    """Resolve exact names and area-confirmed number variants; review fuzzy alternatives."""
 
     wanted = normalize_lookup_value(well_name)
     if not wanted:
@@ -181,6 +201,20 @@ def _match_well_labels(session: Any, well_name: str | None, area_name: str | Non
                     for well in area_variants)
                 return WellMatchResult('manual_required', candidates=candidates,
                                        warnings=('area_variant_requires_confirmation',))
+    if wanted_area and not any(area_names_match(area_name, value)
+                               for well in exact for value in areas.get(well.id, ())):
+        variants = [well for well in wells if well_number_variants_match(well_name, well.name)
+                    and normalize_lookup_value(well.name) != wanted]
+        variant_areas = load_well_areas(session, (well.id for well in variants), area_name)
+        matches = [WellMatchCandidate(well.id, well.name, .95, 'number_area',
+                                      next(value for value in variant_areas[well.id]
+                                           if area_names_match(area_name, value)))
+                   for well in variants if any(area_names_match(area_name, value)
+                                               for value in variant_areas.get(well.id, ()))]
+        if len(matches) == 1:
+            return WellMatchResult('matched', selected=matches[0])
+        if matches:
+            return WellMatchResult('ambiguous', candidates=tuple(matches), warnings=('multiple_number_area_wells',))
     if len(exact) == 1:
         well = exact[0]
         values = areas.get(well.id, ())
