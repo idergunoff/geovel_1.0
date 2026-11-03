@@ -386,3 +386,5 @@ imputer = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0
 
 
 Base.metadata.create_all(engine)
+from terrain_service import ensure_terrain_schema
+ensure_terrain_schema(engine)

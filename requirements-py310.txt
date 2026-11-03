@@ -52,6 +52,7 @@ alembic==1.16.5
 psycopg2-binary==2.9.10
 lasio==0.32
 openpyxl==3.1.5
+pyarrow==20.0.0
 chardet==5.2.0
 tqdm==4.67.1
 

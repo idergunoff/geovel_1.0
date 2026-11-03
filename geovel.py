@@ -97,6 +97,10 @@ proxy = pg.SignalProxy(radarogramma.scene().sigMouseMoved, rateLimit=60, slot=mo
 
 def log_uncaught_exceptions(ex_cls, ex, tb):
     """ Вывод ошибок программы """
+    if isinstance(ex, TerrainError):
+        session.rollback()
+        QtWidgets.QMessageBox.warning(MainWindow, 'Сетка рельефа', str(ex))
+        return
     text = '{}: {}:\n'.format(ex_cls.__name__, ex)
     text += ''.join(traceback.format_tb(tb))
     print(text)
@@ -124,7 +128,31 @@ ui.pushButton_draw_cur.clicked.connect(draw_current_radarogram)
 ui.pushButton_vacuum.clicked.connect(vacuum)
 ui.pushButton_uf.clicked.connect(load_uf_grid)
 ui.pushButton_m.clicked.connect(load_m_grid)
-ui.pushButton_r.clicked.connect(load_r_grid)
+ui.pushButton_r.setText('Сетки рельефа')
+ui.pushButton_r.setToolTip('Каталог сеток рельефа и привязки к объектам')
+
+def open_terrain_catalog():
+    load_r_grid()
+    update_list_model_nn()
+    update_list_bind_vel_prediction()
+    if ui.checkBox_relief.isChecked():
+        draw_relief()
+
+ui.pushButton_r.clicked.connect(open_terrain_catalog)
+ui.checkBox_relief_smoothing = QtWidgets.QCheckBox('Сглаживать рельеф', MainWindow)
+ui.checkBox_relief_smoothing.setObjectName('checkBox_relief_smoothing')
+ui.doubleSpinBox_relief_smoothing = QtWidgets.QDoubleSpinBox(MainWindow)
+ui.doubleSpinBox_relief_smoothing.setObjectName('doubleSpinBox_relief_smoothing')
+ui.doubleSpinBox_relief_smoothing.setRange(0.1, 10000)
+ui.doubleSpinBox_relief_smoothing.setValue(10)
+ui.doubleSpinBox_relief_smoothing.setSuffix(' м')
+ui.doubleSpinBox_relief_smoothing.setEnabled(False)
+ui.checkBox_relief_smoothing.setToolTip('Только отображение. Значения land и обучающие наборы не меняются.')
+ui.gridLayout_42.addWidget(ui.checkBox_relief_smoothing, 1, 3)
+ui.gridLayout_42.addWidget(ui.doubleSpinBox_relief_smoothing, 1, 4)
+ui.checkBox_relief_smoothing.toggled.connect(ui.doubleSpinBox_relief_smoothing.setEnabled)
+ui.checkBox_relief_smoothing.toggled.connect(lambda _: draw_relief())
+ui.doubleSpinBox_relief_smoothing.valueChanged.connect(lambda _: draw_relief())
 ui.pushButton_fft.clicked.connect(calc_fft)
 ui.pushButton_add_fft.clicked.connect(calc_add_fft)
 ui.pushButton_ifft.clicked.connect(calc_ifft)

@@ -75,7 +75,7 @@ def test_upgrade_head_preserves_preexisting_tables(tmp_path, existing, missing_i
     command.upgrade(config, 'head')
 
     with engine.begin() as connection:
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalars().all() == ['2f3a4b5c6d7e']
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalars().all() == ScriptDirectory.from_config(config).get_heads()
         inspector = sa.inspect(connection)
         for name in ('well_parameter_choice', *CORE_TABLES):
             assert inspector.has_table(name)
@@ -132,7 +132,7 @@ def test_core_upgrade_can_generate_offline_sql(tmp_path):
     assert 'ADD COLUMN thickness FLOAT' in sql
     assert 'ADD COLUMN geological_index_raw TEXT' in sql
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ['2f3a4b5c6d7e']
+    assert len(scripts.get_heads()) == 1
     output = io.StringIO()
     context = MigrationContext.configure(dialect_name='sqlite', opts={'as_sql': True, 'output_buffer': output})
     with Operations.context(context):

@@ -4019,7 +4019,7 @@ def calc_object_model_regmod():
         if ui.checkBox_save_prof_reg.isChecked():
 
             if session.query(ProfileModelPrediction).filter_by(
-                    profile_id=get_profile_id(), model_id=model.id, type_model='reg').count() == 0:
+                    is_stale=False, profile_id=get_profile_id(), model_id=model.id, type_model='reg').count() == 0:
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()
 

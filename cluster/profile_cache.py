@@ -213,7 +213,7 @@ def draw_cluster_profile_result(profile_id: int, profile_labels: dict, *, use_re
     list_down = json.loads(current_formation.layer_down.layer_line)
 
     if use_relief and ui.checkBox_relief.isChecked() and profile.depth_relief:
-        depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+        depth = [i * 100 / 40 for i in relief_display_depth(profile)]
         coeff = 512 / (512 + np.max(depth))
         list_up = [int((x + y) * coeff) for x, y in zip(list_up, depth)]
         list_down = [int((x + y) * coeff) for x, y in zip(list_down, depth)]

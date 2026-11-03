@@ -1086,7 +1086,7 @@ def draw_formation():
     if ui.checkBox_relief.isChecked():
         profile = session.query(Profile).filter(Profile.id == get_profile_id()).first()
         if profile.depth_relief:
-            depth = [i * 100 / 40 for i in json.loads(profile.depth_relief)]
+            depth = [i * 100 / 40 for i in relief_display_depth(profile)]
             coeff = 512 / (512 + np.max(depth))
             layer_up = [int((x + y) * coeff) for x, y in zip(layer_up, depth)]
             layer_down = [int((x + y) * coeff) for x, y in zip(layer_down, depth)]
@@ -1171,7 +1171,7 @@ def build_table_profile_model_predict():
         return
     pd_predict = pd.DataFrame(columns=['x_pulc', 'y_pulc', 'prediction'])
     for prof in session.query(Profile).filter_by(research_id=predict.profile.research_id).all():
-        pred = session.query(ProfileModelPrediction).filter_by(profile_id=prof.id, model_id=predict.model_id).first()
+        pred = session.query(ProfileModelPrediction).filter_by(profile_id=prof.id, model_id=predict.model_id, type_model=predict.type_model, is_stale=False).order_by(ProfileModelPrediction.id.desc()).first()
         if not pred:
             set_info(f'Модель не расчитана для профиля {prof.title}', 'red')
             QtWidgets.QMessageBox.critical(MainWindow, 'Error', f'Модель не расчитана для профиля {prof.title}')
@@ -1185,7 +1185,7 @@ def build_table_profile_model_predict():
             value = json.loads(pred.prediction)
         pd_dict = {'x_pulc': x_pulc, 'y_pulc': y_pulc, 'prediction': value}
         if ui.checkBox_use_land.isChecked():
-            land = json.loads(prof.formations[0].land)
+            land = ensure_formation_terrain(session, prof.formations[0])
             pd_dict['land'] = land
             pd_dict['abs_uf'] = [i - j for i, j in zip(land, value)]
         pd_predict = pd.concat([pd_predict, pd.DataFrame(pd_dict)], ignore_index=True)
@@ -1285,6 +1285,9 @@ def draw_relief():
             return
 
         prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
+        if not calc_relief_profile(prof):
+            ui.checkBox_relief.setChecked(False)
+            return
         if ui.checkBox_vel.isChecked():
             if session.query(BindingLayerPrediction).join(ProfileModelPrediction).filter(
                     ProfileModelPrediction.profile_id == prof.id).count() == 0:
@@ -1292,7 +1295,7 @@ def draw_relief():
                 set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
                 return
             velocity_signal = calc_deep_predict_current_profile()
-            depth_relief = json.loads(prof.depth_relief)
+            depth_relief = relief_display_depth(prof)
             relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in range(len(depth_relief))]
             l_max = 0
             for i in relief_velocity_signal:
@@ -1335,7 +1338,7 @@ def draw_relief():
         else:
             prof_signal = json.loads(curr_prof.signal)
 
-            depth_relief = json.loads(prof.depth_relief)
+            depth_relief = relief_display_depth(prof)
             bottom_relief = [np.max(depth_relief) - i for i in depth_relief]
             relief_signal = [[-128 for _ in range(int((depth_relief[i] * 100) / 40))] + prof_signal[i] + [-128 for _ in range(int((bottom_relief[i] * 100) / 40))] for i in range(len(prof_signal))]
             max_sig = len(relief_signal)
@@ -1438,7 +1441,7 @@ def draw_profile_model_prediction():
             prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
 
             velocity_signal = calc_deep_predict_current_profile()
-            depth_relief = json.loads(prof.depth_relief)
+            depth_relief = relief_display_depth(prof)
             relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
                                       range(len(depth_relief))]
             l_max = 0
@@ -1579,7 +1582,7 @@ def draw_velocity_model_color():
             if ui.checkBox_relief.isChecked():
                 prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
                 velocity_signal = calc_deep_predict_current_profile()
-                depth_relief = json.loads(prof.depth_relief)
+                depth_relief = relief_display_depth(prof)
                 relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
                                           range(len(depth_relief))]
                 l_max = 0

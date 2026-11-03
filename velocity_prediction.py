@@ -49,6 +49,8 @@ def rmv_bind_vel_prediction():
 def calc_deep_predict_current_profile():
     list_layer_line, list_predict = [], []
     for i in session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all():
+        if i.prediction and i.prediction.is_stale:
+            raise TerrainError('Прогноз для привязанного слоя устарел после смены рельефа. Рассчитайте его заново.')
         try:
             list_predict.append(savgol_line(json.loads(i.prediction.prediction), 175))
             list_layer_line.append(json.loads(i.layer.layer_line))
@@ -135,6 +137,8 @@ def calc_list_velocity():
     list_vel = []
     bindings = session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all()
     for b in range(len(bindings)):
+        if bindings[b].prediction.is_stale:
+            raise TerrainError('Прогноз для привязанного слоя устарел после смены рельефа. Рассчитайте его заново.')
         if len(list_vel) == 0:
             l = json.loads(bindings[b].layer.layer_line)
             p = savgol_line(json.loads(bindings[b].prediction.prediction), 175)
@@ -152,7 +156,7 @@ def update_list_model_nn():
     ui.listWidget_model_nn.clear()
     if not ui.checkBox_model_nn.isChecked():
         return
-    for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id(), type_model='reg').all():
+    for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id(), type_model='reg', is_stale=False).all():
 
         model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
         item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
@@ -467,7 +471,7 @@ def check_uf():
     list_predict_uf = json.loads(predict.prediction)
 
     formation = session.query(Formation).filter_by(profile_id=get_profile_id()).first()
-    list_land = json.loads(formation.land)
+    list_land = ensure_formation_terrain(session, formation)
     list_top = json.loads(formation.top)
 
     graph = [list_predict_uf[i] - (list_land[i] - list_top[i]) for i in range(len(list_predict_uf))]

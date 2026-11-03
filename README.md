@@ -119,3 +119,7 @@ python -m pip install -r requirements-dev.txt
 ```
 
 Используйте Python из выбранного виртуального окружения.
+
+## Сетки рельефа
+
+Каталог сеток, привязка к объектам и правила пересчёта описаны в [docs/terrain.md](docs/terrain.md).

@@ -126,7 +126,8 @@ class UniteObjectsDialog(QtWidgets.QDialog):
                 profile_id=profile_id,
                 model_id=selected.model_id,
                 type_model=selected.type_model,
-            ).first()
+                is_stale=False,
+            ).order_by(ProfileModelPrediction.id.desc()).first()
             if prediction is None:
                 self._warning(f"Модель не рассчитана для профиля {profile.title}.")
                 return None
@@ -145,7 +146,7 @@ class UniteObjectsDialog(QtWidgets.QDialog):
                 if not profile.formations:
                     self._warning(f"Для профиля {profile.title} не рассчитан рельеф.")
                     return None
-                land = json.loads(profile.formations[0].land)
+                land = ensure_formation_terrain(session, profile.formations[0])
                 data["land"] = land
                 data["abs_uf"] = [height - value for height, value in zip(land, values)]
             frames.append(pd.DataFrame(data))

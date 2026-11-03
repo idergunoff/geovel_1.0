@@ -24,6 +24,7 @@ def _model_table_cache_key(model, formation, measure_indices=None):
     return (
         formation.id,
         formation.profile_id,
+        formation.profile.relief_source_key,
         tuple(sorted(set(json.loads(model.list_params)))),
         model.except_signal or '',
         model.except_crl or '',
@@ -50,7 +51,7 @@ def _stored_model_prediction(param, formation):
     prediction = session.query(ProfileModelPrediction).filter_by(
         profile_id=formation.profile_id, type_model=type_model, model_id=model_id,
     ).order_by(ProfileModelPrediction.id.desc()).first()
-    if prediction is None:
+    if prediction is None or prediction.is_stale:
         return None
     try:
         values = json.loads(prediction.prediction)
@@ -200,6 +201,7 @@ def _prefetch_profile_data(markups, list_param):
             ProfileModelPrediction.profile_id.in_(profile_ids),
             ProfileModelPrediction.model_id == model_id,
             ProfileModelPrediction.type_model == type_model,
+            ProfileModelPrediction.is_stale.is_(False),
         ).order_by(ProfileModelPrediction.id).all()
         for profile_id, prediction in rows:
             if prediction is not None:
@@ -279,6 +281,11 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
         except_param = session.query(ExceptionReg).filter_by(analysis_id=analisis_id).first()
 
+    if {'land', 'speed_cover'}.intersection(list_param):
+        from terrain_service import ensure_formation_terrain
+        for formation_id in {markup.formation_id for markup in markups}:
+            ensure_formation_terrain(session, session.get(Formation, formation_id))
+        session.commit()
     stored_feature_cache = _prefetch_stored_features(markups, list_param)
     remaining_formations = Counter(markup.formation_id for markup in markups)
     remaining_profiles = Counter(markup.profile_id for markup in markups)
@@ -656,6 +663,10 @@ def build_table_test(analisis='mlp', model=False, curr_form=False, model_table_c
         set_info('Не выбран пласт', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Не выбран пласт')
         return
+    if {'land', 'speed_cover'}.intersection(list_param):
+        from terrain_service import ensure_formation_terrain
+        ensure_formation_terrain(session, curr_form)
+        session.commit()
     cache_key = None
     cache_entry = None
     if model_table_cache is not None and model:

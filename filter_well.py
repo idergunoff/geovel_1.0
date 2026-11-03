@@ -27,7 +27,7 @@ def open_filter_well_cls():
             try:
                 list_alt = []
                 for alt in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
-                    list_alt.extend(json.loads(alt.abs_relief))
+                    list_alt.extend(ensure_profile_terrain(session, alt))
 
                 ui_fw.spinBox_alt_from.setValue(int(min(list_alt) - 5))
                 ui_fw.spinBox_alt_to.setValue(int(max(list_alt) + 5))
@@ -127,7 +127,7 @@ def open_filter_well_reg():
             try:
                 list_alt = []
                 for alt in session.query(Profile).filter(Profile.research_id == get_research_id()).all():
-                    list_alt.extend(json.loads(alt.abs_relief))
+                    list_alt.extend(ensure_profile_terrain(session, alt))
 
                 ui_fw.spinBox_alt_from.setValue(int(min(list_alt) - 5))
                 ui_fw.spinBox_alt_to.setValue(int(max(list_alt) + 5))
