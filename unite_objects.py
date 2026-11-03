@@ -126,7 +126,6 @@ class UniteObjectsDialog(QtWidgets.QDialog):
                 profile_id=profile_id,
                 model_id=selected.model_id,
                 type_model=selected.type_model,
-                is_stale=False,
             ).order_by(ProfileModelPrediction.id.desc()).first()
             if prediction is None:
                 self._warning(f"Модель не рассчитана для профиля {profile.title}.")

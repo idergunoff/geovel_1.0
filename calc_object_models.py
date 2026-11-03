@@ -240,7 +240,7 @@ def calc_object():
         for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_cls.research_id).all()):
 
             if session.query(ProfileModelPrediction).filter_by(
-                    is_stale=False, profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
+                    profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
 
                 list_formation_loaded = json.loads(co_cls.list_formation)
                 curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
@@ -298,7 +298,7 @@ def calc_object():
         for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_reg.research_id).all()):
 
             if session.query(ProfileModelPrediction).filter_by(
-                    is_stale=False, profile_id=prof.id, model_id=model.id, type_model='reg').count() == 0:
+                    profile_id=prof.id, model_id=model.id, type_model='reg').count() == 0:
 
                 list_formation_loaded = json.loads(co_reg.list_formation)
                 curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()

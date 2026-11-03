@@ -98,6 +98,8 @@ class ProfileModelPrediction(Base):
     model_id = Column(Integer)
     type_model = Column(String)
     prediction = Column(Text)
+    # Compatibility with the first terrain-manager release; no longer used to
+    # invalidate or filter saved predictions. Startup clears legacy flags.
     is_stale = Column(Boolean, default=False, server_default='0', nullable=False)
 
     profile = relationship('Profile', back_populates='predictions')

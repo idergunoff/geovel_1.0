@@ -3267,7 +3267,7 @@ def update_list_model_prediction():
         else:
             model = session.query(TrainedModelReg).filter_by(id=p.model_id).first()
         try:
-            item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title}{" [устарел: рельеф изменён]" if p.is_stale else ""} id{p.id}')
+            item = QtWidgets.QListWidgetItem(f'{p.type_model} {model.title} id{p.id}')
             item.setToolTip(f'{round(os.path.getsize(model.path_model) / 1048576, 4)} МБ\n'
                         f'{model.comment}\n'
                         f'Количество параметров: '

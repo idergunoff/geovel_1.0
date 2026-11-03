@@ -51,7 +51,7 @@ def _stored_model_prediction(param, formation):
     prediction = session.query(ProfileModelPrediction).filter_by(
         profile_id=formation.profile_id, type_model=type_model, model_id=model_id,
     ).order_by(ProfileModelPrediction.id.desc()).first()
-    if prediction is None or prediction.is_stale:
+    if prediction is None:
         return None
     try:
         values = json.loads(prediction.prediction)
@@ -201,7 +201,6 @@ def _prefetch_profile_data(markups, list_param):
             ProfileModelPrediction.profile_id.in_(profile_ids),
             ProfileModelPrediction.model_id == model_id,
             ProfileModelPrediction.type_model == type_model,
-            ProfileModelPrediction.is_stale.is_(False),
         ).order_by(ProfileModelPrediction.id).all()
         for profile_id, prediction in rows:
             if prediction is not None:
