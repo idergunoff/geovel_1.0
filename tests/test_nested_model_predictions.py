@@ -104,19 +104,20 @@ def add_model(runtime, tmp_path, type_model, model_id, params, mask=None):
     return model
 
 
-def save_prediction(runtime, formation, type_model, model_id, values):
+def save_prediction(runtime, formation, type_model, model_id, values, legacy_stale=False):
     runtime.db.add(db_models.ProfileModelPrediction(
         profile_id=formation.profile_id, type_model=type_model,
-        model_id=model_id, prediction=json.dumps(values),
+        model_id=model_id, prediction=json.dumps(values), is_stale=legacy_stale,
     ))
     runtime.db.commit()
 
 
 @pytest.mark.parametrize('type_model,values', [('cls', [0.1, 0.2, 0.3]), ('reg', [10, 20, 30])])
-def test_saved_predictions_skip_model_loading_and_parameter_collection(runtime, formation, type_model, values):
+@pytest.mark.parametrize('legacy_stale', [False, True])
+def test_saved_predictions_skip_model_loading_and_parameter_collection(runtime, formation, type_model, values, legacy_stale):
     # The trained model and its file deliberately do not exist.
-    save_prediction(runtime, formation, 'cls', 4, [0.1, 0.2, 0.3])
-    save_prediction(runtime, formation, 'reg', 4, [10, 20, 30])
+    save_prediction(runtime, formation, 'cls', 4, [0.1, 0.2, 0.3], legacy_stale)
+    save_prediction(runtime, formation, 'reg', 4, [10, 20, 30], legacy_stale)
     predict = runtime.functions['calc_profile_model_predict']
 
     assert predict(f'model_{type_model}_test_id4', formation) == values
@@ -127,9 +128,10 @@ def test_saved_predictions_skip_model_loading_and_parameter_collection(runtime, 
     assert all('Используется сохранённый прогноз' in message for message in runtime.messages)
 
 
-def test_training_prefetch_distinguishes_model_types(runtime, formation):
-    save_prediction(runtime, formation, 'cls', 4, [0.1, 0.2, 0.3])
-    save_prediction(runtime, formation, 'reg', 4, [10, 20, 30])
+@pytest.mark.parametrize('legacy_stale', [False, True])
+def test_training_prefetch_distinguishes_model_types(runtime, formation, legacy_stale):
+    save_prediction(runtime, formation, 'cls', 4, [0.1, 0.2, 0.3], legacy_stale)
+    save_prediction(runtime, formation, 'reg', 4, [10, 20, 30], legacy_stale)
     cache = runtime.functions['_prefetch_profile_data'](
         [SimpleNamespace(profile_id=formation.profile_id)], ['model_cls_test_id4', 'model_reg_test_id4'],
     )
@@ -389,24 +391,33 @@ def test_prediction_table_refreshes_land_after_binding(runtime, formation, tmp_p
     assert json.loads(formation.profile.abs_relief) == [200]*3
 
 
-def test_stale_nested_prediction_is_recomputed_instead_of_prefetched(runtime, formation, tmp_path):
+def test_saved_nested_prediction_is_preserved_and_reused_after_rebinding(runtime, formation, tmp_path):
     from terrain_service import bind_grid
     obj, common, local = _terrain_grids(runtime, formation)
     nested = add_model(runtime, tmp_path, 'reg', 2, ['land'])
-    parent = add_model(runtime, tmp_path, 'reg', 1, ['model_reg_nested_id2'])
+    parent = add_model(runtime, tmp_path, 'reg', 1, ['land', 'model_reg_nested_id2'])
     build = runtime.functions['build_table_test']
     first, _ = build('regmod', parent, formation)
+    assert first['land'].tolist() == [100]*3
     assert first['model_reg_nested_id2'].tolist() == [200]*3
+    saved = runtime.db.query(db_models.ProfileModelPrediction).one()
+    saved.is_stale = True  # Legacy marks must not block an existing result.
+    runtime.db.commit()
+    payload = saved.prediction
+    Path(nested.path_model).unlink()
     bind_grid(runtime.db, obj.id, local.id)
     runtime.db.commit()
     cache = runtime.functions['_prefetch_profile_data'](
         [SimpleNamespace(profile_id=formation.profile_id)], ['model_reg_nested_id2'])
-    assert (formation.profile_id, 'model_reg_nested_id2') not in cache
+    assert cache[(formation.profile_id, 'model_reg_nested_id2')] == [200]*3
     second, _ = build('regmod', parent, formation)
-    assert second['model_reg_nested_id2'].tolist() == [400]*3
+    assert second['land'].tolist() == [200]*3
+    assert second['model_reg_nested_id2'].tolist() == [200]*3
     third, _ = build('regmod', parent, formation)
-    assert third['model_reg_nested_id2'].tolist() == [400]*3
-    assert len(CountingModel.calls) == 2
+    assert third['model_reg_nested_id2'].tolist() == [200]*3
+    assert saved.prediction == payload
+    assert runtime.db.query(db_models.ProfileModelPrediction).count() == 1
+    assert len(CountingModel.calls) == 1
 
 
 def test_saved_training_snapshot_is_unchanged_but_new_build_uses_current_land(runtime, formation, tmp_path, monkeypatch):
@@ -434,3 +445,45 @@ def test_saved_training_snapshot_is_unchanged_but_new_build_uses_current_land(ru
     new, _ = runtime.functions['build_table_train_no_db']('regmod', analysis.id, ['land'])
     assert new.land.tolist() == [200]*3
     assert snapshot.read_bytes() == saved_bytes
+
+
+@pytest.mark.parametrize('use_land', [False, True])
+@pytest.mark.parametrize('use_correction', [False, True])
+def test_structural_map_reuses_old_prediction_with_current_land(runtime, formation, use_land, use_correction):
+    from terrain_service import bind_grid, ensure_formation_terrain
+    obj, common, local = _terrain_grids(runtime, formation)
+    save_prediction(runtime, formation, 'reg', 1, [10, 20, 30], legacy_stale=True)
+    saved = runtime.db.query(db_models.ProfileModelPrediction).one()
+    correction = db_models.PredictionCorrect(prediction_id=saved.id, correct='[11, 21, 31]')
+    runtime.db.add(correction); runtime.db.commit()
+    payload = saved.prediction
+    bind_grid(runtime.db, obj.id, local.id)
+    runtime.db.commit()
+    runtime.functions['ui'].listWidget_model_pred = SimpleNamespace(
+        currentItem=lambda: SimpleNamespace(text=lambda: f'reg model id{saved.id}'))
+    runtime.functions['ui'].checkBox_corr_pred = SimpleNamespace(isChecked=lambda: use_correction)
+    runtime.functions['ui'].checkBox_use_land = SimpleNamespace(isChecked=lambda: use_land)
+    runtime.functions['ensure_formation_terrain'] = ensure_formation_terrain
+    load_functions(ROOT / 'draw.py', runtime.functions, {'build_table_profile_model_predict'})
+    table = runtime.functions['build_table_profile_model_predict']()
+    expected = [11, 21, 31] if use_correction else [10, 20, 30]
+    assert table['prediction'].tolist() == expected
+    if use_land:
+        assert table['land'].tolist() == [200]*3
+        assert table['abs_uf'].tolist() == [200 - value for value in expected]
+    else:
+        assert 'land' not in table and 'abs_uf' not in table
+    assert saved.prediction == payload and correction.correct == '[11, 21, 31]'
+
+
+def test_legacy_mark_does_not_block_velocity_from_saved_prediction(runtime, formation):
+    formation.layer_up.layer_line = '[2, 2, 2]'
+    save_prediction(runtime, formation, 'reg', 1, [10, 20, 30], legacy_stale=True)
+    saved = runtime.db.query(db_models.ProfileModelPrediction).one()
+    binding = db_models.BindingLayerPrediction(prediction=saved, layer=formation.layer_up)
+    runtime.db.add(binding); runtime.db.commit()
+    runtime.functions.update(get_profile_id=lambda: formation.profile_id,
+                             savgol_line=lambda values, window: values)
+    load_functions(ROOT / 'velocity_prediction.py', runtime.functions, {'calc_list_velocity'})
+    assert runtime.functions['calc_list_velocity']() == [[62.5, 125, 187.5]]
+    assert saved.prediction == '[10, 20, 30]' and binding.prediction_id == saved.id

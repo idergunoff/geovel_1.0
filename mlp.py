@@ -1704,7 +1704,7 @@ def calc_object_class():
 
         if ui.checkBox_save_prof_mlp.isChecked():
             if session.query(ProfileModelPrediction).filter_by(
-                    is_stale=False, profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
+                    profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
 
                 working_data_profile = working_data.copy()
                 working_sample_profile = working_data_profile[list_param_num].values.tolist()

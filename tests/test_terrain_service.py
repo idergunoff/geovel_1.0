@@ -99,7 +99,8 @@ def test_binding_recalculates_all_researches_preserving_training_snapshot(db, tm
         assert json.loads(profile.abs_relief) == [200, 200, 200]
         assert json.loads(profile.depth_relief) == [0, 0, 0]
         assert json.loads(profile.formations[0].land) == [200, 200, 200]
-        assert [p.is_stale for p in profile.predictions] == [True, False]
+        assert [p.is_stale for p in profile.predictions] == [False, False]
+        assert [p.prediction for p in profile.predictions] == ['[1, 1, 1]', '[2, 2, 2]']
         assert json.loads(profile.abs_relief) == json.loads(profile.formations[0].land)
         assert json.loads(profile.formations[0].speed_cover) == [937.5]*3
     assert snapshot.read_bytes() == b'existing immutable training snapshot'
@@ -294,3 +295,66 @@ def test_binding_rebuilds_profiles_without_formations_and_reports_missing_cover_
     assert profile.formations[0].speed_cover is None
     assert json.loads(empty.abs_relief) == [200]*2
     assert progress == [(0, 3), (1, 3), (2, 3), (3, 3)]
+
+
+def test_terrain_changes_preserve_predictions_corrections_and_bindings(db):
+    from terrain_service import invalidate_profile
+    obj = make_object(db)
+    common = grid(db)
+    local = grid(db, 200, True)
+    profile = obj.researches[0].profiles[0]
+    formation = profile.formations[0]
+    ensure_formation_terrain(db, formation)
+    model = m.TrainedModelReg(list_params='["land", "speed_cover"]')
+    db.add(model); db.flush()
+    saved = m.ProfileModelPrediction(profile=profile, model_id=model.id, type_model='reg', prediction='[10, 20, 30]')
+    correction = m.PredictionCorrect(prediction=saved, correct='[11, 21, 31]')
+    binding = m.BindingLayerPrediction(prediction=saved, layer=formation.layer_up)
+    index = m.IndexProductivity(prediction=saved, research=profile.research)
+    db.add_all([saved, correction, binding, index]); db.commit()
+    ids = (saved.id, correction.id, binding.id, index.id)
+    bind_grid(db, obj.id, local.id)
+    bind_grid(db, obj.id, None)
+    invalidate_profile(db, profile)
+    ensure_formation_terrain(db, formation)
+    delete_grid(db, common.id)
+    db.commit()
+    assert (saved.id, correction.id, binding.id, index.id) == ids
+    assert saved.prediction == '[10, 20, 30]' and saved.is_stale is False
+    assert correction.correct == '[11, 21, 31]'
+    assert binding.prediction_id == saved.id and index.prediction_id == saved.id
+
+
+@pytest.mark.parametrize('repair', ['startup', 'migration'])
+def test_legacy_prediction_flags_are_cleared_without_changing_results(db, tmp_path, repair):
+    from alembic import command
+    from alembic.config import Config
+    from pathlib import Path
+    engine = create_engine(f'sqlite:///{tmp_path / "predictions.sqlite"}')
+    m.Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "INSERT INTO profile_model_prediction (id, profile_id, model_id, type_model, prediction, is_stale) "
+            "VALUES (1, 7, 42, 'reg', '[10, 20, 30]', 1)")
+        connection.exec_driver_sql("INSERT INTO prediction_correct (id, prediction_id, correct) VALUES (1, 1, '[11, 21, 31]')")
+        connection.exec_driver_sql("INSERT INTO binding_layer_prediction (id, prediction_id, layer_id) VALUES (1, 1, 23)")
+        connection.exec_driver_sql("INSERT INTO analysis_reg (id, data, up_data) VALUES (1, 'old.parquet', 1)")
+    if repair == 'startup':
+        ensure_terrain_schema(engine)
+        ensure_terrain_schema(engine)
+    else:
+        root = Path(__file__).resolve().parents[1]
+        config = Config(str(root / 'alembic.ini'))
+        config.set_main_option('script_location', str(root / 'alembic'))
+        config.set_main_option('sqlalchemy.url', str(engine.url))
+        command.stamp(config, '3a4b5c6d7e8f')
+        command.upgrade(config, 'head')
+        command.upgrade(config, 'head')
+    with engine.begin() as connection:
+        assert connection.exec_driver_sql(
+            'SELECT id, profile_id, model_id, prediction, is_stale FROM profile_model_prediction').one() == (
+                1, 7, 42, '[10, 20, 30]', 0)
+        assert connection.exec_driver_sql('SELECT id, prediction_id, correct FROM prediction_correct').one() == (1, 1, '[11, 21, 31]')
+        assert connection.exec_driver_sql('SELECT prediction_id, layer_id FROM binding_layer_prediction').one() == (1, 23)
+        assert connection.exec_driver_sql('SELECT data, up_data FROM analysis_reg').one() == ('old.parquet', 1)
+    engine.dispose()

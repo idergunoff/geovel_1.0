@@ -1171,7 +1171,7 @@ def build_table_profile_model_predict():
         return
     pd_predict = pd.DataFrame(columns=['x_pulc', 'y_pulc', 'prediction'])
     for prof in session.query(Profile).filter_by(research_id=predict.profile.research_id).all():
-        pred = session.query(ProfileModelPrediction).filter_by(profile_id=prof.id, model_id=predict.model_id, type_model=predict.type_model, is_stale=False).order_by(ProfileModelPrediction.id.desc()).first()
+        pred = session.query(ProfileModelPrediction).filter_by(profile_id=prof.id, model_id=predict.model_id, type_model=predict.type_model).order_by(ProfileModelPrediction.id.desc()).first()
         if not pred:
             set_info(f'Модель не расчитана для профиля {prof.title}', 'red')
             QtWidgets.QMessageBox.critical(MainWindow, 'Error', f'Модель не расчитана для профиля {prof.title}')

@@ -13,8 +13,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.spatial import cKDTree
 from sqlalchemy import inspect
 
-from models_db.model import (CommonGrid, GeoradarObject, Research, Profile, Formation,
-                             ProfileModelPrediction, TrainedModelReg, TrainedModelClass)
+from models_db.model import CommonGrid, GeoradarObject, Research, Profile, Formation
 
 
 class TerrainError(ValueError):
@@ -38,6 +37,10 @@ def ensure_terrain_schema(engine):
             for name, sql_type in columns.items():
                 if name not in existing:
                     connection.exec_driver_sql(f'ALTER TABLE {table} ADD COLUMN {name} {sql_type}')
+        # Repair flags written by the initial terrain manager. Predictions and
+        # their corrections remain saved results, independent of the terrain.
+        connection.exec_driver_sql(
+            'UPDATE profile_model_prediction SET is_stale = 0 WHERE is_stale <> 0')
 
 
 class TerrainSurface:
@@ -247,32 +250,10 @@ def sample_object_terrain(db, object_id, points):
     return surface(_resolve_grid(db, obj, points)).sample(points)
 
 
-def _terrain_model(db, type_model, model_id, visited=None):
-    visited = set() if visited is None else visited
-    identity = (type_model, model_id)
-    if identity in visited:
-        return False
-    visited.add(identity)
-    model = db.get(TrainedModelClass if type_model == 'cls' else TrainedModelReg, model_id)
-    if model is None:
-        return False
-    for param in json.loads(model.list_params or '[]'):
-        if param in ('land', 'speed_cover'):
-            return True
-        if param.startswith('model_'):
-            parts = param.split('_')
-            if _terrain_model(db, parts[1], int(param.rsplit('_id', 1)[1]), visited):
-                return True
-    return False
-
-
 def invalidate_profile(db, profile):
     profile.abs_relief = profile.depth_relief = profile.relief_source_key = None
     for formation in profile.formations:
         formation.land = formation.speed_cover = formation.land_source_key = None
-    for prediction in profile.predictions:
-        if _terrain_model(db, prediction.type_model, prediction.model_id):
-            prediction.is_stale = True
 
 
 def bind_grid(db, object_id, grid_id, progress=None):
