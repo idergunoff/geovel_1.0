@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
+PARSER_VERSION = "3.8"
+
 
 @dataclass
 class ParsedCoreInterval:
@@ -65,7 +67,7 @@ class ParsedCoreDocument:
     described_by: Optional[str]
     intervals: list[ParsedCoreInterval] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    parser_version: str = "3.8"
+    parser_version: str = PARSER_VERSION
     dictionary_version: Optional[str] = None
     drilling_start_raw: Optional[str] = None
     drilling_start: Optional[str] = None

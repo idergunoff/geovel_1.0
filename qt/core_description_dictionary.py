@@ -167,7 +167,7 @@ class CoreDescriptionDictionaryDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(self)
         note = QtWidgets.QLabel(
             "Выберите раздел и добавьте или измените слова. Сохранённый словарь применяется при следующей "
-            "загрузке документов. Для уже открытых описаний повторите загрузку.")
+            "загрузке документов. Для сохранённых описаний используйте «Переразобрать» в окне описаний керна.")
         note.setWordWrap(True)
         layout.addWidget(note)
         self.version_label = QtWidgets.QLabel()

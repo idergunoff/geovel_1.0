@@ -20,6 +20,7 @@ ALLOWED_CATEGORIES = {
     "negation", "uncertainty", "ignore",
 }
 ALLOWED_PATTERN_TYPES = {"word", "phrase", "regex"}
+SEMANTIC_PARSER_VERSION = "1.1.0"
 
 
 class DictionaryValidationError(ValueError):
@@ -178,7 +179,8 @@ def _matches(text: str, rules: Iterable[DictionaryRule]) -> list[SemanticMatch]:
     found: list[tuple[int, SemanticMatch]] = []
     for rule in rules:
         for pattern in rule.patterns:
-            expression = pattern if rule.pattern_type == "regex" else re.escape(pattern)
+            expression = (pattern if rule.pattern_type == "regex" else
+                          r"\s+".join(re.escape(part) for part in pattern.split()))
             if rule.pattern_type in {"word", "phrase"}:
                 expression = rf"(?<!\w){expression}(?!\w)"
             for match in re.finditer(expression, text, re.I):
@@ -186,7 +188,20 @@ def _matches(text: str, rules: Iterable[DictionaryRule]) -> list[SemanticMatch]:
                     rule.id, rule.category, rule.canonical_value,
                     match.group(0), match.start(), match.end(),
                 )))
-    return [item for _, item in sorted(found, key=lambda pair: (pair[1].start, -pair[0], pair[1].rule_id))]
+    result = []
+    seen = set()
+    for _, item in sorted(found, key=lambda pair: (pair[1].start, -pair[0], pair[1].rule_id)):
+        key = (item.category, item.canonical_value, item.start, item.end)
+        if key not in seen:
+            result.append(item)
+            seen.add(key)
+    # A learned multiword rock name owns its full span, including shorter bundled aliases.
+    rock_spans = []
+    for item in sorted((m for m in result if m.category == "rock"),
+                       key=lambda m: (-(m.end - m.start), m.start)):
+        if not any(item.start < other.end and item.end > other.start for other in rock_spans):
+            rock_spans.append(item)
+    return [item for item in result if item.category != "rock" or item in rock_spans]
 
 
 def analyze_description(text: str, dictionary: SemanticDictionary | None = None) -> tuple[
