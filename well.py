@@ -506,7 +506,9 @@ def show_core_description():
     if well is None:
         set_info('Скважина не выбрана', 'red')
         return
-    return open_core_description_view(session, well, MainWindow)
+    dialog = open_core_description_view(session, well, MainWindow)
+    dialog.descriptions_changed.connect(lambda _well_ids: refresh_core_descriptions())
+    return dialog
 
 
 def remove_core_description():

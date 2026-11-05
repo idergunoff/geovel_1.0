@@ -15,6 +15,7 @@ from models_db.model import (
 )
 
 from .models import ParsedCoreDocument, ParsedCoreInterval
+from .semantics import SEMANTIC_PARSER_VERSION
 from .areas import area_names_match, AREA_SIMILARITY_THRESHOLD
 from .identity import (
     WellMetadata, IdentityComparison, compare_identity, identity_match_count,
@@ -376,6 +377,11 @@ def save_core_import(
                 manually_edited=bool(edit), recognition_details=_json({
                     'matches': [asdict(match) for match in parsed.semantic_matches],
                     'warnings': parsed.warnings, 'errors': parsed.errors,
+                    'processing': {
+                        'parser_version': parsed_document.parser_version,
+                        'semantic_parser_version': SEMANTIC_PARSER_VERSION,
+                        'dictionary_version': parsed_document.dictionary_version,
+                    },
                 }),
             )
             session.add(row)
