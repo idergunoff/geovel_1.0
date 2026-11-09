@@ -27,6 +27,7 @@ def check_noise_profile():
     curve = pg.PlotCurveItem(x=number, y=label_lof, pen=pg.mkPen(color='red', width=2.4))
 
     ui.graph.addItem(curve)  # добавляем график данных на график
+    fit_profile_graph_y(ui.graph)
     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
     ui.graph.getAxis('bottom').setScale(2.5)
     ui.graph.getAxis('bottom').setLabel('Профиль, м')
