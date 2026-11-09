@@ -19,6 +19,7 @@ from mapinfo_export import (
 from profile_object_selection import choose_profile_object_ids
 from well_selection import find_well_row, well_id_from_text
 from core_description.presentation import CORE_COLOR, CORE_MARKER, core_well_ids
+from profile_graph_scale import fit_profile_graph_y
 
 
 list_param_geovel = [
@@ -1220,6 +1221,8 @@ def draw_param():
         ui.graph.getAxis('bottom').setScale(2.5)
         ui.graph.getAxis('bottom').setLabel('Профиль, м')
         set_info(f'Отрисовка параметра "{param}" для текущего профиля', 'blue')  # выводим информационное сообщение в лог синим цветом
+
+    fit_profile_graph_y(ui.graph)
 
 
 # def draw_profile_model_prediction():

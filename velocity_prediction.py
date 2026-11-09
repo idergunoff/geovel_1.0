@@ -479,6 +479,7 @@ def check_uf():
     curve_filter = pg.PlotCurveItem(x=number, y=savgol_filter(graph, 31, 3), pen=pg.mkPen(color='red', width=2.4))
     ui.graph.addItem(curve)  # добавляем график данных на график
     ui.graph.addItem(curve_filter)  # добавляем фильтрованный график данных на график
+    fit_profile_graph_y(ui.graph)
     ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
     ui.graph.getAxis('bottom').setScale(2.5)
     ui.graph.getAxis('bottom').setLabel('Профиль, м')

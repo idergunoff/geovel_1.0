@@ -237,6 +237,7 @@ def draw_fft_spectr():
     l_down = pg.InfiniteLine(pos=line_down, angle=90, pen=pg.mkPen(color='darkgreen', width=1, dash=[8, 2]))
     ui.graph.addItem(l_up)
     ui.graph.addItem(l_down)
+    fit_profile_graph_y(ui.graph)
     ui.graph.showGrid(x=True, y=True)
 
 

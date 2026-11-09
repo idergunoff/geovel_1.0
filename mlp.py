@@ -1536,7 +1536,7 @@ def draw_result_mlp(working_data, curr_form, color_marker):
     ui.graph.addItem(curve)
     ui.graph.addItem(curve_filter)
     ui.graph.addItem(text)
-    ui.graph.setYRange(0, 1)
+    fit_profile_graph_y(ui.graph, classification=True)
 
     if ui.checkBox_save_prof_mlp.isChecked():
         try:

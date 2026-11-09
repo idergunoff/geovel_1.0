@@ -3892,6 +3892,7 @@ def calc_profile_model_regmod():
         # Добавляем кривую и отфильтрованную кривую на график для всех пластов
         ui.graph.addItem(curve)
         ui.graph.addItem(curve_filter)
+        fit_profile_graph_y(ui.graph)
 
         result = QtWidgets.QMessageBox.question(ui.listWidget_well_regmod, 'Сохранение результата',
                                                 'Вы хотите сохранить результат модели?',

@@ -462,6 +462,7 @@ def show_thermogram():
         ui.graph.clear()
         curve = pg.PlotCurveItem(x=x, y=y, pen='r', name='Температура')
         ui.graph.addItem(curve)
+        fit_profile_graph_y(ui.graph)
         ui.graph.showGrid(x=True, y=True)  # отображаем сетку на графике
         show_start_therm()
         show_end_therm()
