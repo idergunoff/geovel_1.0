@@ -1,5 +1,3 @@
-from collections import Counter
-
 from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, \
     calc_entropy_features_profile, calc_nonlinear_features_profile, calc_morphology_features_profile, \
     calc_frequency_features_profile, calc_envelope_feature_profile, calc_autocorr_feature_profile, \
@@ -225,6 +223,25 @@ def _prefetch_formation_layers(markups):
     }
 
 
+def _prepare_training_terrain(formation_id):
+    """Refresh current terrain without loading unrelated feature/signal arrays."""
+    from sqlalchemy.orm import joinedload, load_only
+    from terrain_service import ensure_formation_terrain
+
+    formation = session.query(Formation).options(
+        load_only(Formation.id, Formation.profile_id, Formation.up, Formation.top,
+                  Formation.land, Formation.speed_cover, Formation.land_source_key),
+        joinedload(Formation.profile).load_only(
+            Profile.id, Profile.research_id, Profile.title, Profile.x_pulc, Profile.y_pulc,
+            Profile.abs_relief, Profile.depth_relief, Profile.relief_source_key,
+        ),
+    ).filter_by(id=formation_id).one()
+    ensure_formation_terrain(session, formation)
+    # Persist together with the finished table. A commit here would expire all
+    # markups and trigger a separate reload for each of them.
+    session.flush()
+
+
 def build_table_train(db=False, analisis='lda'):
     # Получение списка параметров
     if analisis == 'mlp':
@@ -260,6 +277,8 @@ def build_table_train(db=False, analisis='lda'):
 
 def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -> (pd.DataFrame, list):
 
+    ui.progressBar.setMaximum(0)
+    ui.progressBar.setValue(0)
     # Если в базе нет сохранённой обучающей выборки. Создание таблицы
     if analisis == 'regmod':
         data_train = pd.DataFrame(columns=['prof_well_index', 'target_value'])
@@ -280,16 +299,13 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         markups = session.query(MarkupReg).filter_by(analysis_id=analisis_id).all()
         except_param = session.query(ExceptionReg).filter_by(analysis_id=analisis_id).first()
 
-    if {'land', 'speed_cover'}.intersection(list_param):
-        from terrain_service import ensure_formation_terrain
-        for formation_id in {markup.formation_id for markup in markups}:
-            ensure_formation_terrain(session, session.get(Formation, formation_id))
-        session.commit()
-    stored_feature_cache = _prefetch_stored_features(markups, list_param)
-    remaining_formations = Counter(markup.formation_id for markup in markups)
-    remaining_profiles = Counter(markup.profile_id for markup in markups)
-    profile_data_cache = _prefetch_profile_data(markups, list_param)
-    formation_layer_cache = _prefetch_formation_layers(markups)
+    needs_terrain = bool({'land', 'speed_cover'}.intersection(list_param))
+    prepared_terrain = set()
+    profile_params = [param for param in list_param if param.startswith('prof')]
+    formation_params = [param for param in list_param if not param.startswith('prof')]
+    current_profile_id = current_formation_id = None
+    profile_data_cache, profile_feature_cache, stored_feature_cache = {}, {}, {}
+    formation_layer_cache = {}
     # Nested model parameters often refer to several models trained from the
     # same columns and differing only by their final feature mask.  Keep their
     # unmasked profile tables for this build only, so repeated models do not
@@ -312,6 +328,25 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         # в locals() под динамическими именами и оставались в памяти до конца
         # всей сборки, включая особенно объёмные signal/CRL массивы.
         runtime_values = {}
+        # Keep only the current profile/formation in memory. In particular,
+        # never decode every radargram before producing the first table row.
+        # Input order is retained even when a profile occurs again later.
+        if markup.profile_id != current_profile_id:
+            profile_data_cache.clear()
+            profile_feature_cache.clear()
+            profile_data_cache.update(_prefetch_profile_data([markup], list_param))
+            profile_feature_cache.update(_prefetch_stored_features([markup], profile_params))
+            current_profile_id = markup.profile_id
+        if markup.formation_id != current_formation_id:
+            stored_feature_cache.clear()
+            formation_layer_cache.clear()
+            model_table_cache.clear()
+            if needs_terrain and markup.formation_id not in prepared_terrain:
+                _prepare_training_terrain(markup.formation_id)
+                prepared_terrain.add(markup.formation_id)
+            stored_feature_cache.update(_prefetch_stored_features([markup], formation_params))
+            formation_layer_cache.update(_prefetch_formation_layers([markup]))
+            current_formation_id = markup.formation_id
         # Получение списка фиктивных меток и границ слоев из разметки
         list_fake = json.loads(markup.list_fake) if markup.list_fake else []
         measure_indices = sorted({
@@ -319,9 +354,8 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             if isinstance(measure, int) and measure >= 0 and measure not in list_fake
         })
         list_up, list_down = formation_layer_cache[markup.formation_id]
-        cached_signal = profile_data_cache.get((markup.profile_id, 'signal'))
-        if cached_signal is not None:
-            runtime_values[str(markup.profile_id) + '_signal'] = cached_signal
+        if (markup.profile_id, 'signal') in profile_data_cache:
+            runtime_values[str(markup.profile_id) + '_signal'] = profile_data_cache[(markup.profile_id, 'signal')]
         for param in (item for item in list_param if item.startswith('model_')):
             cached_prediction = profile_data_cache.get((markup.profile_id, param))
             if cached_prediction is not None:
@@ -331,8 +365,9 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
         for param in list_param:
             entity_id = markup.profile_id if param.startswith('prof') else markup.formation_id
             cache_key = (param, entity_id)
-            if cache_key in stored_feature_cache:
-                runtime_values[f'list_{param}'] = stored_feature_cache[cache_key]
+            feature_cache = profile_feature_cache if param.startswith('prof') else stored_feature_cache
+            if cache_key in feature_cache:
+                runtime_values[f'list_{param}'] = feature_cache[cache_key]
                 continue
             # Если параметр является расчётным
             if param.startswith('Signal') or param.startswith('distr') or param.startswith('sep') or param.startswith('mfcc'):
@@ -550,21 +585,6 @@ def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -
             if len(data_train_rows) >= TRAIN_TABLE_ROW_CHUNK_SIZE:
                 data_train_chunks.append(pd.DataFrame.from_records(data_train_rows))
                 data_train_rows.clear()
-
-        # Как только профиль/пласт больше не понадобится следующим разметкам,
-        # освобождаем его предварительно загруженные массивы. Это не даёт кэшу
-        # суммироваться с уже собранной таблицей до самого конца операции.
-        remaining_formations[markup.formation_id] -= 1
-        if remaining_formations[markup.formation_id] == 0:
-            formation_layer_cache.pop(markup.formation_id, None)
-            for key in [key for key in stored_feature_cache if key[1] == markup.formation_id and not key[0].startswith('prof')]:
-                stored_feature_cache.pop(key, None)
-        remaining_profiles[markup.profile_id] -= 1
-        if remaining_profiles[markup.profile_id] == 0:
-            for key in [key for key in profile_data_cache if key[0] == markup.profile_id]:
-                profile_data_cache.pop(key, None)
-            for key in [key for key in stored_feature_cache if key[1] == markup.profile_id and key[0].startswith('prof')]:
-                stored_feature_cache.pop(key, None)
 
         ui.progressBar.setValue(nm + 1)
 

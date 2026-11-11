@@ -447,6 +447,115 @@ def test_saved_training_snapshot_is_unchanged_but_new_build_uses_current_land(ru
     assert snapshot.read_bytes() == saved_bytes
 
 
+@pytest.mark.parametrize('analysis_kind', ['mlp', 'regmod'])
+def test_training_streams_profiles_preserving_order_and_feature_values(
+        runtime, formation, tmp_path, monkeypatch, analysis_kind):
+    import os
+    _terrain_grids(runtime, formation)  # Register feature tables and parameter families.
+    runtime.functions.update(os=os, TRAIN_TABLE_ROW_CHUNK_SIZE=2)
+    runtime.functions['list_wavelet_features'] = ['wvt_energ_D1']
+    other_profile = db_models.Profile(id=8, x_pulc='[40, 50, 60]', signal='[[7, 8], [9, 10], [11, 12]]')
+    other = db_models.Formation(id=12, profile=other_profile,
+        layer_up=db_models.Layers(profile=other_profile, layer_line='[0, 0, 0]'),
+        layer_down=db_models.Layers(profile=other_profile, layer_line='[2, 2, 2]'),
+        A_mean='[400, 500, 600]')
+    same_profile = db_models.Formation(id=13, profile=formation.profile,
+        layer_up=formation.layer_up, layer_down=formation.layer_down, A_mean='[70, 80, 90]')
+    formation.profile.signal = '[[1, 2], [3, 4], [5, 6]]'
+    formation.A_mean = '[100, 200, 300]'
+    runtime.db.add_all([other, same_profile,
+        model_profile_features.WaveletFeatureProfile(profile_id=7, wvt_energ_D1='[10, 20, 30]'),
+        model_profile_features.WaveletFeatureProfile(profile_id=8, wvt_energ_D1='[40, 50, 60]')])
+    if analysis_kind == 'mlp':
+        analysis = db_models.AnalysisMLP(title='Streaming')
+        marker = db_models.MarkerMLP(analysis=analysis, title='Rock')
+        markup_class = db_models.MarkupMLP
+        target = dict(marker=marker)
+    else:
+        analysis = db_models.AnalysisReg(title='Streaming')
+        markup_class = db_models.MarkupReg
+        target = dict(target_value=42)
+    runtime.db.add(analysis)
+    runtime.db.flush()
+    analysis_id = analysis.id
+    for well_id, form, measures, fake in (
+            (1, formation, '[0, 2, 0]', '[2]'), (2, formation, '[2]', None),
+            (3, same_profile, '[1]', None), (4, other, '[1]', None), (5, formation, '[1]', None)):
+        runtime.db.add(markup_class(analysis=analysis, formation=form, profile=form.profile,
+            well_id=well_id, list_measure=measures, list_fake=fake, **target))
+    runtime.db.commit()
+    for form in (formation, other):
+        save_prediction(runtime, form, 'reg', 99, [11, 22, 33])
+
+    progress, loads = [], []
+    runtime.functions['ui'].progressBar.setValue = progress.append
+    prefetch = runtime.functions['_prefetch_profile_data']
+    def record_prefetch(markups, params):
+        assert len(markups) == 1  # Raw arrays are never loaded for future profiles.
+        loads.append((markups[0].profile_id, progress[-1]))
+        return prefetch(markups, params)
+    runtime.functions['_prefetch_profile_data'] = record_prefetch
+    monkeypatch.chdir(tmp_path)
+    (tmp_path/'data_tables'/'cls').mkdir(parents=True)
+    (tmp_path/'data_tables'/'reg').mkdir(parents=True)
+    params = ['Signal_Abase', 'X', 'A_mean', 'prof_wvt_energ_D1', 'model_reg_saved_id99']
+    table, _ = runtime.functions['build_table_train_no_db'](analysis_kind, analysis_id, params)
+    target_name = 'mark' if analysis_kind == 'mlp' else 'target_value'
+    expected = pd.DataFrame({
+        'prof_well_index': ['7_1_0', '7_1_0', '7_2_2', '7_3_1', '8_4_1', '7_5_1'],
+        target_name: ['Rock' if analysis_kind == 'mlp' else 42]*6,
+        'Signal_Abase_1': [1, 1, 5, 3, 9, 3], 'Signal_Abase_2': [2, 2, 6, 4, 10, 4],
+        'X': [10, 10, 30, 20, 50, 20], 'A_mean': [100, 100, 300, 80, 500, 200],
+        'prof_wvt_energ_D1': [10, 10, 30, 20, 50, 20],
+        'model_reg_saved_id99': [11, 11, 33, 22, 22, 22],
+    })
+    pd.testing.assert_frame_equal(table, expected, check_dtype=False)
+    assert loads == [(7, 0), (8, 3), (7, 4)]
+    assert progress == [0, 1, 2, 3, 4, 5]
+    stored_analysis = runtime.db.get(type(analysis), analysis_id)
+    pd.testing.assert_frame_equal(pd.read_parquet(stored_analysis.data), table)
+    assert stored_analysis.up_data
+
+
+def test_training_terrain_does_not_reload_markups_or_read_raw_signal(
+        runtime, formation, tmp_path, monkeypatch):
+    import os
+    from sqlalchemy import event
+    from terrain_service import ensure_formation_terrain
+    _terrain_grids(runtime, formation)
+    runtime.functions.update(os=os, TRAIN_TABLE_ROW_CHUNK_SIZE=1000)
+    formation.profile.signal = 'unneeded raw signal'
+    formation.top = '[90, 90, 90]'
+    formation.layer_up.layer_line = '[2, 2, 2]'
+    analysis = db_models.AnalysisReg(title='Terrain streaming')
+    runtime.db.add(analysis)
+    runtime.db.flush()
+    analysis_id = analysis.id
+    for i in range(3):
+        runtime.db.add(db_models.MarkupReg(analysis=analysis, formation=formation,
+            profile=formation.profile, well_id=i+1, target_value=42, list_measure=f'[{i}]'))
+    ensure_formation_terrain(runtime.db, formation)
+    runtime.db.commit()
+    # Expire everything to exercise real database loads, rather than warm ORM objects.
+    runtime.db.expire_all()
+    queries = []
+    def record_query(conn, cursor, statement, parameters, context, many):
+        if statement.startswith('SELECT'):
+            queries.append(statement)
+    event.listen(runtime.db.bind, 'before_cursor_execute', record_query)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path/'data_tables'/'reg').mkdir(parents=True)
+    try:
+        table, _ = runtime.functions['build_table_train_no_db'](
+            'regmod', analysis_id, ['land', 'speed_cover'])
+    finally:
+        event.remove(runtime.db.bind, 'before_cursor_execute', record_query)
+    assert table.land.tolist() == [100]*3
+    assert table.speed_cover.tolist() == [62.5]*3
+    assert sum('FROM markup_reg' in query for query in queries) == 1
+    assert not any('profile.signal' in query for query in queries)
+
+
 @pytest.mark.parametrize('use_land', [False, True])
 @pytest.mark.parametrize('use_correction', [False, True])
 def test_structural_map_reuses_old_prediction_with_current_land(runtime, formation, use_land, use_correction):
