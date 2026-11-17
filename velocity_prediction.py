@@ -1,10 +1,14 @@
 import json
 import random
 import statistics
+from html import escape
+
+from sqlalchemy.exc import SQLAlchemyError
 
 
 from func import *
 from velocity_model import check_intersection
+from velocity_prediction_binding import bind_object_predictions
 
 
 def update_list_bind_vel_prediction():
@@ -44,6 +48,25 @@ def rmv_bind_vel_prediction():
         set_info('Выберите привязку которую хотите удалить', 'red')
     session.commit()
     update_list_bind_vel_prediction()
+
+
+def add_bind_vel_prediction_all_profiles():
+    object_id, profile_id = get_object_id(), get_profile_id()
+    if not object_id or not profile_id:
+        set_info('Выберите объект и текущий профиль с настроенными привязками.', 'red')
+        return
+    try:
+        count = bind_object_predictions(session, object_id, profile_id)
+        session.commit()
+    except ValueError as error:
+        set_info(escape(str(error)).replace('\n', '<br>'), 'red')
+        return
+    except SQLAlchemyError:
+        session.rollback()
+        set_info('Не удалось сохранить привязки. Изменения отменены.', 'red')
+        return
+    update_list_bind_vel_prediction()
+    set_info(f'Привязки текущего профиля применены к остальным профилям объекта: {count}.', 'green')
 
 
 def calc_deep_predict_current_profile():

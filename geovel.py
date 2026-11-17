@@ -649,6 +649,7 @@ ui.toolButton_ix_prod_clr.clicked.connect(index_prod_clear)
 
 ########## Velocity Prediction ############
 ui.pushButton_add_bind_vel_pred.clicked.connect(add_bind_vel_prediction)
+ui.pushButton_bind_vel_pred_all_profiles.clicked.connect(add_bind_vel_prediction_all_profiles)
 ui.pushButton_rmv_bind_vel_pred.clicked.connect(rmv_bind_vel_prediction)
 ui.pushButton_draw_vel_pred.clicked.connect(draw_radar_vel_pred)
 ui.checkBox_model_nn.clicked.connect(update_list_model_nn)

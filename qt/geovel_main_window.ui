@@ -2298,9 +2298,12 @@
                  </widget>
                 </item>
                 <item row="1" column="3">
-                 <widget class="QPushButton" name="pushButton_4">
+                 <widget class="QPushButton" name="pushButton_bind_vel_pred_all_profiles">
+                  <property name="toolTip">
+                   <string>Применить привязки всех слоёв текущего профиля ко всем остальным профилям объекта, включая все исследования. Слои сопоставляются по имени, prediction — по модели и типу. Существующие привязки заменяются. При отличии слоёв, отсутствии или неоднозначности prediction изменения не применяются.</string>
+                  </property>
                   <property name="text">
-                   <string/>
+                   <string>bind all profiles</string>
                   </property>
                  </widget>
                 </item>
