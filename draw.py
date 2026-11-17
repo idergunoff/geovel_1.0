@@ -1295,6 +1295,8 @@ def draw_relief():
                 set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
                 return
             velocity_signal = calc_deep_predict_current_profile()
+            if velocity_signal is None:
+                return
             depth_relief = relief_display_depth(prof)
             relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in range(len(depth_relief))]
             l_max = 0
@@ -1353,12 +1355,9 @@ def draw_relief():
                 set_info('Нет привязанных слоев для отображения (Velocity - Prediction)', 'red')
                 return
             deep_signal = calc_deep_predict_current_profile()
-            l_max = 0
-            try:
-                for i in deep_signal:
-                    l_max = len(i) if len(i) > l_max else l_max
-            except:
+            if deep_signal is None:
                 return
+            l_max = max(map(len, deep_signal))
             deep_signal = [i + [-128 for _ in range(l_max - len(i))] for i in deep_signal]
             deep_signal = [interpolate_list(i, 512) for i in deep_signal]
             draw_image_deep_prof(deep_signal, l_max / 512)
@@ -1441,6 +1440,8 @@ def draw_profile_model_prediction():
             prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
 
             velocity_signal = calc_deep_predict_current_profile()
+            if velocity_signal is None:
+                return
             depth_relief = relief_display_depth(prof)
             relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
                                       range(len(depth_relief))]
@@ -1475,6 +1476,8 @@ def draw_profile_model_prediction():
                 list_down = [list_down[i] if list_down[i] > list_up[i] else list_up[i] for i in range(len(list_down))]
         else:
             deep_signal = calc_deep_predict_current_profile()
+            if deep_signal is None:
+                return
             l_max = 0
             for i in deep_signal:
                 l_max = len(i) if len(i) > l_max else l_max
@@ -1582,6 +1585,8 @@ def draw_velocity_model_color():
             if ui.checkBox_relief.isChecked():
                 prof = session.query(Profile).filter(Profile.id == curr_prof.profile_id).first()
                 velocity_signal = calc_deep_predict_current_profile()
+                if velocity_signal is None:
+                    return
                 depth_relief = relief_display_depth(prof)
                 relief_velocity_signal = [[-128 for _ in range(int(depth_relief[i]))] + velocity_signal[i] for i in
                                           range(len(depth_relief))]
@@ -1590,6 +1595,8 @@ def draw_velocity_model_color():
                     l_max = len(i) if len(i) > l_max else l_max
             else:
                 deep_signal = calc_deep_predict_current_profile()
+                if deep_signal is None:
+                    return
                 l_max = 0
                 for i in deep_signal:
                     l_max = len(i) if len(i) > l_max else l_max
