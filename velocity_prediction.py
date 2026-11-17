@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 from func import *
-from velocity_model import check_intersection
+from velocity_depth_signal import build_velocity_depth_signal
 from velocity_prediction_binding import bind_object_predictions
 
 
@@ -70,66 +70,42 @@ def add_bind_vel_prediction_all_profiles():
 
 
 def calc_deep_predict_current_profile():
-    list_layer_line, list_predict = [], []
-    for i in session.query(BindingLayerPrediction).join(Layers).filter(Layers.profile_id == get_profile_id()).all():
-        try:
-            list_predict.append(savgol_line(json.loads(i.prediction.prediction), 175))
-            list_layer_line.append(json.loads(i.layer.layer_line))
-        except AttributeError:
-            session.delete(i)
-            session.commit()
-            continue
-
-    if not check_intersection(list_layer_line):
-        set_info('Слои не должны пересекаться', 'red')
-        return
-
+    profile_id = get_profile_id()
     if ui.checkBox_minmax.isChecked():
         curr_prof = session.query(CurrentProfileMinMax).first()
     else:
         curr_prof = session.query(CurrentProfile).first()
+    if curr_prof is None or curr_prof.profile_id != profile_id:
+        set_info('Не выбран профиль для пересчёта глубины.', 'red')
+        return
     try:
         signal = json.loads(curr_prof.signal)
-    except AttributeError:
-        set_info('Не выбран профиль', 'red')
-        return
-    deep_signal = [[] for _ in range(len(signal))]
-    
-    for i in range(len(list_predict) + 1):
-        try:
-            if i == 0:
-                list_layer_top = [0 for _ in range(len(signal))]
-            else:
-                list_layer_top = list_layer_line[i - 1]
-
-            if i == len(list_predict):
-                list_layer_bottom = [511 for _ in range(len(signal))]
-            else:
-                list_layer_bottom = list_layer_line[i]
-
-            if i == 0:
-                list_deep_line = list_predict[i]
-            elif i == len(list_predict):
-                list_deep_line = [(5 * 8 * (511 - list_layer_top[nv])) / 100  for nv in range(len(signal))]
-            else:
-                list_deep_line = [list_predict[i][j] - list_predict[i-1][j] for j in range(len(signal))]
-        except IndexError:
-            break
-
-        for nm, measure in enumerate(signal):
+        bindings = session.query(BindingLayerPrediction).join(Layers).filter(
+            Layers.profile_id == profile_id,
+        ).order_by(BindingLayerPrediction.id).all()
+        boundaries = []
+        for binding in bindings:
+            if binding.prediction is None or binding.prediction.profile_id != profile_id:
+                raise ValueError(f'Слой «{binding.layer.layer_title}»: нет prediction этого профиля; проверьте привязку.')
+            prediction = binding.prediction
+            raw_depths = (prediction.corrected[0].correct
+                          if ui.checkBox_corr_pred.isChecked() and prediction.corrected else prediction.prediction)
             try:
-                deep_signal[nm] = deep_signal[nm] + interpolate_list(
-                    measure[list_layer_top[nm]:list_layer_bottom[nm]],
-                    int(list_deep_line[nm]))
-            except IndexError:
-                break
-    return deep_signal
+                boundaries.append((binding.layer.layer_title, json.loads(binding.layer.layer_line), json.loads(raw_depths)))
+            except (TypeError, ValueError) as error:
+                raise ValueError(f'Слой «{binding.layer.layer_title}»: не сохранены корректные границы или prediction.') from error
+        return build_velocity_depth_signal(signal, boundaries, interpolate_list, savgol_line)
+    except (TypeError, ValueError) as error:
+        set_info(f'Профиль id{profile_id}: {escape(str(error))}', 'red')
+        return
 
 
 
 def draw_radar_vel_pred():
 
     deep_signal = calc_deep_predict_current_profile()
+    if deep_signal is None:
+        return
     l_max = 0
     for i in deep_signal:
         l_max = len(i) if len(i) > l_max else l_max

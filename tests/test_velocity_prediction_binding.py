@@ -1,4 +1,5 @@
 import ast
+import json
 from html import escape
 from pathlib import Path
 from types import SimpleNamespace
@@ -224,3 +225,43 @@ def test_button_handler_rolls_back_failed_save(dataset, monkeypatch):
     assert 'отменены' in messages[-1][0]
     assert refreshed == []
     assert snapshot(dataset.db) == before
+
+
+def test_bulk_bound_profiles_render_thin_intervals_with_production_calculation(dataset):
+    from scipy.signal import savgol_filter
+    from models_db.model import CurrentProfile
+    from velocity_depth_signal import build_velocity_depth_signal
+
+    db = dataset.db
+    for profile in dataset.profiles[:3]:
+        for layer in profile.layers:
+            layer.layer_line = json.dumps([2 if layer.layer_title == 'top' else 3] * 7)
+        for prediction in profile.predictions:
+            prediction.prediction = json.dumps([1.5 if prediction.model_id == 7 else 1.9] * 7)
+    db.commit()
+    apply(dataset)
+    before = snapshot(db)
+    target = dataset.profiles[2]
+    db.add(CurrentProfile(profile_id=target.id, signal=json.dumps([list(range(512))] * 7)))
+    db.commit()
+    messages = []
+    namespace = dict(
+        session=db, json=json, escape=escape, savgol_filter=savgol_filter,
+        CurrentProfile=CurrentProfile, Layers=Layers, BindingLayerPrediction=BindingLayerPrediction,
+        get_profile_id=lambda: target.id, build_velocity_depth_signal=build_velocity_depth_signal,
+        set_info=lambda text, color: messages.append(text),
+        ui=SimpleNamespace(checkBox_minmax=SimpleNamespace(isChecked=lambda: False),
+                           checkBox_corr_pred=SimpleNamespace(isChecked=lambda: False)),
+    )
+    root = Path(__file__).resolve().parents[1]
+    for filename, names in [('func.py', {'interpolate_list', 'savgol_line'}),
+                            ('velocity_prediction.py', {'calc_deep_predict_current_profile'})]:
+        path = root / filename
+        functions = [node for node in ast.parse(path.read_text(encoding='utf-8')).body
+                     if isinstance(node, ast.FunctionDef) and node.name in names]
+        exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), 'exec'), namespace)
+    result = namespace['calc_deep_predict_current_profile']()
+    assert len(result) == 7
+    assert all(len(trace) == 205 for trace in result)
+    assert messages == []
+    assert snapshot(db) == before
