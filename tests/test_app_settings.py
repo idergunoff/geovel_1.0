@@ -56,6 +56,20 @@ def test_dialog_directory_preserves_save_filename(app, tmp_path):
     assert app_settings._dialog_directory("ignored", save=False) == str(tmp_path)
 
 
+def test_editable_combobox_restores_custom_text(app):
+    dialog = QtWidgets.QDialog()
+    combo = QtWidgets.QComboBox(dialog, objectName="comboBox_interval")
+    combo.setEditable(True)
+    combo.addItems(["Автоматически", "1"])
+    combo.setEditText("0,75")
+
+    app_settings.save_form(dialog, "test")
+    combo.setCurrentIndex(1)
+    app_settings.restore_form(dialog, "test")
+
+    assert combo.currentText() == "0,75"
+
+
 def test_remember_selection_accepts_multiple_files(app, tmp_path):
     selection = ([str(tmp_path / "first.doc"), str(tmp_path / "second.docx")],
                  "Word (*.doc *.docx)")

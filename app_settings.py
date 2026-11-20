@@ -77,6 +77,8 @@ def _restore_widget(widget, value):
         index = widget.findText(str(value))
         if index >= 0:
             widget.setCurrentIndex(index)
+        elif widget.isEditable():
+            widget.setEditText(str(value))
     elif isinstance(widget, QtWidgets.QLineEdit):
         widget.setText(str(value))
     elif isinstance(widget, QtWidgets.QTabWidget):

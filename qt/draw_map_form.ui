@@ -218,13 +218,54 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEdit_report_contour_step">
+           <widget class="QComboBox" name="comboBox_report_contour_step">
+            <property name="editable">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>Выберите готовый шаг или введите своё значение</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_report_scale_min">
+            <property name="text">
+             <string>Минимум шкалы</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_report_scale_min">
             <property name="placeholderText">
              <string>Автоматически</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_report_scale_max">
+            <property name="text">
+             <string>Максимум шкалы</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_report_scale_max">
+            <property name="placeholderText">
+             <string>Автоматически</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_report_points">
+            <property name="text">
+             <string>Показать точки замеров</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_report_clip">
             <property name="text">
              <string>Обрезать по области замеров</string>
@@ -234,7 +275,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="5" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_report_profiles">
             <property name="text">
              <string>Показать профили исследования</string>

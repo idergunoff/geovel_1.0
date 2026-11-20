@@ -13,7 +13,7 @@ from scipy.spatial import ConvexHull, QhullError
 
 
 def parse_contour_interval(text):
-    if not text.strip():
+    if text.strip() in ('', 'Автоматически'):
         return None
     try:
         interval = float(text.replace(',', '.'))
@@ -22,6 +22,24 @@ def parse_contour_interval(text):
     if not np.isfinite(interval) or interval <= 0:
         raise ValueError('Шаг изолиний должен быть положительным числом.')
     return interval
+
+
+def parse_scale_bounds(minimum, maximum):
+    bounds = []
+    for text, label in ((minimum, 'Минимум'), (maximum, 'Максимум')):
+        if not text.strip():
+            bounds.append(None)
+            continue
+        try:
+            value = float(text.replace(',', '.'))
+        except ValueError:
+            value = np.nan
+        if not np.isfinite(value):
+            raise ValueError(f'{label} шкалы должен быть числом.')
+        bounds.append(value)
+    if all(value is not None for value in bounds) and bounds[0] >= bounds[1]:
+        raise ValueError('Минимум шкалы должен быть меньше максимума.')
+    return tuple(bounds)
 
 
 def _color_levels(low, high, interval):
@@ -44,7 +62,7 @@ def _color_levels(low, high, interval):
 def build_report_map(
     xx, yy, surface, samples, *, title, parameter, cmap, grid_step, method,
     contour_interval=None, show_contours=True, show_points=True, clip_to_samples=True,
-    profiles=(), wells=(), sample_names=None,
+    profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None,
 ):
     """Build the report figure from the existing grid."""
     x_min, x_max = xx.min(), xx.max()
@@ -66,20 +84,36 @@ def build_report_map(
     if surface.count() == 0:
         raise ValueError('Нет расчётных значений для построения отчётной карты.')
     surface_low, surface_high = float(surface.min()), float(surface.max())
-    low, high = surface_low, surface_high
+    data_low, data_high = surface_low, surface_high
     if show_points and len(valid_samples):
-        low = min(low, float(valid_samples[:, 2].min()))
-        high = max(high, float(valid_samples[:, 2].max()))
+        data_low = min(data_low, float(valid_samples[:, 2].min()))
+        data_high = max(data_high, float(valid_samples[:, 2].max()))
+    low = data_low if scale_min is None else scale_min
+    high = data_high if scale_max is None else scale_max
+    if low == high and (scale_min is None) != (scale_max is None):
+        auto_low, *_, auto_high = _color_levels(low, high, None)
+        low = auto_low if scale_min is None else low
+        high = auto_high if scale_max is None else high
+    if low > high or (low == high and scale_min is not None and scale_max is not None):
+        raise ValueError('Минимум шкалы должен быть меньше максимума. Проверьте обе границы.')
     levels = _color_levels(low, high, contour_interval if show_contours else None)
+    if scale_min is not None:
+        levels = np.r_[low, levels[levels > low]]
+    if scale_max is not None:
+        levels = np.r_[levels[levels < high], high]
     palette = colormaps.get_cmap(cmap)
     if palette.N < len(levels) - 1:
         palette = palette.resampled(len(levels) - 1)
     norm = BoundaryNorm(levels, palette.N)
 
-    fill = ax.contourf(xx, yy, surface, levels=levels, cmap=palette, norm=norm)
+    extend_low, extend_high = data_low < levels[0], data_high > levels[-1]
+    extend = {(True, True): 'both', (True, False): 'min',
+              (False, True): 'max', (False, False): 'neither'}[extend_low, extend_high]
+    fill = ax.contourf(xx, yy, surface, levels=levels, cmap=palette, norm=norm, extend=extend)
     colorbar = figure.colorbar(fill, cax=ax.inset_axes([1.03, 0, 0.045, 1]),
                                spacing='proportional', label=parameter)
-    ticks = levels[::max(1, ceil((len(levels) - 1) / 10))] if low < high else [low]
+    tick_step = max(1, ceil((len(levels) - 1) / 10))
+    ticks = np.r_[levels[:-1:tick_step], levels[-1]] if low < high else [low]
     colorbar.set_ticks(ticks)
 
     coverage = None
@@ -99,26 +133,17 @@ def build_report_map(
         lines = ax.contour(xx, yy, surface, levels=contour_levels, colors='0.2', linewidths=0.65)
         if coverage is not None:
             lines.set_clip_path(coverage)
-        label_style = dict(inline=False, fontsize=8, fmt=lambda level: f'{level:.8g}')
-        labels = list(ax.clabel(lines, **label_style))
+        manual = False
         if coverage is not None:
             path = coverage.get_path()
-            visible_labels = []
-            for label in labels:
-                if path.contains_point(label.get_position()):
-                    visible_labels.append(label)
-                else:
-                    label.remove()
-            labeled = {label.get_text() for label in visible_labels}
-            for level, segments in zip(lines.levels, lines.allsegs):
-                if label_style['fmt'](level) in labeled:
-                    continue
+            manual = []
+            for segments in lines.allsegs:
                 visible_segments = [segment[path.contains_points(segment)] for segment in segments]
                 segment = max(visible_segments, key=len, default=[])
-                if len(segment):
-                    placed = ax.clabel(lines, levels=[level], manual=[segment[len(segment) // 2]], **label_style)
-                    visible_labels.append(placed[-1])
-            labels = visible_labels
+                if len(segment) > 1:
+                    manual.append(segment[len(segment) // 2])
+        # Pass all levels together: Matplotlib's manual placement indexes the full contour set.
+        labels = ax.clabel(lines, manual=manual, inline=False, fontsize=8, fmt=lambda level: f'{level:.8g}')
         for label in labels:
             label.set_path_effects([patheffects.withStroke(linewidth=2.5, foreground='white')])
 
