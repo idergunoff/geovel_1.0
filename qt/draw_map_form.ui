@@ -90,7 +90,7 @@
        <item row="2" column="1">
         <widget class="QSpinBox" name="spinBox_grid">
          <property name="toolTip">
-          <string>Размер сетки</string>
+           <string>Расстояние между соседними узлами сетки</string>
          </property>
          <property name="minimum">
           <number>20</number>
@@ -109,7 +109,7 @@
           <enum>Qt::LeftToRight</enum>
          </property>
          <property name="text">
-          <string>Grid:</string>
+          <string>Шаг сетки, м</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -181,6 +181,67 @@
          <property name="text">
           <string>show uncertainty</string>
          </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_map_style">
+         <property name="text">
+          <string>Оформление карты</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QComboBox" name="comboBox_map_style">
+         <item>
+          <property name="text">
+           <string>Обычное</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Для отчёта</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_report_map">
+         <property name="title">
+          <string>Настройки отчётной карты</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_report_map">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_report_contour_step">
+            <property name="text">
+             <string>Шаг изолиний</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="lineEdit_report_contour_step">
+            <property name="placeholderText">
+             <string>Автоматически</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_report_clip">
+            <property name="text">
+             <string>Обрезать по области замеров</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_report_profiles">
+            <property name="text">
+             <string>Показать профили исследования</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
       </layout>
