@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from report_map import build_report_map, parse_contour_interval, parse_scale_bounds
+from report_map import build_categorical_report_map, build_report_map, parse_contour_interval, parse_scale_bounds
 
 
 def test_report_map_uses_the_same_scale_and_clips_the_field():
@@ -99,3 +99,48 @@ def test_report_scale_fields_accept_independent_bounds():
         parse_scale_bounds('5', '5')
     with pytest.raises(ValueError, match='Максимум шкалы должен быть числом'):
         parse_scale_bounds('', 'inf')
+
+
+def test_categorical_report_draws_only_boundaries_between_visible_classes(tmp_path):
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    cells = np.ma.array([[0, 0], [1, 1], [2, 2]], mask=[[False, False], [False, False], [True, False]])
+    points = np.array([[0, 0], [100, 100], [200, 100]])
+    labels = np.array([2, 8, -1])
+    colors = {2: 'red', 8: 'blue', -1: 'gray'}
+
+    figure = build_categorical_report_map(
+        xx, yy, cells, points, labels, colors, title='Кластерная карта', grid_step=100,
+        method='Probability', clip_to_samples=True, uncertainty=cells / 2,
+        profiles=[([0, 200], [25, 75])], wells=[(100, 50, 'Скв. 1', 'orange')],
+    )
+
+    ax = figure.axes[0]
+    fill, overlay, boundaries, *_ = ax.collections
+    assert ax.get_aspect() == 1
+    np.testing.assert_array_equal(np.ma.getmaskarray(fill.get_array()).reshape(cells.shape), cells.mask)
+    assert fill.cmap.colors == ['red', 'blue', 'gray']
+    assert overlay.get_clim() == (0, 1)
+    assert ax.get_legend().get_texts()[0].get_text() == 'Кластер 2'
+    assert [label.get_text() for label in ax.get_legend().get_texts()] == [
+        'Кластер 2', 'Кластер 8', 'Шум', 'Профили', 'Точки замеров', 'Шумовые точки', 'Скважины',
+    ]
+    np.testing.assert_allclose(boundaries.get_segments(), [
+        [[50, -50], [50, 50]], [[50, 50], [50, 150]], [[150, 50], [150, 150]],
+    ])
+
+    for suffix, signature in [('pdf', b'%PDF'), ('png', b'\x89PNG')]:
+        target = tmp_path / f'кластеры.{suffix}'
+        figure.savefig(target)
+        assert target.read_bytes().startswith(signature)
+
+
+def test_categorical_report_can_hide_points_and_boundaries_with_one_class():
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    figure = build_categorical_report_map(
+        xx, yy, np.zeros(xx.shape, dtype=int), np.array([[0, 0]]), np.array([7]), {7: 'blue'},
+        title='Один класс', grid_step=100, method='Nearest', show_points=False, show_contours=False,
+    )
+
+    ax = figure.axes[0]
+    assert len(ax.collections) == 1
+    assert [label.get_text() for label in ax.get_legend().get_texts()] == ['Кластер 7']
