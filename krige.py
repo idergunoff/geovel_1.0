@@ -18,7 +18,7 @@ from kriging_utils import (
 )
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
-from report_map import build_report_map, parse_contour_interval
+from report_map import build_report_map, parse_contour_interval, parse_scale_bounds
 from well_map_style import well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
@@ -316,6 +316,10 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     ui_dm.setupUi(Draw_Map)
     Draw_Map.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     ui_dm.checkBox_report_profiles.setChecked(profiles)
+    ui_dm.comboBox_report_contour_step.setInsertPolicy(QtWidgets.QComboBox.NoInsert)
+    ui_dm.comboBox_report_contour_step.addItems([
+        'Автоматически', '0,01', '0,05', '0,1', '0,2', '0,5', '1', '2', '5', '10', '20', '50', '100',
+    ])
 
     for i in cmap_list:
         ui_dm.comboBox_cmap.addItem(i)
@@ -393,10 +397,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         return not _is_categorical_mode() and ui_dm.comboBox_map_style.currentIndex() == 1
 
     def _apply_map_style_state():
+        report_style = _is_report_style()
         ui_dm.label_map_style.setVisible(not _is_categorical_mode())
         ui_dm.comboBox_map_style.setVisible(not _is_categorical_mode())
-        ui_dm.groupBox_report_map.setVisible(_is_report_style())
-        ui_dm.lineEdit_report_contour_step.setEnabled(ui_dm.checkBox_show_contours.isChecked())
+        ui_dm.groupBox_report_map.setVisible(report_style)
+        ui_dm.checkBox_show_points.setVisible(not report_style)
+        ui_dm.comboBox_report_contour_step.setEnabled(ui_dm.checkBox_show_contours.isChecked())
 
     def _rebuild_interp_method_options():
         if interp_method_combo is None:
@@ -488,9 +494,13 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     def form_lda_ok():
         report_style = _is_report_style()
         contour_interval = None
-        if report_style and ui_dm.checkBox_show_contours.isChecked():
+        if report_style:
             try:
-                contour_interval = parse_contour_interval(ui_dm.lineEdit_report_contour_step.text())
+                if ui_dm.checkBox_show_contours.isChecked():
+                    contour_interval = parse_contour_interval(ui_dm.comboBox_report_contour_step.currentText())
+                scale_min, scale_max = parse_scale_bounds(
+                    ui_dm.lineEdit_report_scale_min.text(), ui_dm.lineEdit_report_scale_max.text(),
+                )
             except ValueError as exc:
                 QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))
                 return
@@ -792,12 +802,13 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     parameter=param, cmap=color_map, grid_step=grid_size, method=surface_method,
                     contour_interval=contour_interval,
                     show_contours=ui_dm.checkBox_show_contours.isChecked(),
-                    show_points=ui_dm.checkBox_show_points.isChecked(),
+                    show_points=ui_dm.checkBox_report_points.isChecked(),
                     clip_to_samples=ui_dm.checkBox_report_clip.isChecked(),
                     profiles=_report_profiles() if ui_dm.checkBox_report_profiles.isChecked() else (),
                     wells=[(well.x_coord, well.y_coord, well.name, well_marker_color(well))
                            for well in wells.values()],
                     sample_names=list_name,
+                    scale_min=scale_min, scale_max=scale_max,
                 )
             except ValueError as exc:
                 QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))

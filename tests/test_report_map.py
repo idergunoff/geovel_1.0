@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from report_map import build_report_map, parse_contour_interval
+from report_map import build_report_map, parse_contour_interval, parse_scale_bounds
 
 
 def test_report_map_uses_the_same_scale_and_clips_the_field():
@@ -48,6 +48,7 @@ def test_report_exports_constant_surface_without_a_coverage_polygon(tmp_path):
 def test_report_rejects_invalid_or_unreasonably_fine_contour_steps():
     assert parse_contour_interval(' 0,25 ') == 0.25
     assert parse_contour_interval('') is None
+    assert parse_contour_interval('Автоматически') is None
     with pytest.raises(ValueError, match='положительным'):
         parse_contour_interval('nan')
 
@@ -58,3 +59,43 @@ def test_report_rejects_invalid_or_unreasonably_fine_contour_steps():
             parameter='м/с', cmap='jet', grid_step=75, method='Кригинг',
             contour_interval=0.1,
         )
+
+
+def test_report_labels_higher_levels_when_coverage_excludes_lower_contours():
+    xx, yy = np.mgrid[0:1000:10, 0:400:10]
+    figure = build_report_map(
+        xx, yy, xx / 100, np.array([[620, 40, 6.2], [950, 40, 9.5], [790, 105, 7.9]]),
+        title='Скорость', parameter='м/с', cmap='viridis', grid_step=10, method='Кригинг',
+        contour_interval=1,
+    )
+    labels = {label.get_text() for label in figure.axes[0].texts}
+    assert labels == {'7', '8', '9'}
+
+
+def test_report_respects_exact_scale_bounds_and_can_hide_points():
+    xx, yy = np.mgrid[0:600:25, 0:400:25]
+    figure = build_report_map(
+        xx, yy, xx / 100, np.array([[50, 50, -1], [500, 50, 7], [300, 325, 3]]),
+        title='Скорость', parameter='м/с', cmap='viridis', grid_step=25, method='Кригинг',
+        contour_interval=1, scale_min=1.3, scale_max=4.8, show_points=False,
+        sample_names=['Замер 1', 'Замер 2', 'Замер 3'], wells=[(260, 100, 'Скв. 1', 'orange')],
+    )
+    ax = figure.axes[0]
+    fill, contours, _ = ax.collections
+    assert fill.extend == 'both'
+    assert fill.get_clip_path() is not None
+    np.testing.assert_allclose(fill.levels, [1.3, 2, 3, 4, 4.8])
+    np.testing.assert_allclose(contours.levels, fill.levels)
+    np.testing.assert_allclose(ax.child_axes[0].get_yticks(), fill.levels)
+    assert ax.get_legend_handles_labels()[1] == ['Скважины']
+    assert {text.get_text() for text in ax.texts}.isdisjoint(['Замер 1', 'Замер 2', 'Замер 3'])
+
+
+def test_report_scale_fields_accept_independent_bounds():
+    assert parse_scale_bounds('', '') == (None, None)
+    assert parse_scale_bounds('-1,5', '') == (-1.5, None)
+    assert parse_scale_bounds('', '0') == (None, 0)
+    with pytest.raises(ValueError, match='Минимум шкалы должен быть меньше максимума'):
+        parse_scale_bounds('5', '5')
+    with pytest.raises(ValueError, match='Максимум шкалы должен быть числом'):
+        parse_scale_bounds('', 'inf')
