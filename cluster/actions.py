@@ -695,5 +695,6 @@ def calculate_cluster():
         labels_for_map,
         map_title,
         color_marker=False,
-        initial_map_mode="categorical"
+        initial_map_mode="categorical",
+        report_research_id=clust_object.research_id if clust_object is not None else None,
     )

@@ -1,12 +1,13 @@
-"""Matplotlib layout for continuous maps exported from GeoVel."""
+"""Matplotlib layouts for maps exported from GeoVel."""
 
 from math import ceil, floor
 
 import numpy as np
 from matplotlib import colormaps, patheffects
-from matplotlib.colors import BoundaryNorm
+from matplotlib.collections import LineCollection
+from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.figure import Figure
-from matplotlib.patches import Polygon
+from matplotlib.patches import Patch, Polygon
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from scipy.spatial import ConvexHull, QhullError
@@ -59,24 +60,55 @@ def _color_levels(low, high, interval):
     return levels
 
 
-def build_report_map(
-    xx, yy, surface, samples, *, title, parameter, cmap, grid_step, method,
-    contour_interval=None, show_contours=True, show_points=True, clip_to_samples=True,
-    profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None,
-):
-    """Build the report figure from the existing grid."""
+def _report_axes(xx, yy, title):
     x_min, x_max = xx.min(), xx.max()
     y_min, y_max = yy.min(), yy.max()
     height = np.clip(2.5 + 8.5 * (y_max - y_min) / (x_max - x_min), 5, 10)
     figure = Figure(figsize=(11, height), layout='constrained')
     ax = figure.subplots()
-    ax.set_title(title or parameter, loc='left', fontweight='bold', pad=12)
+    ax.set_title(title, loc='left', fontweight='bold', pad=12)
     ax.set(xlabel='X, м', ylabel='Y, м', aspect='equal')
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=7))
     ax.ticklabel_format(style='plain', useOffset=False)
+    target_length = (x_max - x_min) / 5
+    magnitude = 10.0 ** floor(np.log10(target_length))
+    scale_length = max(value for value in (magnitude, 2 * magnitude, 5 * magnitude) if value <= target_length)
+    scale_label = f'{scale_length / 1000:g} км' if scale_length >= 1000 else f'{scale_length:g} м'
+    scale = AnchoredSizeBar(ax.transData, scale_length, scale_label, 'lower left', frameon=True, borderpad=0.7)
+    scale.set_zorder(9)
+    ax.add_artist(scale)
+    return figure, ax
+
+
+def _draw_profiles(ax, profiles):
+    for index, (x, y) in enumerate(profiles):
+        ax.plot(x, y, color='0.3', linewidth=1, zorder=4, label='Профили' if index == 0 else None)
+
+
+def _draw_wells(ax, wells):
+    for index, (x, y, name, color) in enumerate(wells):
+        ax.scatter(x, y, c=[color], marker='^', s=55, linewidths=0.6,
+                   edgecolors='black', zorder=7, label='Скважины' if index == 0 else None)
+        ax.annotate(name, (x, y), (4, 5), textcoords='offset points', fontsize=8, zorder=8)
+
+
+def _report_footer(figure, shape, grid_step, method, clip_requested, clipped):
+    footer = f'{method}   ·   Шаг сетки {grid_step:g} м   ·   Узлы {shape[0]} × {shape[1]}'
+    if clip_requested:
+        footer += '   ·   Обрезка по области замеров' if clipped else '   ·   Область замеров не образует контур'
+    figure.supxlabel(footer, fontsize=9, color='0.3', wrap=True)
+
+
+def build_report_map(
+    xx, yy, surface, samples, *, title, parameter, cmap, grid_step, method,
+    contour_interval=None, show_contours=True, show_points=True, clip_to_samples=True,
+    profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None,
+):
+    """Build the report figure from the existing continuous grid."""
+    figure, ax = _report_axes(xx, yy, title or parameter)
 
     valid = np.isfinite(samples).all(axis=1)
     valid_samples = samples[valid]
@@ -147,8 +179,7 @@ def build_report_map(
         for label in labels:
             label.set_path_effects([patheffects.withStroke(linewidth=2.5, foreground='white')])
 
-    for index, (x, y) in enumerate(profiles):
-        ax.plot(x, y, color='0.3', linewidth=1, zorder=4, label='Профили' if index == 0 else None)
+    _draw_profiles(ax, profiles)
 
     if show_points and len(valid_samples):
         x, y, values = valid_samples.T
@@ -159,23 +190,63 @@ def build_report_map(
                 if is_valid:
                     ax.annotate(name, (sx, sy), (4, 4), textcoords='offset points', fontsize=7, zorder=6)
 
-    for index, (x, y, name, color) in enumerate(wells):
-        ax.scatter(x, y, c=[color], marker='^', s=55, linewidths=0.6,
-                   edgecolors='black', zorder=7, label='Скважины' if index == 0 else None)
-        ax.annotate(name, (x, y), (4, 5), textcoords='offset points', fontsize=8, zorder=8)
-
-    target_length = (x_max - x_min) / 5
-    magnitude = 10.0 ** floor(np.log10(target_length))
-    scale_length = max(value for value in (magnitude, 2 * magnitude, 5 * magnitude) if value <= target_length)
-    scale_label = f'{scale_length / 1000:g} км' if scale_length >= 1000 else f'{scale_length:g} м'
-    scale = AnchoredSizeBar(ax.transData, scale_length, scale_label, 'lower left', frameon=True, borderpad=0.7)
-    scale.set_zorder(9)
-    ax.add_artist(scale)
+    _draw_wells(ax, wells)
     if ax.get_legend_handles_labels()[0]:
         ax.legend(loc='upper right', fontsize=8)
 
-    footer = f'{method}   ·   Шаг сетки {grid_step:g} м   ·   Узлы {xx.shape[0]} × {xx.shape[1]}'
-    if clip_to_samples:
-        footer += '   ·   Обрезка по области замеров' if coverage is not None else '   ·   Область замеров не образует контур'
-    figure.supxlabel(footer, fontsize=9, color='0.3')
+    _report_footer(figure, xx.shape, grid_step, method, clip_to_samples, coverage is not None)
+    return figure
+
+
+def _draw_class_boundaries(ax, cells, vertices):
+    codes = np.ma.getdata(cells)
+    valid = ~np.ma.getmaskarray(cells)
+    across_x = valid[:-1, :] & valid[1:, :] & (codes[:-1, :] != codes[1:, :])
+    across_y = valid[:, :-1] & valid[:, 1:] & (codes[:, :-1] != codes[:, 1:])
+    x_edges = np.stack((vertices[1:-1, :-1][across_x], vertices[1:-1, 1:][across_x]), axis=1)
+    y_edges = np.stack((vertices[:-1, 1:-1][across_y], vertices[1:, 1:-1][across_y]), axis=1)
+    segments = np.concatenate((x_edges, y_edges))
+    if len(segments):
+        ax.add_collection(LineCollection(segments, colors='0.2', linewidths=0.65, zorder=3))
+
+
+def build_categorical_report_map(
+    xx, yy, cells, points, labels, colors, *, title, grid_step, method,
+    show_contours=True, show_points=True, clip_to_samples=False, uncertainty=None,
+    profiles=(), wells=(),
+):
+    """Render class indices using the palette order used to calculate the grid."""
+    cells = np.ma.asarray(cells)
+    if cells.count() == 0:
+        raise ValueError('Сетка не покрывает область замеров. Уменьшите шаг сетки или отключите обрезку.')
+
+    figure, ax = _report_axes(xx, yy, title)
+    palette = ListedColormap(list(colors.values()))
+    norm = BoundaryNorm(np.arange(len(colors) + 1) - 0.5, palette.N)
+    fill = ax.pcolormesh(xx, yy, cells, shading='nearest', cmap=palette, norm=norm, rasterized=True)
+    if uncertainty is not None:
+        overlay = ax.pcolormesh(xx, yy, uncertainty, shading='nearest', cmap='binary',
+                                vmin=0, vmax=1, alpha=0.35, rasterized=True, zorder=2)
+        figure.colorbar(overlay, ax=ax, location='bottom', shrink=0.7, pad=0.12, aspect=32,
+                        label='Неопределённость', ticks=[0, 0.5, 1])
+    if show_contours:
+        _draw_class_boundaries(ax, cells, fill.get_coordinates())
+
+    _draw_profiles(ax, profiles)
+    if show_points:
+        regular = labels != -1
+        if regular.any():
+            ax.scatter(*points[regular].T, c=[colors[label] for label in labels[regular]], s=20,
+                       edgecolors='black', linewidths=0.45, zorder=5, label='Точки замеров')
+        if (~regular).any():
+            ax.scatter(*points[~regular].T, color='0.25', marker='x', s=23, linewidths=0.8,
+                       zorder=5, label='Шумовые точки')
+    _draw_wells(ax, wells)
+
+    classes = [Patch(facecolor=color, edgecolor='0.35', label='Шум' if label == -1 else f'Кластер {label}')
+               for label, color in colors.items()]
+    layers, _ = ax.get_legend_handles_labels()
+    ax.legend(handles=classes + layers, loc='upper left', bbox_to_anchor=(1.02, 1),
+              fontsize=8, ncols=ceil((len(classes) + len(layers)) / 14))
+    _report_footer(figure, xx.shape, grid_step, method, clip_to_samples, np.ma.is_masked(cells))
     return figure

@@ -18,7 +18,7 @@ from kriging_utils import (
 )
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
-from report_map import build_report_map, parse_contour_interval, parse_scale_bounds
+from report_map import build_categorical_report_map, build_report_map, parse_contour_interval, parse_scale_bounds
 from well_map_style import well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
@@ -309,7 +309,8 @@ def show_map():
     draw_map(list_x, list_y, list_z, param)
 
 
-def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None, initial_map_mode=None):
+def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None,
+             initial_map_mode=None, report_research_id=None):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
@@ -394,14 +395,26 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         return "categor" in mode_text or "cluster" in mode_text or mode_text.startswith("cat")
 
     def _is_report_style():
-        return not _is_categorical_mode() and ui_dm.comboBox_map_style.currentIndex() == 1
+        return ui_dm.comboBox_map_style.currentIndex() == 1
 
     def _apply_map_style_state():
         report_style = _is_report_style()
-        ui_dm.label_map_style.setVisible(not _is_categorical_mode())
-        ui_dm.comboBox_map_style.setVisible(not _is_categorical_mode())
+        categorical_mode = _is_categorical_mode()
+        numeric_controls = (
+            ui_dm.label_report_contour_step, ui_dm.comboBox_report_contour_step,
+            ui_dm.label_report_scale_min, ui_dm.lineEdit_report_scale_min,
+            ui_dm.label_report_scale_max, ui_dm.lineEdit_report_scale_max, ui_dm.checkBox_report_clip,
+        )
+        for control in numeric_controls:
+            control.setVisible(not categorical_mode)
         ui_dm.groupBox_report_map.setVisible(report_style)
         ui_dm.checkBox_show_points.setVisible(not report_style)
+        ui_dm.label_4.setVisible(not (report_style and categorical_mode))
+        ui_dm.comboBox_cmap.setVisible(not (report_style and categorical_mode))
+        if report_style:
+            ui_dm.checkBox_show_contours.setText('Границы классов' if categorical_mode else 'Изолинии')
+        else:
+            ui_dm.checkBox_show_contours.setText('show contours')
         ui_dm.comboBox_report_contour_step.setEnabled(ui_dm.checkBox_show_contours.isChecked())
 
     def _rebuild_interp_method_options():
@@ -462,18 +475,21 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     ui_dm.checkBox_show_contours.toggled.connect(_apply_map_style_state)
     _apply_map_mode_state()
 
-    def _map_wells():
+    def _map_wells(research_id=None):
         if ui.checkBox_object_well.isChecked():
-            return get_list_nearest_well_for_object(get_object_id())
+            if research_id is None:
+                return get_list_nearest_well_for_object(get_object_id())
+            research = session.get(Research, research_id)
+            return get_list_nearest_well_for_object(research.object_id) if research is not None else []
         if ui.checkBox_profile_well.isChecked():
-            research_id = get_research_id()
+            research_id = research_id if research_id is not None else get_research_id()
             research = session.get(Research, research_id) if research_id is not None else None
             if research is not None:
                 return [well for profile in research.profiles for well in (get_list_nearest_well(profile.id) or [])]
         return []
 
     def _report_profiles():
-        research_id = get_research_id()
+        research_id = report_research_id if report_research_id is not None else get_research_id()
         research = session.get(Research, research_id) if research_id is not None else None
         tracks = []
         for profile in research.profiles if research is not None else ():
@@ -491,10 +507,40 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             return ui.comboBox_geochem.currentText().split(' id')[0]
         return f'{get_object_name()} {get_research_name()}'.strip()
 
+    def _show_report(builder, *args, **kwargs):
+        wells = {item[0].id: item[0] for item in _map_wells(report_research_id)}
+        title = param if _is_categorical_mode() else ' — '.join(filter(None, (_map_object_title(), param)))
+        try:
+            report = builder(
+                *args, title=title,
+                show_contours=ui_dm.checkBox_show_contours.isChecked(),
+                show_points=ui_dm.checkBox_report_points.isChecked(),
+                profiles=_report_profiles() if ui_dm.checkBox_report_profiles.isChecked() else (),
+                wells=[(well.x_coord, well.y_coord, well.name, well_marker_color(well))
+                       for well in wells.values()],
+                **kwargs,
+            )
+        except ValueError as exc:
+            QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))
+            return
+        preview = QtWidgets.QDialog(Draw_Map)
+        preview.setWindowTitle(f'Карта для отчёта — {param}')
+        preview.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        canvas = FigureCanvasQTAgg(report)
+        toolbar = NavigationToolbar2QT(canvas, preview)
+        layout = QtWidgets.QVBoxLayout(preview)
+        layout.addWidget(toolbar)
+        layout.addWidget(canvas)
+        screen = Draw_Map.screen().availableGeometry()
+        width, height = canvas.get_width_height()
+        preview.resize(min(width, screen.width()), min(height + toolbar.sizeHint().height(), screen.height() - 40))
+        preview.show()
+
     def form_lda_ok():
         report_style = _is_report_style()
+        categorical_mode = _is_categorical_mode()
         contour_interval = None
-        if report_style:
+        if report_style and not categorical_mode:
             try:
                 if ui_dm.checkBox_show_contours.isChecked():
                     contour_interval = parse_contour_interval(ui_dm.comboBox_report_contour_step.currentText())
@@ -559,8 +605,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         if not color_marker:
             color_map = ui_dm.comboBox_cmap.currentText()
 
-        if _is_categorical_mode():
+        if categorical_mode:
             # Отдельный пайплайн categorical.
+            if report_style:
+                valid = np.isfinite(samples[::sparse]).all(axis=1)
+                x, y, z = samples[::sparse][valid].T
             points = np.column_stack([x, y])
             labels = np.array([int(v) for v in z], dtype=int)
             if len(points) == 0:
@@ -625,17 +674,22 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     source_class_indices=source_class_indices
                 )
 
-            class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
+            show_uncertainty_ctrl = _get_control("checkBox_show_uncertainty", "checkBox_uncertainty", "checkBox_2")
+            show_uncertainty = uncertainty_grid is not None and show_uncertainty_ctrl is not None and show_uncertainty_ctrl.isChecked()
+            if report_style:
+                _show_report(
+                    build_categorical_report_map, xx, yy, class_index_grid, points, labels,
+                    {label: color_by_label[label] for label in sorted_labels},
+                    grid_step=grid_size, method=f'{method_title}, сглаживание: {boundary_smoothing_level}',
+                    clip_to_samples=clip_on, uncertainty=uncertainty_grid if show_uncertainty else None,
+                )
+                return
 
+            class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
             fig_interp = plt.figure(figsize=(12, 9))
             plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
 
-            show_uncertainty_ctrl = _get_control("checkBox_show_uncertainty", "checkBox_uncertainty", "checkBox_2")
-            if (
-                uncertainty_grid is not None
-                and show_uncertainty_ctrl is not None
-                and show_uncertainty_ctrl.isChecked()
-            ):
+            if show_uncertainty:
                 uncertainty_plot = plt.pcolormesh(
                     xx,
                     yy,
@@ -794,37 +848,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # print(z_interp)
 
         if report_style:
-            wells = {item[0].id: item[0] for item in _map_wells()}
-            try:
-                report = build_report_map(
-                    xx, yy, z_interp, samples,
-                    title=' — '.join(filter(None, (_map_object_title(), param))),
-                    parameter=param, cmap=color_map, grid_step=grid_size, method=surface_method,
-                    contour_interval=contour_interval,
-                    show_contours=ui_dm.checkBox_show_contours.isChecked(),
-                    show_points=ui_dm.checkBox_report_points.isChecked(),
-                    clip_to_samples=ui_dm.checkBox_report_clip.isChecked(),
-                    profiles=_report_profiles() if ui_dm.checkBox_report_profiles.isChecked() else (),
-                    wells=[(well.x_coord, well.y_coord, well.name, well_marker_color(well))
-                           for well in wells.values()],
-                    sample_names=list_name,
-                    scale_min=scale_min, scale_max=scale_max,
-                )
-            except ValueError as exc:
-                QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))
-                return
-            preview = QtWidgets.QDialog(Draw_Map)
-            preview.setWindowTitle(f'Карта для отчёта — {param}')
-            preview.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            canvas = FigureCanvasQTAgg(report)
-            toolbar = NavigationToolbar2QT(canvas, preview)
-            layout = QtWidgets.QVBoxLayout(preview)
-            layout.addWidget(toolbar)
-            layout.addWidget(canvas)
-            screen = Draw_Map.screen().availableGeometry()
-            width, height = canvas.get_width_height()
-            preview.resize(min(width, screen.width()), min(height + toolbar.sizeHint().height(), screen.height() - 40))
-            preview.show()
+            _show_report(
+                build_report_map, xx, yy, z_interp, samples,
+                parameter=param, cmap=color_map, grid_step=grid_size, method=surface_method,
+                contour_interval=contour_interval, clip_to_samples=ui_dm.checkBox_report_clip.isChecked(),
+                sample_names=list_name, scale_min=scale_min, scale_max=scale_max,
+            )
             return
 
         # Визуализация результатов
