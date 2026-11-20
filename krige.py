@@ -5,6 +5,7 @@ import numpy as np
 from sqlalchemy.exc import OperationalError
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from scipy import ndimage
 from scipy.spatial import ConvexHull, Delaunay, cKDTree
 
@@ -17,6 +18,7 @@ from kriging_utils import (
 )
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
+from report_map import build_report_map, parse_contour_interval
 from well_map_style import well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
@@ -312,8 +314,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
     ui_dm.setupUi(Draw_Map)
-    Draw_Map.show()
     Draw_Map.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    ui_dm.checkBox_report_profiles.setChecked(profiles)
 
     for i in cmap_list:
         ui_dm.comboBox_cmap.addItem(i)
@@ -341,7 +343,6 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     )
 
     continuous_controls = [
-        _get_control("label_3"),
         _get_control("comboBox_estimator"),
         _get_control("label_27"),
         _get_control("comboBox_var_model"),
@@ -388,6 +389,15 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         mode_text = map_mode_combo.currentText().strip().lower()
         return "categor" in mode_text or "cluster" in mode_text or mode_text.startswith("cat")
 
+    def _is_report_style():
+        return not _is_categorical_mode() and ui_dm.comboBox_map_style.currentIndex() == 1
+
+    def _apply_map_style_state():
+        ui_dm.label_map_style.setVisible(not _is_categorical_mode())
+        ui_dm.comboBox_map_style.setVisible(not _is_categorical_mode())
+        ui_dm.groupBox_report_map.setVisible(_is_report_style())
+        ui_dm.lineEdit_report_contour_step.setEnabled(ui_dm.checkBox_show_contours.isChecked())
+
     def _rebuild_interp_method_options():
         if interp_method_combo is None:
             return
@@ -422,28 +432,68 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         _set_enabled_state(categorical_controls, categorical_mode)
         _rebuild_interp_method_options()
         _apply_interpolation_method_deps()
+        _apply_map_style_state()
+
+    def _select_initial_map_mode():
+        if map_mode_combo is not None and isinstance(initial_map_mode, str):
+            initial_mode_norm = initial_map_mode.strip().lower()
+            for idx in range(map_mode_combo.count()):
+                if initial_mode_norm in map_mode_combo.itemText(idx).strip().lower():
+                    map_mode_combo.setCurrentIndex(idx)
+                    break
 
     if map_mode_combo is not None:
         existing_modes = [map_mode_combo.itemText(i) for i in range(map_mode_combo.count())]
         if not existing_modes:
             map_mode_combo.addItems(["Continuous (Kriging)", "Categorical (Cluster)"])
-        if isinstance(initial_map_mode, str):
-            initial_mode_norm = initial_map_mode.strip().lower()
-            for idx in range(map_mode_combo.count()):
-                mode_text = map_mode_combo.itemText(idx).strip().lower()
-                if initial_mode_norm in mode_text:
-                    map_mode_combo.setCurrentIndex(idx)
-                    break
+        _select_initial_map_mode()
         map_mode_combo.currentTextChanged.connect(lambda _: _apply_map_mode_state())
 
     if interp_method_combo is not None:
         interp_method_combo.currentTextChanged.connect(lambda _: _apply_interpolation_method_deps())
 
+    ui_dm.comboBox_map_style.currentIndexChanged.connect(_apply_map_style_state)
+    ui_dm.checkBox_show_contours.toggled.connect(_apply_map_style_state)
     _apply_map_mode_state()
 
+    def _map_wells():
+        if ui.checkBox_object_well.isChecked():
+            return get_list_nearest_well_for_object(get_object_id())
+        if ui.checkBox_profile_well.isChecked():
+            research_id = get_research_id()
+            research = session.get(Research, research_id) if research_id is not None else None
+            if research is not None:
+                return [well for profile in research.profiles for well in (get_list_nearest_well(profile.id) or [])]
+        return []
+
+    def _report_profiles():
+        research_id = get_research_id()
+        research = session.get(Research, research_id) if research_id is not None else None
+        tracks = []
+        for profile in research.profiles if research is not None else ():
+            try:
+                x = np.asarray(json.loads(profile.x_pulc), dtype=float)
+                y = np.asarray(json.loads(profile.y_pulc), dtype=float)
+            except (TypeError, ValueError):
+                continue
+            if x.ndim == 1 and x.shape == y.shape and len(x) > 1:
+                tracks.append((x, y))
+        return tracks
+
+    def _map_object_title():
+        if ui.tabWidget_2.currentWidget().objectName() == 'tab_10':
+            return ui.comboBox_geochem.currentText().split(' id')[0]
+        return f'{get_object_name()} {get_research_name()}'.strip()
 
     def form_lda_ok():
-
+        report_style = _is_report_style()
+        contour_interval = None
+        if report_style and ui_dm.checkBox_show_contours.isChecked():
+            try:
+                contour_interval = parse_contour_interval(ui_dm.lineEdit_report_contour_step.text())
+            except ValueError as exc:
+                QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))
+                return
         sparse_ctrl = _get_control("spinBox_sparse")
         sparse = sparse_ctrl.value() if sparse_ctrl is not None else 1
         # Создание набора данных
@@ -455,13 +505,17 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         grid_size = grid_ctrl.value() if grid_ctrl is not None else 75
 
 
-        # Создание сетки для интерполяции
-        # gridx = np.linspace(min(list_x) - 200, max(list_x) + 200, grid_size)
-        # gridy = np.linspace(min(list_y) - 200, max(list_y) + 200, grid_size)
-        xx, yy = np.mgrid[min(list_x) - 200: max(list_x) + 200: grid_size, min(list_y) - 200: max(list_y) + 200: grid_size]
-        # print(xx, yy)
-
-
+        grid_x, grid_y = list_x, list_y
+        if report_style:
+            samples = np.column_stack([list_x, list_y, list_z]).astype(float)
+            if not np.isfinite(samples).all(axis=1).any():
+                QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', 'Нет точек с координатами и значениями.')
+                return
+            # Use the same extent as the standard map whenever its coordinates are valid.
+            finite_positions = samples[np.isfinite(samples[:, :2]).all(axis=1), :2]
+            grid_x, grid_y = finite_positions.T
+        xx, yy = np.mgrid[min(grid_x) - 200: max(grid_x) + 200: grid_size,
+                          min(grid_y) - 200: max(grid_y) + 200: grid_size]
 
         # Создание объекта OrdinaryKriging
         var_model_ctrl = _get_control("comboBox_var_model")
@@ -653,9 +707,11 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             return
 
         if len(coord) == 1 or np.allclose(z, z[0]):
+            surface_method = 'Постоянная поверхность'
             z_interp = np.full(xx.shape, z[0], dtype=float)
             set_info('Все значения карты одинаковы: построена постоянная поверхность.', 'brown')
         else:
+            surface_method = f'Кригинг ({var_model})'
             try:
                 variogram = Variogram(
                     coordinates=coord,
@@ -678,12 +734,14 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     z_interp, coord, z, xx, yy
                 )
                 if filled_cell_count:
+                    surface_method += f' + IDW ({filled_cell_count} узлов)'
                     set_info(
                         f'Кригинг построен; {filled_cell_count} ячеек без достаточного '
                         'числа соседей локально заполнены методом IDW.',
                         'brown'
                     )
             except Exception as exc:
+                surface_method = 'IDW'
                 set_info(
                     f'Вариограмма не построена ({dist_func}, {bin_func}; '
                     f'{type(exc).__name__}: {exc}). '
@@ -712,6 +770,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                         )
                     try:
                         z_interp = savgol_filter(z_interp, window_length, polyorder)
+                        surface_method += f', фильтр {window_length}'
                     except ValueError as exc:
                         set_info(f'Сглаживание пропущено: {exc}', 'brown')
 
@@ -724,6 +783,39 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         # z_interp = ok.__call__((xx, yy))
         # print(z_interp)
 
+        if report_style:
+            wells = {item[0].id: item[0] for item in _map_wells()}
+            try:
+                report = build_report_map(
+                    xx, yy, z_interp, samples,
+                    title=' — '.join(filter(None, (_map_object_title(), param))),
+                    parameter=param, cmap=color_map, grid_step=grid_size, method=surface_method,
+                    contour_interval=contour_interval,
+                    show_contours=ui_dm.checkBox_show_contours.isChecked(),
+                    show_points=ui_dm.checkBox_show_points.isChecked(),
+                    clip_to_samples=ui_dm.checkBox_report_clip.isChecked(),
+                    profiles=_report_profiles() if ui_dm.checkBox_report_profiles.isChecked() else (),
+                    wells=[(well.x_coord, well.y_coord, well.name, well_marker_color(well))
+                           for well in wells.values()],
+                    sample_names=list_name,
+                )
+            except ValueError as exc:
+                QtWidgets.QMessageBox.warning(Draw_Map, 'Карта для отчёта', str(exc))
+                return
+            preview = QtWidgets.QDialog(Draw_Map)
+            preview.setWindowTitle(f'Карта для отчёта — {param}')
+            preview.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            canvas = FigureCanvasQTAgg(report)
+            toolbar = NavigationToolbar2QT(canvas, preview)
+            layout = QtWidgets.QVBoxLayout(preview)
+            layout.addWidget(toolbar)
+            layout.addWidget(canvas)
+            screen = Draw_Map.screen().availableGeometry()
+            width, height = canvas.get_width_height()
+            preview.resize(min(width, screen.width()), min(height + toolbar.sizeHint().height(), screen.height() - 40))
+            preview.show()
+            return
+
         # Визуализация результатов
         fig_interp = plt.figure(figsize=(12, 9))
         plt.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
@@ -735,35 +827,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             for n_ix in range(len(list_name)):
                 plt.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
 
-        if ui.checkBox_profile_well.isChecked() or ui.checkBox_object_well.isChecked():
-            if ui.checkBox_object_well.isChecked():
-                wells = get_list_nearest_well_for_object(get_object_id())
-            else:
-                r = session.query(Research).filter_by(id=get_research_id()).first()
-                wells = [well for profile in r.profiles for well in (get_list_nearest_well(profile.id) or [])]
-            for well in wells:
-                plt.scatter(
-                    well[0].x_coord,
-                    well[0].y_coord,
-                    marker='o',
-                    color=well_marker_color(well[0]),
-                    s=50,
-                )
-                plt.text(well[0].x_coord + 20, well[0].y_coord + 20, well[0].name)
+        for well, *_ in _map_wells():
+            plt.scatter(well.x_coord, well.y_coord, marker='o', color=well_marker_color(well), s=50)
+            plt.text(well.x_coord + 20, well.y_coord + 20, well.name)
 
         plt.xlabel('X')
         plt.ylabel('Y')
 
-        if ui.tabWidget_2.currentWidget().objectName() == 'tab_10':
-            object_title = ui.comboBox_geochem.currentText().split(' id')[0]
-        else:
-            object_title = f'{get_object_name()} {get_research_name()}'
-
+        object_title = _map_object_title()
         plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
                   f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
                   # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
                   f'\nФильтр результата: {filt_power if (filt_checkbox is not None and filt_checkbox.isChecked()) else "off"}\n'
-                  f'\nРазмер ячеек сетки: {grid_size}x{grid_size}')
+                  f'\nШаг сетки: {grid_size} м, узлы: {xx.shape[0]}×{xx.shape[1]}')
         plt.tight_layout()
 
         if profiles:
@@ -793,6 +869,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         set_info("В форме карты не найдена кнопка DRAW (pushButton_map).", "brown")
     from app_settings import bind_form
     bind_form(Draw_Map, "draw_map_form")
+    _select_initial_map_mode()
+    _apply_map_mode_state()
     Draw_Map.exec_()
 
 
