@@ -95,6 +95,19 @@ def _draw_wells(ax, wells):
         ax.annotate(name, (x, y), (4, 5), textcoords='offset points', fontsize=8, zorder=8)
 
 
+def annotate_observations(ax, points, labels):
+    labels_by_position = {}
+    for (x, y), label in zip(points, labels):
+        label = label.strip()
+        if label and np.isfinite(x) and np.isfinite(y):
+            labels_by_position.setdefault((x, y), {})[label] = None
+
+    outline = [patheffects.withStroke(linewidth=2.5, foreground='white')]
+    for position, names in labels_by_position.items():
+        ax.annotate('\n'.join(names), position, xytext=(4, 4), textcoords='offset points',
+                    fontsize=7, path_effects=outline, zorder=6)
+
+
 def _report_footer(figure, shape, grid_step, method, clip_requested, clipped):
     footer = f'{method}   ·   Шаг сетки {grid_step:g} м   ·   Узлы {shape[0]} × {shape[1]}'
     if clip_requested:
@@ -105,7 +118,7 @@ def _report_footer(figure, shape, grid_step, method, clip_requested, clipped):
 def build_report_map(
     xx, yy, surface, samples, *, title, parameter, cmap, grid_step, method,
     contour_interval=None, show_contours=True, show_points=True, clip_to_samples=True,
-    profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None,
+    profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None, point_labels=None,
 ):
     """Build the report figure from the existing continuous grid."""
     figure, ax = _report_axes(xx, yy, title or parameter)
@@ -189,6 +202,8 @@ def build_report_map(
             for (sx, sy, _), name, is_valid in zip(samples, sample_names, valid):
                 if is_valid:
                     ax.annotate(name, (sx, sy), (4, 4), textcoords='offset points', fontsize=7, zorder=6)
+        if point_labels is not None:
+            annotate_observations(ax, valid_samples[:, :2], np.asarray(point_labels)[valid])
 
     _draw_wells(ax, wells)
     if ax.get_legend_handles_labels()[0]:
@@ -213,7 +228,7 @@ def _draw_class_boundaries(ax, cells, vertices):
 def build_categorical_report_map(
     xx, yy, cells, points, labels, colors, *, title, grid_step, method,
     show_contours=True, show_points=True, clip_to_samples=False, uncertainty=None,
-    profiles=(), wells=(),
+    profiles=(), wells=(), point_labels=None,
 ):
     """Render class indices using the palette order used to calculate the grid."""
     cells = np.ma.asarray(cells)
@@ -241,6 +256,8 @@ def build_categorical_report_map(
         if (~regular).any():
             ax.scatter(*points[~regular].T, color='0.25', marker='x', s=23, linewidths=0.8,
                        zorder=5, label='Шумовые точки')
+        if point_labels is not None:
+            annotate_observations(ax, points, point_labels)
     _draw_wells(ax, wells)
 
     classes = [Patch(facecolor=color, edgecolor='0.35', label='Шум' if label == -1 else f'Кластер {label}')

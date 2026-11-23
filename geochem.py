@@ -1570,6 +1570,13 @@ def train_model_geochem():
                          all_components=all_components)
 
 
+def _draw_geochem_map(data, values, title, color_marker):
+    draw_map(
+        data['X'].tolist(), data['Y'].tolist(), values, title, color_marker,
+        point_labels=data['title'].fillna('').astype(str).tolist(),
+    )
+
+
 def calc_geochem_classification():
     data_test, list_param = build_geochem_table_model_points()
 
@@ -1653,8 +1660,6 @@ def calc_geochem_classification():
         working_data_result = pd.concat([data_test, pd.DataFrame(probability, columns=list_cat)], axis=1)
         working_data_result['mark'] = mark
 
-        x = list(working_data_result['X'])
-        y = list(working_data_result['Y'])
         if len(set(mark)) == 2 and not ui_rm.checkBox_color_marker.isChecked():
             z = list(working_data_result[list_cat[0]])
             color_marker = False
@@ -1664,7 +1669,7 @@ def calc_geochem_classification():
             z = string_to_unique_number(list(working_data_result['mark']), 'geochem')
             color_marker = True
             working_data_result['mark_number'] = z
-        draw_map(x, y, z, f'Geochem {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
+        _draw_geochem_map(working_data_result, z, f'Geochem {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
         result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
         if result1 == QMessageBox.Yes:
             result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
@@ -2331,13 +2336,13 @@ def calc_vector():
         list_cos_mean = softmax_new(list_cos_mean)
         list_cos_mean = norm_akhmet(list_cos_mean)
     data_test['cos_mean'] = list_cos_mean
-    x, y, z = data_test['X'], data_test['Y'], data_test['cos_mean']
 
     text_method = '\nMethod correlation' if ui.checkBox_geochem_vector_corr.isChecked() else '\nMethod cosine'
     text_method += ' - StandardScaler' if ui.checkBox_std_sc.isChecked() else ''
     text_method += ' - softmax' if ui.checkBox_softmax.isChecked() else ''
 
-    draw_map(x, y, z, f'Geochem vector {ui.comboBox_geochem_maket.currentText().split(" id")[0]} {text_method}', False)
+    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
+    _draw_geochem_map(data_test, data_test['cos_mean'], f'Geochem vector {maket_title} {text_method}', False)
 
 
     result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
@@ -2419,8 +2424,8 @@ def calc_isolation_forest():
 
 
 
-    x, y, z = data_test['X'], data_test['Y'], data_test['Probability']
-    draw_map(x, y, z, f'Geochem isolation forest {ui.comboBox_geochem_maket.currentText().split(" id")[0]}', False)
+    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
+    _draw_geochem_map(data_test, data_test['Probability'], f'Geochem isolation forest {maket_title}', False)
 
     result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
     if result1 == QMessageBox.Yes:
