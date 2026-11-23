@@ -12,6 +12,8 @@ from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from scipy.spatial import ConvexHull, QhullError
 
+from well_map_style import draw_map_wells
+
 
 def parse_contour_interval(text):
     if text.strip() in ('', 'Автоматически'):
@@ -88,13 +90,6 @@ def _draw_profiles(ax, profiles):
         ax.plot(x, y, color='0.3', linewidth=1, zorder=4, label='Профили' if index == 0 else None)
 
 
-def _draw_wells(ax, wells):
-    for index, (x, y, name, color) in enumerate(wells):
-        ax.scatter(x, y, c=[color], marker='^', s=55, linewidths=0.6,
-                   edgecolors='black', zorder=7, label='Скважины' if index == 0 else None)
-        ax.annotate(name, (x, y), (4, 5), textcoords='offset points', fontsize=8, zorder=8)
-
-
 def annotate_observations(ax, points, labels):
     labels_by_position = {}
     for (x, y), label in zip(points, labels):
@@ -119,6 +114,7 @@ def build_report_map(
     xx, yy, surface, samples, *, title, parameter, cmap, grid_step, method,
     contour_interval=None, show_contours=True, show_points=True, clip_to_samples=True,
     profiles=(), wells=(), sample_names=None, scale_min=None, scale_max=None, point_labels=None,
+    well_clusters=None,
 ):
     """Build the report figure from the existing continuous grid."""
     figure, ax = _report_axes(xx, yy, title or parameter)
@@ -205,7 +201,8 @@ def build_report_map(
         if point_labels is not None:
             annotate_observations(ax, valid_samples[:, :2], np.asarray(point_labels)[valid])
 
-    _draw_wells(ax, wells)
+    draw_map_wells(ax, wells, xx, yy, surface, marker='^', well_clusters=well_clusters,
+                   coverage=coverage.get_path() if coverage is not None else None)
     if ax.get_legend_handles_labels()[0]:
         ax.legend(loc='upper right', fontsize=8)
 
@@ -228,7 +225,7 @@ def _draw_class_boundaries(ax, cells, vertices):
 def build_categorical_report_map(
     xx, yy, cells, points, labels, colors, *, title, grid_step, method,
     show_contours=True, show_points=True, clip_to_samples=False, uncertainty=None,
-    profiles=(), wells=(), point_labels=None,
+    profiles=(), wells=(), point_labels=None, well_clusters=None,
 ):
     """Render class indices using the palette order used to calculate the grid."""
     cells = np.ma.asarray(cells)
@@ -258,7 +255,8 @@ def build_categorical_report_map(
                        zorder=5, label='Шумовые точки')
         if point_labels is not None:
             annotate_observations(ax, points, point_labels)
-    _draw_wells(ax, wells)
+    draw_map_wells(ax, wells, xx, yy, cells, marker='^', class_labels=tuple(colors),
+                   well_clusters=well_clusters)
 
     classes = [Patch(facecolor=color, edgecolor='0.35', label='Шум' if label == -1 else f'Кластер {label}')
                for label, color in colors.items()]

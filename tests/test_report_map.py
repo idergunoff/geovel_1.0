@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 from report_map import build_categorical_report_map, build_report_map, parse_contour_interval, parse_scale_bounds
 
@@ -23,6 +24,7 @@ def test_report_map_uses_the_same_scale_and_clips_the_field():
     assert contours.get_clip_path() is not None
     assert {'1', '2', '3', '4', 'Скв. 1'} <= {label.get_text() for label in ax.texts}
     assert ax.get_legend_handles_labels()[1] == ['Профили', 'Точки замеров', 'Скважины']
+    assert [label.get_text() for label in figure.legends[0].get_texts()] == ['Скв. 1 — 2.6']
 
 
 def test_report_exports_constant_surface_without_a_coverage_polygon(tmp_path):
@@ -144,6 +146,71 @@ def test_categorical_report_can_hide_points_and_boundaries_with_one_class():
     ax = figure.axes[0]
     assert len(ax.collections) == 1
     assert [label.get_text() for label in ax.get_legend().get_texts()] == ['Кластер 7']
+    assert not figure.legends
+
+
+def test_report_wells_have_no_value_outside_the_visible_surface():
+    xx, yy = np.mgrid[0:600:25, 0:400:25]
+    samples = np.array([[50, 50, 0.5], [500, 50, 5], [300, 325, 3]])
+    figure = build_report_map(
+        xx, yy, xx / 100, samples, title='Скорость', parameter='м/с', cmap='viridis',
+        grid_step=25, method='Кригинг', show_points=False,
+        wells=[(50, 50, 'Граница', 'red'), (50, 350, 'Вне контура', 'red'),
+               (1000, 0, 'Вне сетки', 'red')],
+    )
+
+    assert [label.get_text() for label in figure.legends[0].get_texts()] == [
+        'Граница — 0.5', 'Вне контура — нет значения', 'Вне сетки — нет значения',
+    ]
+
+
+def test_categorical_well_legend_uses_cluster_labels_from_each_profile():
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    figure = build_categorical_report_map(
+        xx, yy, np.zeros(xx.shape, dtype=int), np.array([[100, 0]]), np.array([7]), {7: 'blue'},
+        title='Карта кластеров', grid_step=100, method='Nearest',
+        wells=[(100, 0, 'Скв. 1', 'red'), (100, 100, 'Скв. 2', 'red')],
+        well_clusters=[[('П1', 4, 5), ('П2', -1, 2.5), ('П3', None, 0)], ()],
+    )
+
+    assert len(figure.legends) == 1
+    assert [label.get_text() for label in figure.legends[0].get_texts()] == [
+        'Скв. 1 · П1 (5.00 м) — Кластер 4', 'Скв. 1 · П2 (2.50 м) — Шум (-1)',
+        'Скв. 1 · П3 (0.00 м) — нет метки', 'Скв. 2 — нет метки',
+    ]
+    assert [label.get_text() for label in figure.axes[0].get_legend().get_texts()][0] == 'Кластер 7'
+
+
+def test_other_categorical_maps_sample_the_visible_grid_and_respect_its_mask():
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    cells = np.ma.array([[0, 0], [1, 1], [0, 0]], mask=[[False, False], [False, False], [False, True]])
+    figure = build_categorical_report_map(
+        xx, yy, cells, np.array([[0, 0], [100, 0]]), np.array([7, -1]), {7: 'blue', -1: 'gray'},
+        title='Категории', grid_step=100, method='Nearest',
+        wells=[(10, 50, 'Класс', 'red'), (100, 0, 'Шум', 'red'), (200, 100, 'Пропуск', 'red')],
+    )
+
+    assert [label.get_text() for label in figure.legends[0].get_texts()] == [
+        'Класс — Кластер 7', 'Шум — Шум (-1)', 'Пропуск — нет метки',
+    ]
+
+
+def test_long_well_legend_leaves_room_for_the_map():
+    xx, yy = np.mgrid[0:1000:50, 0:200:50]
+    wells = [(i, 100, f'Скважина №{i + 1000}', 'red') for i in range(60)]
+    figure = build_categorical_report_map(
+        xx, yy, np.zeros(xx.shape), np.array([[50, 0]]), np.array([4]), {4: 'blue'},
+        title='Карта', grid_step=50, method='Nearest', wells=wells,
+        well_clusters=[[(f'Продольный профиль {i}', 4, 9)] for i in range(len(wells))],
+    )
+
+    canvas = FigureCanvasAgg(figure)
+    canvas.draw()
+    map_bounds = figure.axes[0].get_window_extent()
+    legend = figure.legends[0]
+    assert len(legend.get_texts()) == len(wells)
+    assert not map_bounds.overlaps(legend.get_window_extent())
+    assert map_bounds.width / figure.dpi > 5
 
 
 def test_report_labels_follow_valid_observations_and_group_coincident_samples():
