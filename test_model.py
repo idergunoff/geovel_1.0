@@ -11,8 +11,6 @@ def test_start():
     test_classifModel = QtWidgets.QDialog()
     ui_tm = Ui_FormTestModel()
     ui_tm.setupUi(test_classifModel)
-    test_classifModel.show()
-    test_classifModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     test_classifModel.resize(int(m_width/3), m_height - 200)
@@ -115,7 +113,6 @@ def test_start():
             ChooseMark = QtWidgets.QDialog()
             ui_cm = Ui_FormRegMod()
             ui_cm.setupUi(ChooseMark)
-            ChooseMark.show()
             ChooseMark.setAttribute(Qt.WA_DeleteOnClose)
 
             ui_cm.label.setText('Не совпадают названия меток для данной модели.\n'
@@ -132,7 +129,7 @@ def test_start():
                 ChooseMark.close()
 
             ui_cm.pushButton_calc_model.clicked.connect(update_markers)
-            ChooseMark.exec()
+            ask_in_window(ChooseMark, test_classifModel)
 
         data_table, params = build_table_train_no_db("mlp", get_test_MLP_id(), list_param)
         data_test = data_table.copy()
@@ -277,7 +274,6 @@ def test_start():
                     ChooseMark = QtWidgets.QDialog()
                     ui_cm = Ui_FormRegMod()
                     ui_cm.setupUi(ChooseMark)
-                    ChooseMark.show()
                     ChooseMark.setAttribute(Qt.WA_DeleteOnClose)
 
                     ui_cm.label.setText('Не совпадают названия меток для данной модели.\n'
@@ -296,7 +292,7 @@ def test_start():
                         ChooseMark.close()
 
                     ui_cm.pushButton_calc_model.clicked.connect(update_markers)
-                    ChooseMark.exec()
+                    ask_in_window(ChooseMark, test_classifModel)
                 curr_list_cat = list_cat.copy()
             else:
                 list_cat = curr_list_cat.copy()
@@ -429,15 +425,13 @@ def test_start():
     ui_tm.pushButton_test.clicked.connect(test_classif_model)
     ui_tm.pushButton_test_all.clicked.connect(test_all_classif_models)
     ui_tm.comboBox_test_analysis.activated.connect(update_list_test_well)
-    test_classifModel.exec_()
+    show_work_window(test_classifModel)
 
 
 def regression_test():
     test_regressModel = QtWidgets.QDialog()
     ui_tr = Ui_FormTestModel()
     ui_tr.setupUi(test_regressModel)
-    test_regressModel.show()
-    test_regressModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     test_regressModel.resize(int(m_width/2.2), m_height - 200)
@@ -743,5 +737,5 @@ def regression_test():
     ui_tr.pushButton_test.clicked.connect(test_regress_model)
     ui_tr.pushButton_test_all.clicked.connect(test_all_regress_models)
 
-    test_regressModel.exec_()
+    show_work_window(test_regressModel)
 

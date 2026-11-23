@@ -295,7 +295,7 @@ def plot_cluster_map(
         fig.tight_layout(rect=(0, 0.05, 1, 1))
     else:
         fig.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def show_cluster_diagnostics(
@@ -323,7 +323,7 @@ def show_cluster_diagnostics(
             ax.imshow(image)
             ax.axis("off")
             fig.tight_layout()
-            plt.show()
+            plt.show(block=False)
             return cached_image_base64
         except Exception:
             pass
@@ -452,7 +452,7 @@ def show_cluster_diagnostics(
     image_buffer = io.BytesIO()
     fig.savefig(image_buffer, format="png", dpi=110, bbox_inches="tight")
     image_base64 = base64.b64encode(image_buffer.getvalue()).decode("ascii")
-    plt.show()
+    plt.show(block=False)
     return image_base64
 
 def evaluate_clustering(

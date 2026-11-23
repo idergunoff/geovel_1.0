@@ -340,8 +340,6 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
     Regressor = QtWidgets.QDialog()
     ui_r = Ui_RegressorForm()
     ui_r.setupUi(Regressor)
-    Regressor.show()
-    Regressor.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_r.spinBox_pca.setMaximum(len(input_data[0]))
     ui_r.spinBox_pca.setValue(len(input_data[0]) // 2)
@@ -833,7 +831,6 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
-        global data_pca, data_tsne, colors, factor_lof
 
         data_lof = input_data.copy()
         # data_lof.drop(['prof_well_index', 'target_value'], axis=1, inplace=True)
@@ -843,18 +840,16 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         n_LOF = ui_r.spinBox_lof_neighbor.value()
 
         tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42, n_jobs=-1)
-        data_tsne = tsne.fit_transform(training_sample_lof)
+        tsne_values = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)
-        data_pca = pca.fit_transform(training_sample_lof)
+        pca_values = pca.fit_transform(training_sample_lof)
 
-        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
+        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof, pca_values, tsne_values)
 
-        Form_LOF = QtWidgets.QDialog()
+        Form_LOF = QtWidgets.QDialog(Regressor)
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
-        Form_LOF.show()
-        Form_LOF.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
 
         def set_title_lof_form(label_lof):
@@ -871,8 +866,9 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
 
 
         def calc_lof_in_window():
-            global data_pca, data_tsne, colors, factor_lof
-            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            nonlocal data_pca, data_tsne, colors, factor_lof, label_lof
+            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             ui_lof.checkBox_samples.setChecked(False)
             draw_lof_tsne(data_tsne, ui_lof)
             draw_lof_pca(data_pca, ui_lof)
@@ -882,7 +878,8 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
 
 
         def calc_clean_model():
-            _, _, _, _, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            _, _, _, _, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             input_data_clean = input_data.copy()
             target_data_top_clean = target_data_top.copy()
             target_data_bottom_clean = target_data_bottom.copy()
@@ -899,7 +896,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         ui_lof.pushButton_clean_lof.clicked.connect(calc_clean_model)
         ui_lof.pushButton_lof.clicked.connect(calc_lof_in_window)
 
-        Form_LOF.exec_()
+        show_work_window(Form_LOF)
 
 
     def draw_lof_bar(colors, factor_lof, label_lof, ui_lof):
@@ -945,8 +942,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
         canvas_tsne.draw()
 
 
-    def calc_lof_model(n_LOF, training_sample):
-        global data_pca, data_tsne
+    def calc_lof_model(n_LOF, training_sample, data_pca, data_tsne):
         lof = LocalOutlierFactor(n_neighbors=n_LOF)
         label_lof = lof.fit_predict(training_sample)
         factor_lof = -lof.negative_outlier_factor_
@@ -965,7 +961,7 @@ def show_regressor_train_form(input_data, target_data_top, target_data_bottom):
     # ui_r.checkBox_rfr_extra.clicked.connect(push_checkbutton_extra)
     # ui_r.checkBox_rfr_ada.clicked.connect(push_checkbutton_ada)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
-    Regressor.exec_()
+    show_work_window(Regressor)
 
 
 def update_list_trained_models():

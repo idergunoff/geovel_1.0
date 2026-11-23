@@ -1,19 +1,22 @@
 import csv
 
+from matplotlib.figure import Figure
+
 from func import *
 from qt.slice_form import Ui_SliceForm
 
 
 def push_slice():
+    research_id = get_research_id()
+    name = get_object_name()
+    year = get_research_name().split('.')[-1]
     SliceForm = QtWidgets.QDialog()
     ui_slc = Ui_SliceForm()
     ui_slc.setupUi(SliceForm)
-    SliceForm.show()
     m_width, m_height = get_width_height_monitor()
     SliceForm.resize(int(m_width/1.5), m_height - 200)
-    SliceForm.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
 
-    figure = plt.figure()
+    figure = Figure()
     canvas = FigureCanvas(figure)
     ui_slc.verticalLayout_slice.addWidget(canvas)
 
@@ -42,19 +45,17 @@ def push_slice():
         figure.clear()
         list_x, list_y, list_z = get_slice(research_id, idx)
 
-        plt.tripcolor(list_x, list_y, list_z, cmap=ui_slc.comboBox_cmap.currentText())
-        plt.grid()
+        axis = figure.add_subplot()
+        axis.tripcolor(list_x, list_y, list_z, cmap=ui_slc.comboBox_cmap.currentText())
+        axis.grid()
         figure.suptitle(f'Slice {idx}')
         figure.tight_layout()
         canvas.draw()
 
     def show_slice():
-        draw_slice(get_research_id(), ui_slc.spinBox_slice.value())
+        draw_slice(research_id, ui_slc.spinBox_slice.value())
 
     def export_slice():
-        name = get_object_name()
-        year = get_research_name().split('.')[-1]
-        research_id = get_research_id()
         idx = ui_slc.spinBox_slice.value()
         list_x, list_y, list_z = get_slice(research_id, idx)
 
@@ -77,5 +78,5 @@ def push_slice():
     ui_slc.spinBox_slice.valueChanged.connect(show_slice)
     ui_slc.comboBox_cmap.activated.connect(show_slice)
     ui_slc.pushButton_export.clicked.connect(export_slice)
-    SliceForm.exec_()
+    show_work_window(SliceForm)
 

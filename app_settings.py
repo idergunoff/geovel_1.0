@@ -8,6 +8,8 @@ import os
 
 from PyQt5 import QtCore, QtWidgets
 
+from qt.work_windows import ask_in_window
+
 
 ORGANIZATION = "GeoVel"
 APPLICATION = "GeoVel"
@@ -148,6 +150,14 @@ def _remember_selection(selection):
     if directory:
         settings().setValue(_DIALOG_KEY, directory)
     return selection
+
+
+def save_file_in_window(owner, caption, directory="", filter=""):
+    dialog = QtWidgets.QFileDialog(owner, caption, _dialog_directory(directory, save=True), filter)
+    dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
+    if ask_in_window(dialog, owner) != QtWidgets.QDialog.Accepted:
+        return "", ""
+    return _remember_selection((dialog.selectedFiles()[0], dialog.selectedNameFilter()))
 
 
 def install_file_dialog_history():

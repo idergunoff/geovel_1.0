@@ -123,7 +123,6 @@ def rename_model_reg():
     RenameModel = QtWidgets.QDialog()
     ui_rnm = Ui_FormRenameModel()
     ui_rnm.setupUi(RenameModel)
-    RenameModel.show()
     RenameModel.setAttribute(Qt.WA_DeleteOnClose)
     ui_rnm.lineEdit.setText(model.title)
 
@@ -136,7 +135,7 @@ def rename_model_reg():
     ui_rnm.buttonBox.accepted.connect(rename_model)
     ui_rnm.buttonBox.rejected.connect(RenameModel.close)
 
-    RenameModel.exec_()
+    ask_in_window(RenameModel, MainWindow)
 
 
 def add_regression_model():
@@ -303,37 +302,39 @@ def add_all_well_markup_reg():
                       parent=dialog)
 
     dialog = RegressionTargetWizard(session, candidates, MainWindow, open_candidate_log)
-    if dialog.exec_() != QtWidgets.QDialog.Accepted:
-        return
-    selected = dialog.selected_candidates()
-    try:
-        # Recheck duplicates because the preview may have been open for a while.
-        for candidate in selected:
-            duplicate = session.query(MarkupReg).filter(
-                MarkupReg.analysis_id == analysis_id, MarkupReg.well_id == candidate.well_id,
-                MarkupReg.profile_id == candidate.profile_id).first()
-            if duplicate and dialog.existing_mode() == 'skip':
-                continue
-            config, details, manual = dialog.provenance_json(candidate)
-            values = dict(target_value=candidate.resolution.value,
-                          target_source_type=dialog.settings().source, target_source_config=config,
-                          target_source_details=details, target_is_manual_override=manual)
-            if duplicate:
-                for field, value in values.items():
-                    setattr(duplicate, field, value)
-                if dialog.existing_mode() == 'all':
-                    duplicate.formation_id = candidate.formation_id
-                    duplicate.list_measure = json.dumps(candidate.list_measure)
-            else:
-                session.add(MarkupReg(
-                    analysis_id=analysis_id, well_id=candidate.well_id, profile_id=candidate.profile_id,
-                    formation_id=candidate.formation_id, list_measure=json.dumps(candidate.list_measure), **values))
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    set_info(f'Добавлено обучающих скважин с рассчитанной целевой переменной: {len(selected)}', 'green')
-    update_list_well_markup_reg()
+    def apply_changes():
+        selected = dialog.selected_candidates()
+        try:
+            # Recheck duplicates because the preview may have been open for a while.
+            for candidate in selected:
+                duplicate = session.query(MarkupReg).filter(
+                    MarkupReg.analysis_id == analysis_id, MarkupReg.well_id == candidate.well_id,
+                    MarkupReg.profile_id == candidate.profile_id).first()
+                if duplicate and dialog.existing_mode() == 'skip':
+                    continue
+                config, details, manual = dialog.provenance_json(candidate)
+                values = dict(target_value=candidate.resolution.value,
+                              target_source_type=dialog.settings().source, target_source_config=config,
+                              target_source_details=details, target_is_manual_override=manual)
+                if duplicate:
+                    for field, value in values.items():
+                        setattr(duplicate, field, value)
+                    if dialog.existing_mode() == 'all':
+                        duplicate.formation_id = candidate.formation_id
+                        duplicate.list_measure = json.dumps(candidate.list_measure)
+                else:
+                    session.add(MarkupReg(
+                        analysis_id=analysis_id, well_id=candidate.well_id, profile_id=candidate.profile_id,
+                        formation_id=candidate.formation_id, list_measure=json.dumps(candidate.list_measure), **values))
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        set_info(f'Добавлено обучающих скважин с рассчитанной целевой переменной: {len(selected)}', 'green')
+        update_list_well_markup_reg()
+
+    dialog.accepted.connect(apply_changes)
+    show_work_window(dialog)
 
 
 def check_all_well_markup_reg():
@@ -667,7 +668,7 @@ def split_well_train_test():
     plt.colorbar(sc, label='value')
 
     plt.legend()
-    plt.show()
+    plt.show(block=False)
 
     result = QtWidgets.QMessageBox.question(
         MainWindow,
@@ -1192,6 +1193,9 @@ def add_param_list_reg():
 
 def train_regression_model():
     """ Расчет регрессионной модели """
+    analysis_id = get_regmod_id()
+    except_signal = ui.lineEdit_signal_except_reg.text()
+    except_crl = ui.lineEdit_crl_except_reg.text()
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
     list_nan_param, count_nan = set(), 0
@@ -1221,7 +1225,7 @@ def train_regression_model():
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
 
-        analysis_data = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+        analysis_data = session.query(AnalysisReg).filter_by(id=analysis_id).first()
         try:
             data_train.to_parquet(analysis_data.data)
         except OSError:
@@ -1240,8 +1244,7 @@ def train_regression_model():
     Regressor = QtWidgets.QDialog()
     ui_r = Ui_RegressorForm()
     ui_r.setupUi(Regressor)
-    Regressor.show()
-    Regressor.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    Regressor.setWindowTitle(f'{Regressor.windowTitle()} — {get_regmod_title()}')
     training_mask = TrainingFeatureMask(
         list_param_reg, data_train.columns, ui_r.checkBox_mask_param, ui_r.listWidget_mask_param,
         get_list_param_by_mask,
@@ -1770,7 +1773,7 @@ def train_regression_model():
 
         fig.delaxes(axs[1, 1])
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
         if ui_rs.checkBox_save_model.isChecked():
             result = QtWidgets.QMessageBox.question(
@@ -1788,7 +1791,7 @@ def train_regression_model():
                     pickle.dump(pipe, f)
 
                 new_trained_model = TrainedModelReg(
-                    analysis_id=get_regmod_id(),
+                    analysis_id=analysis_id,
                     title=f'{model_name}_{round(r2, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
                     path_model=path_model,
                     list_params=json.dumps(list_param_name),
@@ -1806,8 +1809,6 @@ def train_regression_model():
         RandomSearchReg = QtWidgets.QDialog()
         ui_rs = Ui_RandomSearchReg()
         ui_rs.setupUi(RandomSearchReg)
-        RandomSearchReg.show()
-        RandomSearchReg.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         x_train, x_test, y_train, y_test = train_test_split(
             training_sample, target, test_size=0.2, random_state=42
@@ -1841,16 +1842,15 @@ def train_regression_model():
         def search_param():
             """ Подбор оптимальных параметров с помощью Optuna """
 
-            global data
             filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                       filter="Excel Files (*.xlsx)")
             ui_rs.plainTextEdit.clear()
             start_time = datetime.datetime.now()
             data = create_data()
 
-            def create_objective(data):
+            def create_objective():
                 def objective(trial):
-                    global data
+                    nonlocal data
                     print("Trial number:", trial.number)
                     ui_rs.plainTextEdit.appendPlainText("Trial number: " + str(trial.number))
                     pipe_steps = []
@@ -2100,7 +2100,7 @@ def train_regression_model():
             # Запуск оптимизации
             # optuna.logging.set_verbosity(optuna.logging.CRITICAL)
             try:
-                objective_func = create_objective(data)
+                objective_func = create_objective()
                 study = optuna.create_study(direction='maximize')
                 study.optimize(objective_func, n_trials=ui_rs.spinBox_trials.value())
 
@@ -2131,7 +2131,7 @@ def train_regression_model():
             calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test)
 
         ui_rs.pushButton_search_param.clicked.connect(search_param)
-        RandomSearchReg.exec_()
+        show_work_window(RandomSearchReg)
 
     def calc_model_reg():
         """ Создание и тренировка модели """
@@ -2290,8 +2290,6 @@ def train_regression_model():
         Form_PDP = QtWidgets.QDialog()
         ui_pdp = Ui_Dialog_PDP()
         ui_pdp.setupUi(Form_PDP)
-        Form_PDP.show()
-        Form_PDP.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
 
         for p in list_param_reg:
@@ -2308,55 +2306,58 @@ def train_regression_model():
                                                         kind='average')
             else:
                 PartialDependenceDisplay.from_estimator(pipe, x_test, [param], feature_names=list_param_reg, kind='both')
-            plt.show()
+            plt.show(block=False)
 
 
 
         ui_pdp.pushButton_pdp.clicked.connect(draw_dependence)
-        Form_PDP.exec_()
-
-
-
-        if not ui_r.checkBox_save_model.isChecked():
-            return
-        result = QtWidgets.QMessageBox.question(
-            MainWindow,
-            'Сохранение модели',
-            f'Сохранить модель {model_name}?',
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
-        if result == QtWidgets.QMessageBox.Yes:
-            # Сохранение модели в файл с помощью pickle
-            path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
-            if os.path.exists(path_model):
-                path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
-            with open(path_model, 'wb') as f:
-                pickle.dump(pipe, f)
-
-            new_trained_model = TrainedModelReg(
-                analysis_id=get_regmod_id(),
-                title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
-                path_model=path_model,
-                list_params=json.dumps(list_param_name),
-                except_signal=ui.lineEdit_signal_except_reg.text(),
-                except_crl=ui.lineEdit_crl_except_reg.text(),
-                comment = text_model
-            )
-            session.add(new_trained_model)
-            session.commit()
-
+        if ui_r.checkBox_save_model.isChecked():
+            mask_id = None
             if ui_r.checkBox_mask_param.isChecked():
                 mask_id = int(ui_r.listWidget_mask_param.currentItem().text().split(' id')[-1])
-                new_trained_model_mask = TrainedModelRegMask(
-                    model_id=new_trained_model.id,
-                    mask_id=mask_id
+
+            def save_model():
+                if session.get(AnalysisReg, analysis_id) is None:
+                    set_info('Анализ, для которого обучена модель, удалён.', 'red')
+                    return
+                question = QtWidgets.QMessageBox(
+                    QtWidgets.QMessageBox.Question, 'Сохранение модели', f'Сохранить модель {model_name}?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, MainWindow,
                 )
-                session.add(new_trained_model_mask)
+                question.setDefaultButton(QtWidgets.QMessageBox.No)
+                if ask_in_window(question, MainWindow) != QtWidgets.QMessageBox.Yes:
+                    return
+                # Сохранение модели в файл с помощью pickle
+                path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}.pkl'
+                if os.path.exists(path_model):
+                    path_model = f'models/regression/{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y_%H%M%S")}.pkl'
+                with open(path_model, 'wb') as f:
+                    pickle.dump(pipe, f)
+
+                new_trained_model = TrainedModelReg(
+                    analysis_id=analysis_id,
+                    title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
+                    path_model=path_model,
+                    list_params=json.dumps(list_param_name),
+                    except_signal=except_signal,
+                    except_crl=except_crl,
+                    comment = text_model
+                )
+                session.add(new_trained_model)
                 session.commit()
 
-            update_list_trained_models_regmod()
-        else:
-            pass
+                if mask_id is not None and session.get(ParameterMask, mask_id) is not None:
+                    new_trained_model_mask = TrainedModelRegMask(
+                        model_id=new_trained_model.id,
+                        mask_id=mask_id
+                    )
+                    session.add(new_trained_model_mask)
+                    session.commit()
+
+                update_list_trained_models_regmod()
+
+            Form_PDP.finished.connect(lambda _: save_model())
+        show_work_window(Form_PDP)
 
 
     def calc_cov():
@@ -2512,7 +2513,7 @@ def train_regression_model():
         # plt.ylim(0, 1.05)
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
         plot_groups_with_smoothed_hull(data_train_cov)
         plot_graphs_by_group(graphs, group_order)
@@ -2592,12 +2593,11 @@ def train_regression_model():
             list_accuracy.append(test_accuracy)
 
         plt.bar(range(5), list_accuracy)
-        plt.show()
+        plt.show(block=False)
 
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
-        global data_pca, data_tsne, colors, factor_lof
 
         data_lof = data_train.copy()
         data_lof.drop(['prof_well_index', 'target_value'], axis=1, inplace=True)
@@ -2607,19 +2607,17 @@ def train_regression_model():
         n_LOF = ui_r.spinBox_lof_neighbor.value()
 
         tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-        data_tsne = tsne.fit_transform(training_sample_lof)
+        tsne_values = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)
-        data_pca = pca.fit_transform(training_sample_lof)
+        pca_values = pca.fit_transform(training_sample_lof)
 
-        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
+        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof, pca_values, tsne_values)
 
 
-        Form_LOF = QtWidgets.QDialog()
+        Form_LOF = QtWidgets.QDialog(Regressor)
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
-        Form_LOF.show()
-        Form_LOF.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
 
         def set_title_lof_form(label_lof):
@@ -2638,8 +2636,9 @@ def train_regression_model():
 
 
         def calc_lof_in_window():
-            global data_pca, data_tsne, colors, factor_lof
-            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            nonlocal data_pca, data_tsne, colors, factor_lof, label_lof
+            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             ui_lof.checkBox_samples.setChecked(False)
             draw_lof_tsne(data_tsne, ui_lof)
             draw_lof_pca(data_pca, ui_lof)
@@ -2651,7 +2650,8 @@ def train_regression_model():
 
 
         def calc_clean_model():
-            _, _, _, _, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            _, _, _, _, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             lof_index = [i for i, x in enumerate(label_lof) if x == -1]
             for ix in lof_index:
                 prof_well = data_train['prof_well_index'][ix]
@@ -2678,11 +2678,11 @@ def train_regression_model():
 
             new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
 
-            analysis_reg = session.query(AnalysisReg).filter_by(id=get_regmod_id()).first()
+            analysis_reg = session.query(AnalysisReg).filter_by(id=analysis_id).first()
             filepath = analysis_reg.data
             new_data_train.to_parquet(filepath)
 
-            # session.query(AnalysisReg).filter_by(id=get_regmod_id()).update(
+            # session.query(AnalysisReg).filter_by(id=analysis_id).update(
             #     {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
             # session.commit()
             # build_table_train(False, 'regmod')
@@ -2691,7 +2691,6 @@ def train_regression_model():
 
 
         def draw_checkbox_samples():
-            global data_pca, data_tsne, colors, factor_lof
             if ui_lof.checkBox_samples.isChecked():
                 col = ui_lof.listWidget_features.currentItem().text()
                 draw_hist_sample_feature(data_train, col, data_train[col][int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0])], ui_lof)
@@ -2711,7 +2710,7 @@ def train_regression_model():
         ui_lof.listWidget_features.currentItemChanged.connect(draw_checkbox_samples)
         ui_lof.pushButton_lof.clicked.connect(calc_lof_in_window)
 
-        Form_LOF.exec_()
+        show_work_window(Form_LOF)
 
 
     def insert_list_samples(data, list_widget, label_lof):
@@ -2788,8 +2787,7 @@ def train_regression_model():
         canvas_tsne.draw()
 
 
-    def calc_lof_model(n_LOF, training_sample):
-        global data_pca, data_tsne
+    def calc_lof_model(n_LOF, training_sample, data_pca, data_tsne):
         lof = LocalOutlierFactor(n_neighbors=n_LOF)
         label_lof = lof.fit_predict(training_sample)
         factor_lof = -lof.negative_outlier_factor_
@@ -2820,8 +2818,6 @@ def train_regression_model():
         GenAlg = QtWidgets.QDialog()
         ui_ga = Ui_GeneticForm()
         ui_ga.setupUi(GenAlg)
-        GenAlg.show()
-        GenAlg.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
         m_width, m_height = get_width_height_monitor()
         GenAlg.resize(m_width - 500, m_height - 400)
@@ -2832,7 +2828,7 @@ def train_regression_model():
 
         def update_combobox_gen_an():
             ui_ga.comboBox_gen_analysis.clear()
-            gen_analysis = session.query(GeneticAlgorithmReg).filter_by(analysis_id=get_regmod_id()).order_by(
+            gen_analysis = session.query(GeneticAlgorithmReg).filter_by(analysis_id=analysis_id).order_by(
                 desc(GeneticAlgorithmReg.id)).all()
             for ga in gen_analysis:
                 ui_ga.comboBox_gen_analysis.addItem(f'{ga.type_problem} {ga.title} id{ga.id}')
@@ -3156,7 +3152,7 @@ def train_regression_model():
             else:
                 p_type = 'no'
             ga = session.query(GeneticAlgorithmReg).filter_by(
-                analysis_id=get_regmod_id(),
+                analysis_id=analysis_id,
                 title=title,
                 pipeline=text_model,
                 list_params=json.dumps(list_param_reg),
@@ -3312,7 +3308,7 @@ def train_regression_model():
             p_sep = os.path.sep
             filepath = f'genetic{p_sep}reg{p_sep}{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}{title}.pkl'
             new_gen = GeneticAlgorithmReg(
-                analysis_id=get_regmod_id(),
+                analysis_id=analysis_id,
                 title=title,
                 pipeline=text_model,
                 checkfile_path=filepath,
@@ -3550,7 +3546,7 @@ def train_regression_model():
         update_list_mask()
         update_combobox_gen_an()
 
-        GenAlg.exec_()
+        show_work_window(GenAlg)
 
     ui_r.pushButton_lof.clicked.connect(calc_lof)
     ui_r.pushButton_calc.clicked.connect(calc_model_reg)
@@ -3563,7 +3559,7 @@ def train_regression_model():
     ui_r.pushButton_cvw.clicked.connect(calc_model_regression_by_cvw)
     from app_settings import bind_form
     bind_form(Regressor, "regressor_form")
-    Regressor.exec_()
+    show_work_window(Regressor)
 
 
 
@@ -3703,7 +3699,7 @@ def train_regression_model():
 #                 pickle.dump(pipe, f)
 #
 #             new_trained_model = TrainedModelReg(
-#                 analysis_id=get_regmod_id(),
+#                 analysis_id=analysis_id,
 #                 title=f'{model_name}_{round(accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
 #                 path_model=path_model,
 #                 list_params=json.dumps(list_param),
@@ -3835,21 +3831,33 @@ def remove_trained_model_regmod():
 def calc_profile_model_regmod():
     """ Расчет профиля обученной моделью """
 
+    profile_id = get_profile_id()
     try:
         working_data, curr_form = build_table_test('regmod')
     except TypeError:
         QMessageBox.critical(MainWindow, 'Ошибка', 'Недостаточно  параметров для рассчета по выбранной модели',
                              QMessageBox.Ok)
         return
+    model_item = ui.listWidget_trained_model_reg.currentItem()
+    if model_item is None:
+        set_info("Выберите обученную модель.", "red")
+        return
+    model_id = model_item.data(Qt.UserRole)
+
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
-    Choose_RegModel.show()
-    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
+        if get_profile_id() != profile_id:
+            set_info("Выберите в главном окне исходный профиль для этого расчёта.", "red")
+            return
+        current_model = ui.listWidget_trained_model_reg.currentItem()
+        if current_model is None or current_model.data(Qt.UserRole) != model_id:
+            set_info("Выберите в главном окне исходную модель для этого расчёта.", "red")
+            return
         model = session.query(TrainedModelReg).filter_by(
-        id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        id=model_id).first()
         list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
 
         model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
@@ -3910,16 +3918,16 @@ def calc_profile_model_regmod():
             update_list_model_prediction()
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
-    Choose_RegModel.exec_()
+    show_work_window(Choose_RegModel)
 
 
 def calc_object_model_regmod():
     """ Расчет объекта обученной моделью """
 
-    global flag_break
     working_data_result = pd.DataFrame()
     list_formation = []
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    research_id = get_research_id()
+    profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
     flag_break = []
     for n, prof in enumerate(profiles):
         if flag_break:
@@ -3941,14 +3949,13 @@ def calc_object_model_regmod():
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
-            Choose_Formation.show()
             Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
             for f in prof.formations:
                 ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
-                global flag_break
+                nonlocal flag_break
                 # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
                 if ui_cf.checkBox_to_all.isChecked():
                     title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
@@ -3970,7 +3977,7 @@ def calc_object_model_regmod():
                     Choose_Formation.close()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-            Choose_Formation.exec_()
+            ask_in_window(Choose_Formation, MainWindow)
     # working_data_result = pd.DataFrame()
     # list_formation = []
     # for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == get_research_id()).all()):
@@ -4046,14 +4053,25 @@ def calc_object_model_regmod():
     update_list_model_prediction()
     working_data_result_copy = working_data_result.copy()
 
+    model_item = ui.listWidget_trained_model_reg.currentItem()
+    if model_item is None:
+        set_info("Выберите обученную модель.", "red")
+        return
+    model_id = model_item.data(Qt.UserRole)
+
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
-    Choose_RegModel.show()
-    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_regmod():
-        model = session.query(TrainedModelReg).filter_by(id=ui.listWidget_trained_model_reg.currentItem().data(Qt.UserRole)).first()
+        if get_research_id() != research_id:
+            set_info("Выберите в главном окне исходное исследование для этого расчёта.", "red")
+            return
+        current_model = ui.listWidget_trained_model_reg.currentItem()
+        if current_model is None or current_model.data(Qt.UserRole) != model_id:
+            set_info("Выберите в главном окне исходную модель для этого расчёта.", "red")
+            return
+        model = session.query(TrainedModelReg).filter_by(id=model_id).first()
         with open(model.path_model, 'rb') as f:
             reg_model = pickle.load(f)
 
@@ -4088,32 +4106,37 @@ def calc_object_model_regmod():
         y = list(working_data_result_copy['y_pulc'])
         z = list(working_data_result_copy['value'])
 
-        draw_map(x, y, z, ui.listWidget_trained_model_reg.currentItem().text(), False)
-        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта регрессионной модели?', QMessageBox.Yes,
-                                       QMessageBox.No)
-        if result1 == QMessageBox.Yes:
-            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
-                                           QMessageBox.No)
-            if result2 == QMessageBox.Yes:
-                list_col = ['x_pulc', 'y_pulc', 'value']
-                working_data_result_excel = working_data_result_copy[list_col]
+        file_prefix = f'{get_object_name()}_{get_research_name()}'
+        model_title = ui.listWidget_trained_model_reg.currentItem().text()
+
+        def save_results():
+            result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта регрессионной модели?')
+            if result1:
+                result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+                if result2:
+                    list_col = ['x_pulc', 'y_pulc', 'value']
+                    working_data_result_excel = working_data_result_copy[list_col]
+                else:
+                    working_data_result_excel = working_data_result.copy()
+                try:
+                    file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                    fn = save_file_in_window(MainWindow,
+                        caption=f'Сохранить результат регрессионной модели "{file_prefix}" в таблицу',
+                        directory=file_name,
+                        filter="Excel Files (*.xlsx)")
+                    if not fn[0]:
+                        return
+                    working_data_result_excel.to_excel(fn[0])
+                    set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+                except ValueError:
+                    pass
             else:
-                working_data_result_excel = working_data_result.copy()
-            try:
-                file_name = f'{get_object_name()}_{get_research_name()}__модель_{ui.listWidget_trained_model_reg.currentItem().text()}.xlsx'
-                fn = QFileDialog.getSaveFileName(
-                    caption=f'Сохранить результат регрессионной модели "{get_object_name()}_{get_research_name()}" в таблицу',
-                    directory=file_name,
-                    filter="Excel Files (*.xlsx)")
-                working_data_result_excel.to_excel(fn[0])
-                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-            except ValueError:
                 pass
-        else:
-            pass
+
+        draw_map(x, y, z, ui.listWidget_trained_model_reg.currentItem().text(), False, on_close=save_results)
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_regmod)
-    Choose_RegModel.exec_()
+    show_work_window(Choose_RegModel)
 
 
 def copy_regmod():
@@ -4219,8 +4242,6 @@ def anova_regmod():
     Anova = QtWidgets.QDialog()
     ui_anova = Ui_Anova()
     ui_anova.setupUi(Anova)
-    Anova.show()
-    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
 
     # ui_anova.graphicsView.setBackground('w')
 
@@ -4258,7 +4279,7 @@ def anova_regmod():
 
     ui_anova.listWidget.currentItemChanged.connect(draw_graph_anova)
 
-    Anova.exec_()
+    show_work_window(Anova)
 
 
 def clear_fake_reg():
@@ -4286,8 +4307,6 @@ def get_model_param_list_reg():
     FormParams = QtWidgets.QDialog()
     ui_p = Ui_Form_ModelParams()
     ui_p.setupUi(FormParams)
-    FormParams.show()
-    FormParams.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_p.label.setText(model.title + ' parameters: ')
     ui_p.label_crl.setText(ui_p.label_crl.text() + model.except_crl)
@@ -4343,7 +4362,7 @@ def get_model_param_list_reg():
     ui_p.pushButton_add_class.clicked.connect(lambda: add_and_compare_models('cls'))
     ui_p.pushButton_add_reg.clicked.connect(lambda: add_and_compare_models('reg'))
 
-    FormParams.exec_()
+    show_work_window(FormParams)
 
 
 
@@ -4359,7 +4378,6 @@ def update_trained_model_reg_comment():
     FormComment = QtWidgets.QDialog()
     ui_cmt = Ui_Form_comment()
     ui_cmt.setupUi(FormComment)
-    FormComment.show()
     FormComment.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_cmt.textEdit.setText(an.comment)
@@ -4372,7 +4390,7 @@ def update_trained_model_reg_comment():
 
     ui_cmt.buttonBox.accepted.connect(update_comment)
 
-    FormComment.exec_()
+    ask_in_window(FormComment, MainWindow)
 
 
 def reg_model_prediction_upgrade():
@@ -4402,7 +4420,6 @@ def reg_model_prediction_upgrade():
     FormUpgradePredict = QtWidgets.QDialog()
     ui_up = Ui_FormUpgradeModel()
     ui_up.setupUi(FormUpgradePredict)
-    FormUpgradePredict.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     model_list_param = json.loads(model.list_params)
     ui_up.listWidget_predict_model.addItems([
@@ -4440,7 +4457,7 @@ def reg_model_prediction_upgrade():
         FormUpgradePredict.close()
 
     ui_up.pushButton_upgrade_model.clicked.connect(upgrade_list_param_predict)
-    FormUpgradePredict.exec_()
+    show_work_window(FormUpgradePredict)
 
 
 def export_model_reg():

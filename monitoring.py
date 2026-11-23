@@ -453,7 +453,7 @@ def show_thermogram():
         ax.set_ylim((y_center - max_range / 2, y_center + max_range / 2))
         ax.set_zlim((z_center - max_range / 2, z_center + max_range / 2))
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
     else:
         x = [l[0] for l in therm_data]
         y = [t[1] for t in therm_data]
@@ -575,7 +575,7 @@ def show_corr_therm():
     plt.tight_layout()
     ax.legend()
     ax.grid(True)
-    plt.show()
+    plt.show(block=False)
 
 
 def remove_thermogram():
@@ -619,7 +619,6 @@ def remove_therm_by_date():
     FormDelTherm = QtWidgets.QDialog()
     ui_fdt = Ui_Form_delete_therm_by_date()
     ui_fdt.setupUi(FormDelTherm)
-    FormDelTherm.show()
     FormDelTherm.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     date_start = session.query(Thermogram).filter_by(h_well_id=h_well_id).order_by(Thermogram.date_time).first().date_time
@@ -650,7 +649,7 @@ def remove_therm_by_date():
 
     ui_fdt.buttonBox.accepted.connect(remove_therm_by_start_stop)
     ui_fdt.buttonBox.rejected.connect(FormDelTherm.close)
-    FormDelTherm.exec_()
+    ask_in_window(FormDelTherm, MainWindow)
 
 
 
@@ -702,7 +701,7 @@ def draw_param_h_well():
         ax.grid(True)
         ax.legend()
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
         # Вариант отображения параметров в pyqtgraph
         # x_num = [mdates.date2num(date) for date in x]
@@ -911,10 +910,10 @@ def show_inclinometry():
             def rotate(angle):
                 ax.view_init(azim=angle)
 
-            ani = FuncAnimation(fig, rotate, frames=np.arange(0, 360, 1), interval=ui.spinBox_interval_animation.value())
+            fig.animation = FuncAnimation(fig, rotate, frames=np.arange(0, 360, 1), interval=ui.spinBox_interval_animation.value())
 
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def coordinate_binding_thermogram():
@@ -1146,10 +1145,11 @@ def show_therms_animation():
 
     # Подключение функции обработки события к кнопке
     pause_button.on_clicked(pause_animation)
+    fig.animation_controls = (animation, animation_3d, pause_button)
 
     app.processEvents()
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def show_therms_animation_sep():
@@ -1231,6 +1231,7 @@ def show_therms_animation_sep():
 
         # Подключение функции обработки события к кнопке
         pause_button.on_clicked(pause_animation)
+        fig.animation_controls = (animation, pause_button)
         plt.tight_layout()
 
     else:
@@ -1289,11 +1290,12 @@ def show_therms_animation_sep():
 
         # Подключение функции обработки события к кнопке
         pause_button.on_clicked(pause_animation)
+        fig.animation_controls = (animation, pause_button)
     # Отображение
 
     app.processEvents()
     # plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def average_lists(lists):
@@ -1454,16 +1456,20 @@ def draw_map_by_thermogram():
                 list_x += xs_therm
                 list_y += ys_therm
                 list_t += ts_therm
-    draw_map(list_x, list_y, list_t, f'{research.object.title} {target_date.strftime("%d.%m.%Y")}', False)
-    result = QMessageBox.question(MainWindow, 'Сохранить рабочий набор?', 'Сохранить рабочий набор?', QMessageBox.Yes, QMessageBox.No)
-    if result == QMessageBox.Yes:
-        result_table = pd.DataFrame({'x': list_x, 'y': list_y, 'temp': list_t})
-        file_name = f'{research.object.title}_{target_date.strftime("%d.%m.%Y")}.xlsx'
-        fn = QFileDialog.getSaveFileName(caption='Сохранить рабочий набор', directory=file_name, filter="Excel Files (*.xlsx)")
-        result_table.to_excel(fn[0], index=False)
-        set_info(f'Рабочий набор сохранен в файл {fn[0]}', 'green')
-    else:
-        pass
+    def save_results():
+        result = confirm_in_window(MainWindow, 'Сохранить рабочий набор?', 'Сохранить рабочий набор?')
+        if result:
+            result_table = pd.DataFrame({'x': list_x, 'y': list_y, 'temp': list_t})
+            file_name = f'{research.object.title}_{target_date.strftime("%d.%m.%Y")}.xlsx'
+            fn = save_file_in_window(MainWindow, caption='Сохранить рабочий набор', directory=file_name, filter="Excel Files (*.xlsx)")
+            if not fn[0]:
+                return
+            result_table.to_excel(fn[0], index=False)
+            set_info(f'Рабочий набор сохранен в файл {fn[0]}', 'green')
+        else:
+            pass
+
+    draw_map(list_x, list_y, list_t, f'{research.object.title} {target_date.strftime("%d.%m.%Y")}', False, on_close=save_results)
 
 
 def test():
@@ -1478,4 +1484,4 @@ def test():
     for i, label in enumerate(title):
         plt.annotate(label, (x[i], y[i]))
 
-    plt.show()
+    plt.show(block=False)

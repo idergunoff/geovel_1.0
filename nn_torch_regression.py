@@ -79,7 +79,7 @@ def draw_results_graphs(loss, epochs):
 
     fig.suptitle(f'\nTrain Loss Plot: ')
     plt.subplots_adjust(top=0.8)
-    plt.show()
+    plt.show(block=False)
 
 
 class PyTorchRegressor:
@@ -260,11 +260,10 @@ def add_features(ui_tch, text_model):
 
 
 def torch_regressor_train():
+    analysis_id = get_regmod_id()
     TorchRegressor = QtWidgets.QDialog()
     ui_tch = Ui_TorchNNRegressor()
     ui_tch.setupUi(TorchRegressor)
-    TorchRegressor.show()
-    TorchRegressor.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data_train, list_param_name = build_table_train(True, 'regmod')
     list_param_reg = get_list_param_numerical_for_train(list_param_name)
@@ -450,11 +449,11 @@ def torch_regressor_train():
                                             epochs, regular, early_stopping, patience, batch_size=20))
              ])
 
-        except_reg = session.query(ExceptionReg).filter_by(analysis_id=get_regmod_id()).first()
+        except_reg = session.query(ExceptionReg).filter_by(analysis_id=analysis_id).first()
 
         new_lineup = LineupTrain(
             type_ml='reg',
-            analysis_id=get_regmod_id(),
+            analysis_id=analysis_id,
             list_param=json.dumps(list_param_reg),
             list_param_short=json.dumps(list_param_name),
             except_signal=except_reg.except_signal,
@@ -731,4 +730,4 @@ def torch_regressor_train():
 
     ui_tch.pushButton_train.clicked.connect(choose)
     ui_tch.pushButton_lineup.clicked.connect(torch_regressor_lineup)
-    TorchRegressor.exec()
+    show_work_window(TorchRegressor)

@@ -5,12 +5,10 @@ from build_table import *
 
 def push_random_search():
     """ Старт окна RandomizedSearchCV """
-    global dict_param_distr
+    dict_param_distr = {}
     RandomSearch = QtWidgets.QDialog()
     ui_rs = Ui_RandomSearchForm()
     ui_rs.setupUi(RandomSearch)
-    RandomSearch.show()
-    RandomSearch.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data_train, list_param = build_table_train(True, 'mlp')
 
@@ -44,7 +42,6 @@ def push_random_search():
     ### KNN ###
 
     def show_dict_param_distr_knn():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         add_text('knn__weights', dict_param_distr['knn__weights'])
         if ui_rs.checkBox_neighbors_lim.isChecked():
@@ -55,7 +52,7 @@ def push_random_search():
 
 
     def click_knn():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_neighbors_lim.setChecked(False)
         n_knn = ui_rs.spinBox_neighbors.value()
         weights_knn = 'distance' if ui_rs.checkBox_knn_weights.isChecked() else 'uniform'
@@ -64,7 +61,6 @@ def push_random_search():
 
 
     def add_neighbors():
-        global dict_param_distr
         if not ui_rs.radioButton_knn.isChecked():
             return
         n_knn = ui_rs.spinBox_neighbors.value()
@@ -78,7 +74,6 @@ def push_random_search():
 
 
     def lim_neighbors():
-        global dict_param_distr
         if not ui_rs.radioButton_knn.isChecked():
             return
         n_knn = ui_rs.spinBox_neighbors.value()
@@ -91,7 +86,6 @@ def push_random_search():
 
 
     def correct_lim_neighbors():
-        global dict_param_distr
         if not ui_rs.radioButton_knn.isChecked() or not ui_rs.checkBox_neighbors_lim.isChecked():
             return
         n_knn = ui_rs.spinBox_neighbors.value()
@@ -101,7 +95,6 @@ def push_random_search():
 
 
     def add_weights():
-        global dict_param_distr
         if not ui_rs.radioButton_knn.isChecked():
             return
         weights_knn = 'distance' if ui_rs.checkBox_knn_weights.isChecked() else 'uniform'
@@ -112,7 +105,6 @@ def push_random_search():
 
     ### SVC ###
     def show_dict_param_distr_svc():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         add_text('svc__kernel', dict_param_distr['svc__kernel'])
         if ui_rs.checkBox_svc_lim.isChecked():
@@ -123,14 +115,13 @@ def push_random_search():
 
 
     def click_svc():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_svc_lim.setChecked(False)
         dict_param_distr = {'svc__kernel': [ui_rs.comboBox_svr_kernel.currentText()], 'svc__C': [ui_rs.doubleSpinBox_svr_c.value()]}
         show_dict_param_distr_pca() if ui_rs.checkBox_pca.isChecked() else show_dict_param_distr_svc()
 
 
     def add_kernel():
-        global dict_param_distr
         if not ui_rs.radioButton_svc.isChecked():
             return
         if not ui_rs.comboBox_svr_kernel.currentText() in dict_param_distr['svc__kernel']:
@@ -139,7 +130,6 @@ def push_random_search():
 
 
     def add_c():
-        global dict_param_distr
         if not ui_rs.radioButton_svc.isChecked():
             return
         svc_c = ui_rs.doubleSpinBox_svr_c.value()
@@ -154,7 +144,6 @@ def push_random_search():
 
 
     def lim_c():
-        global dict_param_distr
         if not ui_rs.radioButton_svc.isChecked():
             return
         svc_c = ui_rs.doubleSpinBox_svr_c.value()
@@ -167,7 +156,6 @@ def push_random_search():
 
 
     def correct_lim_c():
-        global dict_param_distr
         if not ui_rs.radioButton_svc.isChecked() or not ui_rs.checkBox_svc_lim.isChecked():
             return
         svc_c = ui_rs.doubleSpinBox_svr_c.value()
@@ -179,7 +167,6 @@ def push_random_search():
     ### QDA ###
 
     def show_dict_param_distr_qda():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         if ui_rs.checkBox_reg_param_lim.isChecked():
             add_text('qda__reg_param',
@@ -190,14 +177,13 @@ def push_random_search():
 
 
     def click_qda():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_reg_param_lim.setChecked(False)
         dict_param_distr = {'qda__reg_param': [round(ui_rs.doubleSpinBox_qda_reg_param.value(), 2)]}
         show_dict_param_distr_pca() if ui_rs.checkBox_pca.isChecked() else show_dict_param_distr_qda()
 
 
     def add_reg_param():
-        global dict_param_distr
         if not ui_rs.radioButton_qda.isChecked():
             return
         reg_param = round(ui_rs.doubleSpinBox_qda_reg_param.value(), 2)
@@ -211,7 +197,6 @@ def push_random_search():
 
 
     def lim_reg_param():
-        global dict_param_distr
         if not ui_rs.radioButton_qda.isChecked():
             return
         reg_param = round(ui_rs.doubleSpinBox_qda_reg_param.value(), 2)
@@ -224,7 +209,6 @@ def push_random_search():
 
 
     def correct_lim_reg_param():
-        global dict_param_distr
         if not ui_rs.radioButton_qda.isChecked() or not ui_rs.checkBox_reg_param_lim.isChecked():
             return
         reg_param = round(ui_rs.doubleSpinBox_qda_reg_param.value(), 2)
@@ -236,7 +220,6 @@ def push_random_search():
 ### GNB ###
 
     def show_dict_param_distr_gnb():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         if ui_rs.checkBox_var_smooth_lim.isChecked():
             add_text('gnb__var_smoothing', f'uniform(10 ** (-{ui_rs.spinBox_gnb_var_smooth.value()}), '
@@ -246,14 +229,13 @@ def push_random_search():
 
 
     def click_gnb():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_var_smooth_lim.setChecked(False)
         dict_param_distr = {'gnb__var_smoothing': [10 ** (-ui_rs.spinBox_gnb_var_smooth.value())]}
         show_dict_param_distr_pca() if ui_rs.checkBox_pca.isChecked() else show_dict_param_distr_gnb()
 
 
     def add_var_smooth():
-        global dict_param_distr
         if not ui_rs.radioButton_gnb.isChecked():
             return
         var_smooth = 10 ** (-ui_rs.spinBox_gnb_var_smooth.value())
@@ -267,7 +249,6 @@ def push_random_search():
 
 
     def lim_var_smooth():
-        global dict_param_distr
         if not ui_rs.radioButton_gnb.isChecked():
             return
         var_smooth = 10 ** (-ui_rs.spinBox_gnb_var_smooth.value())
@@ -280,7 +261,6 @@ def push_random_search():
 
 
     def correct_lim_var_smooth():
-        global dict_param_distr
         if not ui_rs.radioButton_gnb.isChecked() or not ui_rs.checkBox_var_smooth_lim.isChecked():
             return
         var_smooth = 10 ** (-ui_rs.spinBox_gnb_var_smooth.value())
@@ -292,7 +272,6 @@ def push_random_search():
 ### RFC ###
 
     def show_dict_param_distr_rfc():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         if ui_rs.checkBox_rfc_n_lim.isChecked():
             add_text('rfc__n_estimators', f'randint({ui_rs.spinBox_rfc_n.value()}, '
@@ -302,14 +281,13 @@ def push_random_search():
 
 
     def click_rfc():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_rfc_n_lim.setChecked(False)
         dict_param_distr = {'rfc__n_estimators': [ui_rs.spinBox_rfc_n.value()]}
         show_dict_param_distr_pca() if ui_rs.checkBox_pca.isChecked() else show_dict_param_distr_rfc()
 
 
     def add_rfc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_rfc.isChecked():
             return
         n_est = ui_rs.spinBox_rfc_n.value()
@@ -323,7 +301,6 @@ def push_random_search():
 
 
     def lim_rfc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_rfc.isChecked():
             return
         n_est = ui_rs.spinBox_rfc_n.value()
@@ -336,7 +313,6 @@ def push_random_search():
 
 
     def correct_lim_rfc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_rfc.isChecked() or not ui_rs.checkBox_rfc_n_lim.isChecked():
             return
         n_est = ui_rs.spinBox_rfc_n.value()
@@ -348,7 +324,6 @@ def push_random_search():
 ### GBC ###
 
     def show_dict_param_distr_gbc():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         if ui_rs.checkBox_lerning_rate_lim.isChecked():
             add_text('gbc__learning_rate', f'uniform({round(ui_rs.doubleSpinBox_learning_rate.value(), 2)}, '
@@ -363,7 +338,7 @@ def push_random_search():
 
 
     def click_gbc():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_lerning_rate_lim.setChecked(False)
         ui_rs.checkBox_n_estimator_lim.setChecked(False)
         dict_param_distr = {'gbc__learning_rate': [ui_rs.doubleSpinBox_learning_rate.value()],
@@ -372,7 +347,6 @@ def push_random_search():
 
 
     def add_lr():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked():
             return
         lr = round(ui_rs.doubleSpinBox_learning_rate.value(), 2)
@@ -386,7 +360,6 @@ def push_random_search():
 
 
     def lim_lr():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked():
             return
         lr = round(ui_rs.doubleSpinBox_learning_rate.value(), 2)
@@ -399,7 +372,6 @@ def push_random_search():
 
 
     def correct_lim_lr():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked() or not ui_rs.checkBox_lerning_rate_lim.isChecked():
             return
         lr = round(ui_rs.doubleSpinBox_learning_rate.value(), 2)
@@ -409,7 +381,6 @@ def push_random_search():
 
 
     def add_gbc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked():
             return
         n_est = ui_rs.spinBox_n_estimators.value()
@@ -422,7 +393,6 @@ def push_random_search():
 
 
     def lim_gbc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked():
             return
         n_est = ui_rs.spinBox_n_estimators.value()
@@ -435,7 +405,6 @@ def push_random_search():
 
 
     def correct_lim_gbc_n():
-        global dict_param_distr
         if not ui_rs.radioButton_gbc.isChecked() or not ui_rs.checkBox_n_estimator_lim.isChecked():
             return
         n_est = ui_rs.spinBox_n_estimators.value()
@@ -447,7 +416,6 @@ def push_random_search():
 ### MLP ###
 
     def show_dict_param_distr_mlp():
-        global dict_param_distr
         ui_rs.textEdit.clear()
         if ui_rs.checkBox_random_hidden_layer.isChecked():
             add_text('mlp__hidden_layer_sizes', f'hidden_layer({ui_rs.spinBox_min_neuro.value()}, '
@@ -466,7 +434,7 @@ def push_random_search():
 
 
     def click_mlp():
-        global dict_param_distr
+        nonlocal dict_param_distr
         ui_rs.checkBox_mlp_alpha_lim.setChecked(False)
         ui_rs.checkBox_random_hidden_layer.setChecked(False)
         dict_param_distr = {'mlp__hidden_layer_sizes': [tuple(map(int, ui_rs.lineEdit_layer_mlp.text().split()))],
@@ -477,7 +445,6 @@ def push_random_search():
 
 
     def add_hidden_layer():
-        global dict_param_distr
         if ui_rs.lineEdit_layer_mlp.text() == '' or not ui_rs.radioButton_mlp.isChecked():
             return
         if ui_rs.checkBox_random_hidden_layer.isChecked():
@@ -490,7 +457,6 @@ def push_random_search():
 
 
     def add_random_hidden_layer():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked():
             return
         if ui_rs.checkBox_random_hidden_layer.isChecked():
@@ -506,7 +472,6 @@ def push_random_search():
 
 
     def add_activation():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked():
             return
         if ui_rs.comboBox_activation_mlp.currentText() not in dict_param_distr['mlp__activation']:
@@ -515,7 +480,6 @@ def push_random_search():
 
 
     def add_solver():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked():
             return
         if ui_rs.comboBox_solvar_mlp.currentText() not in dict_param_distr['mlp__solver']:
@@ -524,7 +488,6 @@ def push_random_search():
 
 
     def add_alpha():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked():
             return
         alpha = round(ui_rs.doubleSpinBox_alpha_mlp.value(), 5)
@@ -538,7 +501,6 @@ def push_random_search():
 
 
     def lim_alpha():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked():
             return
         alpha = round(ui_rs.doubleSpinBox_alpha_mlp.value(), 5)
@@ -551,7 +513,6 @@ def push_random_search():
 
 
     def correct_alpha():
-        global dict_param_distr
         if not ui_rs.radioButton_mlp.isChecked() or not ui_rs.checkBox_mlp_alpha_lim.isChecked():
             return
         alpha = round(ui_rs.doubleSpinBox_alpha_mlp.value(), 5)
@@ -562,7 +523,6 @@ def push_random_search():
 ### PCA ###
 
     def show_dict_param_distr_pca():
-        global dict_param_distr
         if ui_rs.radioButton_mlp.isChecked():
             show_dict_param_distr_mlp()
         if ui_rs.radioButton_gbc.isChecked():
@@ -586,7 +546,6 @@ def push_random_search():
 
 
     def click_pca():
-        global dict_param_distr
         ui_rs.checkBox_pca_lim.setChecked(False)
         ui_rs.checkBox_pca_mle.setChecked(False)
         if ui_rs.checkBox_pca.isChecked():
@@ -597,7 +556,6 @@ def push_random_search():
 
 
     def add_pca():
-        global dict_param_distr
         if not ui_rs.checkBox_pca.isChecked():
             return
         n_comp = 'mle' if ui_rs.checkBox_pca_mle.isChecked() else ui_rs.spinBox_pca.value()
@@ -607,7 +565,6 @@ def push_random_search():
 
 
     def lim_pca():
-        global dict_param_distr
         if not ui_rs.checkBox_pca.isChecked():
             return
         n_comp = ui_rs.spinBox_pca.value()
@@ -621,7 +578,6 @@ def push_random_search():
 
 
     def correct_lim_pca():
-        global dict_param_distr
         if not ui_rs.checkBox_pca.isChecked() or not ui_rs.checkBox_pca_lim.isChecked():
             return
         n_comp = ui_rs.spinBox_pca.value()
@@ -641,7 +597,6 @@ def push_random_search():
 
     def calc_random_search():
         """ Создание и тренировка модели """
-        global dict_param_distr
 
         start_time = datetime.datetime.now()
         # Нормализация данных
@@ -870,4 +825,4 @@ def push_random_search():
     ui_rs.spinBox_pca_lim.valueChanged.connect(correct_lim_pca)
 
 
-    RandomSearch.exec_()
+    show_work_window(RandomSearch)

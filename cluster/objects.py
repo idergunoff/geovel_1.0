@@ -72,7 +72,6 @@ def remove_clust_analys():
 
 
 def collect_clust_object():
-    global flag_break
     working_data_result = pd.DataFrame()
     list_formation = []
     profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
@@ -97,14 +96,13 @@ def collect_clust_object():
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
-            Choose_Formation.show()
             Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
             for f in prof.formations:
                 ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
-                global flag_break
+                nonlocal flag_break
                 # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
                 if ui_cf.checkBox_to_all.isChecked():
                     title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
@@ -126,7 +124,7 @@ def collect_clust_object():
                     Choose_Formation.close()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-            Choose_Formation.exec_()
+            ask_in_window(Choose_Formation, MainWindow)
 
     for f in list_formation:
         cf = session.query(Formation).filter_by(id=int(f.split(' id')[-1])).first()

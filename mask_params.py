@@ -14,8 +14,6 @@ def mask_param_form():
     MaskParam = QtWidgets.QDialog()
     ui_mp = Ui_MaskParamForm()
     ui_mp.setupUi(MaskParam)
-    MaskParam.show()
-    MaskParam.setAttribute(Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     MaskParam.resize(int(m_width/1.5), int(m_height/1.5))
@@ -126,8 +124,6 @@ def mask_param_form():
         FormMaskInfo = QtWidgets.QDialog()
         ui_mi = Ui_Form_Mask_Info()
         ui_mi.setupUi(FormMaskInfo)
-        FormMaskInfo.show()
-        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
 
         ui_mi.textEdit.setText(mask.mask_info)
 
@@ -150,7 +146,7 @@ def mask_param_form():
         ui_mi.buttonBox.accepted.connect(update_info)
         ui_mi.buttonBox.rejected.connect(cancel_update)
 
-        FormMaskInfo.exec_()
+        show_work_window(FormMaskInfo)
 
     def save_mask_changes():
         """ Сохранение изменений для текущей маски """
@@ -471,4 +467,4 @@ def mask_param_form():
     ui_mp.pushButton_delete.clicked.connect(delete_mask)
 
 
-    MaskParam.exec_()
+    show_work_window(MaskParam)

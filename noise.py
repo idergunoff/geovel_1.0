@@ -55,24 +55,29 @@ def check_noise_object():
     print(label_lof)
     print(factor_lof)
 
-    draw_map(list_x, list_y, label_lof, 'NOISE', profiles=True)
-    result = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта зоны помех?',
-                                   QMessageBox.Yes, QMessageBox.No)
+    file_prefix = f'{get_object_name()}_{get_research_name()}'
 
-    if result == QMessageBox.Yes:
-        pd_result = pd.DataFrame(columns=['x', 'y', 'noise'])
-        pd_result['x'] = list_x
-        pd_result['y'] = list_y
-        pd_result['noise'] = label_lof
-    else:
-        return
-    try:
-        file_name = f'{get_object_name()}_{get_research_name()}__NOISE.xlsx'
-        fn = QFileDialog.getSaveFileName(
-            caption=f'Сохранить результат расчета зоны помех "{get_object_name()}_{get_research_name()}" в таблицу',
-            directory=file_name,
-            filter="Excel Files (*.xlsx)")
-        pd_result.to_excel(fn[0])
-        set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-    except ValueError:
-        pass
+    def save_results():
+        result = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта зоны помех?')
+
+        if result:
+            pd_result = pd.DataFrame(columns=['x', 'y', 'noise'])
+            pd_result['x'] = list_x
+            pd_result['y'] = list_y
+            pd_result['noise'] = label_lof
+        else:
+            return
+        try:
+            file_name = f'{file_prefix}__NOISE.xlsx'
+            fn = save_file_in_window(MainWindow,
+                caption=f'Сохранить результат расчета зоны помех "{file_prefix}" в таблицу',
+                directory=file_name,
+                filter="Excel Files (*.xlsx)")
+            if not fn[0]:
+                return
+            pd_result.to_excel(fn[0])
+            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+        except ValueError:
+            pass
+
+    draw_map(list_x, list_y, label_lof, 'NOISE', profiles=True, on_close=save_results)

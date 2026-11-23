@@ -10,8 +10,6 @@ def calc_object():
     CalcObjectWindow = QtWidgets.QDialog()
     ui_co = Ui_Dialog_calc_object()
     ui_co.setupUi(CalcObjectWindow)
-    CalcObjectWindow.show()
-    CalcObjectWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     def update_co_models_list():
         ui_co.listWidget_objects.clear()
@@ -63,11 +61,11 @@ def calc_object():
         model = session.query(TrainedModelClass).filter_by(
             id=current_item.data(Qt.UserRole)).first()
 
-        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        research_id = get_research_id()
+        profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
         if len(profiles) == 0:
             set_info(f'У текущего исследования нет профилей', 'red')
         else:
-            global flag_break
             list_formation = []
             flag_break = []
             no_formation = 0
@@ -88,14 +86,13 @@ def calc_object():
                     Choose_Formation = QtWidgets.QDialog()
                     ui_cf = Ui_FormationLDA()
                     ui_cf.setupUi(Choose_Formation)
-                    Choose_Formation.show()
                     Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
                     for f in prof.formations:
                         ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
                     ui_cf.listWidget_form_lda.setCurrentRow(0)
 
                     def form_mlp_ok():
-                        global flag_break
+                        nonlocal flag_break
                         if ui_cf.checkBox_to_all.isChecked():
                             title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
                             for prof in profiles:
@@ -116,7 +113,7 @@ def calc_object():
                             Choose_Formation.close()
 
                     ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-                    Choose_Formation.exec_()
+                    ask_in_window(Choose_Formation, CalcObjectWindow)
 
             if no_formation > 0:
                 if no_formation == 1:
@@ -127,7 +124,7 @@ def calc_object():
                          f'Исследование не добавлено в список CalcObject', 'red')
             else:
                 new_co_cls = CalcObject(
-                    research_id=get_research_id(),
+                    research_id=research_id,
                     type_ml='cls',
                     model_id=model.id,
                     list_formation=json.dumps(list_formation)
@@ -147,11 +144,11 @@ def calc_object():
         model = session.query(TrainedModelReg).filter_by(
             id=current_item.data(Qt.UserRole)).first()
 
-        profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+        research_id = get_research_id()
+        profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
         if len(profiles) == 0:
             set_info(f'У текущего исследования нет профилей', 'red')
         else:
-            global flag_break
             list_formation = []
             flag_break = []
             no_formation = 0
@@ -172,14 +169,13 @@ def calc_object():
                     Choose_Formation = QtWidgets.QDialog()
                     ui_cf = Ui_FormationLDA()
                     ui_cf.setupUi(Choose_Formation)
-                    Choose_Formation.show()
                     Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
                     for f in prof.formations:
                         ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
                     ui_cf.listWidget_form_lda.setCurrentRow(0)
 
                     def form_mlp_ok():
-                        global flag_break
+                        nonlocal flag_break
                         if ui_cf.checkBox_to_all.isChecked():
                             title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
                             for prof in profiles:
@@ -200,7 +196,7 @@ def calc_object():
                             Choose_Formation.close()
 
                     ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-                    Choose_Formation.exec_()
+                    ask_in_window(Choose_Formation, CalcObjectWindow)
 
             if no_formation > 0:
                 if no_formation == 1:
@@ -211,7 +207,7 @@ def calc_object():
                          f'Исследование не добавлено в список CalcObject', 'red')
             else:
                 new_co_reg = CalcObject(
-                    research_id=get_research_id(),
+                    research_id=research_id,
                     type_ml = 'reg',
                     model_id = model.id,
                     list_formation = json.dumps(list_formation)
@@ -365,4 +361,4 @@ def calc_object():
     ui_co.pushButton_calc_cls.clicked.connect(add_cls_model)
     ui_co.pushButton_calc_reg.clicked.connect(add_reg_model)
 
-    CalcObjectWindow.exec_()
+    show_work_window(CalcObjectWindow)

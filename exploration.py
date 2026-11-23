@@ -270,8 +270,6 @@ def load_point_exploration():
     PointsLoader = QtWidgets.QDialog()
     ui_pt = Ui_Form_load_points()
     ui_pt.setupUi(PointsLoader)
-    PointsLoader.show()
-    PointsLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     def cancel_points():
         PointsLoader.close()
 
@@ -324,7 +322,7 @@ def load_point_exploration():
 
     ui_pt.buttonBox.accepted.connect(load_points)
     ui_pt.buttonBox.rejected.connect(cancel_points)
-    PointsLoader.exec_()
+    show_work_window(PointsLoader)
 
 
 def update_train_list_exploration():
@@ -360,8 +358,6 @@ def load_train_data():
     PointsLoader = QtWidgets.QDialog()
     ui_pt = Ui_Form_load_points()
     ui_pt.setupUi(PointsLoader)
-    PointsLoader.show()
-    PointsLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     list_combobox = [ui_pt.comboBox_N, ui_pt.comboBox_x, ui_pt.comboBox_y, ui_pt.comboBox_t]
     for cmbx in list_combobox:
@@ -404,7 +400,7 @@ def load_train_data():
 
     ui_pt.buttonBox.accepted.connect(load_train_points)
     ui_pt.buttonBox.rejected.connect(cancel_points)
-    PointsLoader.exec()
+    show_work_window(PointsLoader)
 
 
 def draw_interpolation():
@@ -650,7 +646,6 @@ def build_interp_table():
                 Choose_Formation = QtWidgets.QDialog()
                 ui_cf = Ui_FormationMAP()
                 ui_cf.setupUi(Choose_Formation)
-                Choose_Formation.show()
                 Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
                 set_info(f'Выберите пласт для "{profile.title}"', 'blue')
                 for f in profile.formations:
@@ -665,7 +660,7 @@ def build_interp_table():
                     Choose_Formation.close()
 
                 ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
-                Choose_Formation.exec_()
+                ask_in_window(Choose_Formation, MainWindow)
 
         coord_geo = np.column_stack((np.array(x_prof[::5]), np.array(y_prof[::5])))
         for index, g in enumerate(geo_param):
@@ -720,8 +715,6 @@ def exploration_MLP():
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
     ui_cls.setupUi(Classifier)
-    Classifier.show()
-    Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     ui_cls.spinBox_pca.setMaximum(len(list_param_mlp))
     ui_cls.spinBox_pca.setValue(len(list_param_mlp) // 2)
@@ -1087,7 +1080,6 @@ def exploration_MLP():
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
-        global data_pca, data_tsne, colors, factor_lof
 
         data_lof = data_train.copy()
         data_lof.drop(['x_coord', 'y_coord', 'title', 'target'], axis=1, inplace=True)
@@ -1098,18 +1090,16 @@ def exploration_MLP():
 
 
         tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-        data_tsne = tsne.fit_transform(training_sample_lof)
+        tsne_values = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)
-        data_pca = pca.fit_transform(training_sample_lof)
+        pca_values = pca.fit_transform(training_sample_lof)
 
-        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
+        colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof, pca_values, tsne_values)
 
-        Form_LOF = QtWidgets.QDialog()
+        Form_LOF = QtWidgets.QDialog(Classifier)
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
-        Form_LOF.show()
-        Form_LOF.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
 
         def set_title_lof_form(label_lof):
@@ -1128,8 +1118,9 @@ def exploration_MLP():
 
 
         def calc_lof_in_window():
-            global data_pca, data_tsne, colors, factor_lof
-            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            nonlocal data_pca, data_tsne, colors, factor_lof, label_lof
+            colors, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             ui_lof.checkBox_samples.setChecked(False)
             draw_lof_tsne(data_tsne, ui_lof)
             draw_lof_pca(data_pca, ui_lof)
@@ -1141,7 +1132,8 @@ def exploration_MLP():
 
 
         def calc_clean_model():
-            _, _, _, _, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            _, _, _, _, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             lof_index = [i for i, x in enumerate(label_lof) if x == -1]
             for ix in lof_index:
                 prof_well = data_train['prof_well_index'][ix]
@@ -1173,7 +1165,6 @@ def exploration_MLP():
 
 
         def draw_checkbox_samples():
-            global data_pca, data_tsne, colors, factor_lof
             if ui_lof.checkBox_samples.isChecked():
                 col = ui_lof.listWidget_features.currentItem().text()
                 draw_hist_sample_feature(data_train, col, data_train[col][int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0])], ui_lof)
@@ -1193,7 +1184,7 @@ def exploration_MLP():
         ui_lof.listWidget_features.currentItemChanged.connect(draw_checkbox_samples)
         ui_lof.pushButton_lof.clicked.connect(calc_lof_in_window)
 
-        Form_LOF.exec_()
+        show_work_window(Form_LOF)
 
 
     def insert_list_samples(data, list_widget, label_lof):
@@ -1270,8 +1261,7 @@ def exploration_MLP():
         canvas_tsne.draw()
 
 
-    def calc_lof_model(n_LOF, training_sample):
-        global data_pca, data_tsne
+    def calc_lof_model(n_LOF, training_sample, data_pca, data_tsne):
         lof = LocalOutlierFactor(n_neighbors=n_LOF)
         label_lof = lof.fit_predict(training_sample)
         factor_lof = -lof.negative_outlier_factor_
@@ -1298,7 +1288,7 @@ def exploration_MLP():
     # ui_cls.checkBox_rfc_ada.clicked.connect(push_checkbutton_ada)
     ui_cls.checkBox_smote.clicked.connect(push_checkbutton_smote)
     ui_cls.checkBox_adasyn.clicked.connect(push_checkbutton_adasyn)
-    Classifier.exec_()
+    show_work_window(Classifier)
 
 
 def  show_interp_map():
@@ -1406,7 +1396,6 @@ def  show_interp_map():
                 Choose_Formation = QtWidgets.QDialog()
                 ui_cf = Ui_FormationMAP()
                 ui_cf.setupUi(Choose_Formation)
-                Choose_Formation.show()
                 Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
                 set_info(f'Выберите пласт для "{profile.title}"', 'blue')
                 for f in profile.formations:
@@ -1421,7 +1410,7 @@ def  show_interp_map():
                     Choose_Formation.close()
 
                 ui_cf.pushButton_ok_form_map.clicked.connect(form_lda_ok)
-                Choose_Formation.exec_()
+                ask_in_window(Choose_Formation, MainWindow)
 
         coord_geo = np.column_stack((np.array(x_prof[::5]), np.array(y_prof[::5])))
         for index, g in enumerate(geo_param):
@@ -1466,8 +1455,6 @@ def calc_exploration_class():
     Choose_ExplModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_ExplModel)
-    Choose_ExplModel.show()
-    Choose_ExplModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     def calc_exploration_model():
         try:
             model = session.query(TrainedModelExploration).filter_by(
@@ -1520,33 +1507,38 @@ def calc_exploration_class():
 
         z = list(working_data_result.iloc[:, -2])
 
-        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_expl.currentItem().text()}', color_marker=False)
-        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
-                                       QMessageBox.No)
-        if result1 == QMessageBox.Yes:
-            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?',
-                                           QMessageBox.Yes, QMessageBox.No)
-            if result2 == QMessageBox.Yes:
-                list_col = [0, 1]
-                list_col += ['x_coord', 'y_coord', 'mark']
-                working_data_result = working_data_result[list_col]
+        file_prefix = f'{get_object_name()}_{get_research_name()}'
+        model_title = get_expl_model_title()
+
+        def save_results(working_data_result=working_data_result):
+            result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
+            if result1:
+                result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+                if result2:
+                    list_col = [0, 1]
+                    list_col += ['x_coord', 'y_coord', 'mark']
+                    working_data_result = working_data_result[list_col]
+                else:
+                    pass
+                try:
+                    file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                    fn = save_file_in_window(MainWindow,
+                        caption=f'Сохранить результат MLP "{file_prefix}" в таблицу',
+                        directory=file_name,
+                        filter="Excel Files (*.xlsx)")
+                    if not fn[0]:
+                        return
+                    working_data_result.to_excel(fn[0])
+                    set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+                except ValueError:
+                    pass
             else:
                 pass
-            try:
-                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_expl_model_title()}.xlsx'
-                fn = QFileDialog.getSaveFileName(
-                    caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
-                    directory=file_name,
-                    filter="Excel Files (*.xlsx)")
-                working_data_result.to_excel(fn[0])
-                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-            except ValueError:
-                pass
-        else:
-            pass
+
+        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_expl.currentItem().text()}', color_marker=False, on_close=save_results)
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_exploration_model)
-    Choose_ExplModel.exec_()
+    show_work_window(Choose_ExplModel)
 
 
 

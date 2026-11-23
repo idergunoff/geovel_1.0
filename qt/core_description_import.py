@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from qt.work_windows import ask_in_window
 
 from core_description.database import WellCatalog, WellMatchResult, load_well_catalog, match_well, save_core_import
 from core_description.areas import area_names_match, normalize_area_name
@@ -348,7 +349,7 @@ class CoreDescriptionImportDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, "Ошибка словаря", str(error))
             return
         editor.dictionary_saved.connect(self._dictionary_saved)
-        editor.exec_()
+        ask_in_window(editor, self)
 
     def _dictionary_saved(self, version: str) -> None:
         self.dictionary_notice.setText(

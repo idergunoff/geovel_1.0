@@ -150,8 +150,6 @@ def load_geochem():
     GeochemLoader = QtWidgets.QDialog()
     ui_gl = Ui_GeochemLoader()
     ui_gl.setupUi(GeochemLoader)
-    GeochemLoader.show()
-    GeochemLoader.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     m_width, m_height = get_width_height_monitor()
     GeochemLoader.resize(int(m_width/2), 300)
 
@@ -310,15 +308,13 @@ def load_geochem():
     ui_gl.buttonBox.rejected.connect(GeochemLoader.close)
     ui_gl.buttonBox.accepted.connect(load_geochem_to_db)
 
-    GeochemLoader.exec_()
+    show_work_window(GeochemLoader)
 
 
 def anova_geochem():
     Anova = QtWidgets.QDialog()
     ui_anova = Ui_Anova()
     ui_anova.setupUi(Anova)
-    Anova.show()
-    Anova.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
 
     m_width, m_height = get_width_height_monitor()
     Anova.resize(int(m_width/3)*2, int(m_height/3)*2)
@@ -374,7 +370,7 @@ def anova_geochem():
     ui_anova.radioButton_box.clicked.connect(draw_graph_anova)
     for i in range(ui_anova.listWidget_checkbox_well.count()):
         ui_anova.listWidget_checkbox_well.itemWidget(ui_anova.listWidget_checkbox_well.item(i)).stateChanged.connect(draw_graph_anova)
-    Anova.exec_()
+    show_work_window(Anova)
 
 
 def tsne_geochem():
@@ -382,8 +378,6 @@ def tsne_geochem():
     ui_tsne = Ui_TSNE_PCA()
     ui_tsne.setupUi(TSNE_form)
     configure_l1_controls(ui_tsne)
-    TSNE_form.show()
-    TSNE_form.setAttribute(QtCore.Qt.WA_DeleteOnClose) # атрибут удаления виджета после закрытия
 
     m_width, m_height = get_width_height_monitor()
     TSNE_form.resize(m_width - 200, m_height - 200)
@@ -842,8 +836,6 @@ def tsne_geochem():
         FormMaskInfo = QtWidgets.QDialog()
         ui_mi = Ui_Form_Mask_Info()
         ui_mi.setupUi(FormMaskInfo)
-        FormMaskInfo.show()
-        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
 
         ui_mi.textEdit.setText(mask.mask_info)
 
@@ -866,7 +858,7 @@ def tsne_geochem():
         ui_mi.buttonBox.accepted.connect(update_info)
         ui_mi.buttonBox.rejected.connect(cancel_update)
 
-        FormMaskInfo.exec_()
+        show_work_window(FormMaskInfo)
 
     def delete_mask_tsne():
         """ Удаление текущей маски """
@@ -1194,7 +1186,7 @@ def tsne_geochem():
     draw_graph_tsne()
     draw_graph_anova()
 
-    TSNE_form.exec_()
+    show_work_window(TSNE_form)
 
 
 def update_maket_combobox():
@@ -1570,26 +1562,31 @@ def train_model_geochem():
                          all_components=all_components)
 
 
-def _draw_geochem_map(data, values, title, color_marker):
+def _draw_geochem_map(data, values, title, color_marker, *, on_close=None):
     draw_map(
         data['X'].tolist(), data['Y'].tolist(), values, title, color_marker,
-        point_labels=data['title'].fillna('').astype(str).tolist(),
+        point_labels=data['title'].fillna('').astype(str).tolist(), on_close=on_close,
     )
 
 
 def calc_geochem_classification():
+    geochem_id, maket_id = get_geochem_id(), get_maket_id()
     data_test, list_param = build_geochem_table_model_points()
 
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
-    Choose_RegModel.show()
-    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
+        if get_geochem_id() != geochem_id or get_maket_id() != maket_id:
+            set_info("Выберите в главном окне исходный объект и макет для этого расчёта.", "red")
+            return
 
-        model = session.query(GeochemTrainedModel).filter_by(
-            id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
+        model_item = ui.listWidget_g_trained_model.currentItem()
+        model = session.get(GeochemTrainedModel, model_item.data(Qt.UserRole)) if model_item else None
+        if model is None:
+            set_info('Выберите обученную геохимическую модель.', 'red')
+            return
 
         list_param_model = json.loads(model.list_params)
 
@@ -1669,28 +1666,38 @@ def calc_geochem_classification():
             z = string_to_unique_number(list(working_data_result['mark']), 'geochem')
             color_marker = True
             working_data_result['mark_number'] = z
-        _draw_geochem_map(working_data_result, z, f'Geochem {ui.listWidget_g_trained_model.currentItem().text()}', color_marker)
-        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
-        if result1 == QMessageBox.Yes:
-            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
-            if result2 == QMessageBox.Yes:
-                list_col = [i.title for i in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all()]
-                list_col += ['title', 'X', 'Y', 'mark', 'mark_number']
-                working_data_result = working_data_result[list_col]
+        file_prefix = f'{get_object_name()}_{get_research_name()}'
+        model_title = get_mlp_title()
+
+        def save_results(working_data_result=working_data_result):
+            result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
+            if result1:
+                result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+                if result2:
+                    list_col = [i.title for i in session.query(GeochemCategory).filter_by(maket_id=maket_id).all()]
+                    list_col += ['title', 'X', 'Y', 'mark', 'mark_number']
+                    working_data_result = working_data_result[list_col]
+                else:
+                    pass
+                try:
+                    file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                    fn = save_file_in_window(MainWindow, caption=f'Сохранить результат MLP "{file_prefix}" в таблицу', directory=file_name,
+                                                     filter="Excel Files (*.xlsx)")
+                    if not fn[0]:
+                        return
+                    working_data_result.to_excel(fn[0])
+                    set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+                except ValueError:
+                    pass
             else:
                 pass
-            try:
-                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                                 filter="Excel Files (*.xlsx)")
-                working_data_result.to_excel(fn[0])
-                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-            except ValueError:
-                pass
-        else:
-            pass
+
+        _draw_geochem_map(
+            working_data_result, z, f'Geochem {ui.listWidget_g_trained_model.currentItem().text()}',
+            color_marker, on_close=save_results,
+        )
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
-    Choose_RegModel.exec_()
+    show_work_window(Choose_RegModel)
 
 
 def drop_fake_geochem():
@@ -1705,8 +1712,6 @@ def draw_point_graph():
     ui_pg = Ui_GraphParam()
     ui_pg.setupUi(PointGraph)
     configure_l1_controls(ui_pg)
-    PointGraph.show()
-    PointGraph.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     m_width, m_height = get_width_height_monitor()
     PointGraph.resize(m_width - 200, m_height - 200)
@@ -2057,8 +2062,6 @@ def draw_point_graph():
         FormMaskInfo = QtWidgets.QDialog()
         ui_mi = Ui_Form_Mask_Info()
         ui_mi.setupUi(FormMaskInfo)
-        FormMaskInfo.show()
-        FormMaskInfo.setAttribute(Qt.WA_DeleteOnClose)
 
         ui_mi.textEdit.setText(mask.mask_info)
 
@@ -2081,7 +2084,7 @@ def draw_point_graph():
         ui_mi.buttonBox.accepted.connect(update_info)
         ui_mi.buttonBox.rejected.connect(cancel_update)
 
-        FormMaskInfo.exec_()
+        show_work_window(FormMaskInfo)
 
     def delete_mask():
         """ Удаление текущей маски """
@@ -2208,7 +2211,7 @@ def draw_point_graph():
     ui_pg.pushButton_mask_info.clicked.connect(update_mask_info)
     ui_pg.pushButton_update_mask_list.clicked.connect(update_mask_list_w_msg)
     ui_pg.pushButton_delete_mask.clicked.connect(delete_mask)
-    PointGraph.exec_()
+    show_work_window(PointGraph)
 
 
 def all_check(widget, check):
@@ -2271,7 +2274,6 @@ def update_trained_model_geochem_comment():
     FormComment = QtWidgets.QDialog()
     ui_cmt = Ui_Form_comment()
     ui_cmt.setupUi(FormComment)
-    FormComment.show()
     FormComment.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_cmt.textEdit.setText(g_model.comment)
@@ -2284,7 +2286,7 @@ def update_trained_model_geochem_comment():
 
     ui_cmt.buttonBox.accepted.connect(update_comment)
 
-    FormComment.exec_()
+    ask_in_window(FormComment, MainWindow)
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -2341,32 +2343,38 @@ def calc_vector():
     text_method += ' - StandardScaler' if ui.checkBox_std_sc.isChecked() else ''
     text_method += ' - softmax' if ui.checkBox_softmax.isChecked() else ''
 
-    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
-    _draw_geochem_map(data_test, data_test['cos_mean'], f'Geochem vector {maket_title} {text_method}', False)
+    file_prefix = f'{get_object_name()}_{get_research_name()}'
+    model_title = get_mlp_title()
+
+    def save_results(data_test=data_test):
 
 
-    result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes,
-                                   QMessageBox.No)
-    if result1 == QMessageBox.Yes:
-        result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
-                                       QMessageBox.No)
-        if result2 == QMessageBox.Yes:
-            list_col = ['title', 'X', 'Y', 'cos_mean']
-            data_test = data_test[list_col]
+        result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
+        if result1:
+            result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+            if result2:
+                list_col = ['title', 'X', 'Y', 'cos_mean']
+                data_test = data_test[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                fn = save_file_in_window(MainWindow,
+                    caption=f'Сохранить результат MLP "{file_prefix}" в таблицу',
+                    directory=file_name,
+                    filter="Excel Files (*.xlsx)")
+                if not fn[0]:
+                    return
+                data_test.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
         else:
             pass
-        try:
-            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-            fn = QFileDialog.getSaveFileName(
-                caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
-                directory=file_name,
-                filter="Excel Files (*.xlsx)")
-            data_test.to_excel(fn[0])
-            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-        except ValueError:
-            pass
-    else:
-        pass
+
+    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
+    _draw_geochem_map(data_test, data_test['cos_mean'], f'Geochem vector {maket_title} {text_method}',
+                      False, on_close=save_results)
 
 
 def calc_isolation_forest():
@@ -2424,31 +2432,38 @@ def calc_isolation_forest():
 
 
 
-    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
-    _draw_geochem_map(data_test, data_test['Probability'], f'Geochem isolation forest {maket_title}', False)
+    file_prefix = f'{get_object_name()}_{get_research_name()}'
+    model_title = get_mlp_title()
 
-    result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
-    if result1 == QMessageBox.Yes:
-        data_test = pd.concat([data_train, data_test])
-        result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes,
-                                       QMessageBox.No)
-        if result2 == QMessageBox.Yes:
-            list_col = ['title', 'X', 'Y','Prediction', 'Probability', 'Anomaly Score']
-            data_test = data_test[list_col]
+    def save_results(data_test=data_test):
+
+        result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
+        if result1:
+            data_test = pd.concat([data_train, data_test])
+            result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+            if result2:
+                list_col = ['title', 'X', 'Y','Prediction', 'Probability', 'Anomaly Score']
+                data_test = data_test[list_col]
+            else:
+                pass
+            try:
+                file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                fn = save_file_in_window(MainWindow,
+                    caption=f'Сохранить результат MLP "{file_prefix}" в таблицу',
+                    directory=file_name,
+                    filter="Excel Files (*.xlsx)")
+                if not fn[0]:
+                    return
+                data_test.to_excel(fn[0])
+                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+            except ValueError:
+                pass
         else:
             pass
-        try:
-            file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-            fn = QFileDialog.getSaveFileName(
-                caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу',
-                directory=file_name,
-                filter="Excel Files (*.xlsx)")
-            data_test.to_excel(fn[0])
-            set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-        except ValueError:
-            pass
-    else:
-        pass
+
+    maket_title = ui.comboBox_geochem_maket.currentText().split(' id')[0]
+    _draw_geochem_map(data_test, data_test['Probability'], f'Geochem isolation forest {maket_title}',
+                      False, on_close=save_results)
 
 
 def add_geochem_point_fake():

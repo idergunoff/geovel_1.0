@@ -60,6 +60,8 @@ from qt.filter_form import *
 from qt.form_map_well_log import *
 from qt.form_upgrade_predict_model import *
 from qt.qc_form import *
+from qt.work_windows import ask_in_window, confirm_in_window, show_work_window
+from app_settings import install_file_dialog_history, save_file_in_window
 from cluster_tooltips import apply_cluster_tooltips
 
 import numpy as np
@@ -236,7 +238,7 @@ def show_year_profile_length_report():
     buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, parent=dialog)
     buttons.rejected.connect(dialog.reject)
     layout.addWidget(buttons)
-    dialog.exec_()
+    show_work_window(dialog)
 
 from yellowbrick.classifier import DiscriminationThreshold
 
@@ -270,8 +272,6 @@ from functools import lru_cache
 
 
 app = QtWidgets.QApplication(sys.argv)
-from app_settings import install_file_dialog_history
-
 install_file_dialog_history()
 MainWindow = QtWidgets.QMainWindow()
 ui = Ui_MainWindow()

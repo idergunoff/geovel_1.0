@@ -46,8 +46,6 @@ def push_random_param_reg():
     RandomParam = QtWidgets.QDialog()
     ui_rp = Ui_RandomParam()
     ui_rp.setupUi(RandomParam)
-    RandomParam.show()
-    RandomParam.setAttribute(Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     RandomParam.resize(int(m_width / 1.5), int(m_height / 1.5))
@@ -55,8 +53,6 @@ def push_random_param_reg():
     Regressor = QtWidgets.QDialog()
     ui_r = Ui_RegressorForm()
     ui_r.setupUi(Regressor)
-    Regressor.show()
-    Regressor.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
 
     def get_regmod_test_id():
@@ -1183,6 +1179,7 @@ def push_random_param_reg():
     ui_rp.spinBox_bot_skip_down.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
 
 
-    RandomParam.exec_()
-
-    Regressor.exec_()
+    show_work_window(Regressor)
+    Regressor.setAttribute(Qt.WA_DeleteOnClose, False)
+    RandomParam.finished.connect(Regressor.deleteLater)
+    show_work_window(RandomParam)

@@ -9,8 +9,6 @@ def open_filter_well_cls():
     FilterWell = QtWidgets.QDialog()
     ui_fw = Ui_FilterWellForm()
     ui_fw.setupUi(FilterWell)
-    FilterWell.show()
-    FilterWell.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     FilterWell.resize(int(m_width/4), int(m_height/1.5))
@@ -102,15 +100,13 @@ def open_filter_well_cls():
     ui_fw.checkBox_alt.clicked.connect(set_alt_interval)
     ui_fw.pushButton_filter.clicked.connect(push_filter)
 
-    FilterWell.exec_()
+    show_work_window(FilterWell)
 
 
 def open_filter_well_reg():
     FilterWell = QtWidgets.QDialog()
     ui_fw = Ui_FilterWellForm()
     ui_fw.setupUi(FilterWell)
-    FilterWell.show()
-    FilterWell.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     FilterWell.resize(int(m_width/4), int(m_height/1.5))
@@ -198,7 +194,7 @@ def open_filter_well_reg():
     ui_fw.checkBox_alt.clicked.connect(set_alt_interval)
     ui_fw.pushButton_filter.clicked.connect(push_filter)
 
-    FilterWell.exec_()
+    show_work_window(FilterWell)
 
 
 def get_names_boundary():
