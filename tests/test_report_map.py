@@ -144,3 +144,25 @@ def test_categorical_report_can_hide_points_and_boundaries_with_one_class():
     ax = figure.axes[0]
     assert len(ax.collections) == 1
     assert [label.get_text() for label in ax.get_legend().get_texts()] == ['Кластер 7']
+
+
+def test_report_labels_follow_valid_observations_and_group_coincident_samples():
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    samples = np.array([[100, 100, 1], [0, 0, np.nan], [100, 100, 2], [100, 100, 3], [200, 0, 2]])
+    figure = build_report_map(
+        xx, yy, xx / 100, samples, title='Геохимия', parameter='Значение', cmap='viridis',
+        grid_step=100, method='Кригинг', show_contours=False,
+        point_labels=['Проба 1', 'Пропуск', 'Проба 2', 'Проба 1', ' '],
+    )
+    labels = figure.axes[0].texts
+    assert [(label.xy, label.get_text()) for label in labels] == [((100, 100), 'Проба 1\nПроба 2')]
+
+
+@pytest.mark.parametrize('show_points', [True, False])
+def test_categorical_report_uses_observation_names_only_when_points_are_visible(show_points):
+    xx, yy = np.mgrid[0:300:100, 0:200:100]
+    figure = build_categorical_report_map(
+        xx, yy, np.zeros(xx.shape, dtype=int), np.array([[100, 0]]), np.array([7]), {7: 'blue'},
+        title='Геохимия', grid_step=100, method='Nearest', show_points=show_points, point_labels=['Проба 7'],
+    )
+    assert [label.get_text() for label in figure.axes[0].texts] == (['Проба 7'] if show_points else [])

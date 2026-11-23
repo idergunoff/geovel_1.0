@@ -285,6 +285,13 @@
          </layout>
         </widget>
        </item>
+       <item row="9" column="0" colspan="2">
+        <widget class="QCheckBox" name="checkBox_show_point_labels">
+         <property name="text">
+          <string>Подписать точки наблюдений</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_advanced">

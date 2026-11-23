@@ -18,7 +18,10 @@ from kriging_utils import (
 )
 from qt.choose_formation_map import *
 from qt.draw_map_form import *
-from report_map import build_categorical_report_map, build_report_map, parse_contour_interval, parse_scale_bounds
+from report_map import (
+    annotate_observations, build_categorical_report_map, build_report_map,
+    parse_contour_interval, parse_scale_bounds,
+)
 from well_map_style import well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
@@ -310,12 +313,17 @@ def show_map():
 
 
 def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None,
-             initial_map_mode=None, report_research_id=None):
+             initial_map_mode=None, report_research_id=None, *, point_labels=None):
 
     Draw_Map = QtWidgets.QDialog()
     ui_dm = Ui_DrawMapForm()
     ui_dm.setupUi(Draw_Map)
     Draw_Map.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    has_labels = point_labels is not None and any(label.strip() for label in point_labels)
+    ui_dm.checkBox_show_point_labels.setVisible(has_labels)
+    if point_labels is not None:
+        ui_dm.checkBox_show_points.setText('Показать точки наблюдений')
+        ui_dm.checkBox_report_points.setText('Показать точки наблюдений')
     ui_dm.checkBox_report_profiles.setChecked(profiles)
     ui_dm.comboBox_report_contour_step.setInsertPolicy(QtWidgets.QComboBox.NoInsert)
     ui_dm.comboBox_report_contour_step.addItems([
@@ -397,6 +405,10 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     def _is_report_style():
         return ui_dm.comboBox_map_style.currentIndex() == 1
 
+    def _apply_point_labels_state():
+        points_toggle = ui_dm.checkBox_report_points if _is_report_style() else ui_dm.checkBox_show_points
+        ui_dm.checkBox_show_point_labels.setEnabled(points_toggle.isChecked())
+
     def _apply_map_style_state():
         report_style = _is_report_style()
         categorical_mode = _is_categorical_mode()
@@ -416,6 +428,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         else:
             ui_dm.checkBox_show_contours.setText('show contours')
         ui_dm.comboBox_report_contour_step.setEnabled(ui_dm.checkBox_show_contours.isChecked())
+        _apply_point_labels_state()
 
     def _rebuild_interp_method_options():
         if interp_method_combo is None:
@@ -473,6 +486,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
     ui_dm.comboBox_map_style.currentIndexChanged.connect(_apply_map_style_state)
     ui_dm.checkBox_show_contours.toggled.connect(_apply_map_style_state)
+    ui_dm.checkBox_show_points.toggled.connect(_apply_point_labels_state)
+    ui_dm.checkBox_report_points.toggled.connect(_apply_point_labels_state)
     _apply_map_mode_state()
 
     def _map_wells(research_id=None):
@@ -552,6 +567,9 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 return
         sparse_ctrl = _get_control("spinBox_sparse")
         sparse = sparse_ctrl.value() if sparse_ctrl is not None else 1
+        labels_control = ui_dm.checkBox_show_point_labels
+        active_labels = point_labels if labels_control.isEnabled() and labels_control.isChecked() else None
+        sparse_labels = np.asarray(active_labels[::sparse]) if active_labels is not None else None
         # Создание набора данных
         x = np.array(list_x[::sparse])
         y = np.array(list_y[::sparse])
@@ -610,6 +628,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             if report_style:
                 valid = np.isfinite(samples[::sparse]).all(axis=1)
                 x, y, z = samples[::sparse][valid].T
+                if sparse_labels is not None:
+                    sparse_labels = sparse_labels[valid]
             points = np.column_stack([x, y])
             labels = np.array([int(v) for v in z], dtype=int)
             if len(points) == 0:
@@ -682,6 +702,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     {label: color_by_label[label] for label in sorted_labels},
                     grid_step=grid_size, method=f'{method_title}, сглаживание: {boundary_smoothing_level}',
                     clip_to_samples=clip_on, uncertainty=uncertainty_grid if show_uncertainty else None,
+                    point_labels=sparse_labels,
                 )
                 return
 
@@ -724,6 +745,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                         marker=marker_style, edgecolors='k' if lbl != -1 else None,
                         linewidths=0.3
                     )
+                if sparse_labels is not None:
+                    annotate_observations(fig_interp.axes[0], points, sparse_labels)
 
             plt.xlabel('X')
             plt.ylabel('Y')
@@ -852,7 +875,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 build_report_map, xx, yy, z_interp, samples,
                 parameter=param, cmap=color_map, grid_step=grid_size, method=surface_method,
                 contour_interval=contour_interval, clip_to_samples=ui_dm.checkBox_report_clip.isChecked(),
-                sample_names=list_name, scale_min=scale_min, scale_max=scale_max,
+                sample_names=list_name, scale_min=scale_min, scale_max=scale_max, point_labels=active_labels,
             )
             return
 
@@ -860,9 +883,16 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         fig_interp = plt.figure(figsize=(12, 9))
         plt.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
         plt.pcolormesh(xx, yy, z_interp, shading='auto', cmap=color_map)
-        plt.scatter(x, y, c=z, cmap=color_map)
+        show_points = point_labels is None or ui_dm.checkBox_show_points.isChecked()
+        if show_points:
+            plt.scatter(x, y, c=z, cmap=color_map)
         plt.colorbar(label=param)
-        plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
+        if show_points:
+            plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
+        if sparse_labels is not None:
+            observations = np.column_stack([list_x[::sparse], list_y[::sparse], list_z[::sparse]]).astype(float)
+            valid = np.isfinite(observations).all(axis=1)
+            annotate_observations(fig_interp.axes[0], observations[valid, :2], sparse_labels[valid])
         if list_name:
             for n_ix in range(len(list_name)):
                 plt.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
