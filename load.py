@@ -12,7 +12,6 @@ def add_object():
     Add_Object = QtWidgets.QDialog()
     ui_ob = Ui_add_obj()
     ui_ob.setupUi(Add_Object)
-    Add_Object.show()
     Add_Object.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     ui_ob.dateEdit.setDate(datetime.date.today())
 
@@ -48,7 +47,7 @@ def add_object():
 
     ui_ob.buttonBox.accepted.connect(object_to_db)
     ui_ob.buttonBox.rejected.connect(cancel_add_object)
-    Add_Object.exec_()
+    ask_in_window(Add_Object, MainWindow)
 
 
 def load_profile():
@@ -686,14 +685,19 @@ def load_m_grid():
         return
 
 
-def load_r_grid():
+def load_r_grid(on_close):
     from qt.terrain_manager import TerrainManager
-    dialog = TerrainManager(session, MainWindow, get_object_id())
-    dialog.exec_()
-    check_grid_relief()
-    if get_profile_id():
-        calc_relief_profile(session.get(Profile, get_profile_id()))
-    update_list_model_prediction()
+    dialog = TerrainManager(session, object_id=get_object_id())
+
+    def refresh_main_window():
+        check_grid_relief()
+        if get_profile_id():
+            calc_relief_profile(session.get(Profile, get_profile_id()))
+        update_list_model_prediction()
+        on_close()
+
+    dialog.finished.connect(refresh_main_window)
+    show_work_window(dialog)
 
 
 def save_signal():

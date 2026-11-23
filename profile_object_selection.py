@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from PyQt5 import QtCore, QtWidgets
+from qt.work_windows import ask_in_window
 
 
 def choose_profile_object_ids(
@@ -64,7 +65,8 @@ def choose_profile_object_ids(
     button_box.rejected.connect(dialog.reject)
     layout.addWidget(button_box)
 
-    if dialog.exec_() != QtWidgets.QDialog.Accepted:
+    result = ask_in_window(dialog, parent) if parent is not None else dialog.exec_()
+    if result != QtWidgets.QDialog.Accepted:
         return None
     return {
         int(object_widget.item(row).data(QtCore.Qt.UserRole))

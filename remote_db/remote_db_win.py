@@ -18,6 +18,7 @@ from remote_db.sync_features.sync_entropy_features_profile import *
 from remote_db.deduplicate_wells import *
 from mlp import update_list_mlp
 from geochem import update_combobox_geochem
+from qt.work_windows import show_work_window
 from remote_db.sync_geochem import *
 from remote_db.unload_geochem import *
 
@@ -31,9 +32,7 @@ def open_rem_db_window():
     RemoteDB = QtWidgets.QDialog()
     ui_rdb = Ui_rem_db()
     ui_rdb.setupUi(RemoteDB)
-    RemoteDB.show()
 
-    RemoteDB.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def get_object_rem_id():
         """ Получение id выбранного объекта """
@@ -2218,4 +2217,4 @@ def open_rem_db_window():
     ui_rdb.pushButton_sync_all_geochem.clicked.connect(sync_all_geochem)
 
 
-    RemoteDB.exec_()
+    show_work_window(RemoteDB)

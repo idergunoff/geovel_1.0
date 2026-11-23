@@ -8,6 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from PyQt5 import QtCore, QtWidgets
+from qt.work_windows import ask_in_window
 
 from core_description.semantics import (
     DictionaryValidationError, analyze_description, load_dictionary_payload,
@@ -289,7 +290,7 @@ class CoreDescriptionDictionaryDialog(QtWidgets.QDialog):
 
     def add_rule(self) -> None:
         editor = DictionaryRuleDialog(category=self.category_combo.currentData() or "rock", parent=self)
-        if editor.exec_() == QtWidgets.QDialog.Accepted:
+        if ask_in_window(editor, self) == QtWidgets.QDialog.Accepted:
             self.payload["rules"].append(editor.rule)
             self._show_changed_rule(editor.rule)
 
@@ -298,7 +299,7 @@ class CoreDescriptionDictionaryDialog(QtWidgets.QDialog):
         for index, rule in enumerate(self.payload["rules"]):
             if rule["id"] == selected:
                 editor = DictionaryRuleDialog(rule, parent=self)
-                if editor.exec_() == QtWidgets.QDialog.Accepted:
+                if ask_in_window(editor, self) == QtWidgets.QDialog.Accepted:
                     self.payload["rules"][index] = editor.rule
                     self._show_changed_rule(editor.rule)
                 return
@@ -320,7 +321,7 @@ class CoreDescriptionDictionaryDialog(QtWidgets.QDialog):
         question.addButton("Удалить", QtWidgets.QMessageBox.AcceptRole)
         cancel = question.addButton("Отмена", QtWidgets.QMessageBox.RejectRole)
         question.setDefaultButton(cancel)
-        question.exec_()
+        ask_in_window(question, self)
         if question.buttonRole(question.clickedButton()) == QtWidgets.QMessageBox.AcceptRole:
             self.payload["rules"] = [rule for rule in self.payload["rules"] if rule["id"] != selected]
             self._update_dirty()
@@ -362,7 +363,7 @@ class CoreDescriptionDictionaryDialog(QtWidgets.QDialog):
             discard = question.addButton("Не сохранять", QtWidgets.QMessageBox.DestructiveRole)
             cancel = question.addButton("Отмена", QtWidgets.QMessageBox.RejectRole)
             question.setDefaultButton(cancel)
-            question.exec_()
+            ask_in_window(question, self)
             clicked = question.clickedButton()
             if clicked is save:
                 if not self.save():

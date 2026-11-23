@@ -141,7 +141,7 @@ def plot_roc_curve(ui_tch, model, val_dl):
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic (ROC)')
     plt.legend(loc='lower right')
-    plt.show()
+    plt.show(block=False)
 
 def fit_split(epochs, model, optimizer, loss_function, regular, train_dl, val_dl, ui_tch, early_stopping=False):
     best_loss = float('inf')
@@ -679,7 +679,7 @@ def nn_choose_params(ui_tch, data, list_param):
 
     fig.suptitle(f'Accuracy: {accuracy:.4f}\n Precision: {precision:.4f}\n Recall: {recall:.4f}\n F1-Score: {f1:.4f}')
     plt.subplots_adjust(top=0.8)
-    plt.show()
+    plt.show(block=False)
 
     # Сохранение модели
     if ui_tch.checkBox_save_model.isChecked():
@@ -842,7 +842,7 @@ def nn_tune_params(ui_tch, data, list_param):
 
     fig.suptitle(f'Accuracy: {accuracy:.4f}\n Precision: {precision:.4f}\n Recall: {recall:.4f}\n F1-Score: {f1:.4f}')
     plt.subplots_adjust(top=0.8)
-    plt.show()
+    plt.show(block=False)
 
     if ui_tch.checkBox_save_model.isChecked():
         text_model = '*** TORCH NN *** \n' + 'test_accuray: ' + str(round(accuracy, 3)) + '\nвремя обучения: ' \
@@ -890,7 +890,7 @@ def cross_validation_shuffle(dataset, epochs, model, optimizer, loss_function,
     plt.title('Cross Validation')
     plt.xlabel('Folds')
     plt.ylabel('Accuracy')
-    plt.show()
+    plt.show(block=False)
 
 
 def cross_validation_split(train_dataset, val_dataset, epochs, model, optimizer,
@@ -931,7 +931,7 @@ def cross_validation_split(train_dataset, val_dataset, epochs, model, optimizer,
     plt.title('Cross Validation')
     plt.xlabel('Folds')
     plt.ylabel('Accuracy')
-    plt.show()
+    plt.show(block=False)
 
 
 def nn_cross_val(ui_tch, data):
@@ -1061,7 +1061,7 @@ def draw_results_graphs(loss, epochs, learning_rate, hidden_units, weight_decay,
                          + '\nweight decay: ' + str(weight_decay) + '\ndropout rate: ' + str(dropout_rate) + \
                          '\nregularization: ' + str(regular))
     plt.subplots_adjust(top=0.8)
-    plt.show()
+    plt.show(block=False)
 
 
 class PyTorchClassifier(BaseEstimator):
@@ -1350,7 +1350,7 @@ def draw_roc_curve(y_val, y_mark):
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic')
     plt.legend(loc="lower right")
-    plt.show()
+    plt.show(block=False)
     return roc_auc
 
 def classify_based_on_roc(y_val, y_mark, threshold_strategy="accuracy"):
@@ -1467,11 +1467,10 @@ def final_model_build(ui_tch, input_dim, output_dim, labels_dict):
 
 
 def torch_classifier_train():
+    analysis_id = get_MLP_id()
     TorchClassifier = QtWidgets.QDialog()
     ui_tch = Ui_TorchClassifierForm()
     ui_tch.setupUi(TorchClassifier)
-    TorchClassifier.show()
-    TorchClassifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data, list_param = build_table_train(True, 'mlp')
     list_param_mlp = data.columns.tolist()[2:]
@@ -1539,10 +1538,10 @@ def torch_classifier_train():
                                              epochs, regular, early_stopping, patience, labels_dict, batch_size=20))
         ])
 
-        except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=get_MLP_id()).first()
+        except_mlp = session.query(ExceptionMLP).filter_by(analysis_id=analysis_id).first()
         new_lineup = LineupTrain(
             type_ml='cls',
-            analysis_id=get_MLP_id(),
+            analysis_id=analysis_id,
             list_param=json.dumps(list_param_mlp),
             list_param_short=json.dumps(list_param),
             except_signal=except_mlp.except_signal,
@@ -1983,5 +1982,5 @@ def torch_classifier_train():
 
     ui_tch.pushButton_lineup.clicked.connect(torch_classifier_lineup)
     ui_tch.pushButton_train.clicked.connect(choose)
-    TorchClassifier.exec()
+    show_work_window(TorchClassifier)
 

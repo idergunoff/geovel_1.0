@@ -90,6 +90,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     count_nan = 0
 
     # Используем vectorized операции вместо циклов
+    analysis_id = get_MLP_id() if type_case == 'georadar' else None
+    maket_id = get_maket_id() if type_case == 'geochem' else None
+    if type_case == 'georadar':
+        except_signal = ui.lineEdit_signal_except.text()
+        except_crl = ui.lineEdit_crl_except.text()
+
     nan_mask = data_train[list_param].isna()
     inf_mask = np.isinf(data_train[list_param])
 
@@ -106,7 +112,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         list_col = data_train.columns.tolist()
         data_train = pd.DataFrame(imputer.fit_transform(data_train), columns=list_col)
-        analysis_data = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+        analysis_data = session.query(AnalysisMLP).filter_by(id=analysis_id).first()
         try:
             data_train.to_parquet(analysis_data.data)
         except OSError:
@@ -126,8 +132,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
     ui_cls.setupUi(Classifier)
-    Classifier.show()
-    Classifier.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     training_mask = TrainingFeatureMask(
         list_param, data_train.columns, ui_cls.checkBox_mask_param, ui_cls.listWidget_mask_param,
         get_list_param_by_mask,
@@ -611,7 +615,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         plt.ylim(0, 1.05)
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
         plot_groups_with_smoothed_hull(data_train_cov)
 
@@ -887,9 +891,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             return
         # Сохранение моделей
         if type_case == 'georadar':
-            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save, ui_cls)
+            save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param_save, ui_cls,
+                                      analysis_id=analysis_id, except_signal=except_signal, except_crl=except_crl)
         if type_case == 'geochem':
-            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, input_features(list_param), data_train)
+            save_model_geochem_class(model_name, pipe, test_accuracy, text_model, input_features(list_param),
+                                     data_train, maket_id=maket_id)
 
 
     def build_pipeline(markup_train, training_sample_train):
@@ -988,7 +994,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
     def calc_lof():
         """ Расчет выбросов методом LOF """
-        global data_pca, data_tsne, colors_lof, factor_lof
 
         data_lof = data_train[list_param]
 
@@ -998,21 +1003,19 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         try:
             tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=42)
-            data_tsne = tsne.fit_transform(training_sample_lof)
+            tsne_values = tsne.fit_transform(training_sample_lof)
         except ValueError:
             tsne = TSNE(n_components=2, perplexity=len(data_train.index) - 1, learning_rate=200, random_state=42)
-            data_tsne = tsne.fit_transform(training_sample_lof)
+            tsne_values = tsne.fit_transform(training_sample_lof)
 
         pca = PCA(n_components=2)
-        data_pca = pca.fit_transform(training_sample_lof)
+        pca_values = pca.fit_transform(training_sample_lof)
 
-        colors_lof, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof)
+        colors_lof, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(n_LOF, training_sample_lof, pca_values, tsne_values)
 
-        Form_LOF = QtWidgets.QDialog()
+        Form_LOF = QtWidgets.QDialog(Classifier)
         ui_lof = Ui_LOF_form()
         ui_lof.setupUi(Form_LOF)
-        Form_LOF.show()
-        Form_LOF.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
 
         def set_title_lof_form(label_lof):
@@ -1031,8 +1034,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
         def calc_lof_in_window():
-            global data_pca, data_tsne, colors_lof, factor_lof
-            colors_lof, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            nonlocal data_pca, data_tsne, colors_lof, factor_lof, label_lof
+            colors_lof, data_pca, data_tsne, factor_lof, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             ui_lof.checkBox_samples.setChecked(False)
             draw_lof_tsne(data_tsne, ui_lof)
             draw_lof_pca(data_pca, ui_lof)
@@ -1044,14 +1048,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
         def calc_clean_model():
-            _, _, _, _, label_lof = calc_lof_model(ui_lof.spinBox_lof_n.value(), training_sample_lof)
+            _, _, _, _, label_lof = calc_lof_model(
+                ui_lof.spinBox_lof_n.value(), training_sample_lof, pca_values, tsne_values)
             lof_index = [i for i, x in enumerate(label_lof) if x == -1]
             if type_case == 'georadar':
                 for ix in lof_index:
                     prof_well = data_train[point_name][ix]
                     prof_id, well_id, fake_id = int(prof_well.split('_')[0]), int(prof_well.split('_')[1]), int(prof_well.split('_')[2])
                     old_list_fake = session.query(MarkupMLP.list_fake).filter(
-                        MarkupMLP.analysis_id == get_MLP_id(),
+                        MarkupMLP.analysis_id == analysis_id,
                         MarkupMLP.profile_id == prof_id,
                         MarkupMLP.well_id == well_id
                     ).first()[0]
@@ -1061,7 +1066,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                     else:
                         new_list_fake = [fake_id]
                     session.query(MarkupMLP).filter(
-                        MarkupMLP.analysis_id == get_MLP_id(),
+                        MarkupMLP.analysis_id == analysis_id,
                         MarkupMLP.profile_id == prof_id,
                         MarkupMLP.well_id == well_id
                     ).update({'list_fake': json.dumps(new_list_fake)}, synchronize_session='fetch')
@@ -1072,10 +1077,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
                 new_data_train = data_train.drop(data_train.index[lof_index]).reset_index(drop=True)
 
-                analysis_mlp = session.query(AnalysisMLP).filter_by(id=get_MLP_id()).first()
+                analysis_mlp = session.query(AnalysisMLP).filter_by(id=analysis_id).first()
                 filepath = analysis_mlp.data
                 new_data_train.to_parquet(filepath)
-                # session.query(AnalysisMLP).filter_by(id=get_MLP_id()).update(
+                # session.query(AnalysisMLP).filter_by(id=analysis_id).update(
                 #     {'data': json.dumps(new_data_train.to_dict())}, synchronize_session='fetch')
                 # session.commit()
 
@@ -1083,7 +1088,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if type_case == 'geochem':
                 for ix in lof_index:
                     train_point = session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
-                        GeochemMaket.id == get_maket_id(),
+                        GeochemMaket.id == maket_id,
                         GeochemTrainPoint.title == data_train[point_name][ix]
                     ).first()
                     session.query(GeochemTrainPoint).filter_by(id=train_point.id).update(
@@ -1097,7 +1102,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             # show_regression_form(data_train_clean, list_param)
 
         def draw_checkbox_samples():
-            global data_pca, data_tsne, colors_lof, factor_lof
             if ui_lof.checkBox_samples.isChecked():
                 col = ui_lof.listWidget_features.currentItem().text()
                 draw_hist_sample_feature(data_train, col, data_train[col][int(ui_lof.listWidget_samples.currentItem().text().split(') ')[0])], ui_lof)
@@ -1117,7 +1121,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         ui_lof.listWidget_features.currentItemChanged.connect(draw_checkbox_samples)
         ui_lof.pushButton_lof.clicked.connect(calc_lof_in_window)
 
-        Form_LOF.exec_()
+        show_work_window(Form_LOF)
 
 
     def insert_list_samples(data, list_widget, label_lof):
@@ -1193,8 +1197,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         canvas_tsne.draw()
 
 
-    def calc_lof_model(n_LOF, training_sample):
-        global data_pca, data_tsne
+    def calc_lof_model(n_LOF, training_sample, data_pca, data_tsne):
         lof = LocalOutlierFactor(n_neighbors=n_LOF)
         label_lof = lof.fit_predict(training_sample)
         factor_lof = -lof.negative_outlier_factor_
@@ -1223,8 +1226,6 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         GenAlg = QtWidgets.QDialog()
         ui_ga = Ui_GeneticForm()
         ui_ga.setupUi(GenAlg)
-        GenAlg.show()
-        GenAlg.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
         m_width, m_height = get_width_height_monitor()
         GenAlg.resize(m_width - 500, m_height - 400)
@@ -1236,7 +1237,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
         def update_combobox_gen_an():
             ui_ga.comboBox_gen_analysis.clear()
-            gen_analysis = session.query(GeneticAlgorithmCLS).filter_by(analysis_id=get_MLP_id()).order_by(desc(GeneticAlgorithmCLS.id)).all()
+            gen_analysis = session.query(GeneticAlgorithmCLS).filter_by(analysis_id=analysis_id).order_by(desc(GeneticAlgorithmCLS.id)).all()
             for ga in gen_analysis:
                 ui_ga.comboBox_gen_analysis.addItem(f'{ga.type_problem} {ga.title} id{ga.id}')
 
@@ -1532,7 +1533,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             else:
                 p_type = 'no'
             ga = session.query(GeneticAlgorithmCLS).filter_by(
-                analysis_id=get_MLP_id(),
+                analysis_id=analysis_id,
                 title=title,
                 pipeline=text_model,
                 list_params=json.dumps(list_param),
@@ -1691,7 +1692,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             p_sep = os.path.sep
             filepath = f'genetic{p_sep}cls{p_sep}{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}{title}.pkl'
             new_gen = GeneticAlgorithmCLS(
-                analysis_id=get_MLP_id(),
+                analysis_id=analysis_id,
                 title = title,
                 pipeline = text_model,
                 checkfile_path = filepath,
@@ -1940,7 +1941,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         update_list_mask()
         update_combobox_gen_an()
 
-        GenAlg.exec_()
+        show_work_window(GenAlg)
 
 
     def class_exit():
@@ -1965,10 +1966,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     from app_settings import bind_form
     bind_form(Classifier, "classifier_form")
     configure_l1_controls(ui_cls, allow_all=type_case == 'geochem')
-    Classifier.exec_()
+    show_work_window(Classifier)
 
 
-def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param, ui_cls):
+def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_param, ui_cls, *,
+                             analysis_id, except_signal, except_crl):
     """ Сохранение моделей в TrainedModelClass """
 
     result = QtWidgets.QMessageBox.question(
@@ -1986,12 +1988,12 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
             pickle.dump(pipe, f)
 
         new_trained_model = TrainedModelClass(
-            analysis_id=get_MLP_id(),
+            analysis_id=analysis_id,
             title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
             path_model=path_model,
             list_params=json.dumps(list_param),
-            except_signal = ui.lineEdit_signal_except.text(),
-            except_crl = ui.lineEdit_crl_except.text(),
+            except_signal=except_signal,
+            except_crl=except_crl,
             comment=text_model
         )
         session.add(new_trained_model)
@@ -2009,7 +2011,7 @@ def save_model_georadar_class(model_name, pipe, test_accuracy, text_model, list_
     else:
         pass
 
-def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train):
+def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_param, data_train, *, maket_id):
     """ Сохранение моделей в GeochemTrainedModel """
 
     result = QtWidgets.QMessageBox.question(
@@ -2030,7 +2032,7 @@ def save_model_geochem_class(model_name, pipe, test_accuracy, text_model, list_p
         text_model += get_text_train_param_geochem(list_param)
 
         new_trained_model = GeochemTrainedModel(
-            maket_id = get_maket_id(),
+            maket_id=maket_id,
             title=f'{model_name}_{round(test_accuracy, 3)}_{datetime.datetime.now().strftime("%d%m%y")}',
             path_model=path_model,
             list_params=json.dumps(list_param),

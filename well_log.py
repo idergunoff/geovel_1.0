@@ -521,15 +521,9 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
         set_info('Скважина не выбрана', 'red')
         QMessageBox.critical(MainWindow, 'Ошибка', 'Скважина не выбрана')
     else:
-        # Keep the form in the window hierarchy of the dialog that opened it.
-        # This is important when the caller is modal (for example, the regression
-        # target wizard): an unparented dialog is blocked by that modal window and
-        # can be placed behind it by the window manager.
         WellLogForm = QtWidgets.QDialog(parent)
         ui_wl = Ui_Form_well_log()
         ui_wl.setupUi(WellLogForm)
-        WellLogForm.show()
-        WellLogForm.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
         m_width, m_height = get_width_height_monitor()
         # The logging graph and the duplicated well data need more horizontal
@@ -1007,12 +1001,14 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             update_list_well_log()
             update_list_well(select_well=True, selected_well_id=selected_well_id)
 
+        hor_line_dep = hor_line_int = None
+
         def draw_depth_spinbox():
             """ Добавление линий глубины и интервала на график """
-            global hor_line_dep, hor_line_int
+            nonlocal hor_line_dep, hor_line_int
 
             # Удаление предыдущих линий
-            if 'hor_line_dep' in globals():
+            if hor_line_dep is not None:
                 ui_wl.widget_graph_well_log.removeItem(hor_line_dep)
                 ui_wl.widget_graph_well_log.removeItem(hor_line_int)
 
@@ -1069,11 +1065,9 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             MapWellLog = QtWidgets.QDialog()
             ui_mwl = Ui_MapWellLogging()
             ui_mwl.setupUi(MapWellLog)
-            MapWellLog.show()
-            WellLogForm.setAttribute(Qt.WA_DeleteOnClose)
 
             m_width, m_height = get_width_height_monitor()
-            WellLogForm.resize(int(m_width / 4), m_height - 200)
+            MapWellLog.resize(int(m_width / 4), m_height - 200)
 
             for b in get_names_boundary():
                 check = QCheckBox(b)
@@ -1193,7 +1187,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
 
             ui_mwl.pushButton_draw_map.clicked.connect(draw_map_well_log)
             ui_mwl.pushButton_to_excel.clicked.connect(to_excel_well_log)
-            MapWellLog.exec_()
+            show_work_window(MapWellLog)
 
         def clean_double_well_logging():
             dict_well_log = {}
@@ -1390,7 +1384,7 @@ def show_well_log(selected_curve_id=None, selected_depth=None, selected_interval
             set_spinbox_value_expanding_range(ui_wl.doubleSpinBox_interval,
                                               abs(float(selected_interval[1]) - float(selected_interval[0])))
 
-        WellLogForm.exec_()
+        show_work_window(WellLogForm)
 
 def get_names_logging():
     logging = session.query(WellLog).all()

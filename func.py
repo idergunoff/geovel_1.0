@@ -3192,7 +3192,6 @@ def get_list_formation(profiles=None):
     is mapped independently for every profile; profiles without that title get
     ``None`` and are skipped by the caller.
     """
-    global flag_break
     list_formation = []
     if profiles is None:
         profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
@@ -3216,7 +3215,6 @@ def get_list_formation(profiles=None):
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
-            Choose_Formation.show()
             for f in prof.formations:
                 item = QtWidgets.QListWidgetItem(f'{f.title} id{f.id}')
                 # Do not recover the title by splitting visible text: a valid
@@ -3226,7 +3224,7 @@ def get_list_formation(profiles=None):
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
-                global flag_break
+                nonlocal flag_break
                 if ui_cf.checkBox_to_all.isChecked():
                     selected_item = ui_cf.listWidget_form_lda.currentItem()
                     if selected_item is None:
@@ -3247,7 +3245,7 @@ def get_list_formation(profiles=None):
                     Choose_Formation.accept()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-            Choose_Formation.exec_()
+            ask_in_window(Choose_Formation, MainWindow)
             if flag_break and flag_break[0] not in ('stop',):
                 set_info(f'Нет пласта с названием {flag_break[1]} для профиля {flag_break[0]}', 'red')
                 QMessageBox.critical(MainWindow, 'Ошибка', f'Нет пласта с названием {flag_break[1]} для профиля '

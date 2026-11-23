@@ -131,14 +131,13 @@ ui.pushButton_m.clicked.connect(load_m_grid)
 ui.pushButton_r.setText('Сетки рельефа')
 ui.pushButton_r.setToolTip('Каталог сеток рельефа и привязки к объектам')
 
-def open_terrain_catalog():
-    load_r_grid()
+def refresh_terrain_catalog():
     update_list_model_nn()
     update_list_bind_vel_prediction()
     if ui.checkBox_relief.isChecked():
         draw_relief()
 
-ui.pushButton_r.clicked.connect(open_terrain_catalog)
+ui.pushButton_r.clicked.connect(lambda: load_r_grid(refresh_terrain_catalog))
 ui.checkBox_relief_smoothing.toggled.connect(ui.doubleSpinBox_relief_smoothing.setEnabled)
 ui.checkBox_relief_smoothing.toggled.connect(lambda _: draw_relief())
 ui.doubleSpinBox_relief_smoothing.valueChanged.connect(lambda _: draw_relief())

@@ -11,8 +11,6 @@ def pareto_start():
     Pareto = QtWidgets.QDialog()
     ui_prt = Ui_PARETO()
     ui_prt.setupUi(Pareto)
-    Pareto.show()
-    Pareto.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     # ui_anova.graphicsView.setBackground('w')
     m_width, m_height = get_width_height_monitor()
@@ -578,5 +576,5 @@ def pareto_start():
     set_list_point()
     update_list_saved_mask()
 
-    Pareto.exec_()
+    show_work_window(Pareto)
 

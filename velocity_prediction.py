@@ -164,16 +164,17 @@ def update_list_model_nn():
 
 
 def correct_profile_model_predict():
-    global l_int_up, l_int_down, l_int_up_r, l_int_down_r
+    profile_id, research_id = get_profile_id(), get_research_id()
+    prediction_item = ui.listWidget_model_pred.currentItem()
+    prediction_id = prediction_item.text().split(' id')[-1] if prediction_item else None
+    use_corrected = ui.checkBox_corr_pred.isChecked()
     CorrModelPred = QtWidgets.QDialog()
     ui_cmp = Ui_FormCorrectedModel()
     ui_cmp.setupUi(CorrModelPred)
-    CorrModelPred.show()
-    CorrModelPred.setAttribute(Qt.WA_DeleteOnClose)
 
     def update_list_model_prediction_cmp():
         ui_cmp.listWidget_model_pred.clear()
-        for p in session.query(ProfileModelPrediction).filter_by(profile_id=get_profile_id()).all():
+        for p in session.query(ProfileModelPrediction).filter_by(profile_id=profile_id).all():
             if p.type_model == 'cls':
                 model = session.query(TrainedModelClass).filter_by(id=p.model_id).first()
             else:
@@ -193,9 +194,7 @@ def correct_profile_model_predict():
     update_list_model_prediction_cmp()
 
     def get_current_prediction():
-        if not ui.listWidget_model_pred.currentItem():
-            return None
-        return session.query(ProfileModelPrediction).filter_by(id=ui.listWidget_model_pred.currentItem().text().split(' id')[-1]).first()
+        return session.get(ProfileModelPrediction, prediction_id) if prediction_id is not None else None
 
     pred = get_current_prediction()
     if not pred:
@@ -207,7 +206,7 @@ def correct_profile_model_predict():
         result_pred = json.loads(prediction_obj.prediction)
 
         if prediction_obj.corrected:
-            if ui.checkBox_corr_pred.isChecked():
+            if use_corrected:
                 result_pred = json.loads(prediction_obj.corrected[0].correct)
             # else:
             #     session.query(PredictionCorrect).filter_by(
@@ -263,11 +262,13 @@ def correct_profile_model_predict():
     radarogramma.addItem(l_int_down_r)
 
     def draw_int_line():
-        global l_int_up, l_int_down, l_int_up_r, l_int_down_r
+        nonlocal l_int_up, l_int_down, l_int_up_r, l_int_down_r
         ui.graph.removeItem(l_int_up)
         ui.graph.removeItem(l_int_down)
         radarogramma.removeItem(l_int_up_r)
         radarogramma.removeItem(l_int_down_r)
+        if get_profile_id() != profile_id:
+            return
         line_up = ui_cmp.spinBox_int_min.value()
         line_down = ui_cmp.spinBox_int_max.value()
         l_int_up = pg.InfiniteLine(pos=line_up, angle=90, pen=pg.mkPen(color='darkred', width=4, dash=[8, 2]))
@@ -294,6 +295,7 @@ def correct_profile_model_predict():
         if not current_pred:
            set_info('Не выбран прогноз для коррекции', 'red')
            return
+        working_prediction = get_pred_with_correct(current_pred)
 
         if ui_cmp.checkBox_compare.isChecked():
 
@@ -320,7 +322,7 @@ def correct_profile_model_predict():
                             random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
 
             if ui_cmp.checkBox_for_obj.isChecked():
-                profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+                profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
 
                 for prf in profiles:
                     obj_pred = session.query(ProfileModelPrediction).filter_by(
@@ -351,13 +353,13 @@ def correct_profile_model_predict():
                 return
 
             list_pred_cmp = get_pred_with_correct(pred_cmp)
-            apply_correction(list_pred, list_pred_cmp)
+            apply_correction(working_prediction, list_pred_cmp)
 
         else:
             for i in range(ui_cmp.spinBox_int_min.value(), ui_cmp.spinBox_int_max.value() + 1):
-                list_pred[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
+                working_prediction[i] = round(random.uniform(ui_cmp.doubleSpinBox_pred_min.value(), ui_cmp.doubleSpinBox_pred_max.value()), 5)
 
-        session.query(PredictionCorrect).filter_by(prediction_id=current_pred.id).update({'correct': json.dumps(list_pred)})
+        session.query(PredictionCorrect).filter_by(prediction_id=current_pred.id).update({'correct': json.dumps(working_prediction)})
         session.commit()
         CorrModelPred.close()
 
@@ -379,7 +381,6 @@ def correct_profile_model_predict():
     ui_cmp.pushButton_delete_pred.clicked.connect(delete_pred)
 
     def cleanup_correction_lines():
-        global l_int_up, l_int_down, l_int_up_r, l_int_down_r
         try:
             # Удаляем линии из основного графика
             if hasattr(l_int_up, 'scene') and l_int_up.scene():
@@ -398,7 +399,7 @@ def correct_profile_model_predict():
     # Подключаем очистку к сигналу закрытия диалога
     CorrModelPred.finished.connect(cleanup_correction_lines)
 
-    CorrModelPred.exec_()
+    show_work_window(CorrModelPred)
 
 
 def check_object_prediction_wells():
@@ -436,7 +437,7 @@ def check_object_prediction_wells():
         message = QMessageBox(QMessageBox.Information, 'Нет данных для сравнения', description, parent=MainWindow)
         if report.issues:
             message.setDetailedText('\n'.join(report.issues))
-        message.exec_()
+        show_work_window(message)
         return
 
     def open_candidate_log(well_id, details):
@@ -454,7 +455,7 @@ def check_object_prediction_wells():
             box = QMessageBox(QMessageBox.Information, 'Пропущенные данные',
                               f'Ошибок: {len(report.issues)}', parent=dialog)
             box.setDetailedText('\n'.join(report.issues))
-            box.exec_()
+            show_work_window(box)
         issues_button.clicked.connect(show_issues)
         dialog.layout().insertWidget(1, issues_button)
     dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)

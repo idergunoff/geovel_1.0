@@ -349,32 +349,34 @@ def add_all_well_markup_mlp():
 
     dialog = ClassificationWellWizard(
         session, candidates, markers, MainWindow, mode='add', open_well_log=open_candidate_log)
-    if dialog.exec_() != QtWidgets.QDialog.Accepted:
-        return
-    changed = 0
-    try:
-        for candidate, marker_id in dialog.assignments():
-            if marker_id is None:
-                continue
-            markup = session.query(MarkupMLP).filter_by(
-                analysis_id=analysis_id, well_id=candidate.well_id,
-                profile_id=candidate.profile_id).first()
-            if markup:
-                markup.marker_id = marker_id
-                markup.formation_id = candidate.formation_id
-                markup.list_measure = json.dumps(candidate.list_measure)
-            else:
-                session.add(MarkupMLP(
+    def apply_changes():
+        changed = 0
+        try:
+            for candidate, marker_id in dialog.assignments():
+                if marker_id is None:
+                    continue
+                markup = session.query(MarkupMLP).filter_by(
                     analysis_id=analysis_id, well_id=candidate.well_id,
-                    profile_id=candidate.profile_id, formation_id=candidate.formation_id,
-                    marker_id=marker_id, list_measure=json.dumps(candidate.list_measure)))
-            changed += 1
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    update_list_well_markup_mlp()
-    set_info(f'Массовая разметка классификации: добавлено/обновлено {changed} скважин', 'green')
+                    profile_id=candidate.profile_id).first()
+                if markup:
+                    markup.marker_id = marker_id
+                    markup.formation_id = candidate.formation_id
+                    markup.list_measure = json.dumps(candidate.list_measure)
+                else:
+                    session.add(MarkupMLP(
+                        analysis_id=analysis_id, well_id=candidate.well_id,
+                        profile_id=candidate.profile_id, formation_id=candidate.formation_id,
+                        marker_id=marker_id, list_measure=json.dumps(candidate.list_measure)))
+                changed += 1
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        update_list_well_markup_mlp()
+        set_info(f'Массовая разметка классификации: добавлено/обновлено {changed} скважин', 'green')
+
+    dialog.accepted.connect(apply_changes)
+    show_work_window(dialog)
 
 
 def check_all_well_markup_mlp():
@@ -412,24 +414,26 @@ def check_all_well_markup_mlp():
 
     dialog = ClassificationWellWizard(
         session, candidates, markers, MainWindow, mode='check', open_well_log=open_candidate_log)
-    if dialog.exec_() != QtWidgets.QDialog.Accepted:
-        return
-    changed = deleted = 0
-    try:
-        for candidate, marker_id in dialog.assignments():
-            markup = session.query(MarkupMLP).filter_by(id=candidate.markup_id, analysis_id=analysis_id).first()
-            if not markup:
-                continue
-            if marker_id is None:
-                session.delete(markup); deleted += 1
-            elif markup.marker_id != marker_id:
-                markup.marker_id = marker_id; changed += 1
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    update_list_well_markup_mlp()
-    set_info(f'Проверка классификации: изменено {changed}, удалено {deleted} скважин', 'green')
+    def apply_changes():
+        changed = deleted = 0
+        try:
+            for candidate, marker_id in dialog.assignments():
+                markup = session.query(MarkupMLP).filter_by(id=candidate.markup_id, analysis_id=analysis_id).first()
+                if not markup:
+                    continue
+                if marker_id is None:
+                    session.delete(markup); deleted += 1
+                elif markup.marker_id != marker_id:
+                    markup.marker_id = marker_id; changed += 1
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        update_list_well_markup_mlp()
+        set_info(f'Проверка классификации: изменено {changed}, удалено {deleted} скважин', 'green')
+
+    dialog.accepted.connect(apply_changes)
+    show_work_window(dialog)
 
 
 def add_profile_mlp():
@@ -437,7 +441,6 @@ def add_profile_mlp():
     AddProfClass = QtWidgets.QDialog()
     ui_apc = Ui_AddProfileClass()
     ui_apc.setupUi(AddProfClass)
-    AddProfClass.show()
     AddProfClass.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     form = session.query(Formation).filter(Formation.id == get_formation_id()).first()
@@ -492,7 +495,7 @@ def add_profile_mlp():
     ui_apc.buttonBox.accepted.connect(add_profile_mlp_to_db)
     ui_apc.buttonBox.rejected.connect(add_profile_mlp_close)
 
-    AddProfClass.exec_()
+    ask_in_window(AddProfClass, MainWindow)
 
 
 
@@ -664,7 +667,7 @@ def split_well_train_test_mlp():
     plt.colorbar(sc, label='value')
 
     plt.legend()
-    plt.show()
+    plt.show(block=False)
 
 
     result = QtWidgets.QMessageBox.question(
@@ -1357,23 +1360,35 @@ def remove_trained_model_class():
 
 def calc_class_profile():
     """  Расчет профиля по выбранной модели классификатора """
+    profile_id = get_profile_id()
     try:
         working_data, curr_form = build_table_test('mlp')
     except TypeError:
         return
     working_data_class = working_data.copy()
 
+    model_item = ui.listWidget_trained_model_class.currentItem()
+    if model_item is None:
+        set_info("Выберите обученную модель.", "red")
+        return
+    model_id = model_item.data(Qt.UserRole)
+
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
-    Choose_RegModel.show()
-    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
+        if get_profile_id() != profile_id:
+            set_info("Выберите в главном окне исходный профиль для этого расчёта.", "red")
+            return
+        current_model = ui.listWidget_trained_model_class.currentItem()
+        if current_model is None or current_model.data(Qt.UserRole) != model_id:
+            set_info("Выберите в главном окне исходную модель для этого расчёта.", "red")
+            return
         labels = set_marks()
         labels_dict = {value: key for key, value in labels.items()}
         model = session.query(TrainedModelClass).filter_by(
-            id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+            id=model_id).first()
 
         if 'torch' in model.title:
             with open(model.path_model, 'rb') as f:
@@ -1464,7 +1479,7 @@ def calc_class_profile():
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
 
-    Choose_RegModel.exec_()
+    show_work_window(Choose_RegModel)
 
 
 def draw_result_mlp(working_data, curr_form, color_marker):
@@ -1626,10 +1641,10 @@ def calc_object_training_well_distances_mlp():
 
 def calc_object_class():
     """ Расчет объекта по модели """
-    global flag_break
     working_data_result = pd.DataFrame()
     list_formation = []
-    profiles = session.query(Profile).filter(Profile.research_id == get_research_id()).all()
+    research_id = get_research_id()
+    profiles = session.query(Profile).filter(Profile.research_id == research_id).all()
     flag_break = []
     for n, prof in enumerate(profiles):
         if flag_break:
@@ -1651,14 +1666,13 @@ def calc_object_class():
             Choose_Formation = QtWidgets.QDialog()
             ui_cf = Ui_FormationLDA()
             ui_cf.setupUi(Choose_Formation)
-            Choose_Formation.show()
             Choose_Formation.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
             for f in prof.formations:
                 ui_cf.listWidget_form_lda.addItem(f'{f.title} id{f.id}')
             ui_cf.listWidget_form_lda.setCurrentRow(0)
 
             def form_mlp_ok():
-                global flag_break
+                nonlocal flag_break
                 # ui.comboBox_plast.setCurrentText(ui_cf.listWidget_form_lda.currentItem().text())
                 if ui_cf.checkBox_to_all.isChecked():
                     title_form = ui_cf.listWidget_form_lda.currentItem().text().split(' id')[0]
@@ -1680,7 +1694,7 @@ def calc_object_class():
                     Choose_Formation.close()
 
             ui_cf.pushButton_ok_form_lda.clicked.connect(form_mlp_ok)
-            Choose_Formation.exec_()
+            ask_in_window(Choose_Formation, MainWindow)
 
     if ui.checkBox_save_prof_mlp.isChecked():
         model = session.query(TrainedModelClass).filter_by(
@@ -1733,18 +1747,29 @@ def calc_object_class():
     update_list_model_prediction()
     working_data_result_copy = working_data_result.copy()
 
+    model_item = ui.listWidget_trained_model_class.currentItem()
+    if model_item is None:
+        set_info("Выберите обученную модель.", "red")
+        return
+    model_id = model_item.data(Qt.UserRole)
+
     Choose_RegModel = QtWidgets.QDialog()
     ui_rm = Ui_FormRegMod()
     ui_rm.setupUi(Choose_RegModel)
-    Choose_RegModel.show()
-    Choose_RegModel.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def calc_class_model():
+        if get_research_id() != research_id:
+            set_info("Выберите в главном окне исходное исследование для этого расчёта.", "red")
+            return
+        current_model = ui.listWidget_trained_model_class.currentItem()
+        if current_model is None or current_model.data(Qt.UserRole) != model_id:
+            set_info("Выберите в главном окне исходную модель для этого расчёта.", "red")
+            return
         labels = set_marks()
         labels_dict = {value: key for key, value in labels.items()}
 
         model = session.query(TrainedModelClass).filter_by(
-            id=ui.listWidget_trained_model_class.currentItem().data(Qt.UserRole)).first()
+            id=model_id).first()
 
         with open(model.path_model, 'rb') as f:
             class_model = pickle.load(f)
@@ -1830,29 +1855,37 @@ def calc_object_class():
             z = string_to_unique_number(list(working_data_result['mark']), 'mlp')
             color_marker = True
             working_data_result['mark_number'] = z
-        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_class.currentItem().text()}', color_marker)
-        result1 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?', QMessageBox.Yes, QMessageBox.No)
-        if result1 == QMessageBox.Yes:
-            result2 = QMessageBox.question(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?', QMessageBox.Yes, QMessageBox.No)
-            if result2 == QMessageBox.Yes:
-                list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == get_MLP_id()).all()]
-                list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
-                working_data_result = working_data_result[list_col]
+        file_prefix = f'{get_object_name()}_{get_research_name()}'
+        model_title = get_mlp_title()
+        analysis_id = get_MLP_id()
+
+        def save_results(working_data_result=working_data_result):
+            result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
+            if result1:
+                result2 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить только результаты расчёта?')
+                if result2:
+                    list_col = [i.title for i in session.query(MarkerMLP).filter(MarkerMLP.analysis_id == analysis_id).all()]
+                    list_col += ['x_pulc', 'y_pulc', 'mark', 'mark_number']
+                    working_data_result = working_data_result[list_col]
+                else:
+                    pass
+                try:
+                    file_name = f'{file_prefix}__модель_{model_title}.xlsx'
+                    fn = save_file_in_window(MainWindow, caption=f'Сохранить результат MLP "{file_prefix}" в таблицу', directory=file_name,
+                                                     filter="Excel Files (*.xlsx)")
+                    if not fn[0]:
+                        return
+                    working_data_result.to_excel(fn[0])
+                    set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
+                except ValueError:
+                    pass
             else:
                 pass
-            try:
-                file_name = f'{get_object_name()}_{get_research_name()}__модель_{get_mlp_title()}.xlsx'
-                fn = QFileDialog.getSaveFileName(caption=f'Сохранить результат MLP "{get_object_name()}_{get_research_name()}" в таблицу', directory=file_name,
-                                                 filter="Excel Files (*.xlsx)")
-                working_data_result.to_excel(fn[0])
-                set_info(f'Таблица сохранена в файл: {fn[0]}', 'green')
-            except ValueError:
-                pass
-        else:
-            pass
+
+        draw_map(x, y, z, f'Classifier {ui.listWidget_trained_model_class.currentItem().text()}', color_marker, on_close=save_results)
 
     ui_rm.pushButton_calc_model.clicked.connect(calc_class_model)
-    Choose_RegModel.exec_()
+    show_work_window(Choose_RegModel)
 
 
 def calc_corr_mlp():
@@ -1901,7 +1934,7 @@ def anova_mlp():
         MarkerMLP.title == marker, MarkerMLP.analysis_id == get_MLP_id()
     ).first().color for marker in markers}
     dialog = ClassificationAnovaDialog(data_plot, features, palette)
-    dialog.exec_()
+    show_work_window(dialog)
 
 
 def clear_fake_mlp():
@@ -1992,8 +2025,6 @@ def get_model_param_list():
     FormParams = QtWidgets.QDialog()
     ui_p = Ui_Form_ModelParams()
     ui_p.setupUi(FormParams)
-    FormParams.show()
-    FormParams.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_p.label.setText(ui_p.label.text() + model.title)
     ui_p.label_crl.setText(ui_p.label_crl.text() + model.except_crl)
@@ -2049,7 +2080,7 @@ def get_model_param_list():
     ui_p.pushButton_add_class.clicked.connect(lambda: add_and_compare_models('cls'))
     ui_p.pushButton_add_reg.clicked.connect(lambda: add_and_compare_models('reg'))
 
-    FormParams.exec_()
+    show_work_window(FormParams)
 
 
 def update_trained_model_comment():
@@ -2064,7 +2095,6 @@ def update_trained_model_comment():
     FormComment = QtWidgets.QDialog()
     ui_cmt = Ui_Form_comment()
     ui_cmt.setupUi(FormComment)
-    FormComment.show()
     FormComment.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     ui_cmt.textEdit.setText(an.comment)
@@ -2081,7 +2111,7 @@ def update_trained_model_comment():
     ui_cmt.buttonBox.accepted.connect(update_comment)
     ui_cmt.buttonBox.rejected.connect(cancel_update)
 
-    FormComment.exec_()
+    ask_in_window(FormComment, MainWindow)
 
 
 def cls_model_prediction_upgrade():
@@ -2096,8 +2126,6 @@ def cls_model_prediction_upgrade():
     FormUpgradePredict = QtWidgets.QDialog()
     ui_up = Ui_FormUpgradeModel()
     ui_up.setupUi(FormUpgradePredict)
-    FormUpgradePredict.show()
-    FormUpgradePredict.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     model_list_param = json.loads(an.list_params)
 
@@ -2131,7 +2159,7 @@ def cls_model_prediction_upgrade():
 
     ui_up.pushButton_upgrade_model.clicked.connect(upgrade_list_param_predict)
 
-    FormUpgradePredict.exec_()
+    show_work_window(FormUpgradePredict)
 
 
 def export_model_class():
@@ -2318,7 +2346,6 @@ def rename_model_class():
     RenameModel = QtWidgets.QDialog()
     ui_rnm = Ui_FormRenameModel()
     ui_rnm.setupUi(RenameModel)
-    RenameModel.show()
     RenameModel.setAttribute(Qt.WA_DeleteOnClose)
     ui_rnm.lineEdit.setText(model.title)
 
@@ -2331,7 +2358,7 @@ def rename_model_class():
     ui_rnm.buttonBox.accepted.connect(rename_model)
     ui_rnm.buttonBox.rejected.connect(RenameModel.close)
 
-    RenameModel.exec_()
+    ask_in_window(RenameModel, MainWindow)
 
 
 def list_param_to_lineEdit():

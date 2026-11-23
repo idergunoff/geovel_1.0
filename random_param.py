@@ -66,8 +66,6 @@ def push_random_param():
     RandomParam = QtWidgets.QDialog()
     ui_rp = Ui_RandomParam()
     ui_rp.setupUi(RandomParam)
-    RandomParam.show()
-    RandomParam.setAttribute(Qt.WA_DeleteOnClose)
 
     m_width, m_height = get_width_height_monitor()
     RandomParam.resize(int(m_width / 1.5), int(m_height / 1.5))
@@ -75,8 +73,6 @@ def push_random_param():
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
     ui_cls.setupUi(Classifier)
-    Classifier.show()
-    Classifier.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
 
     def push_checkbutton_smote():
@@ -1284,7 +1280,7 @@ def push_random_param():
         ax[3].set_title('Наименее часто встречающиеся параметры')
 
         fig.tight_layout()
-        plt.show()
+        plt.show(block=False)
 
     def find_common_param(sorted_result, percent_models=0.2, percent_params=0.4):
         count_model = int(len(sorted_result) * percent_models)
@@ -1328,6 +1324,7 @@ def push_random_param():
     ui_rp.spinBox_bot_skip_up.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
     ui_rp.spinBox_bot_skip_down.valueChanged.connect(lambda: check_spinbox(ui_rp.spinBox_bot_skip_up, ui_rp.spinBox_bot_skip_down))
 
-    RandomParam.exec_()
-
-    Classifier.exec_()
+    show_work_window(Classifier)
+    Classifier.setAttribute(Qt.WA_DeleteOnClose, False)
+    RandomParam.finished.connect(Classifier.deleteLater)
+    show_work_window(RandomParam)

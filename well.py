@@ -26,7 +26,6 @@ def add_well():
     Add_Well = QtWidgets.QDialog()
     ui_w = Ui_add_well()
     ui_w.setupUi(Add_Well)
-    Add_Well.show()
     Add_Well.setAttribute(Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     ui_w.lineEdit_well_alt.setText('0')
@@ -49,7 +48,7 @@ def add_well():
 
     ui_w.buttonBox.accepted.connect(well_to_db)
     ui_w.buttonBox.rejected.connect(cancel_add_well)
-    Add_Well.exec_()
+    ask_in_window(Add_Well, MainWindow)
 
 
 def search_well():
@@ -79,7 +78,6 @@ def edit_well():
         Add_Well = QtWidgets.QDialog()
         ui_w = Ui_add_well()
         ui_w.setupUi(Add_Well)
-        Add_Well.show()
         Add_Well.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
         well = session.query(Well).filter(Well.id == get_well_id()).first()
@@ -115,7 +113,7 @@ def edit_well():
         ui_w.buttonBox.accepted.connect(well_update)
         ui_w.buttonBox.rejected.connect(cancel_add_well)
         ui_w.toolButton_del.clicked.connect(well_delete)
-        Add_Well.exec_()
+        ask_in_window(Add_Well, MainWindow)
 
 
 def add_wells():
@@ -569,7 +567,6 @@ def add_boundary():
     Add_Boundary = QtWidgets.QDialog()
     ui_b = Ui_add_bondary()
     ui_b.setupUi(Add_Boundary)
-    Add_Boundary.show()
     Add_Boundary.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     last_boundary = session.query(Boundary).order_by(Boundary.id.desc()).first()
@@ -593,7 +590,7 @@ def add_boundary():
 
     ui_b.buttonBox.accepted.connect(boundary_to_db)
     ui_b.buttonBox.rejected.connect(cancel_add_boundary)
-    Add_Boundary.exec_()
+    ask_in_window(Add_Boundary, MainWindow)
 
 
 def remove_boundary():

@@ -372,8 +372,7 @@ def add_window():
     New_Window = QtWidgets.QDialog()
     ui_nw = Ui_new_window()
     ui_nw.setupUi(New_Window)
-    New_Window.show()
-    New_Window.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
+    profile_id = get_profile_id()
 
     radarogramma = ui_nw.radarogram.addPlot()
     img = pg.ImageItem()
@@ -405,7 +404,7 @@ def add_window():
 
     if ui.checkBox_minmax.isChecked():
         radar = json.loads(session.query(CurrentProfile.signal).filter(CurrentProfile.id == 1).first()[0])
-    new_window = WindowProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
+    new_window = WindowProfile(profile_id=profile_id, signal=json.dumps(radar))
     session.add(new_window)
     session.commit()
 
@@ -416,16 +415,21 @@ def add_window():
         rad = session.query(WindowProfile.signal).filter(WindowProfile.id == ui_nw.label_id_nw_rad.text()).first()
         radar = json.loads(rad[0])
         selected = roi.getArrayRegion(np.array(radar), img)
-        n = ui.spinBox_roi.value() // 2
+        if selected is None or not len(selected):
+            return
+        n = len(selected) // 2
         ui_nw.signal.plot(y=range(512, 0, -1), x=selected.mean(axis=0), clear=True, pen='r')
         ui_nw.signal.plot(y=range(512, 0, -1), x=selected[n])
         ui_nw.signal.showGrid(x=True, y=True)
 
 
     def rollback_radar():
+        if get_profile_id() != profile_id:
+            set_info('Для отката выберите исходный профиль снимка.', 'red')
+            return
         radar = json.loads(session.query(WindowProfile.signal).filter(WindowProfile.id == ui_nw.label_id_nw_rad.text()).first()[0])
         clear_current_profile()
-        new_current = CurrentProfile(profile_id=get_profile_id(), signal=json.dumps(radar))
+        new_current = CurrentProfile(profile_id=profile_id, signal=json.dumps(radar))
         session.add(new_current)
         session.commit()
         save_max_min(radar)
@@ -440,7 +444,7 @@ def add_window():
     ui_nw.pushButton_rollback.clicked.connect(rollback_radar)
     updatePlot_nw()
 
-    New_Window.exec_()
+    show_work_window(New_Window)
 
 
 def filter19():

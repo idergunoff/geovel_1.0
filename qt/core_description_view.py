@@ -4,6 +4,7 @@ import json
 import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from qt.work_windows import ask_in_window
 from sqlalchemy.exc import SQLAlchemyError
 
 from core_description.presentation import (
@@ -249,7 +250,7 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
 
     def choose_scope(self):
         dialog = ReparseWellScopeDialog(self.session, self.well_id, self)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+        if ask_in_window(dialog, self) == QtWidgets.QDialog.Accepted:
             self.reparse(well_ids=dialog.selected_well_ids())
 
     def reparse(self, checked=False, *, selected=False, changed_only=False, well_ids=None):
@@ -282,7 +283,7 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
             progress.close()
         dialog = ReparsePreviewDialog(self.session, preview, self, changed_only=changed_only)
         dialog.applied.connect(self._changed)
-        dialog.exec_()
+        ask_in_window(dialog, self)
 
     def _source_menu(self, position):
         menu = self.source_text.createStandardContextMenu()
@@ -306,7 +307,7 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
         except DictionaryValidationError as error:
             self.status_label.setText(str(error))
             return
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+        if ask_in_window(dialog, self) == QtWidgets.QDialog.Accepted:
             self.status_label.setText("Словарь сохранён. Выберите результаты переразбора для применения.")
             self.reparse(changed_only=True)
 
@@ -318,7 +319,7 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
             return
         saved = []
         dialog.dictionary_saved.connect(saved.append)
-        dialog.exec_()
+        ask_in_window(dialog, self)
         if saved:
             self.reparse(changed_only=True)
 
@@ -367,7 +368,7 @@ class CoreDescriptionViewDialog(QtWidgets.QDialog):
 
         undo_button.clicked.connect(undo)
         layout.addWidget(buttons)
-        dialog.exec_()
+        ask_in_window(dialog, self)
 
 
 def open_core_description_view(session, well, parent=None):

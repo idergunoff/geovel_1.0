@@ -141,7 +141,13 @@ def test_training_and_validation_buttons_warn_without_crashing(qt_app, monkeypat
                          'mark' if kind == 'classification' else 'target_value': [0, 1], 'X': [1., 2.]})
     monkeypatch.setattr(app_settings, 'bind_form', lambda *args: None)
     monkeypatch.setattr(QtWidgets.QMessageBox, 'warning', lambda parent, title, text: messages.append(text))
+    main_ui = SimpleNamespace(**{
+        name: QtWidgets.QLineEdit()
+        for name in ('lineEdit_signal_except', 'lineEdit_crl_except',
+                     'lineEdit_signal_except_reg', 'lineEdit_crl_except_reg')
+    })
     scope = dict(
+        ui=main_ui, get_MLP_id=lambda: 1, get_regmod_id=lambda: 1, get_regmod_title=lambda: 'Test',
         pd=pd, np=np, QtWidgets=QtWidgets, QtCore=QtCore, configure_l1_controls=configure_l1_controls,
         Ui_ClassifierForm=Ui_ClassifierForm, Ui_RegressorForm=Ui_RegressorForm,
         QListWidgetItem=QtWidgets.QListWidgetItem, TrainingFeatureMask=TrainingFeatureMask,
@@ -170,7 +176,14 @@ def test_training_and_validation_buttons_warn_without_crashing(qt_app, monkeypat
         dialog.close()
         return 0
 
-    monkeypatch.setattr(QtWidgets.QDialog, 'exec_', exercise)
+    from qt.work_windows import show_work_window
+
+    def show_and_exercise(dialog):
+        show_work_window(dialog)
+        assert not dialog.isModal()
+        exercise(dialog)
+
+    scope['show_work_window'] = show_and_exercise
     if kind == 'classification':
         train = load_function('classification_func.py', 'train_classifier', scope)
         train(data, ['X'], ['X'], {}, 'mark', 'prof_well_index', 'georadar')

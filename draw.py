@@ -1569,7 +1569,7 @@ def draw_velocity_model_color():
                 hatches_plot(ax, color, num)
 
             fig.subplots_adjust(hspace=0.05)
-            plt.show()
+            plt.show(block=False)
 
             draw_relief()
             list_vel = calc_list_velocity()
@@ -1742,7 +1742,7 @@ def plot_groups_with_smoothed_hull(df, x='x_coord', y='y_coord', group='obj_titl
     plt.colorbar(sm, label='Score', ax=ax)
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def plot_graphs_by_group(graphs, names):
@@ -1802,7 +1802,7 @@ def plot_graphs_by_group(graphs, names):
 
     # Настраиваем расположение подграфиков
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 def draw_noise(label_lof):

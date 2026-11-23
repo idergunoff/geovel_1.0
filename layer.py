@@ -12,7 +12,6 @@ def add_layer():
     Add_Layer = QtWidgets.QDialog()
     ui_lay = Ui_add_layer()
     ui_lay.setupUi(Add_Layer)
-    Add_Layer.show()
     Add_Layer.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
 
     def layer_to_db():
@@ -30,7 +29,7 @@ def add_layer():
 
     ui_lay.buttonBox.accepted.connect(layer_to_db)
     ui_lay.buttonBox.rejected.connect(cancel_add_layer)
-    Add_Layer.exec_()
+    ask_in_window(Add_Layer, MainWindow)
 
 
 def remove_layer():
@@ -150,7 +149,6 @@ def add_formation():
     Add_Form = QtWidgets.QDialog()
     ui_f = Ui_add_formation()
     ui_f.setupUi(Add_Form)
-    Add_Form.show()
     Add_Form.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # атрибут удаления виджета после закрытия
     last_form = session.query(Formation).order_by(Formation.id.desc()).first()
     if last_form:
@@ -185,7 +183,7 @@ def add_formation():
 
     ui_f.buttonBox.accepted.connect(formation_to_db)
     ui_f.buttonBox.rejected.connect(cancel_add_formation)
-    Add_Form.exec_()
+    ask_in_window(Add_Form, MainWindow)
 
 
 def add_param_in_new_formation(new_formation_id, new_formation_profile_id):

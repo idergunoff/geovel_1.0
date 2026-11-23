@@ -96,14 +96,13 @@ def feature_selection_calc(data, target, mode):
     FeatSelect = QtWidgets.QDialog()
     ui_fs = Ui_FeatureSelection()
     ui_fs.setupUi(FeatSelect)
-    FeatSelect.show()
-    FeatSelect.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     data = data.replace([np.inf, -np.inf], np.nan)
     data = data.fillna(data.median())
     target = pd.to_numeric(target, errors='coerce')
     target = target.replace([np.inf, -np.inf], 0)
     list_param = []
+    analysis_id = get_MLP_id()
 
     if mode == 'reg':
         metric = f_regression
@@ -111,7 +110,7 @@ def feature_selection_calc(data, target, mode):
         metric = mutual_info_classif
 
     def choose_method():
-        global list_param
+        nonlocal list_param
         if ui_fs.comboBox_method.currentText() == 'Quasi-constant':
             threshold = ui_fs.doubleSpinBox_threshold.value()
             print('Quasi-constant: ')
@@ -177,7 +176,7 @@ def feature_selection_calc(data, target, mode):
             plt.title('Тепловая карта корреляции k признаков с target с наиболее высокой корреляцией')
             plt.xticks(rotation=45)
             plt.yticks(rotation=45)
-            plt.show()
+            plt.show(block=False)
 
             corr_no_target = data_no_target.corr()
 
@@ -217,7 +216,7 @@ def feature_selection_calc(data, target, mode):
             plt.title('Тепловая карта сильной корреляции для признаков после удаления коррелированных больше чем с n признаками:')
             plt.xticks(rotation=45)
             plt.yticks(rotation=45)
-            plt.show()
+            plt.show(block=False)
 
             ui_fs.label_params.setText(f'Отобранные параметры, ранжированные ({len(list_param)})')
             add_param_to_list(list_param, ui_fs)
@@ -369,7 +368,7 @@ def feature_selection_calc(data, target, mode):
             plt.figure(num=None, figsize=(15, 10), dpi=80, facecolor='w', edgecolor='k')
             feat_importances = pd.Series(rf.feature_importances_, index=X_train.columns)
             feat_importances.nlargest(20).plot(kind='barh')
-            plt.show()
+            plt.show(block=False)
 
             num_params = ui_fs.spinBox_num_param.value()
 
@@ -444,11 +443,13 @@ def feature_selection_calc(data, target, mode):
                                                     '\n' + 'Отобранные параметры R^2: ' + str(round(r2_param, 4)))
 
     def import_params():
-        global list_param
+        if get_MLP_id() != analysis_id:
+            set_info('Для импорта выберите исходный классификационный анализ.', 'red')
+            return
         print('list_param: ', list_param)
         update_all_params(list_param)
 
     ui_fs.pushButton_select_features.clicked.connect(choose_method)
     ui_fs.pushButton_import_param.clicked.connect(import_params)
-    FeatSelect.exec_()
+    show_work_window(FeatSelect)
 
