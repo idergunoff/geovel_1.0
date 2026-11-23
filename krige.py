@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sqlalchemy.exc import OperationalError
 from matplotlib.colors import ListedColormap
+from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from scipy import ndimage
@@ -23,7 +24,7 @@ from report_map import (
     annotate_observations, build_categorical_report_map, build_report_map,
     parse_contour_interval, parse_scale_bounds,
 )
-from well_map_style import well_marker_color
+from well_map_style import draw_map_wells, well_marker_color
 
 cmap_list = ['viridis', 'plasma', 'inferno', 'magma', 'cividis','Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
             'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu', 'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn',
@@ -502,8 +503,41 @@ def _interpolate_continuous(
     return xx, yy, x, y, z, z_interp, surface_method
 
 
+def _collect_map_wells(research_id, object_id, *, by_object, cluster_profile_labels):
+    """Keep one marker per well and the matches on each clustered profile."""
+    profiles = session.query(Profile.id, Profile.research_id, Profile.title)
+    if by_object:
+        if object_id is None:
+            return [], None
+        profiles = profiles.join(Research).filter(Research.object_id == object_id)
+    else:
+        if research_id is None:
+            return [], None
+        profiles = profiles.filter(Profile.research_id == research_id)
+
+    wells = {}
+    clusters = {}
+    for profile in profiles.order_by(Profile.title, Profile.id):
+        trace_labels = None
+        if cluster_profile_labels is not None and profile.research_id == research_id:
+            trace_labels = cluster_profile_labels.get(profile.id)
+        for well, trace_index, distance in get_list_nearest_well(profile.id, show_missing_coordinates=False):
+            if well.id not in wells:
+                wells[well.id] = (well.x_coord, well.y_coord, well.name or f'id{well.id}', well_marker_color(well))
+            if trace_labels is not None:
+                profile_title = profile.title or f'id{profile.id}'
+                clusters.setdefault(well.id, []).append((profile_title, trace_labels.get(trace_index), distance))
+
+    well_ids = sorted(wells, key=lambda well_id: (wells[well_id][2], well_id))
+    return (
+        [wells[well_id] for well_id in well_ids],
+        [clusters.get(well_id, ()) for well_id in well_ids] if cluster_profile_labels is not None else None,
+    )
+
+
 def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, list_name=None,
-             initial_map_mode=None, report_research_id=None, *, point_labels=None, on_close=None):
+             initial_map_mode=None, report_research_id=None, *,
+             point_labels=None, on_close=None, cluster_profile_labels=None):
 
     list_x, list_y, list_z = (np.asarray(values).copy() for values in (list_x, list_y, list_z))
     if not (len(list_x) and len(list_x) == len(list_y) == len(list_z)):
@@ -521,28 +555,19 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
     show_profile_wells = ui.checkBox_profile_well.isChecked()
     show_object_wells = ui.checkBox_object_well.isChecked()
 
-    def map_wells(research, selected_object_id):
-        if show_object_wells and selected_object_id is not None:
-            nearby = get_list_nearest_well_for_object(selected_object_id) or []
-        elif show_profile_wells and research is not None:
-            nearby = [well for profile in research.profiles for well in (get_list_nearest_well(profile.id) or [])]
-        else:
-            nearby = []
-        return [
-            (well.id, (well.x_coord, well.y_coord, well.name, well_marker_color(well)))
-            for well, *_ in nearby
-        ]
-
-    research = session.get(Research, research_id) if research_id is not None and (profiles or show_profile_wells) else None
+    research = session.get(Research, research_id) if research_id is not None and profiles else None
     research_profiles = research.profiles if research else []
-    nearby_wells = map_wells(research, object_id)
-    wells = [well for _, well in nearby_wells]
     report_research_id = research_id if report_research_id is None else report_research_id
-    if report_research_id == research_id:
-        report_wells = list(dict(nearby_wells).values())
-    else:
-        report_research = session.get(Research, report_research_id)
-        report_wells = list(dict(map_wells(report_research, report_research.object_id)).values()) if report_research else []
+    wells, well_clusters = [], None
+    if show_profile_wells or show_object_wells:
+        well_object_id = object_id
+        if show_object_wells and report_research_id != research_id:
+            map_research = session.get(Research, report_research_id)
+            well_object_id = map_research.object_id if map_research is not None else None
+        wells, well_clusters = _collect_map_wells(
+            report_research_id, well_object_id, by_object=show_object_wells,
+            cluster_profile_labels=cluster_profile_labels,
+        )
 
     tracks = []
     if report_research_id is not None:
@@ -752,24 +777,37 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
         control = _get_control(*names)
         return control.isChecked() if control is not None else default
 
+    def show_figure(figure, title):
+        preview = QtWidgets.QDialog()
+        preview.setWindowTitle(f'{title} — {param}')
+        canvas = FigureCanvasQTAgg(figure)
+        toolbar = NavigationToolbar2QT(canvas, preview)
+        layout = QtWidgets.QVBoxLayout(preview)
+        layout.addWidget(toolbar)
+        screen = Draw_Map.screen().availableGeometry()
+        width, height = canvas.get_width_height()
+        margin = 24
+        requested_width = width + margin
+        requested_height = height + toolbar.sizeHint().height() + margin
+        max_width, max_height = screen.width() - 40, screen.height() - 40
+        if requested_width > max_width or requested_height > max_height:
+            scroll = QtWidgets.QScrollArea(preview)
+            canvas.setMinimumSize(width, height)
+            scroll.setWidgetResizable(True)
+            scroll.setWidget(canvas)
+            layout.addWidget(scroll)
+        else:
+            layout.addWidget(canvas)
+        preview.resize(min(requested_width, max_width), min(requested_height, max_height))
+        show_work_window(preview)
+
     def show_report(builder, *args, **kwargs):
         try:
             report = builder(*args, **kwargs)
         except ValueError as exc:
             set_info(f'Карта для отчёта: {exc}', 'red')
             return
-
-        preview = QtWidgets.QDialog()
-        preview.setWindowTitle(f'Карта для отчёта — {param}')
-        canvas = FigureCanvasQTAgg(report)
-        toolbar = NavigationToolbar2QT(canvas, preview)
-        layout = QtWidgets.QVBoxLayout(preview)
-        layout.addWidget(toolbar)
-        layout.addWidget(canvas)
-        screen = Draw_Map.screen().availableGeometry()
-        width, height = canvas.get_width_height()
-        preview.resize(min(width, screen.width()), min(height + toolbar.sizeHint().height(), screen.height() - 40))
-        show_work_window(preview)
+        show_figure(report, 'Карта для отчёта')
 
     def form_lda_ok():
         report_style = _is_report_style()
@@ -801,7 +839,8 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 show_contours=show_contours,
                 show_points=ui_dm.checkBox_report_points.isChecked(),
                 profiles=tracks if ui_dm.checkBox_report_profiles.isChecked() else (),
-                wells=report_wells,
+                wells=wells,
+                well_clusters=well_clusters,
             )
         bounds = (grid_x.min(), grid_x.max(), grid_y.min(), grid_y.max())
         sparse = ui_dm.spinBox_sparse.value()
@@ -847,11 +886,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
 
                 class_cmap = ListedColormap([color_by_label[lbl] for lbl in sorted_labels])
 
-                fig_interp = plt.figure(figsize=(12, 9))
-                plt.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
+                fig_interp = Figure(figsize=(12, 9), layout='constrained' if wells else 'tight')
+                ax = fig_interp.subplots()
+                ax.pcolormesh(xx, yy, class_index_grid, shading='auto', cmap=class_cmap, alpha=0.55)
 
                 if uncertainty_grid is not None and show_uncertainty:
-                    uncertainty_plot = plt.pcolormesh(
+                    uncertainty_plot = ax.pcolormesh(
                         xx,
                         yy,
                         uncertainty_grid,
@@ -861,12 +901,12 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                         vmin=0.0,
                         vmax=1.0
                     )
-                    cbar = plt.colorbar(uncertainty_plot, fraction=0.046, pad=0.04)
+                    cbar = fig_interp.colorbar(uncertainty_plot, ax=ax, fraction=0.046, pad=0.04)
                     cbar.set_label('uncertainty')
 
                 if show_contours:
                     contour_levels = np.arange(-0.5, len(sorted_labels), 1.0)
-                    plt.contour(xx, yy, class_index_grid, levels=contour_levels, colors='k', linewidths=0.6, alpha=0.8)
+                    ax.contour(xx, yy, class_index_grid, levels=contour_levels, colors='k', linewidths=0.6, alpha=0.8)
 
                 legend_handles = []
                 for lbl in sorted_labels:
@@ -877,25 +917,25 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                     for lbl in sorted_labels:
                         mask_lbl = labels == lbl
                         marker_style = "x" if lbl == -1 else "o"
-                        plt.scatter(
+                        ax.scatter(
                             x[mask_lbl], y[mask_lbl],
                             c=color_by_label[lbl], s=18 if lbl == -1 else 24,
                             marker=marker_style, edgecolors='k' if lbl != -1 else None,
                             linewidths=0.3
                         )
                     if sparse_labels is not None:
-                        annotate_observations(fig_interp.axes[0], points, sparse_labels)
+                        annotate_observations(ax, points, sparse_labels)
 
-                plt.xlabel('X')
-                plt.ylabel('Y')
-                plt.title(
+                ax.set(xlabel='X', ylabel='Y')
+                ax.set_title(
                     f'Categorical map: {param}\n'
                     f'Method: {method_title}; smoothing: {boundary_smoothing_level}\n'
                     f'Grid: {grid_size}, sparse: {sparse}'
                 )
-                plt.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
-                plt.tight_layout()
-                fig_interp.show()
+                ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+                draw_map_wells(ax, wells, xx, yy, class_index_grid, class_labels=sorted_labels,
+                               well_clusters=well_clusters)
+                show_figure(fig_interp, 'Карта')
 
             Draw_Map.start_calculation(draw_button, calculate, render_categorical)
             return
@@ -930,40 +970,35 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 return
 
             # Визуализация результатов
-            fig_interp = plt.figure(figsize=(12, 9))
-            plt.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
-            plt.pcolormesh(xx, yy, z_interp, shading='auto', cmap=color_map)
+            fig_interp = Figure(figsize=(12, 9), layout='constrained' if wells else 'tight')
+            ax = fig_interp.subplots()
+            ax.contour(xx, yy, z_interp, levels=levels_count, colors='k', linewidths=0.5)
+            color_scale = ax.pcolormesh(xx, yy, z_interp, shading='auto', cmap=color_map)
             if show_points:
-                plt.scatter(x, y, c=z, cmap=color_map)
-            plt.colorbar(label=param)
+                color_scale = ax.scatter(x, y, c=z, cmap=color_map)
+            fig_interp.colorbar(color_scale, ax=ax, label=param)
             if show_points:
-                plt.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
+                ax.scatter(x, y, c=z, marker='.', edgecolors='k', s=0.1)
             if sparse_labels is not None:
                 observations = np.column_stack([list_x[::sparse], list_y[::sparse], list_z[::sparse]]).astype(float)
                 valid = np.isfinite(observations).all(axis=1)
-                annotate_observations(fig_interp.axes[0], observations[valid, :2], sparse_labels[valid])
+                annotate_observations(ax, observations[valid, :2], sparse_labels[valid])
             if list_name:
                 for n_ix in range(len(list_name)):
-                    plt.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
+                    ax.text(list_x[n_ix] + 20, list_y[n_ix] + 20, list_name[n_ix], fontsize=5)
 
-            for well_x, well_y, name, color in wells:
-                plt.scatter(well_x, well_y, marker='o', color=color, s=50)
-                plt.text(well_x + 20, well_y + 20, name)
-
-            plt.xlabel('X')
-            plt.ylabel('Y')
-
-            plt.title(f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
-                      f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
-                      # f'\nКоличество ячеек усреднения вариограммы: {nlags}'
-                      f'\nФильтр результата: {filt_power if apply_filter else "off"}\n'
-                      f'\nШаг сетки: {grid_size} м, узлы: {xx.shape[0]}×{xx.shape[1]}')
-            plt.tight_layout()
-
+            ax.set(xlabel='X', ylabel='Y')
+            ax.set_title(
+                f'{object_title} {param}\n{legend}\nМодель интерполяции: {var_model}'
+                f'\nМетод оценки полувариации: {estimator}\nФункция расстояния: {dist_func}\nФункция разбиения: {bin_func}'
+                f'\nФильтр результата: {filt_power if apply_filter else "off"}\n'
+                f'\nШаг сетки: {grid_size} м, узлы: {xx.shape[0]}×{xx.shape[1]}'
+            )
             if profile_x:
-                plt.scatter(profile_x, profile_y, marker='.', edgecolors='k', s=0.1)
+                ax.scatter(profile_x, profile_y, marker='.', edgecolors='k', s=0.1)
 
-            fig_interp.show()
+            draw_map_wells(ax, wells, xx, yy, z_interp, well_clusters=well_clusters)
+            show_figure(fig_interp, 'Карта')
 
         Draw_Map.start_calculation(draw_button, calculate, render_continuous)
 

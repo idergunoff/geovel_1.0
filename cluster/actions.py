@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from html import escape
-
 from .common import *
 
 def calculate_well_log_cluster(
@@ -271,35 +269,6 @@ def calculate_well_log_cluster(
         "green"
     )
     return visualization_data
-
-def _report_cluster_wells(research_id, profile_ids, profile_labels):
-    """Report the final label at the closest trace for each nearby well and profile."""
-    max_distance = ui.spinBox_well_distance.value()
-    profiles = (session.query(Profile.id, Profile.title)
-                .filter(Profile.research_id == research_id)
-                .order_by(Profile.title, Profile.id))
-    rows = []
-    for profile in profiles:
-        if profile.id not in profile_ids:
-            continue
-        profile_title = escape(profile.title or f'id{profile.id}')
-        trace_labels = profile_labels.get(profile.id, {})
-        for well, trace_index, distance in get_list_nearest_well(
-                profile.id, max_distance=max_distance, show_missing_coordinates=False):
-            label = trace_labels.get(trace_index)
-            if label is None:
-                cluster_text = 'нет метки'
-            elif label == -1:
-                cluster_text = 'шум (-1)'
-            else:
-                cluster_text = f'кластер {label}'
-            well_name = escape(well.name or f'id{well.id}')
-            rows.append(f'Скв. {well_name} · профиль {profile_title} · {distance:.2f} м · {cluster_text}')
-
-    if rows:
-        heading = f'<b>Кластеры у скважин (до {max_distance:g} м)</b>'
-        set_info('<br>'.join([heading, *rows]), 'blue')
-
 
 def calculate_cluster():
     run_context = build_cluster_run_context(show_errors=True)
@@ -664,9 +633,6 @@ def calculate_cluster():
         "green"
     )
     set_info(build_cluster_legend(profile_labels), "blue")
-    if clust_object is not None:
-        profile_ids = {row["profile_id"] for row in run_context["meta"]}
-        _report_cluster_wells(clust_object.research_id, profile_ids, profile_labels)
 
     if sync_ui_to_cluster_object_research(clust_object) and ui.comboBox_profile.count() > 0:
         ui.comboBox_profile.setCurrentIndex(0)
@@ -723,6 +689,7 @@ def calculate_cluster():
         "Открыто окно настроек карты кластеров. Выберите параметры и нажмите DRAW.",
         "blue"
     )
+    profile_ids = {row["profile_id"] for row in run_context["meta"]}
     draw_map(
         map_x,
         map_y,
@@ -731,4 +698,5 @@ def calculate_cluster():
         color_marker=False,
         initial_map_mode="categorical",
         report_research_id=clust_object.research_id if clust_object is not None else None,
+        cluster_profile_labels={profile_id: profile_labels.get(profile_id, {}) for profile_id in profile_ids},
     )
