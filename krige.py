@@ -528,20 +528,21 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
             nearby = [well for profile in research.profiles for well in (get_list_nearest_well(profile.id) or [])]
         else:
             nearby = []
-        return {
-            well.id: (well.x_coord, well.y_coord, well.name, well_marker_color(well))
+        return [
+            (well.id, (well.x_coord, well.y_coord, well.name, well_marker_color(well)))
             for well, *_ in nearby
-        }
+        ]
 
     research = session.get(Research, research_id) if research_id is not None and (profiles or show_profile_wells) else None
     research_profiles = research.profiles if research else []
-    wells = list(map_wells(research, object_id).values())
+    nearby_wells = map_wells(research, object_id)
+    wells = [well for _, well in nearby_wells]
     report_research_id = research_id if report_research_id is None else report_research_id
     if report_research_id == research_id:
-        report_wells = wells
+        report_wells = list(dict(nearby_wells).values())
     else:
         report_research = session.get(Research, report_research_id)
-        report_wells = list(map_wells(report_research, report_research.object_id).values()) if report_research else []
+        report_wells = list(dict(map_wells(report_research, report_research.object_id)).values()) if report_research else []
 
     tracks = []
     if report_research_id is not None:
@@ -787,7 +788,7 @@ def draw_map(list_x, list_y, list_z, param, color_marker=True, profiles=False, l
                 return
 
         labels_control = ui_dm.checkBox_show_point_labels
-        active_labels = point_labels if labels_control.isVisible() and labels_control.isEnabled() and labels_control.isChecked() else None
+        active_labels = point_labels if has_labels and labels_control.isEnabled() and labels_control.isChecked() else None
         grid_x, grid_y = list_x, list_y
         if report_style:
             samples = np.column_stack([list_x, list_y, list_z]).astype(float)

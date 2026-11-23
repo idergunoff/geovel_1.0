@@ -1582,8 +1582,11 @@ def calc_geochem_classification():
             set_info("Выберите в главном окне исходный объект и макет для этого расчёта.", "red")
             return
 
-        model = session.query(GeochemTrainedModel).filter_by(
-            id=ui.listWidget_g_trained_model.currentItem().data(Qt.UserRole)).first()
+        model_item = ui.listWidget_g_trained_model.currentItem()
+        model = session.get(GeochemTrainedModel, model_item.data(Qt.UserRole)) if model_item else None
+        if model is None:
+            set_info('Выберите обученную геохимическую модель.', 'red')
+            return
 
         list_param_model = json.loads(model.list_params)
 
@@ -1665,7 +1668,6 @@ def calc_geochem_classification():
             working_data_result['mark_number'] = z
         file_prefix = f'{get_object_name()}_{get_research_name()}'
         model_title = get_mlp_title()
-        maket_id = get_maket_id()
 
         def save_results(working_data_result=working_data_result):
             result1 = confirm_in_window(MainWindow, 'Сохранение', 'Сохранить результаты расчёта MLP?')
