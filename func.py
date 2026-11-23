@@ -1768,41 +1768,44 @@ def update_list_well(select_well=False, selected_well_id=None):
         ui.listWidget_well.setCurrentRow(0)
 
 
-def get_list_nearest_well(profile_id):
-    profile = session.query(Profile).filter_by(id=profile_id).first()
+def get_list_nearest_well(profile_id, *, max_distance=None, show_missing_coordinates=True):
+    profile = (session.query(Profile.title, Profile.x_pulc, Profile.y_pulc)
+               .filter(Profile.id == profile_id).first())
     if profile is None:
         return []
 
     try:
         x_prof = json.loads(profile.x_pulc or '[]')
         y_prof = json.loads(profile.y_pulc or '[]')
-    except (TypeError, ValueError, json.JSONDecodeError):
-        return []
-    if not x_prof or not y_prof or len(x_prof) != len(y_prof):
-        ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
-        return []
-
-    try:
-        profile_plus_dist = (calc_distance(x_prof[0], y_prof[0], x_prof[-1], y_prof[-1])
-                             + ui.spinBox_well_distance.value())
     except (TypeError, ValueError):
         return []
+    if not isinstance(x_prof, list) or not isinstance(y_prof, list) or not x_prof or len(x_prof) != len(y_prof):
+        if show_missing_coordinates:
+            ui.listWidget_well.addItem(f'Координаты профиля {profile.title} не загружены')
+        return []
 
+    if max_distance is None:
+        max_distance = ui.spinBox_well_distance.value()
+    try:
+        if not all(map(math.isfinite, x_prof)) or not all(map(math.isfinite, y_prof)):
+            return []
+        min_x, max_x = min(x_prof) - max_distance, max(x_prof) + max_distance
+        min_y, max_y = min(y_prof) - max_distance, max(y_prof) + max_distance
+    except (TypeError, ValueError, OverflowError):
+        return []
+
+    # Enclose every trace, including bends far from the profile endpoints.
+    candidates = (session.query(Well)
+                  .filter(Well.x_coord.between(min_x, max_x), Well.y_coord.between(min_y, max_y))
+                  .order_by(Well.name, Well.id))
     list_nearest_well = []
-    for w in session.query(Well).order_by(Well.name).all():
-        # A single incomplete well must not abort a year-wide scan of all
-        # profiles and wells.
-        if w.x_coord is None or w.y_coord is None:
-            continue
+    for well in candidates:
         try:
-            start_profile_dist = calc_distance(x_prof[0], y_prof[0], w.x_coord, w.y_coord)
-            end_profile_dist = calc_distance(x_prof[-1], y_prof[-1], w.x_coord, w.y_coord)
-            if start_profile_dist <= profile_plus_dist or end_profile_dist <= profile_plus_dist:
-                index, dist = closest_point(w.x_coord, w.y_coord, x_prof, y_prof)
-                if dist <= ui.spinBox_well_distance.value():
-                    list_nearest_well.append([w, index, dist])
-        except (TypeError, ValueError):
+            index, dist = closest_point(well.x_coord, well.y_coord, x_prof, y_prof)
+        except (TypeError, ValueError, OverflowError):
             continue
+        if dist <= max_distance:
+            list_nearest_well.append([well, index, dist])
     return list_nearest_well
 
 
