@@ -12,10 +12,16 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from prediction_comparison_statistics import comparison_statistics
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
-from regression_target.presentation import parameter_header_tooltip
+from regression_target.presentation import AGGREGATION_TITLES, parameter_header_tooltip
 from regression_target.service import (
     Resolution, TargetSettings, resolve_target, save_parameter_choice, well_data_rows,
 )
+
+
+def _aggregation_suffix(settings):
+    if settings is not None and settings.source == 'well_log':
+        return f' ({AGGREGATION_TITLES[settings.aggregation]})'
+    return ''
 
 
 @dataclass
@@ -42,6 +48,7 @@ class AnalysisColumn:
 
 class PredictionWellCheckDialog(RegressionTargetWizard):
     SETTINGS_GROUP = 'prediction_well_check'
+    WELL_VALUE_TITLE = 'Значение скважины'
     STATISTICS = (
         ('minimum', 'Мин. |Δ|', 'Минимальная абсолютная ошибка; ниже указаны скважина и профиль.'),
         ('maximum', 'Макс. |Δ|', 'Максимальная абсолютная ошибка; ниже указаны скважина и профиль.'),
@@ -72,7 +79,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         ('profile', 'Профиль'), ('object', 'Объект'), ('prediction_id', 'ID прогноза'),
         ('trace_number', 'Точка профиля'), ('distance_m', 'Расстояние, м'),
         ('corrected', 'Исправленный прогноз'), ('prediction', 'Прогноз'),
-        ('parameter', 'Параметр сравнения'), ('well_value', 'Значение скважины'),
+        ('parameter', 'Параметр сравнения'), ('well_value', WELL_VALUE_TITLE),
         ('well_minus_prediction', 'Скважина − прогноз'), ('status', 'Статус'),
         ('settings', 'Настройки сравнения'), ('details', 'Детали источника'),
     )
@@ -188,8 +195,9 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             return
         values = self._resolve_for_wells(settings)
         self._settings = settings
-        self._comparison_title = self.canonical_combo.currentText()
-        self._comparison_tooltip = self._parameter_tooltip(self._comparison_title, settings)
+        name = self.canonical_combo.currentText()
+        self._comparison_title = name + _aggregation_suffix(settings)
+        self._comparison_tooltip = self._parameter_tooltip(name, settings)
         for candidate in self.candidates:
             candidate.resolution = values[candidate.well_id]
         self._render()
@@ -208,10 +216,11 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
                for column in self.analysis_columns):
             QtWidgets.QMessageBox.information(self, 'Столбец уже добавлен', name)
             return
-        title = f'{name} (исходный текст)' if raw_text else name
+        title = f'{name} (исходный текст)' if raw_text else name + _aggregation_suffix(settings)
         used_titles = {column.title for column in self.analysis_columns}
         used_titles.update(label for field in self.REPORT_FIELDS for label in field)
         used_titles.add(self.prediction_title)
+        used_titles.update(f'{self.WELL_VALUE_TITLE} ({label})' for label in AGGREGATION_TITLES.values())
         suffix = 2
         base_title = title
         while title in used_titles:
@@ -341,6 +350,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
 
     def _update_parameter_header(self):
         self.table.horizontalHeaderItem(7).setToolTip(self._comparison_tooltip)
+        self.table.horizontalHeaderItem(10).setText(self.HEADERS[10][0] + _aggregation_suffix(self._settings))
 
     def _resolve_ambiguity(self, row, column):
         candidate = self._candidate_for_row(row)
@@ -473,34 +483,94 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         item.setToolTip(tooltip)
         return item
 
+    def _report_headers(self):
+        labels = {'prediction': self.prediction_title,
+                  'well_value': self.WELL_VALUE_TITLE + _aggregation_suffix(self._settings)}
+        return ([(key, labels.get(key, title)) for key, title in self.REPORT_FIELDS] +
+                [(column.title, column.title) for column in self.analysis_columns])
+
+    def _select_report_columns(self, headers):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle('Столбцы отчёта')
+        dialog.resize(460, 470)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        columns = QtWidgets.QListWidget(dialog)
+        for _, title in headers:
+            item = QtWidgets.QListWidgetItem(title, columns)
+            item.setCheckState(QtCore.Qt.Checked)
+        layout.addWidget(columns)
+
+        actions = QtWidgets.QHBoxLayout()
+        select_all = QtWidgets.QPushButton('Отметить все', dialog)
+        clear_all = QtWidgets.QPushButton('Снять все', dialog)
+        select_all.setAutoDefault(False)
+        clear_all.setAutoDefault(False)
+        actions.addWidget(select_all)
+        actions.addWidget(clear_all)
+        actions.addStretch()
+        layout.addLayout(actions)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        confirm = buttons.button(QtWidgets.QDialogButtonBox.Ok)
+        confirm.setText('Продолжить')
+        confirm.setDefault(True)
+        buttons.button(QtWidgets.QDialogButtonBox.Cancel).setText('Отмена')
+        layout.addWidget(buttons)
+
+        def selected_columns():
+            return [index for index in range(columns.count())
+                    if columns.item(index).checkState() == QtCore.Qt.Checked]
+
+        def set_all(state):
+            with QtCore.QSignalBlocker(columns):
+                for index in range(columns.count()):
+                    columns.item(index).setCheckState(state)
+            confirm.setEnabled(state == QtCore.Qt.Checked)
+
+        select_all.clicked.connect(lambda: set_all(QtCore.Qt.Checked))
+        clear_all.clicked.connect(lambda: set_all(QtCore.Qt.Unchecked))
+        columns.itemChanged.connect(lambda: confirm.setEnabled(bool(selected_columns())))
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        selected = selected_columns() if dialog.exec_() == QtWidgets.QDialog.Accepted else []
+        dialog.deleteLater()
+        return selected
+
     def _export_csv(self):
+        headers = self._report_headers()
+        selected = self._select_report_columns(headers)
+        if not selected:
+            return
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, 'Экспорт сравнения', 'prediction_wells.csv', 'CSV (*.csv)')
         if not path:
             return
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream, delimiter=';')
-            writer.writerow([key for key, _ in self.REPORT_FIELDS] +
-                            [column.title for column in self.analysis_columns])
-            writer.writerows(self._report_rows())
+            writer.writerow([headers[index][0] for index in selected])
+            writer.writerows(self._report_rows(selected))
 
     def _comparison_settings_json(self):
         return json.dumps(self._settings.as_dict(), ensure_ascii=False) if self._settings else ''
 
-    def _report_rows(self):
+    def _report_rows(self, selected):
         settings = self._comparison_settings_json()
         for c in self.candidates:
             r = c.resolution
             value = r.value if r else None
-            yield (c.well_id, c.well_name, c.profile_id, c.profile_name, c.object_name,
+            row = (c.well_id, c.well_name, c.profile_id, c.profile_name, c.object_name,
                    c.prediction_id, c.trace_index + 1, c.distance, c.corrected, c.stored_value,
                    self._comparison_title, value,
                    value - c.stored_value if value is not None else None,
                    r.status if r else 'not_calculated', settings,
                    json.dumps(r.details, ensure_ascii=False) if r else '{}',
                    *(column.value(c.well_id) for column in self.analysis_columns))
+            yield tuple(row[index] for index in selected)
 
     def _export_excel(self):
+        headers = self._report_headers()
+        selected = self._select_report_columns(headers)
+        if not selected:
+            return
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, 'Экспорт отчёта и статистики', 'prediction_wells.xlsx', 'Excel (*.xlsx)')
         if not path:
@@ -511,11 +581,13 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         try:
             report = workbook.active
             report.title = 'Отчёт'
-            headers = [self.prediction_title if key == 'prediction' else title
-                       for key, title in self.REPORT_FIELDS]
-            self._fill_worksheet(report, headers + [c.title for c in self.analysis_columns],
-                                 self._report_rows())
-            for index, column in enumerate(self.analysis_columns, len(headers) + 1):
+            self._fill_worksheet(report, [headers[index][1] for index in selected],
+                                 self._report_rows(selected))
+            for index, source_index in enumerate(selected, 1):
+                analysis_index = source_index - len(self.REPORT_FIELDS)
+                if analysis_index < 0:
+                    continue
+                column = self.analysis_columns[analysis_index]
                 report.cell(1, index).comment = Comment(column.tooltip, 'GeoVel')
                 if column.raw_text:
                     for cells in report.iter_rows(min_row=2, min_col=index, max_col=index):
