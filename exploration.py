@@ -13,6 +13,8 @@ from func import *
 from build_table import *
 from krige import draw_map
 from random_search import *
+from spatial_lgbm import (SpatialLGBMClassifier, build_lgbm_classifier, classifier_spatial_fit_params,
+                          configure_spatial_lgbm, spatial_cv_params, spatial_training_note)
 # import pykrige.kriging_tools as kt
 # import pykrige
 # from pykrige.ok import OrdinaryKriging
@@ -813,6 +815,8 @@ def exploration_MLP():
                               C=ui_cls.doubleSpinBox_svr_c.value(), random_state=0, class_weight='balanced')
             text_model = (f'**SVC**: \nkernel: {ui_cls.comboBox_svr_kernel.currentText()}, '
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
+        elif model == 'LGBM':
+            model_class, text_model = build_lgbm_classifier(ui_cls)
         else:
             model_class = QuadraticDiscriminantAnalysis()
             text_model = ''
@@ -918,7 +922,14 @@ def exploration_MLP():
 
     def calc_model_class():
         """ Создание и тренировка модели """
-        # global training_sample, markup
+        selected_model = ui_cls.buttonGroup.checkedButton().text()
+        spatial_enabled = selected_model == 'LGBM' and ui_cls.doubleSpinBox_lgbm_spatial_loss.value() > 0
+        if spatial_enabled and any((ui_cls.checkBox_stack_vote.isChecked(), ui_cls.checkBox_baggig.isChecked(),
+                                    ui_cls.checkBox_calibr.isChecked())):
+            QtWidgets.QMessageBox.warning(
+                Classifier, 'Spatial loss', 'Spatial loss доступен для отдельной модели LGBM без калибровки.',
+            )
+            return
         start_time = datetime.datetime.now()
         # Нормализация данных
         scaler = StandardScaler()
@@ -927,8 +938,9 @@ def exploration_MLP():
         pipe_steps.append(('scaler', scaler))
 
         # Разделение данных на обучающую и тестовую выборки
-        training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-            training_sample, markup, test_size=0.20, random_state=1, stratify=markup)
+        training_sample_train, training_sample_test, markup_train, markup_test, train_rows, _ = train_test_split(
+            training_sample, markup, np.arange(len(markup)), test_size=0.20, random_state=1, stratify=markup,
+        )
 
         text_over_sample = ''
 
@@ -951,8 +963,11 @@ def exploration_MLP():
         if ui_cls.checkBox_stack_vote.isChecked():
             model_class, text_model, model_name = build_stacking_voting_model()
         else:
-            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_name = selected_model
             model_class, text_model = choice_model_classifier(model_name)
+            if spatial_enabled:
+                model_class, text_spatial = configure_spatial_lgbm(model_class, ui_cls)
+                text_model += text_spatial
 
         text_model += text_pca
         text_model += text_over_sample
@@ -960,7 +975,14 @@ def exploration_MLP():
         pipe_steps.append(('model', model_class))
         pipe = Pipeline(pipe_steps)
 
-        pipe.fit(training_sample_train, markup_train)# Оценка точности на всей обучающей выборке
+        fit_params = cv_params = {}
+        if isinstance(model_class, SpatialLGBMClassifier):
+            coordinates = data_train.reindex(columns=['x_coord', 'y_coord']).to_numpy(dtype=float)
+            fit_params = classifier_spatial_fit_params(coordinates[train_rows], len(training_sample_train))
+            cv_params = spatial_cv_params(classifier_spatial_fit_params(coordinates))
+        pipe.fit(training_sample_train, markup_train, **fit_params)
+        text_model += spatial_training_note(model_class)
+        # Оценка точности на всей обучающей выборке
         train_accuracy = pipe.score(training_sample, markup)
         test_accuracy = pipe.score(training_sample_test, markup_test)
 
@@ -994,9 +1016,9 @@ def exploration_MLP():
             #     adasyn = ADASYN(random_state=0)
             #     training_sample, markup = adasyn.fit_resample(training_sample, markup)
 
-            scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
+            scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1, **cv_params)
 
-        if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC':
+        if model_name in ('RFC', 'GBC', 'DTC', 'LGBM'):
             imp_name_params, imp_params = [], []
             for n, i in enumerate(model_class.feature_importances_):
                 if i >= np.mean(model_class.feature_importances_):
@@ -1034,7 +1056,7 @@ def exploration_MLP():
             # if not ui_cls.checkBox_rfc_ada.isChecked() or ui_cls.checkBox_rfc_extra.isChecked():
             title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
-        if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC') and not ui_cls.checkBox_cross_val.isChecked():
+        if model_name in ('RFC', 'GBC', 'DTC', 'LGBM') and not ui_cls.checkBox_cross_val.isChecked():
             axes[2].bar(imp_name_params, imp_params)
             axes[2].set_xticklabels(imp_name_params, rotation=90)
             axes[2].set_title('Важность признаков')

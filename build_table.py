@@ -275,6 +275,18 @@ def build_table_train(db=False, analisis='lda'):
     return data_train, list_param
 
 
+def get_profile_spatial_coordinates(data_train):
+    """Resolve the profile XY for each row without changing the training table."""
+    from spatial_lgbm import profile_measure_coordinates
+
+    def load_profiles(profile_ids):
+        return session.query(Profile.id, Profile.x_pulc, Profile.y_pulc).filter(
+            Profile.id.in_(list(profile_ids))
+        ).all()
+
+    return profile_measure_coordinates(data_train['prof_well_index'], load_profiles)
+
+
 def build_table_train_no_db(analisis: str, analisis_id: int, list_param: list) -> (pd.DataFrame, list):
 
     ui.progressBar.setMaximum(0)

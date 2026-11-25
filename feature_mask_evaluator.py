@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 from time import perf_counter
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Mapping, Sequence
 
 import numpy as np
 from sklearn.base import clone
@@ -144,12 +144,16 @@ class FeatureMaskEvaluator:
         invalid_score: float = INVALID_SCORE,
         progress: Callable[[int, int], None] | None = None,
         feature_names: Sequence[str] | None = None,
+        fit_params: Mapping[str, np.ndarray] | None = None,
     ):
         if objective_count not in (1, 2):
             raise ValueError("objective_count must be 1 or 2")
         self.X = np.asarray(X)
         self.y = np.asarray(y).reshape(-1)
         self.estimator = estimator
+        self.fit_params = {name: np.asarray(values) for name, values in (fit_params or {}).items()}
+        if any(len(values) != len(self.y) for values in self.fit_params.values()):
+            raise ValueError('Fit parameters must match the number of rows in y')
         self.folds = list(folds)
         self.objective_count = objective_count
         self.invalid_score = float(invalid_score)
@@ -162,7 +166,10 @@ class FeatureMaskEvaluator:
     def _make_fingerprint(self, feature_names: Sequence[str] | None) -> str:
         """Identify every immutable input that affects an exact evaluation."""
         digest = hashlib.sha256()
-        for array in (self.X, self.y):
+        names = sorted(self.fit_params)
+        if names:
+            digest.update(json.dumps(names).encode())
+        for array in (self.X, self.y, *(self.fit_params[name] for name in names)):
             contiguous = np.ascontiguousarray(array)
             digest.update(str(contiguous.dtype).encode())
             digest.update(str(contiguous.shape).encode())
@@ -207,7 +214,8 @@ class FeatureMaskEvaluator:
                 LOGGER.warning("Feature mask cannot be evaluated: no valid CV folds")
             for number, (train_idx, test_idx) in enumerate(self.folds, start=1):
                 fitted = _seed_estimator(clone(self.estimator), self.telemetry.seed)
-                fitted.fit(selected[train_idx], self.y[train_idx])
+                fit_params = {name: values[train_idx] for name, values in self.fit_params.items()}
+                fitted.fit(selected[train_idx], self.y[train_idx], **fit_params)
                 self.telemetry.model_fits += 1
                 score = float(fitted.score(selected[test_idx], self.y[test_idx]))
                 if np.isfinite(score):

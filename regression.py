@@ -11,6 +11,7 @@ from draw import draw_radarogram, draw_formation, draw_fill, draw_fake, plot_gro
     plot_graphs_by_group
 from func import *
 from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+from spatial_lgbm import SpatialLGBMRegressor, configure_spatial_lgbm, spatial_cv_params, spatial_training_note
 from training_feature_mask import TrainingFeatureMask
 
 LOGGER = logging.getLogger(__name__)
@@ -1240,6 +1241,15 @@ def train_regression_model():
 
     training_sample = data_train[list_param_reg].values.tolist()
     target = sum(data_train[['target_value']].values.tolist(), [])
+    spatial_coordinates = None
+
+    def spatial_fit_params(model, rows=slice(None)):
+        nonlocal spatial_coordinates
+        if not isinstance(model, SpatialLGBMRegressor):
+            return {}
+        if spatial_coordinates is None:
+            spatial_coordinates = get_profile_spatial_coordinates(data_train)
+        return {'model__spatial_coordinates': spatial_coordinates[rows]}
 
     Regressor = QtWidgets.QDialog()
     ui_r = Ui_RegressorForm()
@@ -1486,6 +1496,8 @@ def train_regression_model():
                          f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
                          f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
                          f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
+            model_reg, text_spatial = configure_spatial_lgbm(model_reg, ui_r)
+            text_model += text_spatial
 
         elif model == 'TORCH':
             model_reg, text_model = build_torch_model(x_train)
@@ -1601,7 +1613,7 @@ def train_regression_model():
         return model_class, text_model, model_name
 
 
-    def calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test):
+    def calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test, train_rows):
         pipe_steps = []
         text_scaler = ''
         text_model = ''
@@ -1736,6 +1748,8 @@ def train_regression_model():
                          f'\nlearning_rate: {round(trial.params["learning_rate"], 4)}'  \
                          f'\nmin_child_samples: {trial.params["min_child_samples"]}, ' \
                          f'\nn_estimators: {trial.params["n_estimators"]}'
+            model, text_spatial = configure_spatial_lgbm(model, ui_r)
+            text_model += text_spatial
 
         model_name = ui_rs.buttonGroup.checkedButton().text()
         text_model += text_scaler
@@ -1743,7 +1757,11 @@ def train_regression_model():
 
         pipe_steps.append(('model', model))
         pipe = Pipeline(pipe_steps)
-        pipe.fit(x_train, y_train)
+        pipe.fit(x_train, y_train, **spatial_fit_params(model, train_rows))
+        text_spatial_result = spatial_training_note(model)
+        if text_spatial_result:
+            ui_rs.plainTextEdit.appendPlainText(text_spatial_result.strip())
+            text_model += text_spatial_result
         y_pred = pipe.predict(x_test)
         r2 = r2_score(y_test, y_pred)
         errors = y_pred - y_test
@@ -1810,8 +1828,8 @@ def train_regression_model():
         ui_rs = Ui_RandomSearchReg()
         ui_rs.setupUi(RandomSearchReg)
 
-        x_train, x_test, y_train, y_test = train_test_split(
-            training_sample, target, test_size=0.2, random_state=42
+        x_train, x_test, y_train, y_test, train_rows, _ = train_test_split(
+            training_sample, target, np.arange(len(target)), test_size=0.2, random_state=42
         )
 
         def create_data():
@@ -1845,6 +1863,11 @@ def train_regression_model():
             filename, _ = QFileDialog.getSaveFileName(caption="Сохранить результаты подбора параметров?",
                                                       filter="Excel Files (*.xlsx)")
             ui_rs.plainTextEdit.clear()
+            if ui_rs.radioButton_lgbm.isChecked() and ui_r.doubleSpinBox_lgbm_spatial_loss.value():
+                ui_rs.plainTextEdit.appendPlainText(
+                    f'Spatial loss: {ui_r.doubleSpinBox_lgbm_spatial_loss.value():g}, '
+                    f'радиус: {ui_r.doubleSpinBox_lgbm_spatial_radius.value():g} м'
+                )
             start_time = datetime.datetime.now()
             data = create_data()
 
@@ -2069,11 +2092,15 @@ def train_regression_model():
                                 'learning_rate': model.learning_rate,
                                 'n_estimators': model.n_estimators
                             })
+                            model, _ = configure_spatial_lgbm(model, ui_r)
+                            if isinstance(model, SpatialLGBMRegressor):
+                                new_row['spatial_loss'] = model.spatial_loss
+                                new_row['spatial_radius_m'] = model.spatial_radius
 
 
                         pipe_steps.append(('model', model))
                         pipe = Pipeline(pipe_steps)
-                        pipe.fit(x_train, y_train)
+                        pipe.fit(x_train, y_train, **spatial_fit_params(model, train_rows))
                         y_pred = pipe.predict(x_test)
                         r2 = r2_score(y_test, y_pred)
                         mse = mean_squared_error(y_test, y_pred)
@@ -2128,7 +2155,7 @@ def train_regression_model():
             print(end_time)
             print('\n\n')
 
-            calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test)
+            calc_searched_param_model(trial, ui_rs, x_train, y_train, x_test, y_test, train_rows)
 
         ui_rs.pushButton_search_param.clicked.connect(search_param)
         show_work_window(RandomSearchReg)
@@ -2163,8 +2190,8 @@ def train_regression_model():
             text_scaler += '\nMaxAbsScaler'
 
         # Разделение данных на обучающую и тестовую выборки
-        x_train, x_test, y_train, y_test = train_test_split(
-            training_sample, target, test_size=0.2, random_state=42
+        x_train, x_test, y_train, y_test, train_rows, _ = train_test_split(
+            training_sample, target, np.arange(len(target)), test_size=0.2, random_state=42
         )
 
         if ui_r.checkBox_pca.isChecked():
@@ -2173,10 +2200,21 @@ def train_regression_model():
             pipe_steps.append(('pca', pca))
         text_pca = f'\nPCA: n_components={n_comp}' if ui_r.checkBox_pca.isChecked() else ''
 
+        selected_model = ui_r.buttonGroup.checkedButton().text()
+        if (
+            selected_model == 'LGBM'
+            and ui_r.doubleSpinBox_lgbm_spatial_loss.value()
+            and (ui_r.checkBox_stack_vote.isChecked() or ui_r.checkBox_baggig.isChecked())
+        ):
+            QtWidgets.QMessageBox.warning(
+                Regressor, 'Spatial loss', 'Spatial loss доступен при обучении отдельной модели LGBM.'
+            )
+            return
+
         if ui_r.checkBox_stack_vote.isChecked():
             model_class, text_model, model_name = build_stacking_voting_model()
         else:
-            model_name = ui_r.buttonGroup.checkedButton().text()
+            model_name = selected_model
             model_class, text_model = choice_model_regressor(model_name, x_train)
 
         if ui_r.checkBox_baggig.isChecked():
@@ -2199,9 +2237,13 @@ def train_regression_model():
                 list_train.append(train_index.tolist())
                 list_test.append(test_index.tolist())
                 n_cross += 1
-            scores_cv = cross_val_score(pipe, training_sample, np.array(target, dtype=np.float32), cv=kf, n_jobs=-1)
+            scores_cv = cross_val_score(
+                pipe, training_sample, np.array(target, dtype=np.float32), cv=kf, n_jobs=-1,
+                **spatial_cv_params(spatial_fit_params(model_class)),
+            )
             n_max = np.argmax(scores_cv)
             train_index, test_index = list_train[n_max], list_test[n_max]
+            train_rows = train_index
 
             x_train = [training_sample[i] for i in train_index]
             x_test = [training_sample[i] for i in test_index]
@@ -2209,7 +2251,9 @@ def train_regression_model():
             y_train = [target[i] for i in train_index]
             y_test = [target[i] for i in test_index]
 
-        pipe.fit(x_train, np.array(y_train, dtype=np.float32))
+        pipe.fit(x_train, np.array(y_train, dtype=np.float32), **spatial_fit_params(model_class, train_rows))
+        text_spatial_result = spatial_training_note(model_class)
+        text_model += text_spatial_result
         y_pred = pipe.predict(x_test)
 
         r2 = r2_score(y_test, y_pred)
@@ -2228,7 +2272,8 @@ def train_regression_model():
         train_time = datetime.datetime.now() - start_time
 
         set_info(f'Модель {model_name}:\n точность: {accuracy} '
-                 f' Mean Squared Error:\n {mse}, \n R2: {r2}\n время обучения: {train_time}', 'blue')
+                 f' Mean Squared Error:\n {mse}, \n R2: {r2}\n время обучения: {train_time}'
+                 f'{text_spatial_result}', 'blue')
         y_remain = [round(y_test[i] - y_pred[i], 5) for i in range(len(y_pred))]
 
 
@@ -2456,7 +2501,7 @@ def train_regression_model():
                     n_progress += 1
                     continue
 
-            pipe.fit(training_sample[train_idx], markup[train_idx])
+            pipe.fit(training_sample[train_idx], markup[train_idx], **spatial_fit_params(model_class, train_idx))
             y_pred = pipe.predict(training_sample[test_idx])
             score = pipe.score(training_sample[test_idx], markup[test_idx])
             r2 = r2_score(markup[test_idx], y_pred)
@@ -2577,15 +2622,16 @@ def train_regression_model():
 
             cvw_row, cvw_col = n_cv // 3, n_cv % 3
 
-            data_test_well = data_train_by_well[data_train_by_well['well_id'].isin(lcvw)]
-            data_train_well = data_train_by_well[~data_train_by_well['well_id'].isin(lcvw)]
+            test_rows = data_train_by_well['well_id'].isin(lcvw).to_numpy()
+            data_test_well = data_train_by_well[test_rows]
+            data_train_well = data_train_by_well[~test_rows]
 
             training_sample_train = np.array(data_train_well[list_param_reg].values.tolist())
             training_sample_test = np.array(data_test_well[list_param_reg].values.tolist())
             markup_train = np.array(sum(data_train_well[['target_value']].values.tolist(), []))
             markup_test = np.array(sum(data_test_well[['target_value']].values.tolist(), []))
 
-            pipe.fit(training_sample_train, markup_train)
+            pipe.fit(training_sample_train, markup_train, **spatial_fit_params(model_class, ~test_rows))
 
             # Оценка точности на всей обучающей выборке
             test_accuracy = pipe.score(training_sample_test, markup_test)
@@ -3195,6 +3241,7 @@ def train_regression_model():
             evaluator = FeatureMaskEvaluator(
                 X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
                 progress=update_fold_progress, feature_names=list_param_reg,
+                fit_params=spatial_fit_params(model_class),
             )
 
             def objectives(features):

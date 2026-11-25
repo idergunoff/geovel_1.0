@@ -5,7 +5,10 @@ from calc_additional_features import calc_wavelet_features, calc_fractal_feature
 from calc_profile_features import calc_wavelet_features_profile, calc_fractal_features_profile, calc_entropy_features_profile, \
     calc_nonlinear_features_profile, calc_morphology_features_profile, calc_frequency_features_profile, calc_envelope_feature_profile, \
     calc_autocorr_feature_profile, calc_emd_feature_profile, calc_hht_features_profile
+from build_table import get_profile_spatial_coordinates
 from func import *
+from spatial_lgbm import (SpatialLGBMClassifier, build_lgbm_classifier, configure_spatial_lgbm,
+                          spatial_cv_params, spatial_training_note)
 
 class Model(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
@@ -166,30 +169,9 @@ def push_random_param():
                           f'\nC: {round(ui_cls.doubleSpinBox_svr_c.value(), 2)}, ')
 
         elif model == 'LGBM':
-            model_class = lgb.LGBMClassifier(
-                objective='binary',
-                verbosity=-1,
-                boosting_type='gbdt',
-                reg_alpha=ui_cls.doubleSpinBox_l1_lgbm.value(),
-                reg_lambda=ui_cls.doubleSpinBox_l2_lgbm.value(),
-                num_leaves=ui_cls.spinBox_lgbm_num_leaves.value(),
-                colsample_bytree=ui_cls.doubleSpinBox_lgbm_feature.value(),
-                subsample=ui_cls.doubleSpinBox_lgbm_subsample.value(),
-                subsample_freq=ui_cls.spinBox_lgbm_sub_freq.value(),
-                min_child_samples=ui_cls.spinBox_lgbm_child.value(),
-                learning_rate=ui_cls.doubleSpinBox_lr_lgbm.value(),
-                n_estimators=ui_cls.spinBox_estim_lgbm.value(),
-            )
-
-            text_model = f'**LGBM**: \nlambda_1: {ui_cls.doubleSpinBox_l1_lgbm.value()}, ' \
-                         f'\nlambda_2: {ui_cls.doubleSpinBox_l2_lgbm.value()}, ' \
-                         f'\nnum_leaves: {ui_cls.spinBox_lgbm_num_leaves.value()}, ' \
-                         f'\nfeature_fraction: {ui_cls.doubleSpinBox_lgbm_feature.value()}, ' \
-                         f'\nsubsample: {ui_cls.doubleSpinBox_lgbm_subsample.value()}, ' \
-                         f'\nsubsample_freq: {ui_cls.spinBox_lgbm_sub_freq.value()}, ' \
-                         f'\nmin_child_samples: {ui_cls.spinBox_lgbm_child.value()}, ' \
-                         f'\nlearning_rate: {ui_cls.doubleSpinBox_lr_lgbm.value()}, ' \
-                         f'\nn_estimators: {ui_cls.spinBox_estim_lgbm.value()}'
+            model_class, text_model = build_lgbm_classifier(ui_cls)
+            model_class, text_spatial = configure_spatial_lgbm(model_class, ui_cls)
+            text_model += text_spatial
 
         else:
             model_class = QuadraticDiscriminantAnalysis()
@@ -1112,6 +1094,7 @@ def push_random_param():
             list_col = data_test.columns.tolist()
             data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
 
+            fit_params = {}
             if model_name == 'TORCH':
                 pipe, text_model = build_torch_model(pipe_steps, data_train.iloc[:, 2:])
                 text_model += text_scaler
@@ -1120,6 +1103,8 @@ def push_random_param():
                 text_model += text_scaler
                 pipe_steps.append(('model', model_class))
                 pipe = Pipeline(pipe_steps)
+                if isinstance(model_class, SpatialLGBMClassifier):
+                    fit_params['model__spatial_coordinates'] = get_profile_spatial_coordinates(data_train)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
@@ -1135,9 +1120,16 @@ def push_random_param():
 
             data_train = data_train.iloc[:, 2:].values
             kv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-            cv_results = cross_validate(pipe, data_train, y_train, cv=kv, scoring='accuracy',
-                                        return_estimator=True)
+            cv_results = cross_validate(
+                pipe, data_train, y_train, cv=kv, scoring='accuracy', return_estimator=True,
+                **spatial_cv_params(fit_params),
+            )
             estimators = cv_results['estimator']
+            if fit_params:
+                notes = '\n'.join(spatial_training_note(fitted['model']).strip() for fitted in estimators)
+                ui_rp.textEdit_test_result.append(f'{text_model}\n{notes}')
+                with open(filename, 'a') as f:
+                    print(f'{text_model}\n{notes}', file=f)
             print('estimators \n', estimators)
 
             list_roc, list_percent, list_recall, list_precision, list_f1, filename = test_classif_estimator(estimators,

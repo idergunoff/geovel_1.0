@@ -1379,7 +1379,7 @@ def del_g_train_point():
     else:
         pass
 
-def build_geochem_table(include_all_components=False):
+def build_geochem_table(include_all_components=False, *, include_spatial_coordinates=False):
     parameters = session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).all()
     list_param = [i.param.title for i in parameters]
     if include_all_components:
@@ -1388,14 +1388,24 @@ def build_geochem_table(include_all_components=False):
     else:
         component_names = list_param
     data = pd.DataFrame(columns=['title', 'category'] + component_names)
+    coordinates = []
 
-    for point in session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
-            GeochemMaket.id == get_maket_id()).all():
+    train_points = session.query(GeochemTrainPoint).join(GeochemCategory).join(GeochemMaket).filter(
+        GeochemMaket.id == get_maket_id(),
+    )
+    if include_spatial_coordinates:
+        from sqlalchemy.orm import selectinload
+
+        train_points = train_points.options(selectinload(GeochemTrainPoint.point), selectinload(GeochemTrainPoint.well_point))
+    for point in train_points.all():
         dict_point = {}
         if point.fake:
             continue
         dict_point['title'] = point.title
         dict_point['category'] = point.category.title
+        if include_spatial_coordinates:
+            source = point.point if point.type_point == 'field' else point.well_point
+            coordinates.append((source.x_coord, source.y_coord) if source is not None else (np.nan, np.nan))
         for p in parameters:
             param_id = p.id if include_all_components else p.param_id
             param_title = p.title if include_all_components else p.param.title
@@ -1408,6 +1418,8 @@ def build_geochem_table(include_all_components=False):
             dict_point[param_title] = value.value if value is not None else np.nan
 
         data = pd.concat([data, pd.DataFrame([dict_point])], ignore_index=True)
+    if include_spatial_coordinates:
+        return data, list_param, np.asarray(coordinates, dtype=float).reshape(-1, 2)
     return data, list_param
 
 
@@ -1552,14 +1564,16 @@ def build_geochem_table_model_points():
 
 
 def train_model_geochem():
-    data_train, list_param = build_geochem_table(include_all_components=True)
+    data_train, list_param, coordinates = build_geochem_table(
+        include_all_components=True, include_spatial_coordinates=True,
+    )
     all_components = data_train.columns.tolist()[2:]
     colors = {}
     if session.query(GeochemTrainParameter).filter_by(maket_id=get_maket_id()).first():
         for c in session.query(GeochemCategory).filter_by(maket_id=get_maket_id()).all():
             colors[c.title] = c.color
         train_classifier(data_train, list_param, list_param, colors, 'category', 'title', 'geochem',
-                         all_components=all_components)
+                         all_components=all_components, spatial_coordinates=coordinates)
 
 
 def _draw_geochem_map(data, values, title, color_marker, *, on_close=None):
