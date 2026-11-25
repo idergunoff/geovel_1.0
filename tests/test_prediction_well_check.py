@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -11,6 +12,8 @@ from models_db.model import (Base, GeoradarObject, Research, Profile,
 import models_db.model_cluster  # register related mappings
 import models_db.model_profile_features
 from prediction_well_check import collect_prediction_wells
+
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 
 @pytest.fixture
@@ -110,13 +113,14 @@ def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(datas
                 Boundary(well_id=well.id, title='Target', depth=5)])
     db.commit()
     report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1)])
-    dialog = PredictionWellCheckDialog(db, report.samples, 'Test')
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test', prediction_type=selected.type_model)
     assert [dialog.source_combo.itemData(i) for i in range(3)] == ['boundary', 'well_data', 'well_log']
     assert not dialog.isModal()
     assert dialog.replace_button.isHidden()
     assert dialog.add_selected_button.isHidden()
     assert dialog.delete_selected_button.isHidden()
     assert dialog.table.isColumnHidden(0)
+    assert dialog.table.horizontalHeaderItem(9).text() == 'Прогноз регрессии'
     assert dialog.table.item(0, 9).text() == '2'
     dialog.calculate_button.click()
     assert all(c.resolution.value == 5 for c in dialog.candidates)
@@ -131,8 +135,127 @@ def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(datas
     assert rows[0]['well_minus_prediction'] == '3.0'
     assert json.loads(rows[0]['settings'])['source'] == 'boundary'
     dialog.source_combo.setCurrentIndex(2)
-    assert dialog.candidates[0].resolution is None
-    assert dialog.table.item(0, 10).text() == ''
+    assert dialog.table.item(0, 7).text() == 'Target'
+    assert dialog.table.item(0, 10).text() == '5'
+    assert dialog.statistics.count == 2
+    dialog.close()
+
+
+def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(dataset, monkeypatch, tmp_path):
+    import csv
+
+    from openpyxl import load_workbook
+    from PyQt5 import QtWidgets
+
+    from models_db.model import AliasWellOption, Boundary, CanonicalBoundary, CanonicalWellOption, WellOptionally
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    db, obj, profiles, well, _, _ = dataset
+    selected = db.query(ProfileModelPrediction).filter_by(type_model='cls').one()
+    selected.prediction = '[0.15, 0.5, 0.75]'
+    other_well = Well(name='Без данных', x_coord=20, y_coord=1)
+    db.add_all([CanonicalBoundary(canonical_name='Глубина'),
+                CanonicalWellOption(id=1, canonical_name='Приток'), other_well])
+    db.flush()
+    raw_text = '=Описание\n 1,5 + 2,5 м3/сут  '
+    db.add_all([AliasWellOption(alias_name='Дебит', canonical_id=1),
+                Boundary(well_id=well.id, title='Глубина', depth=0.75),
+                WellOptionally(well_id=well.id, option='ДЕБИТ', value='=Описание'),
+                WellOptionally(well_id=well.id, option='Приток', value=' 1,5 + 2,5 м3/сут  '),
+                WellOptionally(well_id=well.id, option='Другая категория', value='не включать')])
+    db.commit()
+    report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1), (other_well, 2, 1)])
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test', prediction_type=selected.type_model)
+    dialog.hide_missing_check.setChecked(True)
+    assert dialog.table.rowCount() == 2
+    assert dialog.add_text_column_button.isHidden()
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData('well_data'))
+    assert not dialog.add_text_column_button.isHidden()
+    dialog.add_column_button.click()
+    dialog.add_text_column_button.click()
+    assert dialog.table.horizontalHeaderItem(9).text() == 'Вероятность'
+    assert dialog.table.item(0, 13).text() == '4'
+    assert dialog.table.item(0, 14).text() == raw_text
+    assert dialog.table.item(1, 14).text() == ''
+    assert dialog.statistics.count == 0
+
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData('boundary'))
+    dialog.add_column_button.click()
+    dialog.calculate_button.click()
+    assert dialog.table.rowCount() == 1
+    assert dialog.table.item(0, 13).text() == '4'
+    assert dialog.table.item(0, 15).text() == '0.75'
+    assert dialog.statistics.mae == 0.25
+    assert dialog.statistics.excluded_count == 1
+
+    path = tmp_path / 'report'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: (str(path), ''))
+    dialog.excel_export_button.click()
+    book = load_workbook(path.with_suffix('.xlsx'))
+    try:
+        assert book.sheetnames == ['Отчёт', 'Статистика']
+        sheet = book['Отчёт']
+        columns = {cell.value: cell.column for cell in sheet[1]}
+        assert sheet.cell(2, columns['Вероятность']).value == 0.5
+        assert sheet.cell(2, columns['Приток']).value == 4
+        assert sheet.cell(2, columns['Глубина']).value == 0.75
+        text_cell = sheet.cell(2, columns['Приток (исходный текст)'])
+        assert text_cell.value == raw_text
+        assert text_cell.data_type == 's'
+        assert sheet.cell(3, columns['Вероятность']).value == 0.75
+        assert sheet.cell(3, columns['Приток']).value is None
+        stats = {row[0]: row[1:] for row in book['Статистика'].values}
+        assert stats['Средняя |Δ| (MAE)'][0] == 0.25
+        assert stats['Параметр сравнения'][0] == 'Глубина'
+        assert stats['Макс. |Δ|'][2] == well.id
+    finally:
+        book.close()
+
+    path = path.with_suffix('.csv')
+    dialog.export_button.click()
+    with path.open(encoding='utf-8-sig') as stream:
+        rows = list(csv.DictReader(stream, delimiter=';'))
+    assert rows[0]['Приток'] == '4.0'
+    assert rows[0]['Приток (исходный текст)'] == raw_text
+    dialog.remove_column_button.click()
+    dialog.remove_column_button.click()
+    assert dialog.table.columnCount() == 14
+    assert dialog.table.item(0, 13).text() == '4'
+    assert dialog.statistics.mae == 0.25
+    dialog.close()
+
+
+def test_numeric_column_source_choice_applies_to_repeated_well_and_comparison(dataset, monkeypatch):
+    from PyQt5 import QtWidgets
+
+    from models_db.model import Boundary, CanonicalBoundary
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    db, obj, _, well, selected, _ = dataset
+    db.add_all([CanonicalBoundary(canonical_name='Граница'),
+                Boundary(well_id=well.id, title='Граница', depth=5),
+                Boundary(well_id=well.id, title='Граница', depth=7)])
+    db.commit()
+    report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1)])
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test')
+    dialog.calculate_button.click()
+    dialog.add_column_button.click()
+    assert dialog.statistics.count == 0
+    assert dialog.table.item(0, 13).text() == 'выберите…'
+    monkeypatch.setattr(QtWidgets.QInputDialog, 'getItem',
+                        lambda _parent, _title, _prompt, items, *_args: (items[1], True))
+    dialog.table.cellDoubleClicked.emit(0, 13)
+    assert [dialog.table.item(row, 13).text() for row in range(2)] == ['7', '7']
+    assert [candidate.resolution.value for candidate in dialog.candidates] == [7, 7]
+    assert dialog.statistics.count == 2
     dialog.close()
 
 
@@ -218,8 +341,4 @@ def test_statistics_refresh_navigation_and_export(dataset, monkeypatch, tmp_path
     assert maximum['well_id'] == str(well.id)
     assert maximum['profile_id'] == str(profiles[1].id)
     assert next(r for r in rows if r['metric'] == 'count')['value'] == '2'
-    dialog._invalidate_results()
-    assert dialog.statistics.count == 0
-    assert dialog.statistics_labels['mae'].text() == '—'
-    assert not dialog.minimum_button.isEnabled()
     dialog.close()

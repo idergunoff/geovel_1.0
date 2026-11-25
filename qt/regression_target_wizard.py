@@ -383,7 +383,7 @@ class RegressionTargetWizard(QtWidgets.QDialog):
                 existing += 1
             if resolution:
                 counts[status] += 1
-            if self.hide_missing_check.isChecked() and status in ("missing", "invalid"):
+            if self._hide_candidate(status):
                 continue
             row = self.table.rowCount(); self.table.insertRow(row)
             check = QtWidgets.QTableWidgetItem()
@@ -441,6 +441,9 @@ class RegressionTargetWizard(QtWidgets.QDialog):
         self.summary.setText(prefix + f"Кандидатов: {len(self.candidates)}; готово: {counts['resolved']}; "
                              f"требуют выбора: {counts['ambiguous']}; без данных/ошибки: "
                              f"{counts['missing'] + counts['invalid']}; уже добавлено: {existing}")
+
+    def _hide_candidate(self, status):
+        return self.hide_missing_check.isChecked() and status in ("missing", "invalid")
 
     def _update_parameter_header(self):
         """Keep the parameter heading compact and put provenance in its tooltip."""

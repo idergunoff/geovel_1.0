@@ -448,7 +448,8 @@ def check_object_prediction_wells():
                       selected_depth=selected.get('depth'),
                       selected_interval=selected.get('interval') or [None, None], parent=dialog)
 
-    dialog = PredictionWellCheckDialog(session, report.samples, description, MainWindow, open_candidate_log)
+    dialog = PredictionWellCheckDialog(session, report.samples, description, MainWindow, open_candidate_log,
+                                       prediction_type=prediction.type_model)
     if report.issues:
         issues_button = QtWidgets.QPushButton('Показать ошибки данных')
         def show_issues():
