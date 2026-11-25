@@ -49,13 +49,14 @@ def dataset():
 def choose_export_columns(monkeypatch):
     from PyQt5 import QtCore, QtWidgets
 
-    def choose(titles=None):
+    def choose(titles=None, *, checked=None):
         def exec_picker(picker):
             columns = picker.findChild(QtWidgets.QListWidget)
             items = [columns.item(index) for index in range(columns.count())]
             button_box = picker.findChild(QtWidgets.QDialogButtonBox)
             confirm = button_box.button(QtWidgets.QDialogButtonBox.Ok)
-            assert all(item.checkState() == QtCore.Qt.Checked for item in items)
+            initially_checked = [item.text() for item in items if item.checkState() == QtCore.Qt.Checked]
+            assert initially_checked == (checked if checked is not None else [item.text() for item in items])
             if titles is not None:
                 actions = {button.text(): button for button in picker.findChildren(QtWidgets.QPushButton)}
                 actions['Снять все'].click()
@@ -77,6 +78,16 @@ def choose_export_columns(monkeypatch):
         monkeypatch.setattr(QtWidgets.QDialog, 'exec_', exec_picker)
 
     return choose
+
+
+@pytest.fixture(autouse=True)
+def isolate_column_preferences(monkeypatch, tmp_path):
+    from PyQt5 import QtCore
+    from qt import prediction_well_preferences
+
+    path = str(tmp_path / 'well_report.ini')
+    monkeypatch.setattr(prediction_well_preferences, 'settings',
+                        lambda: QtCore.QSettings(path, QtCore.QSettings.IniFormat))
 
 
 def test_same_model_all_researches_and_one_row_per_well_profile(dataset):
@@ -263,6 +274,8 @@ def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(
     with path.open(encoding='utf-8-sig') as stream:
         rows = list(csv.DictReader(stream, delimiter=';'))
     assert rows[0] == {'Приток (исходный текст)': raw_text}
+    choose_export_columns([], checked=headings)
+    dialog.excel_export_button.click()
     dialog.remove_column_button.click()
     dialog.remove_column_button.click()
     assert dialog.table.columnCount() == 14
@@ -316,6 +329,96 @@ def test_well_log_column_titles_follow_saved_aggregation(dataset, monkeypatch, t
         rows = list(csv.reader(stream, delimiter=';'))
     assert rows == [headings, ['3.0', '9.0'], ['3.0', '9.0']]
     dialog.close()
+
+
+def test_export_restores_selection_after_reopening(dataset, monkeypatch, tmp_path, choose_export_columns):
+    from PyQt5 import QtWidgets
+
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    db, obj, _, well, prediction, _ = dataset
+    report = collect_prediction_wells(db, obj.id, prediction, lambda _: [(well, 1, 1)])
+    path = tmp_path / 'report.csv'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: (str(path), ''))
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test')
+    choose_export_columns(['Скважина'])
+    dialog.export_button.click()
+    dialog.close()
+
+    reopened = PredictionWellCheckDialog(db, report.samples, 'Test')
+    choose_export_columns(['Профиль'], checked=['Скважина'])
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: ('', ''))
+    reopened.export_button.click()
+    choose_export_columns([], checked=['Скважина'])
+    reopened.export_button.click()
+    choose_export_columns([])
+    reopened.excel_export_button.click()
+    reopened.close()
+
+
+def test_named_column_preset_restores_parameters_and_recalculates_values(
+        dataset, monkeypatch, tmp_path, choose_export_columns):
+    from PyQt5 import QtWidgets
+
+    from models_db.model import Boundary, CanonicalBoundary, CanonicalWellOption, WellLog, WellOptionally
+    from models_db.model_cluster import CanonicalWellLog
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    db, obj, _, well, prediction, _ = dataset
+    curve = WellLog(well_id=well.id, curve_name='ГК', curve_data='[1, 5, 12, 20]', begin=0, end=3, step=1)
+    entry = WellOptionally(well_id=well.id, option='Приток', value='4 + 8 м')
+    db.add_all([CanonicalBoundary(canonical_name='Кровля'),
+                Boundary(well_id=well.id, title='Кровля', depth=1),
+                CanonicalWellLog(canonical_name='ГК'), CanonicalWellOption(canonical_name='Приток'),
+                curve, entry])
+    db.commit()
+    report = collect_prediction_wells(db, obj.id, prediction, lambda _: [(well, 1, 1)])
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test')
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData('well_data'))
+    dialog.add_text_column_button.click()
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData('well_log'))
+    dialog.aggregation_combo.setCurrentIndex(dialog.aggregation_combo.findData('max'))
+    dialog.interval.setValue(1)
+    dialog.add_column_button.click()
+    dialog.calculate_button.click()
+    assert dialog.table.item(0, 14).text() == '12'
+    monkeypatch.setattr(QtWidgets.QInputDialog, 'getText', lambda *_args, **_kw: ('  Каротаж  ', True))
+    dialog.save_preset_button.click()
+    assert dialog.presets_combo.currentData() == 'Каротаж'
+    path = tmp_path / 'selected.csv'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: (str(path), ''))
+    choose_export_columns(['Приток (исходный текст)'])
+    dialog.export_button.click()
+    dialog.close()
+
+    curve.curve_data = '[1, 7, 9, 99]'
+    entry.value = '4 + 9 м'
+    db.commit()
+    reopened = PredictionWellCheckDialog(db, report.samples, 'Test')
+    assert reopened.table.columnCount() == 13
+    index = reopened.presets_combo.findData('Каротаж')
+    assert index > 0
+    reopened.presets_combo.setCurrentIndex(index)
+    reopened.presets_combo.activated[int].emit(index)
+    assert reopened.table.horizontalHeaderItem(13).text() == 'Приток (исходный текст)'
+    assert reopened.table.item(0, 13).text() == '4 + 9 м'
+    assert reopened.table.horizontalHeaderItem(14).text() == 'ГК (максимум)'
+    assert reopened.table.item(0, 14).text() == '9'
+    assert reopened.table.item(0, 10).text() == '9'
+    assert reopened.aggregation_combo.currentData() == 'max'
+    assert reopened.interval.value() == 1
+    assert reopened.statistics.count == 2
+    choose_export_columns([], checked=['Приток (исходный текст)'])
+    reopened.export_button.click()
+    reopened.close()
 
 
 def test_numeric_column_source_choice_applies_to_repeated_well_and_comparison(dataset, monkeypatch):
