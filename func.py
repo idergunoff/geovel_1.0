@@ -3110,43 +3110,26 @@ def split_list_cvw(l: list, n: int) -> list:
     return result
 
 
-def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_size=0.2):
+def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_size=0.2, *, return_train_rows=False):
     # разбивает данные на обучающую и тестовую выборки
     random.seed(random_seed)
     list_well = [i.split('_')[1] for i in data['prof_well_index'].values.tolist()]
-    data_train_by_well = data.copy()
+    data_train_by_well = data.reset_index(drop=True) if return_train_rows else data.copy()
     data_train_by_well['well_id'] = list_well
-
-    data_train_m1 = data_train_by_well[data_train_by_well[mark] == list_marker[0]]
-    data_train_m2 = data_train_by_well[data_train_by_well[mark] == list_marker[1]]
-
-    list_well_m1 = list(set(data_train_m1['well_id'].values.tolist()))
-    list_well_m2 = list(set(data_train_m2['well_id'].values.tolist()))
-
-    list_prof_m1 = list(set(data_train_m1['prof_well_index'][data_train_m1['well_id'] == '0'].values.tolist()))
-    list_prof_m2 = list(set(data_train_m2['prof_well_index'][data_train_m2['well_id'] == '0'].values.tolist()))
 
     data_train_prof = data_train_by_well[data_train_by_well['well_id'] == '0']
     data_train_well = data_train_by_well[data_train_by_well['well_id'] != '0']
 
-    if '0' in list_well_m1:
-        list_well_m1.remove('0')
-    if '0' in list_well_m2:
-        list_well_m2.remove('0')
+    wells = [list(set(data_train_well.loc[data_train_well[mark] == label, 'well_id'])) for label in list_marker]
+    profiles = [
+        list(set(data_train_prof.loc[data_train_prof[mark] == label, 'prof_well_index'])) for label in list_marker
+    ]
 
     random.seed(ui.spinBox_seed.value())
-    random.shuffle(list_well_m1)
-    random.shuffle(list_well_m2)
-    random.shuffle(list_prof_m1)
-    random.shuffle(list_prof_m2)
-
-    list_test_well_m1 = list_well_m1[:int(len(list_well_m1) * test_size)]
-    list_test_well_m2 = list_well_m2[:int(len(list_well_m2) * test_size)]
-    list_test_prof_m1 = list_prof_m1[:int(len(list_prof_m1) * test_size)]
-    list_test_prof_m2 = list_prof_m2[:int(len(list_prof_m2) * test_size)]
-
-    list_test_well = list_test_well_m1 + list_test_well_m2
-    list_test_prof = list_test_prof_m1 + list_test_prof_m2
+    for group in wells + profiles:
+        random.shuffle(group)
+    list_test_well = [well for group in wells for well in group[:int(len(group) * test_size)]]
+    list_test_prof = [profile for group in profiles for profile in group[:int(len(group) * test_size)]]
 
     data_test_well = data_train_well[data_train_well['well_id'].isin(list_test_well)]
     data_test_prof = data_train_prof[data_train_prof['prof_well_index'].isin(list_test_prof)]
@@ -3161,7 +3144,10 @@ def train_test_split_cvw(data, list_marker, mark, list_param, random_seed, test_
     markup_train = np.array(sum(data_train[[mark]].values.tolist(), []))
     markup_test = np.array(sum(data_test[[mark]].values.tolist(), []))
 
-    return training_sample_train, training_sample_test, markup_train, markup_test
+    split = training_sample_train, training_sample_test, markup_train, markup_test
+    if return_train_rows:
+        return (*split, data_train.index.to_numpy())
+    return split
 
 
 def interpolate_nones(data):

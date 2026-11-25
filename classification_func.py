@@ -16,6 +16,8 @@ from random_search import push_random_search
 from random_param import push_random_param
 from feature_selection import *
 from feature_mask_evaluator import FeatureMaskEvaluator, ScoreEarlyStopping, build_seed_masks
+from spatial_lgbm import (SpatialLGBMClassifier, build_lgbm_classifier, classifier_spatial_fit_params,
+                          configure_spatial_lgbm, spatial_cv_params, spatial_training_note)
 from training_feature_mask import TrainingFeatureMask
 from geochem_preprocessing import ComponentSelector
 from qt.l1_controls import configure_l1_controls
@@ -61,7 +63,8 @@ class Model(nn.Module):
 
 
 
-def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict, mark: str, point_name: str, type_case: str, *, all_components=None):
+def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save: list, colors: dict,
+                     mark: str, point_name: str, type_case: str, *, all_components=None, spatial_coordinates=None):
     """
     Обучить классификатор
 
@@ -73,6 +76,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     :param point_name: название столбца с названиями точек
     :param type_case: тип классификатора ('georadar', 'geochem' или 'exploration')
     :param all_components: все геохимические компоненты до отбора параметров и маски
+    :param spatial_coordinates: координаты XY в метрах в порядке строк для выборок без привязки к профилю
     """
     #### старая не оптимизированная версия кода. Работает долго
     # list_nan_param, count_nan = set(), 0
@@ -128,6 +132,19 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
     training_sample = np.array(data_train[list_param].values.tolist())
     markup = np.array(sum(data_train[[mark]].values.tolist(), []))
     list_marker = get_list_marker_mlp(type_case)
+    if spatial_coordinates is not None:
+        spatial_coordinates = np.asarray(spatial_coordinates, dtype=float)
+
+    def spatial_fit_params(model, rows=slice(None), training_size=None):
+        nonlocal spatial_coordinates
+        if not isinstance(model, SpatialLGBMClassifier):
+            return {}
+        if spatial_coordinates is None:
+            if 'prof_well_index' in data_train:
+                spatial_coordinates = get_profile_spatial_coordinates(data_train)
+            else:
+                spatial_coordinates = np.full((len(data_train), 2), np.nan)
+        return classifier_spatial_fit_params(spatial_coordinates[rows], training_size)
 
     Classifier = QtWidgets.QDialog()
     ui_cls = Ui_ClassifierForm()
@@ -335,30 +352,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         #     text_model = f'**XGB**: \nn estimators: {ui_cls.spinBox_xgb_estim.value()}, '
 
         elif model == 'LGBM':
-            model_class = lgb.LGBMClassifier(
-                objective='binary',
-                verbosity=-1,
-                boosting_type='gbdt',
-                reg_alpha=ui_cls.doubleSpinBox_l1_lgbm.value(),
-                reg_lambda=ui_cls.doubleSpinBox_l2_lgbm.value(),
-                num_leaves=ui_cls.spinBox_lgbm_num_leaves.value(),
-                colsample_bytree=ui_cls.doubleSpinBox_lgbm_feature.value(),
-                subsample=ui_cls.doubleSpinBox_lgbm_subsample.value(),
-                subsample_freq=ui_cls.spinBox_lgbm_sub_freq.value(),
-                min_child_samples=ui_cls.spinBox_lgbm_child.value(),
-                learning_rate=ui_cls.doubleSpinBox_lr_lgbm.value(),
-                n_estimators=ui_cls.spinBox_estim_lgbm.value(),
-            )
-
-            text_model = f'**LGBM**: \nlambda_1: {ui_cls.doubleSpinBox_l1_lgbm.value()}, ' \
-                         f'\nlambda_2: {ui_cls.doubleSpinBox_l2_lgbm.value()}, ' \
-                         f'\nnum_leaves: {ui_cls.spinBox_lgbm_num_leaves.value()}, ' \
-                         f'\nfeature_fraction: {ui_cls.doubleSpinBox_lgbm_feature.value()}, ' \
-                         f'\nsubsample: {ui_cls.doubleSpinBox_lgbm_subsample.value()}, ' \
-                         f'\nsubsample_freq: {ui_cls.spinBox_lgbm_sub_freq.value()}, ' \
-                         f'\nmin_child_samples: {ui_cls.spinBox_lgbm_child.value()}, ' \
-                         f'\nlearning_rate: {ui_cls.doubleSpinBox_lr_lgbm.value()}, ' \
-                         f'\nn_estimators: {ui_cls.spinBox_estim_lgbm.value()}'
+            model_class, text_model = build_lgbm_classifier(ui_cls)
 
         elif model == 'TORCH':
             model_class, text_model = build_torch_model(training_sample_train)
@@ -478,8 +472,15 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         list_marker = get_list_marker_mlp(type_case)
 
-        (markup_train, model_class, model_name, pipe,
-             text_model, training_sample_train) = build_pipeline(markup, training_sample)
+        pipeline = build_pipeline(markup, training_sample)
+        if pipeline is None:
+            return
+        _, model_class, _, pipe, _, _ = pipeline
+        if isinstance(model_class, SpatialLGBMClassifier):
+            QtWidgets.QMessageBox.warning(
+                Classifier, 'Spatial loss', 'Для оценки LGBM со spatial loss используйте CALC с кросс-валидацией.',
+            )
+            return
         markup = np.array([0 if i == list_marker[0] else 1 for i in markup])
         visualizer = DiscriminationThreshold(pipe)
         visualizer.fit(training_sample, markup)
@@ -521,8 +522,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         markup = np.array(sum(data_train[[mark]].values.tolist(), []))
         groups = np.array(sum(data_train_cov[['obj_title']].values.tolist(), []))
 
-        (markup_train, model_class, model_name, pipe,
-         text_model, training_sample_train) = build_pipeline(markup, training_sample)
+        pipeline = build_pipeline(markup, training_sample)
+        if pipeline is None:
+            return
+        _, model_class, model_name, pipe, _, _ = pipeline
 
         # logo = LeaveOneGroupOut()
 
@@ -546,7 +549,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
                     n_progress += 1
                     continue
 
-            pipe.fit(training_sample[train_idx], markup[train_idx])
+            pipe.fit(training_sample[train_idx], markup[train_idx], **spatial_fit_params(model_class, train_idx))
             score = pipe.score(training_sample[test_idx], markup[test_idx])
             # scores.append(score)
 
@@ -631,22 +634,16 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         data_train_by_well['well_id'] = list_well
 
         list_marker = get_list_marker_mlp(type_case)
-        data_train_m1 = data_train_by_well[data_train_by_well[mark] == list_marker[0]]
-        data_train_m2 = data_train_by_well[data_train_by_well[mark] == list_marker[1]]
-
-        list_well_m1 = list(set(data_train_m1['well_id'].values.tolist()))
-        list_well_m2 = list(set(data_train_m2['well_id'].values.tolist()))
-
-
-        if '0' in list_well_m1:
-            list_well_m1.remove('0')
-        if '0' in list_well_m2:
-            list_well_m2.remove('0')
-
-        list_cvw_m1 = split_list_cvw(list_well_m1, 5)
-        list_cvw_m2 = split_list_cvw(list_well_m2, 5)
-
-        list_cvw = [list_cvw_m1[i] + list_cvw_m2[i] for i in range(5)]
+        folds_by_class = []
+        for label in list_marker:
+            wells = set(data_train_by_well.loc[data_train_by_well[mark] == label, 'well_id'])
+            wells.discard('0')
+            if wells:
+                folds_by_class.append(split_list_cvw(list(wells), 5))
+        if not folds_by_class:
+            set_info('Для кросс-валидации по скважинам нужна разметка скважин.', 'red')
+            return
+        list_cvw = [[well for fold in folds for well in fold] for folds in zip(*folds_by_class)]
 
         (fig_cvw, axes_cvw) = plt.subplots(nrows=2, ncols=3)
         fig_cvw.set_size_inches(25, 15)
@@ -658,18 +655,22 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
             cvw_row, cvw_col = n_cv // 3, n_cv % 3
 
-            data_test_well = data_train_by_well[data_train_by_well['well_id'].isin(lcvw)]
-            data_train_well = data_train_by_well[~data_train_by_well['well_id'].isin(lcvw)]
+            test_rows = data_train_by_well['well_id'].isin(lcvw).to_numpy()
+            data_test_well = data_train_by_well[test_rows]
+            data_train_well = data_train_by_well[~test_rows]
 
             training_sample_train = np.array(data_train_well[input_features(list_param)].values.tolist())
             training_sample_test = np.array(data_test_well[input_features(list_param)].values.tolist())
             markup_train = np.array(sum(data_train_well[[mark]].values.tolist(), []))
             markup_test = np.array(sum(data_test_well[[mark]].values.tolist(), []))
 
-            (markup_train, model_class, model_name, pipe,
-             text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
+            pipeline = build_pipeline(markup_train, training_sample_train)
+            if pipeline is None:
+                return
+            markup_train, model_class, _, pipe, _, training_sample_train = pipeline
 
-            pipe.fit(training_sample_train, markup_train)
+            pipe.fit(training_sample_train, markup_train,
+                     **spatial_fit_params(model_class, ~test_rows, len(training_sample_train)))
 
             # Оценка точности на всей обучающей выборке
             train_accuracy = pipe.score(training_sample, markup)
@@ -677,8 +678,12 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
             list_accuracy.append(test_accuracy)
 
-            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
+            if len(list_marker) != 2:
+                axes_cvw[cvw_row, cvw_col].set_axis_off()
+                continue
+            pos_column = list(pipe.classes_).index(list_marker[0])
+            preds_test = pipe.predict_proba(training_sample_test)[:, pos_column]
+            fpr, tpr, _ = roc_curve(markup_test, preds_test, pos_label=list_marker[0])
             roc_auc = auc(fpr, tpr)
 
             # Строим ROC-кривую
@@ -710,15 +715,21 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         start_time = datetime.datetime.now()
 
         # Разделение данных на обучающую и тестовую выборки
-        if ui_cls.checkBox_cvw.isChecked():
-            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split_cvw(data_train,
-                list_marker, mark, input_features(list_param), random_seed=ui.spinBox_seed.value(), test_size=0.2)
+        if ui_cls.checkBox_cvw.isChecked() and 'prof_well_index' in data_train:
+            training_sample_train, training_sample_test, markup_train, markup_test, train_rows = train_test_split_cvw(
+                data_train, list_marker, mark, input_features(list_param), random_seed=ui.spinBox_seed.value(),
+                test_size=0.2, return_train_rows=True,
+            )
         else:
-            training_sample_train, training_sample_test, markup_train, markup_test = train_test_split(
-                training_sample, markup, test_size=0.20, random_state=ui.spinBox_seed.value(), stratify=markup)
+            training_sample_train, training_sample_test, markup_train, markup_test, train_rows, _ = train_test_split(
+                training_sample, markup, np.arange(len(markup)), test_size=0.20,
+                random_state=ui.spinBox_seed.value(), stratify=markup,
+            )
 
-        (markup_train, model_class, model_name, pipe,
-         text_model, training_sample_train) = build_pipeline(markup_train, training_sample_train)
+        pipeline = build_pipeline(markup_train, training_sample_train)
+        if pipeline is None:
+            return
+        markup_train, model_class, model_name, pipe, text_model, training_sample_train = pipeline
 
         if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
             labels = set_marks()
@@ -731,7 +742,9 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         else:
             pos_label = list_marker
 
-        pipe.fit(training_sample_train, markup_train)
+        pipe.fit(training_sample_train, markup_train,
+                 **spatial_fit_params(model_class, train_rows, len(training_sample_train)))
+        text_model += spatial_training_note(model_class)
 
         # Получение метрик качества модели
         test_accuracy = pipe.score(training_sample_test, markup_test)
@@ -744,17 +757,25 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         text_model += f'\ntrain_accuracy: {round(train_accuracy, 4)}, test_accuracy: {round(test_accuracy, 4)},'
         set_info(text_model, 'blue')
         preds_train = pipe.predict(training_sample)
-        preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-
-        fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=pos_label[0])
-        roc_auc = auc(fpr, tpr)
         preds_t = pipe.predict(training_sample_test)
-        precision = precision_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
-        recall = recall_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
-        f1 = f1_score(markup_test, preds_t, average='binary', pos_label=pos_label[0])
+        binary = len(pos_label) == 2
+        if binary:
+            pos_column = list(pipe.classes_).index(pos_label[0])
+            preds_test = pipe.predict_proba(training_sample_test)[:, pos_column]
+            fpr, tpr, _ = roc_curve(markup_test, preds_test, pos_label=pos_label[0])
+            roc_auc = auc(fpr, tpr)
+            metrics = {'average': 'binary', 'pos_label': pos_label[0]}
+        else:
+            metrics = {'average': 'macro', 'zero_division': 0}
+        precision = precision_score(markup_test, preds_t, **metrics)
+        recall = recall_score(markup_test, preds_t, **metrics)
+        f1 = f1_score(markup_test, preds_t, **metrics)
 
         text_model += f'test_precision: {round(precision, 4)},\ntest_recall: {round(recall, 4)},' \
-                      f'\ntest_f1: {round(f1, 4)},\nroc_auc: {round(roc_auc, 4)},\nвремя обучения: {train_time}'
+                      f'\ntest_f1: {round(f1, 4)}'
+        if binary:
+            text_model += f',\nroc_auc: {round(roc_auc, 4)}'
+        text_model += f',\nвремя обучения: {train_time}'
         set_info(text_model, 'blue')
 
         # if (ui_cls.checkBox_stack_vote.isChecked() and ui_cls.buttonGroup_stack_vote.checkedButton().text() == 'Voting'
@@ -790,7 +811,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             if ui_cls.buttonGroup.checkedButton().text() == 'TORCH':
                 scores_cv = cross_val_score(pipe, training_sample, np.array([labels[i] for i in markup], dtype=np.float32), cv=kf, n_jobs=-1)
             else:
-                scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1)
+                scores_cv = cross_val_score(pipe, training_sample, markup, cv=kf, n_jobs=-1,
+                                            **spatial_cv_params(spatial_fit_params(model_class)))
 
         # Оценка важности параметров для моделей, которые поддерживают .feature_importances_
         if model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or \
@@ -818,12 +840,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         axes[0].xaxis.grid(True, "minor", linewidth=.25)
         axes[0].yaxis.grid(True, "minor", linewidth=.25)
         axes[0].set_title(f'Диаграмма рассеяния для канонических значений {model_name}\nдля обучающей выборки и тестовой выборки')
-        if len(list_marker) == 2:
-            # Вычисляем ROC-кривую и AUC
-            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-            fpr, tpr, thresholds = roc_curve(markup_test, preds_test, pos_label=pos_label[0])
-            roc_auc = auc(fpr, tpr)
-
+        if binary:
             # Строим ROC-кривую
             axes[1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
             axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
@@ -833,13 +850,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             axes[1].set_ylabel('True Positive Rate')
             axes[1].set_title('ROC-кривая')
             axes[1].legend(loc="lower right")
+        else:
+            axes[1].set_axis_off()
 
         title_graph = text_model
         if model_name == 'RFC' or model_name == 'ETC':
             if not ui_cls.checkBox_calibr.isChecked():
                 if not ui_cls.checkBox_baggig.isChecked():
-                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}, \n' \
-                                   f'roc_auc: {round(roc_auc, 7)}'
+                    title_graph += f'\nOOB score: {round(model_class.oob_score_, 7)}'
 
         if (model_name == 'RFC' or model_name == 'GBC' or model_name == 'DTC' or model_name == 'ETC' or model_name ==
             'ABC' or model_name == 'LGBM') and not ui_cls.checkBox_cross_val.isChecked():
@@ -853,9 +871,8 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             axes[2].bar(range(len(scores_cv)), scores_cv)
             axes[2].set_title('Кросс-валидация')
 
-        elif ui_cls.checkBox_calibr.isChecked():
-            preds_test = pipe.predict_proba(training_sample_test)[:, 0]
-            true_probs, pred_probs = calibration_curve(markup_test, preds_test, n_bins=5, pos_label=list_marker[0])
+        elif ui_cls.checkBox_calibr.isChecked() and binary:
+            true_probs, pred_probs = calibration_curve(markup_test, preds_test, n_bins=5, pos_label=pos_label[0])
 
             # Построение кривой надежности
             axes[2].plot(pred_probs, true_probs, marker='o')
@@ -899,6 +916,14 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
 
 
     def build_pipeline(markup_train, training_sample_train):
+        selected_model = ui_cls.buttonGroup.checkedButton().text()
+        spatial_enabled = selected_model == 'LGBM' and ui_cls.doubleSpinBox_lgbm_spatial_loss.value() > 0
+        if spatial_enabled and any((ui_cls.checkBox_stack_vote.isChecked(), ui_cls.checkBox_baggig.isChecked(),
+                                    ui_cls.checkBox_calibr.isChecked())):
+            QtWidgets.QMessageBox.warning(
+                Classifier, 'Spatial loss', 'Spatial loss доступен для отдельной модели LGBM без калибровки.',
+            )
+            return None
         pipe_steps = []
         text_scaler = ''
 
@@ -968,8 +993,11 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
         if ui_cls.checkBox_stack_vote.isChecked():
             model_class, text_model, model_name = build_stacking_voting_model(model_sample)
         else:
-            model_name = ui_cls.buttonGroup.checkedButton().text()
+            model_name = selected_model
             model_class, text_model = choice_model_classifier(model_name, model_sample)
+            if spatial_enabled:
+                model_class, text_spatial = configure_spatial_lgbm(model_class, ui_cls)
+                text_model += text_spatial
         if ui_cls.checkBox_baggig.isChecked():
             model_class = BaggingClassifier(estimator=model_class, n_estimators=ui_cls.spinBox_bagging.value(),
                                             random_state=0, n_jobs=-1)
@@ -1522,8 +1550,10 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             markup = data_train_cov[[mark]]
             groups = data_train_cov[['object_id']]
 
-            (markup_train, model_class, model_name, pipe,
-             text_model, training_sample_train) = build_pipeline(markup, training_sample)
+            pipeline = build_pipeline(markup, training_sample)
+            if pipeline is None:
+                return
+            _, model_class, model_name, pipe, text_model, _ = pipeline
 
             title = f'{model_name}_{len(list_param)}_{str(ui_ga.spinBox_pop_size.value())}'
             if ui_ga.radioButton_pareto_min.isChecked():
@@ -1576,6 +1606,7 @@ def train_classifier(data_train: pd.DataFrame, list_param: list, list_param_save
             evaluator = FeatureMaskEvaluator(
                 X, y, pipe, folds, objective_count=problem.nobjs, seed=seed,
                 progress=update_fold_progress, feature_names=list_param,
+                fit_params=spatial_fit_params(model_class),
             )
 
             def objectives(features):

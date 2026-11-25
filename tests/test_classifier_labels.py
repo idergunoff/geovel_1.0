@@ -56,6 +56,7 @@ def test_geochem_training_uses_its_own_categories(model_name, radar_markers, mar
         ui=SimpleNamespace(spinBox_seed=SimpleNamespace(value=lambda: 42)),
         train_test_split=train_test_split,
         build_pipeline=lambda y, x: (y, None, model_name, pipe, '', x),
+        spatial_fit_params=lambda *_: {},
         session=session, MarkerMLP=SimpleNamespace(analysis_id=None), get_MLP_id=lambda: '',
     ))
     if model_name != 'TORCH':

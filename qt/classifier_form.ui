@@ -1006,6 +1006,62 @@
                 </item>
                </layout>
               </item>
+              <item row="1" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_lgbm_spatial">
+                <item>
+                 <widget class="QLabel" name="label_lgbm_spatial_loss">
+                  <property name="text">
+                   <string>Spatial loss</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>doubleSpinBox_lgbm_spatial_loss</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_spatial_loss">
+                  <property name="toolTip">
+                   <string>Вес штрафа за различие оценок классов у соседних точек. 0 — выключено. Для отдельной модели LGBM без калибровки.</string>
+                  </property>
+                  <property name="decimals">
+                   <number>4</number>
+                  </property>
+                  <property name="maximum">
+                   <double>100.000000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.100000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_lgbm_spatial_radius">
+                  <property name="text">
+                   <string>Радиус, м</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>doubleSpinBox_lgbm_spatial_radius</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QDoubleSpinBox" name="doubleSpinBox_lgbm_spatial_radius">
+                  <property name="toolTip">
+                   <string>Для каждого измерения ищутся до восьми соседей в пределах радиуса. Штраф уменьшается с расстоянием.</string>
+                  </property>
+                  <property name="minimum">
+                   <double>0.010000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>1000000.000000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>25.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
              </layout>
             </widget>
            </item>

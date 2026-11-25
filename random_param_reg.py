@@ -6,7 +6,9 @@ from calc_profile_features import calc_wavelet_features_profile, calc_fractal_fe
     calc_autocorr_feature_profile, calc_emd_feature_profile, calc_hht_features_profile
 from sklearn.metrics import mean_absolute_error
 
+from build_table import get_profile_spatial_coordinates
 from func import *
+from spatial_lgbm import SpatialLGBMRegressor, configure_spatial_lgbm, spatial_cv_params, spatial_training_note
 
 class RegressionModel(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_units, dropout_rate, activation_fn):
@@ -900,6 +902,8 @@ def push_random_param_reg():
                          f'\nmin_child_samples: {ui_r.spinBox_lgbm_child.value()}, ' \
                          f'\nlearning_rate: {ui_r.doubleSpinBox_lr_lgbm.value()}, ' \
                          f'\nn_estimators: {ui_r.spinBox_estim_lgbm.value()}'
+            model_reg, text_spatial = configure_spatial_lgbm(model_reg, ui_r)
+            text_model += text_spatial
 
         else:
             model_reg = QuadraticDiscriminantAnalysis()
@@ -1106,6 +1110,7 @@ def push_random_param_reg():
             data_test = pd.DataFrame(imputer.fit_transform(data_test), columns=list_col)
 
             model_name = ui_r.buttonGroup.checkedButton().text()
+            fit_params = {}
             if model_name == 'TORCH':
                 pipe, text_model = build_torch_model(pipe_steps, data_train.iloc[:, 2:])
                 text_model += text_scaler
@@ -1114,6 +1119,8 @@ def push_random_param_reg():
                 text_model += text_scaler
                 pipe_steps.append(('model', model_reg))
                 pipe = Pipeline(pipe_steps)
+                if isinstance(model_reg, SpatialLGBMRegressor):
+                    fit_params['model__spatial_coordinates'] = get_profile_spatial_coordinates(data_train)
 
             ui_rp.textEdit_test_result.setTextColor(Qt.black)
             ui_rp.textEdit_test_result.insertPlainText(
@@ -1128,9 +1135,16 @@ def push_random_param_reg():
                   f"Выбранные параметры: \n{list_param}\n")
 
             kv = KFold(n_splits=5, shuffle=True, random_state=0)
-            cv_results = cross_validate(pipe, data_train.iloc[:, 2:], np.array(y_train, dtype=np.float32), cv=kv, scoring='r2',
-                                        return_estimator=True)
+            cv_results = cross_validate(
+                pipe, data_train.iloc[:, 2:], np.array(y_train, dtype=np.float32), cv=kv, scoring='r2',
+                return_estimator=True, **spatial_cv_params(fit_params),
+            )
             estimators = cv_results['estimator']
+            if fit_params:
+                notes = '\n'.join(spatial_training_note(pipe['model']).strip() for pipe in estimators)
+                ui_rp.textEdit_test_result.append(f'{text_model}\n{notes}')
+                with open(filename, 'a') as f:
+                    print(f'{text_model}\n{notes}', file=f)
 
             list_accuracy, list_mse, list_r2, filename = test_classif_regressor(estimators,data_test,list_param, filename)
             mae = np.array(list_accuracy).mean()
