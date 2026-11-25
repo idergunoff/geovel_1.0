@@ -11,10 +11,14 @@ from openpyxl.utils.exceptions import IllegalCharacterError
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from prediction_comparison_statistics import comparison_statistics
+from qt.prediction_well_preferences import (
+    column_config, excluded_report_columns, report_column_key, saved_presets,
+    save_preset, save_report_columns,
+)
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
 from regression_target.presentation import AGGREGATION_TITLES, parameter_header_tooltip
 from regression_target.service import (
-    Resolution, TargetSettings, resolve_target, save_parameter_choice, well_data_rows,
+    Resolution, TargetSettings, list_canonical_targets, resolve_target, save_parameter_choice, well_data_rows,
 )
 
 
@@ -36,8 +40,12 @@ class AnalysisColumn:
     title: str
     settings: TargetSettings
     tooltip: str
-    raw_text: bool
+    config: dict
     values: dict[int, Resolution | str | None]
+
+    @property
+    def raw_text(self):
+        return self.config['raw_text']
 
     def value(self, well_id):
         result = self.values[well_id]
@@ -92,6 +100,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
     def __init__(self, session, samples, description, parent=None, open_well_log=None, *,
                  prediction_type=None):
         self.analysis_columns: list[AnalysisColumn] = []
+        self._comparison_config = None
         self._comparison_title = ''
         self._comparison_tooltip = self.HEADERS[7][1]
         self.prediction_title = {'cls': 'Вероятность', 'reg': 'Прогноз регрессии'}.get(
@@ -153,6 +162,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         columns.addWidget(self.remove_column_button)
         columns.addStretch()
         self.layout().insertLayout(self.layout().indexOf(self.table), columns)
+        self._build_presets_ui()
         for buttons in self.findChildren(QtWidgets.QDialogButtonBox):
             buttons.button(QtWidgets.QDialogButtonBox.Cancel).setText('Закрыть')
         legend = QtWidgets.QLabel(
@@ -162,6 +172,111 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         self.layout().insertWidget(self.layout().count() - 1, legend)
         self._build_statistics_ui()
 
+    def _build_presets_ui(self):
+        row = QtWidgets.QHBoxLayout()
+        row.addWidget(QtWidgets.QLabel('Наборы столбцов'))
+        self.presets_combo = QtWidgets.QComboBox()
+        self.presets_combo.setToolTip('Выберите набор, чтобы загрузить его в таблицу')
+        row.addWidget(self.presets_combo, 1)
+        self.save_preset_button = QtWidgets.QPushButton('Сохранить набор…')
+        row.addWidget(self.save_preset_button)
+        self.layout().insertLayout(self.layout().indexOf(self.table), row)
+        self._refresh_presets()
+        self.presets_combo.activated[int].connect(self._load_preset)
+        self.save_preset_button.clicked.connect(self._save_preset)
+
+    def _refresh_presets(self, selected=None):
+        self.presets_combo.clear()
+        self.presets_combo.addItem('Выберите набор')
+        for name in sorted(saved_presets(), key=str.casefold):
+            self.presets_combo.addItem(name, name)
+        if selected is not None:
+            self.presets_combo.setCurrentIndex(max(0, self.presets_combo.findData(selected)))
+
+    def _save_preset(self):
+        name, accepted = QtWidgets.QInputDialog.getText(
+            self, 'Сохранение набора', 'Название набора', text=self.presets_combo.currentData() or '')
+        name = name.strip()
+        if not accepted or not name:
+            return
+        if name in saved_presets() and QtWidgets.QMessageBox.question(
+                self, 'Замена набора', f'Заменить набор «{name}» текущими столбцами?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No) != QtWidgets.QMessageBox.Yes:
+            return
+        save_preset(name, {'columns': [column.config for column in self.analysis_columns],
+                           'comparison': self._comparison_config})
+        self._refresh_presets(name)
+
+    def _load_preset(self, index):
+        name = self.presets_combo.itemData(index)
+        if name is None:
+            return
+        preset = saved_presets().get(name)
+        if preset is None:
+            self._refresh_presets()
+            return
+        sources = {}
+
+        def resolve_config(config):
+            source = config['source']
+            if config['raw_text'] and source != 'well_data':
+                raise ValueError('Исходный текст доступен для информации о скважине.')
+            if source not in sources:
+                sources[source] = {row.canonical_name.casefold(): row.id
+                                   for row in list_canonical_targets(self.session, source)}
+            canonical_id = sources[source].get(config['name'].casefold())
+            if canonical_id is None:
+                raise ValueError(f'Параметр «{config["name"]}» не найден.')
+            options = dict(config['options'])
+            boundary = options.pop('boundary_name', None)
+            if boundary is not None:
+                boundary_index = self.boundary_combo.findText(boundary, QtCore.Qt.MatchFixedString)
+                if boundary_index < 0:
+                    raise ValueError(f'Опорная граница «{boundary}» не найдена.')
+                options['boundary_canonical_id'] = self.boundary_combo.itemData(boundary_index)
+            return TargetSettings(source, canonical_id, **options)
+
+        try:
+            configurations = [(config, resolve_config(config)) for config in preset['columns']]
+            comparison = preset['comparison']
+            comparison_target = resolve_config(comparison) if comparison is not None else None
+        except ValueError as error:
+            QtWidgets.QMessageBox.warning(self, 'Загрузка набора', str(error))
+            self.presets_combo.setCurrentIndex(0)
+            return
+        except (KeyError, TypeError, AttributeError):
+            QtWidgets.QMessageBox.warning(self, 'Загрузка набора', 'Не удалось прочитать настройки набора.')
+            self.presets_combo.setCurrentIndex(0)
+            return
+
+        columns = []
+        for config, target in configurations:
+            columns.append(self._build_analysis_column(config, target, columns))
+        self._set_comparison(comparison, comparison_target)
+        self.analysis_columns = columns
+        if comparison_target is not None:
+            self._restore_target_controls(comparison_target)
+        self._render()
+
+    def _restore_target_controls(self, target):
+        self.source_combo.setCurrentIndex(self.source_combo.findData(target.source))
+        if self.canonical_combo.findData(target.canonical_id) < 0:
+            self._source_changed()
+        self.canonical_combo.setCurrentIndex(self.canonical_combo.findData(target.canonical_id))
+        if target.source == 'well_data':
+            self.strict_check.setChecked(target.strict_numeric)
+            self.sum_check.setChecked(target.allow_explicit_sum)
+        elif target.source == 'well_log':
+            for combo, value in ((self.aggregation_combo, target.aggregation),
+                                 (self.operation_combo, target.operation),
+                                 (self.depth_mode_combo, target.depth_mode),
+                                 (self.boundary_combo, target.boundary_canonical_id),
+                                 (self.position_combo, target.interval_position)):
+                combo.setCurrentIndex(combo.findData(value))
+            self.fixed_depth.setValue(target.fixed_depth)
+            self.interval.setValue(target.interval)
+
     def _source_changed(self):
         super()._source_changed()
         self.add_text_column_button.setVisible(self.source_combo.currentData() == 'well_data')
@@ -169,10 +284,10 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
     def _hide_candidate(self, status):
         return self._settings is not None and super()._hide_candidate(status)
 
-    def _parameter_tooltip(self, title, settings):
-        index = self.boundary_combo.findData(settings.boundary_canonical_id)
-        boundary = self.boundary_combo.itemText(index) if index >= 0 else ''
-        return parameter_header_tooltip(title, settings, boundary)
+    def _current_column_config(self, target, raw_text=False):
+        index = self.boundary_combo.findData(target.boundary_canonical_id)
+        return column_config(self.canonical_combo.currentText(), target, raw_text,
+                             self.boundary_combo.itemText(index))
 
     def _resolve_for_wells(self, settings, *, raw_text=False):
         well_ids = dict.fromkeys(candidate.well_id for candidate in self.candidates)
@@ -193,31 +308,43 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         if settings is None:
             QtWidgets.QMessageBox.warning(self, 'Нет параметра', 'Выберите канонический параметр.')
             return
-        values = self._resolve_for_wells(settings)
-        self._settings = settings
-        name = self.canonical_combo.currentText()
-        self._comparison_title = name + _aggregation_suffix(settings)
-        self._comparison_tooltip = self._parameter_tooltip(name, settings)
-        for candidate in self.candidates:
-            candidate.resolution = values[candidate.well_id]
+        self._set_comparison(self._current_column_config(settings), settings)
         self._render()
+
+    def _set_comparison(self, config, settings):
+        values = self._resolve_for_wells(settings) if settings is not None else {}
+        self._settings = settings
+        self._comparison_config = config
+        self._comparison_title = config['name'] + _aggregation_suffix(settings) if config else ''
+        self._comparison_tooltip = (parameter_header_tooltip(
+            config['name'], settings, config['options'].get('boundary_name', ''))
+            if config else self.HEADERS[7][1])
+        for candidate in self.candidates:
+            candidate.resolution = values.get(candidate.well_id)
 
     def _add_analysis_column(self, *, raw_text):
         settings = self.settings()
         if settings is None:
             QtWidgets.QMessageBox.warning(self, 'Нет параметра', 'Выберите канонический параметр.')
             return
-        name = self.canonical_combo.currentText()
         if raw_text:
             if settings.source != 'well_data':
                 return
             settings = TargetSettings('well_data', settings.canonical_id)
-        if any(column.settings == settings and column.raw_text == raw_text
-               for column in self.analysis_columns):
-            QtWidgets.QMessageBox.information(self, 'Столбец уже добавлен', name)
+        config = self._current_column_config(settings, raw_text)
+        if any(column.config == config for column in self.analysis_columns):
+            QtWidgets.QMessageBox.information(self, 'Столбец уже добавлен', config['name'])
             return
+        self.analysis_columns.append(self._build_analysis_column(config, settings, self.analysis_columns))
+        self._render()
+        if self.table.rowCount():
+            column = self.table.columnCount() - 1
+            self.table.scrollToItem(self.table.item(0, column), QtWidgets.QAbstractItemView.EnsureVisible)
+
+    def _build_analysis_column(self, config, settings, columns):
+        name, raw_text = config['name'], config['raw_text']
         title = f'{name} (исходный текст)' if raw_text else name + _aggregation_suffix(settings)
-        used_titles = {column.title for column in self.analysis_columns}
+        used_titles = {column.title for column in columns}
         used_titles.update(label for field in self.REPORT_FIELDS for label in field)
         used_titles.add(self.prediction_title)
         used_titles.update(f'{self.WELL_VALUE_TITLE} ({label})' for label in AGGREGATION_TITLES.values())
@@ -227,13 +354,10 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             title = f'{base_title} ({suffix})'
             suffix += 1
         tooltip = (f'Категория «{name}». Исходный текст записей скважины, по одной записи на строку.'
-                   if raw_text else self._parameter_tooltip(name, settings))
+                   if raw_text else parameter_header_tooltip(
+                       name, settings, config['options'].get('boundary_name', '')))
         values = self._resolve_for_wells(settings, raw_text=raw_text)
-        self.analysis_columns.append(AnalysisColumn(title, settings, tooltip, raw_text, values))
-        self._render()
-        column = self.table.columnCount() - 1
-        if self.table.rowCount():
-            self.table.scrollToItem(self.table.item(0, column), QtWidgets.QAbstractItemView.EnsureVisible)
+        return AnalysisColumn(title, settings, tooltip, config, values)
 
     def _remove_analysis_column(self):
         if self.analysis_columns:
@@ -463,6 +587,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             self.table.resizeColumnToContents(index)
             self.table.setColumnWidth(index, min(350, self.table.columnWidth(index)))
         self.remove_column_button.setEnabled(bool(self.analysis_columns))
+        self.save_preset_button.setEnabled(bool(self.analysis_columns) or self._settings is not None)
         self.summary.setText(self.summary.text().split('; уже добавлено:')[0])
         self._render_statistics()
 
@@ -489,15 +614,20 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         return ([(key, labels.get(key, title)) for key, title in self.REPORT_FIELDS] +
                 [(column.title, column.title) for column in self.analysis_columns])
 
-    def _select_report_columns(self, headers):
+    def _report_column_keys(self):
+        return [key for key, _ in self.REPORT_FIELDS] + [
+            report_column_key(column.config) for column in self.analysis_columns]
+
+    def _select_report_columns(self, headers, keys, file_format):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('Столбцы отчёта')
         dialog.resize(460, 470)
         layout = QtWidgets.QVBoxLayout(dialog)
         columns = QtWidgets.QListWidget(dialog)
-        for _, title in headers:
+        excluded = excluded_report_columns(file_format)
+        for key, (_, title) in zip(keys, headers):
             item = QtWidgets.QListWidgetItem(title, columns)
-            item.setCheckState(QtCore.Qt.Checked)
+            item.setCheckState(QtCore.Qt.Unchecked if key in excluded else QtCore.Qt.Checked)
         layout.addWidget(columns)
 
         actions = QtWidgets.QHBoxLayout()
@@ -529,6 +659,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         select_all.clicked.connect(lambda: set_all(QtCore.Qt.Checked))
         clear_all.clicked.connect(lambda: set_all(QtCore.Qt.Unchecked))
         columns.itemChanged.connect(lambda: confirm.setEnabled(bool(selected_columns())))
+        confirm.setEnabled(bool(selected_columns()))
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         selected = selected_columns() if dialog.exec_() == QtWidgets.QDialog.Accepted else []
@@ -537,7 +668,8 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
 
     def _export_csv(self):
         headers = self._report_headers()
-        selected = self._select_report_columns(headers)
+        keys = self._report_column_keys()
+        selected = self._select_report_columns(headers, keys, 'csv')
         if not selected:
             return
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -548,6 +680,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             writer = csv.writer(stream, delimiter=';')
             writer.writerow([headers[index][0] for index in selected])
             writer.writerows(self._report_rows(selected))
+        save_report_columns('csv', keys, selected)
 
     def _comparison_settings_json(self):
         return json.dumps(self._settings.as_dict(), ensure_ascii=False) if self._settings else ''
@@ -568,7 +701,8 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
 
     def _export_excel(self):
         headers = self._report_headers()
-        selected = self._select_report_columns(headers)
+        keys = self._report_column_keys()
+        selected = self._select_report_columns(headers, keys, 'xlsx')
         if not selected:
             return
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -605,6 +739,8 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         except (OSError, ValueError, IllegalCharacterError) as error:
             QtWidgets.QMessageBox.warning(
                 self, 'Ошибка экспорта', f'Не удалось сохранить книгу Excel.\n{error}')
+        else:
+            save_report_columns('xlsx', keys, selected)
         finally:
             workbook.close()
 
