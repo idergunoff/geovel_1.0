@@ -215,12 +215,17 @@ def resolve_boundary(session, well_id: int, canonical_id: int) -> Resolution:
                       {"selected": asdict(candidates[0])})
 
 
-def resolve_well_data(session, well_id: int, settings: TargetSettings) -> Resolution:
-    aliases = set(_alias_norms(session, AliasWellOption, settings.canonical_id))
+def well_data_rows(session, well_id: int, canonical_id: int) -> list[WellOptionally]:
+    """Return original well records matching a canonical information category."""
+    aliases = set(_alias_norms(session, AliasWellOption, canonical_id))
     rows = session.query(WellOptionally).filter(
         WellOptionally.well_id == well_id
     ).order_by(WellOptionally.id).all() if aliases else []
-    rows = [row for row in rows if _matches_alias(row.option, aliases)]
+    return [row for row in rows if _matches_alias(row.option, aliases)]
+
+
+def resolve_well_data(session, well_id: int, settings: TargetSettings) -> Resolution:
+    rows = well_data_rows(session, well_id, settings.canonical_id)
     candidates: list[ResolutionCandidate] = []
     errors: list[str] = []
     for row in rows:

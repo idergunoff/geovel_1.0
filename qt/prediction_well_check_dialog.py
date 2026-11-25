@@ -1,12 +1,21 @@
-"""Prediction comparison using the same parameter selector as Add all well."""
+"""Compare saved predictions and inspect additional well data."""
 import csv
 import json
 from dataclasses import dataclass
+from html import escape
 
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils.exceptions import IllegalCharacterError
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from prediction_comparison_statistics import comparison_statistics
 from qt.regression_target_wizard import RegressionTargetWizard, WizardCandidate
+from regression_target.presentation import parameter_header_tooltip
+from regression_target.service import (
+    Resolution, TargetSettings, resolve_target, save_parameter_choice, well_data_rows,
+)
 
 
 @dataclass
@@ -14,6 +23,21 @@ class PredictionCandidate(WizardCandidate):
     prediction_id: int = 0
     trace_index: int = 0
     corrected: bool = False
+
+
+@dataclass
+class AnalysisColumn:
+    title: str
+    settings: TargetSettings
+    tooltip: str
+    raw_text: bool
+    values: dict[int, Resolution | str | None]
+
+    def value(self, well_id):
+        result = self.values[well_id]
+        if isinstance(result, Resolution):
+            return result.value if result.status == 'resolved' else None
+        return result
 
 
 class PredictionWellCheckDialog(RegressionTargetWizard):
@@ -43,8 +67,28 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         ('Δ', 'Разница: значение скважины минус прогноз; цвет зависит от абсолютной ошибки'),
         ('Статус', 'Совпадение в пределах заданного абсолютного допуска или состояние данных'),
     )
+    REPORT_FIELDS = (
+        ('well_id', 'ID скважины'), ('well', 'Скважина'), ('profile_id', 'ID профиля'),
+        ('profile', 'Профиль'), ('object', 'Объект'), ('prediction_id', 'ID прогноза'),
+        ('trace_number', 'Точка профиля'), ('distance_m', 'Расстояние, м'),
+        ('corrected', 'Исправленный прогноз'), ('prediction', 'Прогноз'),
+        ('parameter', 'Параметр сравнения'), ('well_value', 'Значение скважины'),
+        ('well_minus_prediction', 'Скважина − прогноз'), ('status', 'Статус'),
+        ('settings', 'Настройки сравнения'), ('details', 'Детали источника'),
+    )
+    STATISTICS_FIELDS = (
+        ('count', 'Рассчитанные пары'), ('well_count', 'Уникальные скважины'),
+        ('excluded_count', 'Исключённые пары'), ('within_tolerance', 'Пар в допуске'),
+        ('tolerance', 'Допуск'),
+    )
 
-    def __init__(self, session, samples, description, parent=None, open_well_log=None):
+    def __init__(self, session, samples, description, parent=None, open_well_log=None, *,
+                 prediction_type=None):
+        self.analysis_columns: list[AnalysisColumn] = []
+        self._comparison_title = ''
+        self._comparison_tooltip = self.HEADERS[7][1]
+        self.prediction_title = {'cls': 'Вероятность', 'reg': 'Прогноз регрессии'}.get(
+            prediction_type, 'Прогноз')
         candidates = [PredictionCandidate(
             well_id=s.well.id, well_name=s.well.name or f'id{s.well.id}',
             profile_id=s.profile.id,
@@ -62,20 +106,6 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         label = QtWidgets.QLabel(description)
         label.setWordWrap(True)
         self.layout().insertWidget(0, label)
-        for widget in (self.source_combo, self.canonical_combo, self.aggregation_combo,
-                       self.operation_combo, self.depth_mode_combo, self.boundary_combo,
-                       self.position_combo):
-            widget.currentIndexChanged.connect(self._invalidate_results)
-        for widget in (self.fixed_depth, self.interval):
-            widget.valueChanged.connect(self._invalidate_results)
-        for widget in (self.strict_check, self.sum_check):
-            widget.toggled.connect(self._invalidate_results)
-        self._render()
-
-    def _invalidate_results(self):
-        self._settings = None
-        for candidate in self.candidates:
-            candidate.resolution = None
         self._render()
 
     def _build_ui(self):
@@ -95,17 +125,111 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             header = self.table.horizontalHeaderItem(column)
             header.setText(title)
             header.setToolTip(tooltip)
+        self.table.horizontalHeaderItem(9).setText(self.prediction_title)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         self.table.horizontalHeader().setMinimumSectionSize(64)
+        self.table.setWordWrap(False)
+        self.calculate_button.setText('Рассчитать сравнение')
+        self.hide_missing_check.setText('Скрыть строки без значения для сравнения')
         self.absolute_tolerance.setToolTip('Допустимая абсолютная разница в единицах выбранного параметра')
+        columns = QtWidgets.QHBoxLayout()
+        self.add_column_button = QtWidgets.QPushButton('Добавить расчётный столбец')
+        self.add_text_column_button = QtWidgets.QPushButton('Добавить исходный текст')
+        self.add_text_column_button.setToolTip(
+            'Добавляет отдельный столбец с исходными записями выбранной категории')
+        self.remove_column_button = QtWidgets.QPushButton('Удалить последний столбец')
+        self.add_column_button.clicked.connect(lambda: self._add_analysis_column(raw_text=False))
+        self.add_text_column_button.clicked.connect(lambda: self._add_analysis_column(raw_text=True))
+        self.remove_column_button.clicked.connect(self._remove_analysis_column)
+        columns.addWidget(self.add_column_button)
+        columns.addWidget(self.add_text_column_button)
+        columns.addWidget(self.remove_column_button)
+        columns.addStretch()
+        self.layout().insertLayout(self.layout().indexOf(self.table), columns)
         for buttons in self.findChildren(QtWidgets.QDialogButtonBox):
             buttons.button(QtWidgets.QDialogButtonBox.Cancel).setText('Закрыть')
         legend = QtWidgets.QLabel(
-            'Цвет: зелёный — в пределах допуска; жёлтый → красный — рост абсолютной ошибки; '
-            'красный — максимальная ошибка среди всех строк с рассчитанными значениями.')
+            'При сравнении зелёный цвет означает попадание в допуск. '
+            'Цвет меняется от жёлтого к красному по мере роста абсолютной ошибки.')
         legend.setWordWrap(True)
         self.layout().insertWidget(self.layout().count() - 1, legend)
         self._build_statistics_ui()
+
+    def _source_changed(self):
+        super()._source_changed()
+        self.add_text_column_button.setVisible(self.source_combo.currentData() == 'well_data')
+
+    def _hide_candidate(self, status):
+        return self._settings is not None and super()._hide_candidate(status)
+
+    def _parameter_tooltip(self, title, settings):
+        index = self.boundary_combo.findData(settings.boundary_canonical_id)
+        boundary = self.boundary_combo.itemText(index) if index >= 0 else ''
+        return parameter_header_tooltip(title, settings, boundary)
+
+    def _resolve_for_wells(self, settings, *, raw_text=False):
+        well_ids = dict.fromkeys(candidate.well_id for candidate in self.candidates)
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        try:
+            if raw_text:
+                return {
+                    well_id: '\n'.join(row.value for row in well_data_rows(
+                        self.session, well_id, settings.canonical_id) if row.value) or None
+                    for well_id in well_ids
+                }
+            return {well_id: resolve_target(self.session, well_id, settings) for well_id in well_ids}
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+    def calculate(self):
+        settings = self.settings()
+        if settings is None:
+            QtWidgets.QMessageBox.warning(self, 'Нет параметра', 'Выберите канонический параметр.')
+            return
+        values = self._resolve_for_wells(settings)
+        self._settings = settings
+        self._comparison_title = self.canonical_combo.currentText()
+        self._comparison_tooltip = self._parameter_tooltip(self._comparison_title, settings)
+        for candidate in self.candidates:
+            candidate.resolution = values[candidate.well_id]
+        self._render()
+
+    def _add_analysis_column(self, *, raw_text):
+        settings = self.settings()
+        if settings is None:
+            QtWidgets.QMessageBox.warning(self, 'Нет параметра', 'Выберите канонический параметр.')
+            return
+        name = self.canonical_combo.currentText()
+        if raw_text:
+            if settings.source != 'well_data':
+                return
+            settings = TargetSettings('well_data', settings.canonical_id)
+        if any(column.settings == settings and column.raw_text == raw_text
+               for column in self.analysis_columns):
+            QtWidgets.QMessageBox.information(self, 'Столбец уже добавлен', name)
+            return
+        title = f'{name} (исходный текст)' if raw_text else name
+        used_titles = {column.title for column in self.analysis_columns}
+        used_titles.update(label for field in self.REPORT_FIELDS for label in field)
+        used_titles.add(self.prediction_title)
+        suffix = 2
+        base_title = title
+        while title in used_titles:
+            title = f'{base_title} ({suffix})'
+            suffix += 1
+        tooltip = (f'Категория «{name}». Исходный текст записей скважины, по одной записи на строку.'
+                   if raw_text else self._parameter_tooltip(name, settings))
+        values = self._resolve_for_wells(settings, raw_text=raw_text)
+        self.analysis_columns.append(AnalysisColumn(title, settings, tooltip, raw_text, values))
+        self._render()
+        column = self.table.columnCount() - 1
+        if self.table.rowCount():
+            self.table.scrollToItem(self.table.item(0, column), QtWidgets.QAbstractItemView.EnsureVisible)
+
+    def _remove_analysis_column(self):
+        if self.analysis_columns:
+            self.analysis_columns.pop()
+            self._render()
 
     def _build_statistics_ui(self):
         group = QtWidgets.QGroupBox('Статистика сравнения')
@@ -131,13 +255,16 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         self.minimum_button = QtWidgets.QPushButton('К минимальной ошибке')
         self.maximum_button = QtWidgets.QPushButton('К максимальной ошибке')
         self.statistics_export_button = QtWidgets.QPushButton('Экспорт статистики CSV')
+        self.excel_export_button = QtWidgets.QPushButton('Экспорт отчёта и статистики Excel')
         self.minimum_button.clicked.connect(lambda: self._show_extreme('minimum_rows'))
         self.maximum_button.clicked.connect(lambda: self._show_extreme('maximum_rows'))
         self.statistics_export_button.clicked.connect(self._export_statistics_csv)
+        self.excel_export_button.clicked.connect(self._export_excel)
         tools.addWidget(self.minimum_button)
         tools.addWidget(self.maximum_button)
         tools.addStretch()
         tools.addWidget(self.statistics_export_button)
+        tools.addWidget(self.excel_export_button)
         grid.addLayout(tools, 5, 0, 1, 4)
         self.layout().insertWidget(self.layout().count() - 1, group)
 
@@ -166,6 +293,7 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             label.setText(text)
             label.setToolTip(tooltip)
         self.statistics_scope.setText(
+            (f'Сравнение по параметру «{self._comparison_title}». ' if self._comparison_title else '') +
             f'Рассчитанных пар: {stats.count}; уникальных скважин: {stats.well_count}; '
             f'без результата / исключено: {stats.excluded_count}. '
             f'Допуск: {stats.tolerance:g}. '
@@ -190,28 +318,89 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             self, 'Экспорт статистики', 'prediction_well_statistics.csv', 'CSV (*.csv)')
         if not path:
             return
-        stats = self.statistics
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream, delimiter=';')
             writer.writerow(('metric', 'value', 'description', 'well_id', 'well',
                              'profile_id', 'profile', 'prediction_id'))
-            writer.writerow(('parameter', self.canonical_combo.currentText()))
-            writer.writerow(('settings', json.dumps(self._settings.as_dict(), ensure_ascii=False)
-                             if self._settings else ''))
-            for key in ('count', 'well_count', 'excluded_count', 'within_tolerance', 'tolerance'):
-                writer.writerow((key, getattr(stats, key)))
-            for key, _, tooltip in self.STATISTICS:
-                rows = getattr(stats, key + '_rows', ())
-                if rows:
-                    for c in rows:
-                        writer.writerow((key, getattr(stats, key), tooltip, c.well_id, c.well_name,
-                                         c.profile_id, c.profile_name, c.prediction_id))
-                else:
-                    writer.writerow((key, getattr(stats, key), tooltip))
+            writer.writerows(self._statistics_rows())
+
+    def _statistics_rows(self):
+        stats = self.statistics
+        yield 'parameter', self._comparison_title
+        yield 'settings', self._comparison_settings_json()
+        for key, _ in self.STATISTICS_FIELDS:
+            yield key, getattr(stats, key)
+        for key, _, tooltip in self.STATISTICS:
+            rows = getattr(stats, key + '_rows', ())
+            if rows:
+                for c in rows:
+                    yield (key, getattr(stats, key), tooltip, c.well_id, c.well_name,
+                           c.profile_id, c.profile_name, c.prediction_id)
+            else:
+                yield key, getattr(stats, key), tooltip
 
     def _update_parameter_header(self):
-        super()._update_parameter_header()
-        self.table.horizontalHeaderItem(7).setText('Параметр')
+        self.table.horizontalHeaderItem(7).setToolTip(self._comparison_tooltip)
+
+    def _resolve_ambiguity(self, row, column):
+        candidate = self._candidate_for_row(row)
+        if candidate is None:
+            return
+        analysis_index = column - len(self.HEADERS)
+        analysis = self.analysis_columns[analysis_index] if analysis_index >= 0 else None
+        settings = analysis.settings if analysis else self._settings
+        result = analysis.values[candidate.well_id] if analysis else candidate.resolution
+        if settings is None or not isinstance(result, Resolution) or not result.candidates:
+            return
+        if analysis and len(result.candidates) < 2:
+            return
+        labels = [f'{item.source_name}: {item.raw_value} → {item.value:g} (id{item.source_id})'
+                  for item in result.candidates]
+        selected, ok = QtWidgets.QInputDialog.getItem(
+            self, 'Выбор значения', 'Исходная запись', labels, 0, False)
+        if not ok:
+            return
+        index = labels.index(selected)
+        choice = result.candidates[index]
+        source, canonical_id = settings.source, settings.canonical_id
+        well_id = candidate.well_id
+        if source == 'well_log' and result.details.get('pending_selection') == 'boundary_depth':
+            source, canonical_id = 'boundary', settings.boundary_canonical_id
+            result = resolve_target(self.session, well_id, settings, boundary_candidate=choice)
+        else:
+            result.select(index)
+        save_parameter_choice(self.session, well_id, source, canonical_id, choice.source_id)
+
+        def update(other_settings, previous):
+            if other_settings == settings:
+                return result
+            if ((other_settings.source, other_settings.canonical_id) == (source, canonical_id)
+                    or (source == 'boundary' and other_settings.source == 'well_log'
+                        and other_settings.depth_mode == 'boundary'
+                        and other_settings.boundary_canonical_id == canonical_id)):
+                return resolve_target(self.session, well_id, other_settings)
+            return previous
+
+        if self._settings is not None:
+            primary = update(self._settings, candidate.resolution)
+            for peer in self.candidates:
+                if peer.well_id == well_id:
+                    peer.resolution = primary
+        for other in self.analysis_columns:
+            if not other.raw_text:
+                other.values[well_id] = update(other.settings, other.values[well_id])
+        self._render()
+
+    def _open_well_log(self):
+        column = self.table.currentColumn() - len(self.HEADERS)
+        if column < 0:
+            super()._open_well_log()
+            return
+        candidate = self._candidate_for_row(self.table.currentRow())
+        if candidate and self.open_well_log_callback:
+            result = self.analysis_columns[column].values[candidate.well_id]
+            details = result.details if isinstance(result, Resolution) else {}
+            self.open_well_log_callback(candidate.well_id, details)
 
     @staticmethod
     def _absolute_error(candidate):
@@ -231,6 +420,13 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
             yellow.getRgb()[:3], red.getRgb()[:3])))
 
     def _render(self):
+        first_analysis_column = len(self.HEADERS)
+        old_column_count = self.table.columnCount()
+        self.table.setColumnCount(first_analysis_column + len(self.analysis_columns))
+        for index, column in enumerate(self.analysis_columns, first_analysis_column):
+            header = QtWidgets.QTableWidgetItem(column.title)
+            header.setToolTip(column.tooltip)
+            self.table.setHorizontalHeaderItem(index, header)
         super()._render()
         errors = [error for c in self.candidates
                   if (error := self._absolute_error(c)) is not None]
@@ -238,37 +434,123 @@ class PredictionWellCheckDialog(RegressionTargetWizard):
         for row in range(self.table.rowCount()):
             candidate = self._candidate_for_row(row)
             self.table.item(row, 6).setText(f'{candidate.prediction_id} / {candidate.trace_index + 1}')
+            self.table.item(row, 7).setText(self._comparison_title)
+            if candidate.resolution is None:
+                self.table.item(row, 8).setText('')
             error = self._absolute_error(candidate)
-            if error is not None:
-                color = self._error_color(error, max_error)
-                for column in range(1, self.table.columnCount()):
-                    self.table.item(row, column).setBackground(color)
-            for column in range(1, self.table.columnCount()):
-                item = self.table.item(row, column)
+            color = self._error_color(error, max_error) if error is not None else None
+            for index in range(1, first_analysis_column):
+                item = self.table.item(row, index)
                 item.setToolTip(item.text() + '\n' + item.toolTip())
+                if color is not None:
+                    item.setBackground(color)
             self.table.item(row, 9).setToolTip('Исправленный прогноз' if candidate.corrected else 'Исходный прогноз')
-        self.table.resizeColumnsToContents()
+            for index, column in enumerate(self.analysis_columns, first_analysis_column):
+                self.table.setItem(row, index, self._analysis_item(column, candidate.well_id))
+        for index in range(1, first_analysis_column):
+            self.table.resizeColumnToContents(index)
+        for index in range(old_column_count, self.table.columnCount()):
+            self.table.resizeColumnToContents(index)
+            self.table.setColumnWidth(index, min(350, self.table.columnWidth(index)))
+        self.remove_column_button.setEnabled(bool(self.analysis_columns))
         self.summary.setText(self.summary.text().split('; уже добавлено:')[0])
         self._render_statistics()
+
+    def _analysis_item(self, column, well_id):
+        result = column.values[well_id]
+        if column.raw_text:
+            item = QtWidgets.QTableWidgetItem(result or '')
+            if result:
+                item.setToolTip(f'<pre>{escape(result)}</pre>')
+            return item
+        text = f'{result.value:g}' if result.status == 'resolved' and result.value is not None else ''
+        item = QtWidgets.QTableWidgetItem('выберите…' if result.status == 'ambiguous' else text)
+        has_alternatives = len(result.candidates) > 1
+        item.setBackground(QtGui.QColor('#ffe4a3' if has_alternatives else self.STATUS_COLOR[result.status]))
+        tooltip = result.message
+        if has_alternatives:
+            tooltip += '\nДважды щёлкните, чтобы выбрать исходную запись.'
+        item.setToolTip(tooltip)
+        return item
 
     def _export_csv(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, 'Экспорт сравнения', 'prediction_wells.csv', 'CSV (*.csv)')
         if not path:
             return
-        settings = self._settings
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream, delimiter=';')
-            writer.writerow(('well_id', 'well', 'profile_id', 'profile', 'object', 'prediction_id',
-                             'trace_number', 'distance_m', 'corrected', 'prediction', 'parameter',
-                             'well_value', 'well_minus_prediction', 'status', 'settings', 'details'))
-            for c in self.candidates:
-                r = c.resolution
-                value = r.value if r else None
-                writer.writerow((c.well_id, c.well_name, c.profile_id, c.profile_name, c.object_name,
-                                 c.prediction_id, c.trace_index + 1, c.distance, c.corrected, c.stored_value,
-                                 self.canonical_combo.currentText(), value,
-                                 value - c.stored_value if value is not None else '',
-                                 r.status if r else 'not_calculated',
-                                 json.dumps(settings.as_dict(), ensure_ascii=False) if settings else '',
-                                 json.dumps(r.details, ensure_ascii=False) if r else '{}'))
+            writer.writerow([key for key, _ in self.REPORT_FIELDS] +
+                            [column.title for column in self.analysis_columns])
+            writer.writerows(self._report_rows())
+
+    def _comparison_settings_json(self):
+        return json.dumps(self._settings.as_dict(), ensure_ascii=False) if self._settings else ''
+
+    def _report_rows(self):
+        settings = self._comparison_settings_json()
+        for c in self.candidates:
+            r = c.resolution
+            value = r.value if r else None
+            yield (c.well_id, c.well_name, c.profile_id, c.profile_name, c.object_name,
+                   c.prediction_id, c.trace_index + 1, c.distance, c.corrected, c.stored_value,
+                   self._comparison_title, value,
+                   value - c.stored_value if value is not None else None,
+                   r.status if r else 'not_calculated', settings,
+                   json.dumps(r.details, ensure_ascii=False) if r else '{}',
+                   *(column.value(c.well_id) for column in self.analysis_columns))
+
+    def _export_excel(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Экспорт отчёта и статистики', 'prediction_wells.xlsx', 'Excel (*.xlsx)')
+        if not path:
+            return
+        if not path.lower().endswith('.xlsx'):
+            path += '.xlsx'
+        workbook = Workbook()
+        try:
+            report = workbook.active
+            report.title = 'Отчёт'
+            headers = [self.prediction_title if key == 'prediction' else title
+                       for key, title in self.REPORT_FIELDS]
+            self._fill_worksheet(report, headers + [c.title for c in self.analysis_columns],
+                                 self._report_rows())
+            for index, column in enumerate(self.analysis_columns, len(headers) + 1):
+                report.cell(1, index).comment = Comment(column.tooltip, 'GeoVel')
+                if column.raw_text:
+                    for cells in report.iter_rows(min_row=2, min_col=index, max_col=index):
+                        cells[0].alignment = Alignment(wrap_text=True, vertical='top')
+
+            statistics = workbook.create_sheet('Статистика')
+            metric_titles = {**dict(self.STATISTICS_FIELDS),
+                             **{key: title for key, title, _ in self.STATISTICS},
+                             'parameter': 'Параметр сравнения', 'settings': 'Настройки сравнения',
+                             'match_percent': 'В допуске, %'}
+            rows = ((metric_titles[key], *values) for key, *values in self._statistics_rows())
+            self._fill_worksheet(statistics, ('Метрика', 'Значение', 'Описание', 'ID скважины',
+                                             'Скважина', 'ID профиля', 'Профиль', 'ID прогноза'), rows)
+            workbook.save(path)
+        except (OSError, ValueError, IllegalCharacterError) as error:
+            QtWidgets.QMessageBox.warning(
+                self, 'Ошибка экспорта', f'Не удалось сохранить книгу Excel.\n{error}')
+        finally:
+            workbook.close()
+
+    @staticmethod
+    def _fill_worksheet(sheet, headers, rows):
+        sheet.append(headers)
+        for cell in sheet[1]:
+            cell.data_type = 's'
+            cell.font = Font(bold=True)
+            sheet.column_dimensions[cell.column_letter].width = min(42, max(16, len(cell.value) + 2))
+        for row_number, row in enumerate(rows, 2):
+            for column, value in enumerate(row, 1):
+                if isinstance(value, str) and len(value) > 32767:
+                    raise ValueError('Текст превышает предел ячейки Excel (32 767 символов). '
+                                     'Полную запись можно сохранить в CSV.')
+                cell = sheet.cell(row_number, column, value)
+                # Keep original well text as literal strings, including leading "=".
+                if isinstance(value, str):
+                    cell.data_type = 's'
+        sheet.freeze_panes = 'A2'
+        sheet.auto_filter.ref = sheet.dimensions
