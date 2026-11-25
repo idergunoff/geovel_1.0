@@ -45,6 +45,40 @@ def dataset():
         engine.dispose()
 
 
+@pytest.fixture
+def choose_export_columns(monkeypatch):
+    from PyQt5 import QtCore, QtWidgets
+
+    def choose(titles=None):
+        def exec_picker(picker):
+            columns = picker.findChild(QtWidgets.QListWidget)
+            items = [columns.item(index) for index in range(columns.count())]
+            button_box = picker.findChild(QtWidgets.QDialogButtonBox)
+            confirm = button_box.button(QtWidgets.QDialogButtonBox.Ok)
+            assert all(item.checkState() == QtCore.Qt.Checked for item in items)
+            if titles is not None:
+                actions = {button.text(): button for button in picker.findChildren(QtWidgets.QPushButton)}
+                actions['Снять все'].click()
+                assert not confirm.isEnabled()
+                actions['Отметить все'].click()
+                assert all(item.checkState() == QtCore.Qt.Checked for item in items)
+                actions['Снять все'].click()
+                assert set(titles) <= {item.text() for item in items}
+                for item in items:
+                    if item.text() in titles:
+                        item.setCheckState(QtCore.Qt.Checked)
+            if titles == []:
+                button_box.button(QtWidgets.QDialogButtonBox.Cancel).click()
+            else:
+                assert confirm.isEnabled()
+                confirm.click()
+            return picker.result()
+
+        monkeypatch.setattr(QtWidgets.QDialog, 'exec_', exec_picker)
+
+    return choose
+
+
 def test_same_model_all_researches_and_one_row_per_well_profile(dataset):
     db, obj, profiles, well, selected, second = dataset
     searched = []
@@ -95,7 +129,8 @@ def test_invalid_geometry_does_not_call_search(dataset):
     assert len(report.issues) == 1
 
 
-def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(dataset, monkeypatch, tmp_path):
+def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(
+        dataset, monkeypatch, tmp_path, choose_export_columns):
     from PyQt5 import QtWidgets
     from models_db.model import CanonicalBoundary, AliasBoundary, Boundary
     import qt.regression_target_wizard as wizard
@@ -127,6 +162,7 @@ def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(datas
     assert dialog.table.item(0, 11).text() == '+3'
     path = tmp_path / 'comparison.csv'
     monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_a: (str(path), ''))
+    choose_export_columns()
     dialog._export_csv()
     import csv
     with path.open(encoding='utf-8-sig') as f:
@@ -141,7 +177,8 @@ def test_comparison_dialog_reuses_sources_and_never_exposes_markup_actions(datas
     dialog.close()
 
 
-def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(dataset, monkeypatch, tmp_path):
+def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(
+        dataset, monkeypatch, tmp_path, choose_export_columns):
     import csv
 
     from openpyxl import load_workbook
@@ -194,18 +231,23 @@ def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(data
 
     path = tmp_path / 'report'
     monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: (str(path), ''))
+    headings = ['Вероятность', 'Приток', 'Приток (исходный текст)', 'Глубина']
+    choose_export_columns(headings)
     dialog.excel_export_button.click()
     book = load_workbook(path.with_suffix('.xlsx'))
     try:
         assert book.sheetnames == ['Отчёт', 'Статистика']
         sheet = book['Отчёт']
         columns = {cell.value: cell.column for cell in sheet[1]}
+        assert list(columns) == headings
         assert sheet.cell(2, columns['Вероятность']).value == 0.5
         assert sheet.cell(2, columns['Приток']).value == 4
         assert sheet.cell(2, columns['Глубина']).value == 0.75
         text_cell = sheet.cell(2, columns['Приток (исходный текст)'])
         assert text_cell.value == raw_text
         assert text_cell.data_type == 's'
+        assert text_cell.alignment.wrap_text
+        assert 'Исходный текст' in sheet.cell(1, text_cell.column).comment.text
         assert sheet.cell(3, columns['Вероятность']).value == 0.75
         assert sheet.cell(3, columns['Приток']).value is None
         stats = {row[0]: row[1:] for row in book['Статистика'].values}
@@ -216,16 +258,63 @@ def test_analysis_columns_and_excel_report_keep_numeric_and_original_values(data
         book.close()
 
     path = path.with_suffix('.csv')
+    choose_export_columns(['Приток (исходный текст)'])
     dialog.export_button.click()
     with path.open(encoding='utf-8-sig') as stream:
         rows = list(csv.DictReader(stream, delimiter=';'))
-    assert rows[0]['Приток'] == '4.0'
-    assert rows[0]['Приток (исходный текст)'] == raw_text
+    assert rows[0] == {'Приток (исходный текст)': raw_text}
     dialog.remove_column_button.click()
     dialog.remove_column_button.click()
     assert dialog.table.columnCount() == 14
     assert dialog.table.item(0, 13).text() == '4'
     assert dialog.statistics.mae == 0.25
+    dialog.close()
+
+
+def test_well_log_column_titles_follow_saved_aggregation(dataset, monkeypatch, tmp_path, choose_export_columns):
+    import csv
+
+    from PyQt5 import QtWidgets
+
+    from models_db.model import WellLog
+    from models_db.model_cluster import CanonicalWellLog
+    import qt.regression_target_wizard as wizard
+    from qt.prediction_well_check_dialog import PredictionWellCheckDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    monkeypatch.setattr(wizard, 'restore_form', lambda *_args: None)
+    monkeypatch.setattr(wizard, 'save_form', lambda *_args: None)
+    db, obj, _, well, selected, _ = dataset
+    db.add_all([CanonicalWellLog(canonical_name='ГК'),
+                WellLog(well_id=well.id, curve_name='ГК', curve_data='[1, 3, 9]', begin=0, end=2, step=1)])
+    db.commit()
+    report = collect_prediction_wells(db, obj.id, selected, lambda _: [(well, 1, 1)])
+    dialog = PredictionWellCheckDialog(db, report.samples, 'Test')
+    dialog.source_combo.setCurrentIndex(dialog.source_combo.findData('well_log'))
+    dialog.depth_mode_combo.setCurrentIndex(dialog.depth_mode_combo.findData('fixed'))
+    dialog.calculate_button.click()
+    dialog.add_column_button.click()
+    dialog.aggregation_combo.setCurrentIndex(dialog.aggregation_combo.findData('max'))
+    dialog.add_column_button.click()
+    assert dialog.table.horizontalHeaderItem(10).text() == 'Значение (медиана)'
+    assert dialog.table.item(0, 7).text() == 'ГК (медиана)'
+    headings = ['ГК (медиана)', 'ГК (максимум)']
+    assert [dialog.table.horizontalHeaderItem(index).text() for index in (13, 14)] == headings
+    assert [dialog.table.item(0, index).text() for index in (13, 14)] == ['3', '9']
+
+    def unexpected_file_dialog(*_args):
+        pytest.fail('The save dialog opened after canceling column selection')
+
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', unexpected_file_dialog)
+    choose_export_columns([])
+    dialog.export_button.click()
+    path = tmp_path / 'well_logs.csv'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName', lambda *_args: (str(path), ''))
+    choose_export_columns(headings)
+    dialog.export_button.click()
+    with path.open(encoding='utf-8-sig') as stream:
+        rows = list(csv.reader(stream, delimiter=';'))
+    assert rows == [headings, ['3.0', '9.0'], ['3.0', '9.0']]
     dialog.close()
 
 
