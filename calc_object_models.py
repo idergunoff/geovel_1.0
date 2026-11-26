@@ -1,15 +1,35 @@
 import json
+import pickle
+from collections import Counter
 
-from func import *
-from build_table import *
+import numpy as np
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QListWidgetItem, QMessageBox
+
+from build_table import _model_input_columns, _model_table_sources_key, build_table_test
+from func import get_research_id, imputer, MainWindow, session, set_info, ui, update_list_model_prediction
+from models_db.model import (CalcObject, Formation, GeoradarObject, Profile, ProfileModelPrediction, Research,
+                             TrainedModelClass, TrainedModelReg)
 from qt.calc_object import Ui_Dialog_calc_object
-from regression import update_list_trained_models_regmod
-from PyQt5.QtWidgets import QDialog
+from qt.choose_formation_lda import Ui_FormationLDA
+from qt.work_windows import ask_in_window, show_work_window
+
 
 def calc_object():
     CalcObjectWindow = QtWidgets.QDialog()
     ui_co = Ui_Dialog_calc_object()
     ui_co.setupUi(CalcObjectWindow)
+
+    model_classes = {'cls': TrainedModelClass, 'reg': TrainedModelReg}
+
+    def show_progress(completed, total, interrupted=False):
+        status = 'Расчёт прерван. ' if interrupted else ''
+        ui_co.label_models_progress.setText(f'{status}Посчитано моделей: {completed} из {total}')
+        ui_co.progressBar_models.setRange(0, max(1, total))
+        ui_co.progressBar_models.setValue(completed)
+        ui_co.progressBar_models.repaint()
+        ui_co.label_models_progress.repaint()
 
     def update_co_models_list():
         ui_co.listWidget_objects.clear()
@@ -36,9 +56,16 @@ def calc_object():
                 ui_co.listWidget_objects.setCurrentRow(0)
             except AttributeError:
                 pass
+        show_progress(0, ui_co.listWidget_objects.count())
 
     def remove_co_model():
-        co = session.query(CalcObject).filter_by(id=ui_co.listWidget_objects.currentItem().data(Qt.UserRole)).first()
+        item = ui_co.listWidget_objects.currentItem()
+        if item is None:
+            return
+        co = session.query(CalcObject).filter_by(id=item.data(Qt.UserRole)).first()
+        if co is None:
+            update_co_models_list()
+            return
         session.delete(co)
         session.commit()
         update_co_models_list()
@@ -217,140 +244,98 @@ def calc_object():
                 update_co_models_list()
 
 
-    def start_co_class(co_cls):
-        """ Расчет объекта по модели """
-
-        model = session.query(TrainedModelClass).filter_by(
-            id=co_cls.model_id).first()
-
-        with open(model.path_model, 'rb') as f:
-            class_model = pickle.load(f)
-
-        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
-
-        model_mask = session.query(TrainedModelClassMask).filter_by(model_id=model.id).first()
-        if model_mask:
-            list_param_num = sorted(
-                json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
-
-        for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_cls.research_id).all()):
-
-            if session.query(ProfileModelPrediction).filter_by(
-                    profile_id=prof.id, type_model='cls', model_id=model.id).count() == 0:
-
-                list_formation_loaded = json.loads(co_cls.list_formation)
-                curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-                working_data, curr_form = build_table_test(
-                    'mlp', model=model, curr_form=curr_form, use_model_mask=True,
-                )
-
-                working_data_profile = working_data.copy()
-                working_sample_profile = working_data_profile[list_param_num].values.tolist()
-
-                try:
-                    probability = class_model.predict_proba(working_sample_profile)
-                except ValueError:
-                    working_sample_profile = [[np.nan if np.isinf(x) else x for x in y] for y in
-                                              working_sample_profile]
-                    data = imputer.fit_transform(working_sample_profile)
-                    probability = class_model.predict_proba(data)
-
-                list_result = [round(p[0], 6) for p in probability]
-                new_prof_model_pred = ProfileModelPrediction(
-                    profile_id=prof.id,
-                    type_model='cls',
-                    model_id=model.id,
-                    prediction=json.dumps(list_result)
-                )
-
-                session.add(new_prof_model_pred)
-                session.commit()
-                set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
-
-            else:
-                research = session.query(Research).filter(Research.id == prof.research_id).first()
-                object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
-                set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
-                continue
-
-        update_list_model_prediction()
-
-    def start_co_reg(co_reg):
-        """ Расчет объекта обученной моделью """
-
-        model = session.query(TrainedModelReg).filter_by(
-            id=co_reg.model_id).first()
+    def calculate_model(co, model, model_table_cache):
+        type_model = co.type_ml
+        is_classification = type_model == 'cls'
+        analysis = 'mlp' if is_classification else 'regmod'
 
         with open(model.path_model, 'rb') as f:
-            reg_model = pickle.load(f)
+            estimator = pickle.load(f)
 
-        list_param_num = get_list_param_numerical(json.loads(model.list_params), model)
+        predict = estimator.predict_proba if is_classification else estimator.predict
+        input_columns = _model_input_columns(type_model, model)
+        formation_ids = json.loads(co.list_formation)
+        profiles = session.query(Profile).filter_by(research_id=co.research_id).all()
 
-        model_mask = session.query(TrainedModelRegMask).filter_by(model_id=model.id).first()
-        if model_mask:
-            list_param_num = sorted(
-                json.loads(session.query(ParameterMask).filter_by(id=model_mask.mask_id).first().mask))
-
-        for n, prof in enumerate(session.query(Profile).filter(Profile.research_id == co_reg.research_id).all()):
-
+        for index, profile in enumerate(profiles):
             if session.query(ProfileModelPrediction).filter_by(
-                    profile_id=prof.id, model_id=model.id, type_model='reg').count() == 0:
-
-                list_formation_loaded = json.loads(co_reg.list_formation)
-                curr_form = session.query(Formation).filter(Formation.id == list_formation_loaded[n]).first()
-                working_data, curr_form = build_table_test(
-                    'regmod', model=model, curr_form=curr_form, use_model_mask=True,
-                )
-
-                working_data_profile = working_data.copy()
-                working_sample_profile = working_data_profile[list_param_num].values.tolist()
-
-                try:
-                    y_pred = reg_model.predict(working_sample_profile)
-                except ValueError:
-                    working_sample = [[np.nan if np.isinf(x) else x for x in y] for y in working_sample_profile]
-                    data = imputer.fit_transform(working_sample)
-                    y_pred = reg_model.predict(data)
-
-                new_prof_model_pred = ProfileModelPrediction(
-                    profile_id=prof.id,
-                    type_model='reg',
-                    model_id=model.id,
-                    prediction=json.dumps(y_pred.tolist())
-                )
-                session.add(new_prof_model_pred)
-                session.commit()
-                set_info(f'Результат расчета модели "{model.title}" для профиля {prof.title} сохранен', 'green')
-            else:
-                research = session.query(Research).filter(Research.id == prof.research_id).first()
-                object = session.query(GeoradarObject).filter(GeoradarObject.id == research.object_id).first()
-                set_info(f'Прогноз для исследования от {research.date_research} объекта {object.title} уже есть в БД', 'red')
+                    profile_id=profile.id, type_model=type_model, model_id=model.id).count():
+                research = profile.research
+                set_info(f'Прогноз для исследования от {research.date_research} объекта {research.object.title} '
+                         'уже есть в БД', 'red')
                 continue
+
+            formation = session.get(Formation, formation_ids[index])
+            if formation is None:
+                raise ValueError(f'Не найден пласт для профиля {profile.title}')
+
+            working_data, _ = build_table_test(
+                analysis, model=model, curr_form=formation,
+                model_table_cache=model_table_cache, use_model_mask=True,
+            )
+            sample = working_data[input_columns].values.tolist()
+
+            try:
+                prediction = predict(sample)
+            except ValueError:
+                sample = [[np.nan if np.isinf(value) else value for value in row] for row in sample]
+                prediction = predict(imputer.fit_transform(sample))
+
+            result = [round(row[0], 6) for row in prediction] if is_classification else prediction.tolist()
+            session.add(ProfileModelPrediction(
+                profile_id=profile.id, type_model=type_model, model_id=model.id, prediction=json.dumps(result),
+            ))
+            session.commit()
+            set_info(f'Результат расчета модели "{model.title}" для профиля {profile.title} сохранен', 'green')
 
         update_list_model_prediction()
 
     def start_co():
+        queue = ui_co.listWidget_objects
+        total = queue.count()
+        if total == 0:
+            return
+
+        completed = 0
+        show_progress(completed, total)
         set_info('Начало расчета объектов по моделям', 'blue')
 
-        while ui_co.listWidget_objects.count() > 0:
-            item = ui_co.listWidget_objects.item(0)
-            if item is None:
-                break
+        try:
+            jobs = []
+            for index in range(total):
+                co = session.get(CalcObject, queue.item(index).data(Qt.UserRole))
+                if co is None:
+                    jobs.append((None, None, None))
+                    continue
+                model = session.get(model_classes[co.type_ml], co.model_id)
+                source = (co.research_id, _model_table_sources_key(model)) if model is not None else None
+                jobs.append((co, model, source))
 
-            co = session.query(CalcObject).filter_by(id=item.data(Qt.UserRole)).first()
-            if co is None:
-                ui_co.listWidget_objects.takeItem(0)
-                continue
+            remaining = Counter(source for _, _, source in jobs if source is not None)
+            table_caches = {source: {} for source, count in remaining.items() if count > 1}
 
-            if co.type_ml == 'cls':
-                start_co_class(co)
-            if co.type_ml == 'reg':
-                start_co_reg(co)
+            for co, model, source in jobs:
+                if co is None:
+                    queue.takeItem(0)
+                    continue
+                if model is None:
+                    raise ValueError(f'Модель для записи id{co.id} не найдена')
 
-            session.delete(co)
-            session.commit()
-
-            ui_co.listWidget_objects.takeItem(0)
+                calculate_model(co, model, table_caches.get(source))
+                session.delete(co)
+                session.commit()
+                queue.takeItem(0)
+                remaining[source] -= 1
+                if remaining[source] == 0:
+                    table_caches.pop(source, None)
+                completed += 1
+                show_progress(completed, total)
+        except Exception as error:
+            session.rollback()
+            show_progress(completed, total, interrupted=True)
+            set_info('Расчет объектов по моделям прерван', 'red')
+            QMessageBox.critical(CalcObjectWindow, 'Ошибка расчёта', str(error))
+            return
 
         set_info('Расчет объектов по моделям завершен', 'blue')
 

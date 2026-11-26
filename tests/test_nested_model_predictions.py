@@ -270,6 +270,76 @@ def test_source_order_and_model_type_do_not_split_shared_table(runtime, formatio
     assert len(cache) == 1
 
 
+@pytest.mark.parametrize('fail_second', [False, True])
+def test_object_dialog_reuses_features_and_counts_completed_models(runtime, formation, tmp_path, monkeypatch, fail_second):
+    from collections import Counter
+
+    from PyQt5 import QtCore, QtWidgets
+
+    from qt.calc_object import Ui_Dialog_calc_object
+    from qt.work_windows import show_work_window
+
+    monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    formation.profile.research = db_models.Research(object=db_models.GeoradarObject(title='Test object'))
+    formation.profile.signal = '[[1, 2], [3, 4], [5, 6]]'
+    first = add_model(runtime, tmp_path, 'cls', 1, ['X', 'Signal_Abase'], mask=['Signal_Abase_1'])
+    second = add_model(runtime, tmp_path, 'reg', 1, ['Signal_Abase', 'X'], mask=['Signal_Abase_2'])
+    if fail_second:
+        Path(second.path_model).unlink()
+    for model_type, model in [('cls', first), ('reg', second)]:
+        runtime.db.add(db_models.CalcObject(
+            research_id=formation.profile.research_id, type_ml=model_type, model_id=model.id,
+            list_formation=json.dumps([formation.id]),
+        ))
+    runtime.db.commit()
+
+    progress = []
+    transformations = []
+    errors = []
+    transform = runtime.functions['calc_atrib_measure']
+
+    def count_transform(signal, attribute):
+        transformations.append(attribute)
+        return transform(signal, attribute)
+
+    def run_dialog(dialog):
+        show_work_window(dialog)
+        try:
+            bar = dialog.findChild(QtWidgets.QProgressBar, 'progressBar_models')
+            label = dialog.findChild(QtWidgets.QLabel, 'label_models_progress')
+            assert bar.value() == 0 and bar.maximum() == 2
+            assert label.text() == 'Посчитано моделей: 0 из 2'
+            bar.valueChanged.connect(progress.append)
+            dialog.findChild(QtWidgets.QPushButton, 'pushButton_start_co').click()
+            expected_label = ('Расчёт прерван. Посчитано моделей: 1 из 2' if fail_second
+                              else 'Посчитано моделей: 2 из 2')
+            assert label.text() == expected_label, errors
+            assert dialog.findChild(QtWidgets.QListWidget, 'listWidget_objects').count() == int(fail_second)
+        finally:
+            dialog.close()
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'critical', lambda parent, title, text: errors.append(text))
+    runtime.functions.update(
+        Counter=Counter, Qt=QtCore.Qt, QtCore=QtCore, QtWidgets=QtWidgets,
+        QListWidgetItem=QtWidgets.QListWidgetItem, QMessageBox=QtWidgets.QMessageBox,
+        Ui_Dialog_calc_object=Ui_Dialog_calc_object, calc_atrib_measure=count_transform,
+        show_work_window=run_dialog, update_list_model_prediction=lambda: None,
+    )
+    load_functions(ROOT / 'calc_object_models.py', runtime.functions, {'calc_object'})
+    runtime.functions['calc_object']()
+    app.processEvents()
+
+    assert progress == ([1] if fail_second else [1, 2])
+    assert transformations == ['Abase'] * 3
+    predictions = runtime.db.query(db_models.ProfileModelPrediction).all()
+    expected_predictions = {'cls': [0.01, 0.03, 0.05]}
+    if not fail_second:
+        expected_predictions['reg'] = [4, 8, 12]
+    assert {p.type_model: json.loads(p.prediction) for p in predictions} == expected_predictions
+    assert len(errors) == runtime.db.query(db_models.CalcObject).count() == int(fail_second)
+
+
 @pytest.mark.parametrize('measure_indices', [None, [2, 0]])
 def test_wide_shared_table_extends_without_fragmentation_or_recalculating_features(runtime, formation, tmp_path, measure_indices):
     formation.profile.signal = json.dumps([

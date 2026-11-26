@@ -13,6 +13,15 @@ from calc_additional_features import (calc_hht_features, calc_emd_feature, calc_
 TRAIN_TABLE_ROW_CHUNK_SIZE = 1000
 
 
+def _model_table_sources_key(model):
+    """Identify the configured feature sources shared by compatible models."""
+    return (
+        tuple(sorted(set(json.loads(model.list_params)))),
+        model.except_signal or '',
+        model.except_crl or '',
+    )
+
+
 def _model_table_cache_key(model, formation, measure_indices=None):
     """Identify shared source data independently of model type and final mask.
 
@@ -23,9 +32,7 @@ def _model_table_cache_key(model, formation, measure_indices=None):
         formation.id,
         formation.profile_id,
         formation.profile.relief_source_key,
-        tuple(sorted(set(json.loads(model.list_params)))),
-        model.except_signal or '',
-        model.except_crl or '',
+        *_model_table_sources_key(model),
         None if measure_indices is None else tuple(sorted(set(measure_indices))),
     )
 
